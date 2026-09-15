@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 # tag or commit to rebuild a different run; the clone is not shallow, so any
 # reachable commit works.
 ARG MINE_AI_MCP_REPO=https://github.com/aibengineering/mine-ai-mcp.git
-ARG MINE_AI_MCP_REF=beat-the-game
+ARG MINE_AI_MCP_REF=de4fef3260424d973bf81d0eaa15ff1a2f73ecff
 WORKDIR /opt/mine-ai-mcp
 RUN git clone "${MINE_AI_MCP_REPO}" . \
     && git checkout --detach "${MINE_AI_MCP_REF}" \
