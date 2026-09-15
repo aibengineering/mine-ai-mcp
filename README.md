@@ -5,6 +5,15 @@ Mine AI MCP provides external AI agents with reliable, observable tools to
 inspect, navigate, and act in Minecraft. Every tool reports what was directly
 observed in the game world.
 
+An agent running this server played a fresh world through to the Ender Dragon in a
+single unbroken session. The [recording of that run][video] is on YouTube, and its
+complete artifacts — the agent's transcript, the runtime's SQLite database, the
+server logs, and the seed prompt — are published as a
+[dataset on Hugging Face][dataset].
+
+[video]: https://www.youtube.com/watch?v=ZjtwWEfFVFY
+[dataset]: https://huggingface.co/datasets/aibengineering/beat-the-game-minecraft
+
 ## Quick start: use an existing Minecraft server
 
 Run it straight from the public repository with Bun. The package executes its
@@ -69,6 +78,12 @@ is a one-time step. The image records the commit it was built from at
 image tag with your checkout, so rebuild with both files before rerunning.
 See the [Docker playthrough setup](docker/README.md) for the run directory
 layout, stopping, and resuming.
+
+You do not have to rerun it to inspect it: that run's artifacts are published at
+[aibengineering/beat-the-game-minecraft][dataset] — 1,121 rows of agent transcript,
+the runtime's SQLite database with every tool call and its outcome, the vanilla
+server log carrying the `Free the End` advancement, and the prompt the agent was
+given. The [recording is on YouTube][video].
 
 ## Connect an MCP client
 
