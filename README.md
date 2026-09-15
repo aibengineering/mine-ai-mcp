@@ -11,7 +11,7 @@ Run it straight from the public repository with Bun. The package executes its
 TypeScript source, so there is no build step:
 
 ```sh
-bunx --bun github:aibengineering/mine-ai-mcp --minecraft-host 127.0.0.1 --minecraft-port 25565 --username MineAI --version 1.21.4
+bunx github:aibengineering/mine-ai-mcp --minecraft-host 127.0.0.1 --minecraft-port 25565 --username MineAI --version 1.21.4
 ```
 
 This starts a persistent MCP host at `http://localhost:25575/mcp` and joins the
