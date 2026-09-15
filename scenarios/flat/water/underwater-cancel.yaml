@@ -1,0 +1,27 @@
+name: underwater-cancel
+description: Production underwater navigation and survival qualification (underwater-cancel).
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, doDaylightCycle: false }
+geometry:
+  - fill: { block: stone, from: [-5, -61, -5], to: [9, -57, 5] }
+  - fill: { block: water, from: [-4, -60, -4], to: [8, -57, 4] }
+players:
+  - name: Diver
+    pos: [0.5, -57, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./underwater.ts"]
+params:
+  cancel: true
+  legs: [[0, -60, 0]]
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: completion, who: Diver }
+    - { kind: health, who: Diver, health: 20 }

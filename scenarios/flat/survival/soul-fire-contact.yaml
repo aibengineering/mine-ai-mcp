@@ -1,0 +1,19 @@
+name: soul-fire-contact
+description: Survive fire appearing under the body and end active contact and residual burning, without prescribing how.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: air, from: [-6, -60, -6], to: [6, -54, 6] }
+  - fill: { block: soul_soil, from: [-6, -62, -6], to: [6, -61, 6] }
+players:
+  - name: FireSurvivor
+    op: true
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./soul-fire-contact.ts"]
+goal: { kind: completion, who: FireSurvivor, timeout: 30 }

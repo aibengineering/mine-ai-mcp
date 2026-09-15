@@ -1,0 +1,79 @@
+name: route-cancelled-midway
+description: Stop a sprinting route mid-flight on a stop signal, prove the bot actually halts and holds no controls, then navigate again on the same pathfinder.
+
+# `navigate()` gives every caller three ways to end a route early — `timeoutMs`,
+# an action-wide `signal`, and a route-local `stopSignal` — and production uses
+# all three: item pickup cancels the walk the moment the inventory proves the
+# pickup, and every action cancels on abort. No fixture had ever exercised any
+# of them. Every existing pathfinder scenario runs its route to completion.
+#
+# Two things can go wrong and only the second is visible from outside. A
+# cancelled route may not stop the bot, because continuous handoff means
+# movement controls outlive any single step; a bot that keeps its controls
+# coasts on past the point it was told to stop. And a pathfinder that does not
+# clean up after cancellation refuses or corrupts the next `goto`, which in
+# production is the difference between one failed pickup and an action that
+# never navigates again.
+#
+# The bot sprints east down a walled lane, is cancelled around x=12, must come
+# to rest before x=30, and then has to reach a target at the far end under a
+# fresh route. The lane is walled rather than open so that "kept sprinting"
+# shows up as a large overshoot rather than as a drift off course.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -6 -62 -8 64 -50 8 air"
+
+geometry:
+  - fill: { block: stone, from: [-4, -61, -3], to: [60, -61, 3] }
+  # Waist-high walls keep the run one lane wide without roofing it, so a
+  # spectator can watch the stop happen.
+  - fill: { block: stone, from: [-4, -60, -3], to: [60, -59, -3] }
+  - fill: { block: stone, from: [-4, -60, 3], to: [60, -59, 3] }
+  - fill: { block: bedrock, from: [61, -60, -3], to: [61, -58, 3] }
+
+players:
+  - name: CancelBot
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./route-cancelled-midway.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!CancelBot,gamemode=!spectator]"
+
+params:
+  # Far enough that the bot is at full sprint when the stop signal lands.
+  firstTarget: [58, -60, 0]
+  cancelAfterMs: 1600
+  # Where the bot must have come to rest. Sprinting is ~0.13 blocks/tick, so an
+  # uncancelled route covers this in about two more seconds.
+  stopBefore: 30
+  secondTarget: [58, -60, 0]
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: reach
+      who: CancelBot
+      pos: [58.5, -60, 0.5]
+      radius: 2.0
+    - kind: health
+      who: CancelBot
+      health: 20
+    - kind: completion
+      who: CancelBot

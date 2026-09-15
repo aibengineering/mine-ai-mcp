@@ -1,0 +1,39 @@
+name: generated-basalt-pack-hunt
+description: Stress an iron-equipped melee hunter against two large native cubes and their splitting offspring on a generated basalt shelf.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: true, keepInventory: false, randomTickSpeed: 0 }
+entities:
+  - { type: magma_cube, pos: [195.5, 49, -18.5], nbt: '{Size:3,NoAI:1b,PersistenceRequired:1b,Tags:["basalt_hunt"]}' }
+  - { type: magma_cube, pos: [197.5, 49, -17.5], nbt: '{Size:3,NoAI:1b,PersistenceRequired:1b,Tags:["basalt_hunt"]}' }
+players:
+  - name: BasaltTraveler
+    pos: [185.5, 49, -19.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./generated-basalt-hunt.ts"]
+goal:
+  kind: all
+
+  # Arrangement, native combat, loot pickup, return, and a three-second dwell.
+  timeout: 180
+  goals:
+    - { kind: completion, who: BasaltTraveler }
+    - { kind: hasItem, who: BasaltTraveler, item: magma_cream, count: 1 }
+    - { kind: survive, who: BasaltTraveler, seconds: 1 }
+    - { kind: health, who: BasaltTraveler, health: 1 }

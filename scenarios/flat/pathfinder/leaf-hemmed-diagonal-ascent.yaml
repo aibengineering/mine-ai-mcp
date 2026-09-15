@@ -1,0 +1,82 @@
+name: leaf-hemmed-diagonal-ascent
+description: Reach a raised dirt tread without planning the shorter diagonal ascent whose upper corner is hemmed by leaves.
+
+# The live failure climbed one cardinal step, then repeatedly attempted a
+# diagonal step-up into a dirt-supported landing surrounded by foliage. The
+# catalogue saw clear feet/head cells but omitted the upper corner cells swept
+# by the rising player. Baritone disables diagonal ascent by default and, even
+# when enabled, rejects this head-bonk geometry.
+#
+# A longer cardinal staircase remains available to the east. The acceptance
+# condition is therefore ordinary successful navigation without ever issuing
+# the unsafe directed edge; this is not a no-path fixture.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -5 -63 -6 7 -50 6 air"
+
+geometry:
+  # A low catch floor keeps a failed jump observable without killing the bot.
+  - fill: { block: bedrock, from: [-4, -63, -5], to: [6, -63, 5] }
+
+  # Live-shaped shortcut: one cardinal rise followed by the suspect diagonal
+  # rise. The target itself has the same full dirt support observed live.
+  - setblock: { block: oak_leaves, at: [0, -61, 0] }
+  - setblock: { block: oak_leaves, at: [-1, -60, 0] }
+  - setblock: { block: dirt, at: [0, -59, -1] }
+
+  # These are the two upper corner cells around
+  #   (-1,-59,0) -> (0,-58,-1).
+  # They do not occupy the source, destination, or the two lower corner cells,
+  # so our current `diagonalClear` admits the edge. The player's head sweeps
+  # them while rising, which is the condition Baritone checks separately.
+  - setblock: { block: oak_leaves, at: [-1, -57, -1] }
+  - setblock: { block: oak_leaves, at: [0, -57, 0] }
+
+  # Safe, longer cardinal route: east along the low shelf, north, then climb
+  # west twice and approach the target from the north.
+  - fill: { block: blue_concrete, from: [1, -61, 0], to: [2, -61, 0] }
+  - fill: { block: blue_concrete, from: [2, -61, -2], to: [2, -61, -1] }
+  - setblock: { block: gold_block, at: [1, -60, -2] }
+  - setblock: { block: emerald_block, at: [0, -59, -2] }
+
+players:
+  - name: LeafAscentBot
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./leaf-hemmed-diagonal-ascent.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!LeafAscentBot,gamemode=!spectator]"
+
+params:
+  target: [0, -58, -1]
+  range: 0.5
+
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - kind: reach
+      who: LeafAscentBot
+      pos: [0.5, -58, -0.5]
+      radius: 0.75
+    - kind: health
+      who: LeafAscentBot
+      health: 20
+    - kind: completion
+      who: LeafAscentBot

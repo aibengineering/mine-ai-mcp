@@ -1,0 +1,29 @@
+name: bucket-native-end-knockback
+description: Survive native explosive knockback off a 41-block End platform and recover water without native fall damage.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+players:
+  - name: BucketBot
+    pos: [12.5, 64, 0.5]
+    op: true
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: water_bucket, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./bucket-native-knockback.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: health, who: BucketBot, health: 1 }
+    - { kind: hasItem, who: BucketBot, item: water_bucket, count: 1 }
+    - { kind: completion, who: BucketBot }

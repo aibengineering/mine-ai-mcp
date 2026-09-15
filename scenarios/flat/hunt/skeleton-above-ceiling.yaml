@@ -1,0 +1,41 @@
+name: skeleton-above-ceiling
+# Run 16 request 77: a skeleton four blocks above was in geometric melee
+# range through stone. The obstructed bow repeatedly cancelled its own approach.
+# skeleton-ceiling-before timed out with zero attacks; skeleton-ceiling-after
+# killed the skeleton in both fresh trials (20.9s and 21.9s including setup).
+description: Reach and kill an elevated skeleton behind a stone ceiling instead of treating distance through terrain as contact.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0 }
+setup:
+  - "difficulty normal"
+geometry:
+  - fill: { block: stone, from: [-8, 7, -8], to: [8, 11, 8] }
+  - fill: { block: air, from: [-7, 8, -7], to: [7, 9, 7] }
+entities:
+  - type: skeleton
+    pos: [1.2, 12, 1.6]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+players:
+  - name: CeilingHunter
+    pos: [0.6, 8, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 2 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+params: { mob_name: skeleton, drop_name: bone, count: 1, defeat_count: 1 }
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: kill, who: CeilingHunter, target: skeleton }
+    - { kind: completion, who: CeilingHunter }

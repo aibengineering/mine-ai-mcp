@@ -1,0 +1,39 @@
+name: weeping-vines-descent
+description: Measure whether the pinned Mineflayer physics can execute the descent edges currently offered for weeping vines.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "fill -4 -61 -4 8 -48 4 air"
+geometry:
+  - fill: { block: netherrack, from: [-4, -61, -4], to: [8, -61, 4] }
+  - fill: { block: netherrack, from: [-1, -50, -1], to: [3, -50, 1] }
+  # Enter the hanging column from a supported side ledge below its solid
+  # anchor. Starting above the canopy would require walking through netherrack.
+  - fill: { block: netherrack, from: [-1, -53, 0], to: [1, -53, 0] }
+  - setblock: { block: weeping_vines_plant, at: [2, -51, 0] }
+  - setblock: { block: weeping_vines_plant, at: [2, -52, 0] }
+  - setblock: { block: weeping_vines_plant, at: [2, -53, 0] }
+  - setblock: { block: weeping_vines_plant, at: [2, -54, 0] }
+  - setblock: { block: weeping_vines_plant, at: [2, -55, 0] }
+  - setblock: { block: weeping_vines_plant, at: [2, -56, 0] }
+  - setblock: { block: weeping_vines_plant, at: [2, -57, 0] }
+  - setblock: { block: weeping_vines_plant, at: [2, -58, 0] }
+  - setblock: { block: weeping_vines_plant, at: [2, -59, 0] }
+  - setblock: { block: weeping_vines, at: [2, -60, 0] }
+players:
+  - { name: WeepingBot, pos: [0.5, -52, 0.5] }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./weeping-vines-descent.ts"]
+params:
+  legs:
+    - { target: [4, -60, 0], range: 1, label: "descend weeping vines" }
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: reach, who: WeepingBot, pos: [4.5, -60, 0.5], radius: 1.5 }
+    - { kind: health, who: WeepingBot, health: 20 }
+    - { kind: completion, who: WeepingBot }

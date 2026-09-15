@@ -1,0 +1,83 @@
+name: open-cavern-breakthrough
+description: Excavate through a solid rock partition into an open cavern space, then navigate down cascading ledges to reach the cavern floor.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -6 -62 -10 24 -40 12 air"
+
+geometry:
+  # Cavern bedrock foundation and lower floor
+  - fill: { block: stone, from: [-6, -61, -10], to: [24, -60, 10] }
+
+  # High enclosed tunnel where the bot starts
+  - fill: { block: stone, from: [-4, -49, -3], to: [5, -45, 3] }
+  - fill: { block: air, from: [-3, -48, -2], to: [2, -46, 2] }
+
+  # Solid stone partition blocking the tunnel exit into the cavern (from x: 3 to x: 5)
+  - fill: { block: stone, from: [3, -48, -2], to: [5, -46, 2] }
+
+  # Open cavern space from x: 6 to x: 22, y: -59 to y: -42
+  # Directly below the high exit is a vast cavern.
+  # Contiguous cascading natural stone ledges provide a safe stepped descent:
+  # Threshold ledge right outside the tunnel opening at y: -49 (1-block drop from y: -48)
+  - fill: { block: stone, from: [5, -50, -2], to: [6, -50, 2] }
+
+  # Ledge 1: step down 2 blocks to y: -51 (top at y: -51, floor at y: -52)
+  - fill: { block: stone, from: [7, -52, -2], to: [9, -52, 2] }
+
+  # Ledge 2: step down 3 blocks to y: -54 (top at y: -54, floor at y: -55)
+  - fill: { block: stone, from: [10, -55, 0], to: [12, -55, 3] }
+
+  # Ledge 3: step down 3 blocks to y: -57 (top at y: -57, floor at y: -58)
+  - fill: { block: stone, from: [13, -58, 2], to: [15, -58, 5] }
+
+  # Final cavern floor approach and diamond block target (at y: -59, floor at y: -60)
+  - fill: { block: stone, from: [16, -60, 2], to: [20, -60, 6] }
+  - setblock: { block: diamond_block, at: [18, -60, 4] }
+
+players:
+  - name: CavernMiner
+    pos: [0.5, -48, 0.5]
+    inventory:
+      - item: diamond_pickaxe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!CavernMiner,gamemode=!spectator]"
+
+params:
+  target: [18, -59, 4]
+  range: 1.5
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: reach
+      who: CavernMiner
+      # GoalNear applies the requested radius to integer feet cells. Mine Labs
+      # observes the entity inside that cell, so include the cell-centre margin.
+      pos: [18.5, -59, 4.5]
+      radius: 2.25
+    # The bot must survive the descent without taking fatal fall damage
+    - kind: health
+      who: CavernMiner
+      health: 18
+    - kind: completion
+      who: CavernMiner

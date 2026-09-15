@@ -1,0 +1,58 @@
+name: tree-canopy-chest-handoff
+description: Collect up a standing oak into its canopy, then view a ground-level chest on the far side of the start.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: grass_block, from: [-12, -60, -12], to: [14, -60, 12] }
+  - fill: { block: oak_leaves, from: [4, -54, -2], to: [8, -52, 2] }
+  - fill: { block: oak_leaves, from: [5, -51, -1], to: [7, -51, 1] }
+  - fill: { block: oak_log, from: [6, -59, 0], to: [6, -53, 0] }
+  - setblock: { block: chest, at: [-4, -59, 0] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: iron_axe, count: 1 }
+      - { item: dirt, count: 16 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./tree-canopy-chest-handoff.ts"]
+
+params:
+  logs: 6
+  chest: [-4, -59, 0]
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: oak_log
+      count: 6
+    - kind: blockAt
+      who: Collector
+      pos: [-4, -59, 0]
+      block: chest
+    - kind: completion
+      who: Collector

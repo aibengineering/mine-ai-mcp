@@ -1,0 +1,40 @@
+name: frontier-biome-entry
+description: Enter warped forest within a frontier leg; a loaded warped forest layer above spawn does not count.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+
+setup:
+  - "fillbiome -16 -56 -16 31 -53 15 warped_forest"
+  - "fillbiome 8 -60 -16 31 -57 15 warped_forest"
+
+players:
+  - name: Explorer
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/explorer.ts"]
+
+params:
+  heading: 90
+  chunks: 1
+  biome: warped_forest
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: reach
+      who: Explorer
+      pos: [8.5, -60, 0.5]
+      radius: 2
+    - kind: completion
+      who: Explorer

@@ -1,0 +1,23 @@
+name: occupied-wall-placement
+description: Refuse a full wall cell occupied by a native skeleton before sending, then place after it clears.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+players:
+  - name: WallBuilder
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: cobblestone, count: 2 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./occupied-wall-placement.ts"]
+goal:
+  kind: completion
+  who: WallBuilder
+  timeout: 20

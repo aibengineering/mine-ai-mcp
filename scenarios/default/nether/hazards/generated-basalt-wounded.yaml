@@ -1,0 +1,40 @@
+name: generated-basalt-wounded
+description: Verify wounded pack escape in native basalt terrain.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, keepInventory: false, randomTickSpeed: 0 }
+params: { kind: wounded }
+entities:
+  - { type: magma_cube, pos: [195.5, 49, -18.5], nbt: '{Size:3,NoAI:1b,PersistenceRequired:1b,Tags:["reflex_trial"]}' }
+  - { type: magma_cube, pos: [197.5, 49, -17.5], nbt: '{Size:3,NoAI:1b,PersistenceRequired:1b,Tags:["reflex_trial"]}' }
+players:
+  - name: BasaltTraveler
+    pos: [192.5, 49, -19.5]
+    health: 11
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./generated-basalt-reflex.ts"]
+goal:
+  kind: all
+
+  # Arrange the native pack, escape while wounded, then observe separation.
+  timeout: 90
+  goals:
+    - { kind: completion, who: BasaltTraveler }
+    - { kind: survive, who: BasaltTraveler, seconds: 1 }
+    - { kind: health, who: BasaltTraveler, health: 1 }

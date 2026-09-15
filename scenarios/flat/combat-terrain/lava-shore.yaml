@@ -1,0 +1,50 @@
+name: combat-lava-shore
+description: Face two native zombies approaching from different angles on the last dry row of a lava shore, then recover to dry ground.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+geometry:
+  - fill: { block: lava, from: [-10, -61, 1], to: [10, -61, 12] }
+players:
+  - name: TerrainBot
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./terrain-combat.ts"]
+params:
+  mob: zombie
+  spawns: [[-0.5, -60, -0.5], [1.5, -60, -0.5]]
+  destination: [-12, -60, -4]
+  deckY: -60
+  lavaY: -61
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: survive, who: TerrainBot, seconds: 1 }
+    - { kind: health, who: TerrainBot }
+    - { kind: reach, who: TerrainBot, pos: [-11.5, -60, -3.5], radius: 2 }
+    - { kind: completion, who: TerrainBot }

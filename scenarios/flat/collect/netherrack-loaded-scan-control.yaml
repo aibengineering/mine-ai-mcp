@@ -1,0 +1,29 @@
+name: netherrack-loaded-scan-control
+description: The same runtime, kit, and netherrack bank as the loaded Nether scan regression, surrounded by flat terrain without other netherrack.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: peaceful
+  gamerules:
+    doMobSpawning: false
+    randomTickSpeed: 0
+players:
+  - name: ScanCollector
+    op: true
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: netherrack, count: 4 }
+      - { item: cobblestone, count: 11 }
+      - { item: dirt, count: 20 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../default/nether/netherrack-loaded-scan.ts"]
+params:
+  dimension: overworld
+goal:
+  kind: all
+  timeout: 360
+  goals:
+    - { kind: hasItem, who: ScanCollector, item: netherrack, count: 36 }
+    - { kind: health, who: ScanCollector, health: 20 }
+    - { kind: completion, who: ScanCollector }

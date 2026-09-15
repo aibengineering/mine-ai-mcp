@@ -1,0 +1,75 @@
+name: obsidian-in-rock
+description: An enclosed lava pool with no shore and no air above it; the collect opens a pour cell, casts, takes the bucket back, and mines three.
+
+# The bucket action's old rule demanded a solid shore block beside the lava
+# with air above it, which a pool sealed in rock never has - and rock is what
+# surrounds lava everywhere below y 0, which is where the bot actually mines.
+# The process opens its own cell with one break from the standing cell, which
+# is the seal in reverse, and pours into that.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -20 -56 -20 20 -40 20 air"
+
+geometry:
+  # Solid rock from y -61 to y -57 with the pool buried inside it: stone on
+  # every side of the lava and a stone lid over it. The bot walks on the lid.
+  - fill: { block: stone, from: [-20, -61, -20], to: [20, -57, 20] }
+  - fill: { block: lava, from: [5, -59, -2], to: [9, -59, 2] }
+
+players:
+  - name: Collector
+    pos: [0, -56, 0]
+    inventory:
+      - { item: water_bucket, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./obsidian-in-rock.ts"]
+
+params:
+  block_name: obsidian
+  count: 3
+  scaffold: false
+  # The pool and the rock around it, sampled once a second so the report says
+  # whether water ever landed and when the bucket emptied.
+  census:
+    from: [3, -60, -4]
+    to: [11, -56, 4]
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: obsidian
+      count: 3
+    # The bucket comes back, which is the only thing that makes a second cast
+    # possible, and the bot ends dry rather than in the pool.
+    - kind: hasItem
+      who: Collector
+      item: water_bucket
+      count: 1
+    # Completion must not be earned by respawning with keepInventory.
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector

@@ -1,0 +1,52 @@
+name: stone-quarry
+description: Mine a useful cobblestone stack from the exposed lower face of a stepped quarry wall.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: polished_andesite, from: [-12, -60, -12], to: [18, -60, 12] }
+  - fill: { block: stone, from: [5, -59, -5], to: [12, -56, 5] }
+  - fill: { block: stone, from: [8, -55, -4], to: [12, -53, 4] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+# The request this world exists to exercise.
+params:
+  block_name: stone
+  count: 10
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: cobblestone
+      count: 10
+    - kind: completion
+      who: Collector

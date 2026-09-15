@@ -1,0 +1,41 @@
+name: enderman-one-failed-approach
+description: Reconsider a nearby Enderman after one elevated approach fails and it returns to level ground.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: true }
+geometry:
+  - fill: { block: air, from: [94, 100, -6], to: [146, 114, 8] }
+  - fill: { block: warped_nylium, from: [94, 99, -6], to: [146, 99, 8] }
+  - fill: { block: bedrock, from: [118, 109, -2], to: [122, 114, 2] }
+  - fill: { block: air, from: [120, 110, 0], to: [120, 112, 0] }
+entities:
+  - { type: enderman, pos: [120.5, 100, 0.5], nbt: '{PersistenceRequired:1b,attributes:[{id:"minecraft:movement_speed",base:0.0d}],Tags:["reconsider_primary"]}' }
+  - { type: enderman, pos: [140.5, 100, 4.5], nbt: '{PersistenceRequired:1b,attributes:[{id:"minecraft:movement_speed",base:0.0d}],Tags:["reconsider_alternative"]}' }
+players:
+  - name: EndermanRanking
+    pos: [100.5, 100, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-reconsideration.ts"]
+params:
+  mode: failed_approach
+  primary: [120.5, 100, 0.5]
+  alternative: [140.5, 100, 4.5]
+  teleportTo: [120.5, 110, 0.5]
+  returnTo: [108.5, 100, 0.5]
+  expectedReason: closer target during approach
+goal: { kind: completion, who: EndermanRanking, timeout: 120 }

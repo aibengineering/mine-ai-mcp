@@ -1,0 +1,37 @@
+name: combat-meaningful-wait
+description: Reach the destination alive despite a delayed returning attacker.
+  Waiting, moving and fighting are runtime choices.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+players:
+  - name: PatientCombat
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+entities:
+  - { type: enderman, pos: [6.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["patient_target"]}' }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./meaningful-wait.ts"]
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: reach
+      who: PatientCombat
+      pos:
+        - 80.5
+        - -60
+        - 0.5
+      radius: 2
+    - kind: survive
+      who: PatientCombat
+      seconds: 1
+    - kind: completion
+      who: PatientCombat

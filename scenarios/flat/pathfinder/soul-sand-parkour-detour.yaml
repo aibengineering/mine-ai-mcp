@@ -1,0 +1,58 @@
+name: soul-sand-parkour-detour
+description: Route around a three-block gap because soul sand cannot supply a full sprint-jump takeoff.
+
+# Baritone prices and generates a shorter jump from soul sand. The direct east
+# route is a three-block sprint jump, while a fully supported detour remains
+# available to the north. The bot must reach the target without issuing any
+# gap movement from the soul-sand source cell.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -5 -63 -6 8 -50 6 air"
+
+geometry:
+  - fill: { block: bedrock, from: [-4, -63, -5], to: [7, -63, 5] }
+  - setblock: { block: soul_sand, at: [0, -61, 0] }
+  - setblock: { block: gold_block, at: [3, -61, 0] }
+  - fill: { block: blue_concrete, from: [0, -61, -2], to: [3, -61, -1] }
+
+players:
+  - name: SoulSandBot
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./soul-sand-parkour-detour.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!SoulSandBot,gamemode=!spectator]"
+
+params:
+  target: [3, -60, 0]
+  range: 0.5
+
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - kind: reach
+      who: SoulSandBot
+      pos: [3.5, -60, 0.5]
+      radius: 0.75
+    - kind: health
+      who: SoulSandBot
+      health: 20
+    - kind: completion
+      who: SoulSandBot

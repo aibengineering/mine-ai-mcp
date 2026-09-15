@@ -1,0 +1,124 @@
+name: dripleaf-pool-trap
+description: Hunt a zombie past a big dripleaf over a one-deep pool with a longer dry way round; the leaf is the shorter route by shape alone and tilts under whatever stands on it.
+
+# Live, 2026-09-12, seed 15276542, request 168 (24 rotten_flesh): MineAI_v2 sat
+# at -69.6,5.2,494.5 in a lush cave for the rest of the request with forward
+# and jump held and never moved. Its feet cell -70,5,494 was a waterlogged
+# big_dripleaf_stem over clay, and the head at -70,6,494 was a big_dripleaf
+# whose collision, the slab from 0.6875 to 0.9375, sat over it. A 1.8-block
+# body does not fit under that slab, so the server kept the player in the
+# 1.5-block crouch pose and held y at 5.1834, the leaf's underside less the
+# crouch height. Mineflayer models the standing body: buoyancy lifted it 0.04
+# every tick, the server rejected each position as a new collision and sent
+# it back, and no horizontal control ever moved it. Navigation retried a
+# step_up to the ledge at -71,6,494 and a walk to -70,5,495 from the same
+# cell until the runtime closed.
+#
+# How it got there: by its boxes a big dripleaf is a full-width tread within
+# an eighth of a block of full height, which is the planner's definition of a
+# floor. A body standing on a big dripleaf tilts it: unstable at once, partial
+# after ten ticks, full after ten more, at which point the leaf has no
+# collision and the body drops into whatever is below. One hundred ticks later
+# the leaf resets to its flat shape above a body that has not left. Live, the
+# searches on that route took a second or more each, long enough to stand
+# through.
+#
+# Shifted by [+70, -65, -494]: the live stem cell is 0,-60,0 here. The direct
+# corridor crosses the pool on the leaf; a dry corridor one cell to the south
+# goes round it in four more steps. The zombie is NoAI with a long health bar
+# at the walled east end, out of reach from the leaf, so combat's own stance
+# re-evaluation (which walks off a tilting leaf) never runs there. The ledge
+# is two blocks above the leaf, not one below it as it was live, because the
+# replan on a partly tilted leaf otherwise steps back onto a reachable ledge
+# and parkours the leaf; the trap itself does not depend on the ledge. This
+# is not a lily pad: a lily pad is 0.09375 tall and is walked over as thin
+# collision.
+#
+# Observed 2026-09-12 with the leaf as the only way across: the hunter drops
+# onto the leaf at 1.3 s, the leaf tilts at 1.4, 1.8 and 2.3 s, the hunter is
+# in the pool at 2.7 s, and the leaf resets at 7.3 s. From 7.5 s the server
+# applies y=-59.8166 every tick, the leaf's underside less the crouch box,
+# while mineflayer alternates -59.78 and -59.82 with jump held: the live
+# signature to the millimetre. The approach ended in repeated_movement_failure
+# and the withdrawal dug the clay underfoot without falling.
+#
+# Two things make this fixture pass, and each is enough on its own. The
+# planner's `yielding` trait keeps a big dripleaf out of the floors, so the
+# route goes round. Failing that, a body found held under a ceiling it does
+# not fit beneath breaks the ceiling and walks on (`overhead-pin.ts`), which
+# `dripleaf-pool-pinned.yaml` tests on its own. The evidence says which one
+# ran: a `pinned_body` event means the leaf was stood on.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -6 -61 -3 10 -50 3 air"
+
+geometry:
+  # Shell: floor at -62, roof at -54, walled at both ends.
+  - fill: { block: stone, from: [-6, -62, -3], to: [9, -54, 3] }
+  # West ledge: floor top at -58, a one-block drop onto the leaf and no way back.
+  - fill: { block: air, from: [-4, -57, 0], to: [-1, -55, 0] }
+  # The pool cell: clay bed, waterlogged stem, leaf head one below the ledge.
+  - fill: { block: air, from: [0, -60, 0], to: [0, -55, 0] }
+  - setblock: { block: clay, at: [0, -61, 0] }
+  - setblock: { block: "big_dripleaf_stem[facing=east,waterlogged=true]", at: [0, -60, 0] }
+  - setblock: { block: "big_dripleaf[facing=east,tilt=none,waterlogged=false]", at: [0, -59, 0] }
+  # East bank: floor top at -60, one step below the leaf, ending at a wall at 7.
+  - fill: { block: air, from: [1, -59, 0], to: [6, -55, 0] }
+  # The dry way round: south off the ledge's end, down two steps beside the
+  # pool, and back onto the bank. Six cells against the leaf's two.
+  - fill: { block: air, from: [-1, -57, 1], to: [-1, -55, 1] }
+  - fill: { block: air, from: [-1, -57, 2], to: [-1, -55, 2] }
+  - fill: { block: air, from: [0, -58, 2], to: [0, -55, 2] }
+  - fill: { block: air, from: [1, -59, 2], to: [1, -55, 2] }
+  - fill: { block: air, from: [2, -59, 2], to: [2, -55, 2] }
+  - fill: { block: air, from: [2, -59, 1], to: [2, -55, 1] }
+
+entities:
+  - type: zombie
+    pos: [5.5, -59, 0.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:100.0d}],Health:100.0f}'
+
+players:
+  - name: PoolHunter
+    pos: [-3.5, -57, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!PoolHunter,gamemode=!spectator]"
+
+# A zombie drops rotten flesh two times in three, so this is a defeat goal, as
+# the blaze fixtures are; the loot is recorded, not required.
+params:
+  mob_name: zombie
+  drop_name: rotten_flesh
+  count: 1
+  defeat_count: 1
+
+goal:
+  kind: all
+  # The walk round takes seconds and the kill about ten. Held under the leaf,
+  # the pin was established by eight seconds in the trap-only layout.
+  timeout: 90
+  goals:
+    - { kind: kill, who: PoolHunter, target: zombie }
+    - { kind: survive, who: PoolHunter, seconds: 1 }
+    - { kind: completion, who: PoolHunter }

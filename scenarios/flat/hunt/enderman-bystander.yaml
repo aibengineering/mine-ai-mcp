@@ -1,0 +1,41 @@
+name: enderman-bystander
+description: Strike an enderman beside a moving neutral enderman on a two-block step without sweeping the bystander.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+setup:
+  # Keep the moving-bystander geometry from the recorded incident.
+  - "fill -1 -58 -1 1 -58 1 minecraft:stone"
+  - "fill -2 -60 0 -1 -59 3 minecraft:stone"
+  - "fill 0 -60 1 0 -60 3 minecraft:stone"
+players:
+  - name: SweepBot
+    op: true
+    pos: [0.89188043018387, -60, 0.50070927447847]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-bystander.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: survive, who: SweepBot, seconds: 1 }
+    - { kind: health, who: SweepBot }
+    - { kind: completion, who: SweepBot }

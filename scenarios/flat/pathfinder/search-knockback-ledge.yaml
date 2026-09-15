@@ -1,0 +1,17 @@
+name: search-knockback-ledge
+description: Replay the EyesBot impulse during stationary route calculation and retain the supporting ledge above lava.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: air, from: [-30, -60, 350], to: [-22, -53, 357] }
+  - fill: { block: lava, from: [-30, -60, 350], to: [-22, -60, 357] }
+  - fill: { block: nether_bricks, from: [-27, -57, 353], to: [-27, -57, 354] }
+players:
+  - name: SearchHoldBot
+    pos: [-26.408289649, -56, 353.950314139]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./search-knockback-ledge.ts"]
+goal: { kind: completion, who: SearchHoldBot, timeout: 30 }

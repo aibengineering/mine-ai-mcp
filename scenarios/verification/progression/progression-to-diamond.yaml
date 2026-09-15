@@ -1,0 +1,80 @@
+# One real world, one script, several independently judged locations.
+# Surface heights surveyed on vanilla 1.21.4; no terrain is placed or reset.
+name: progression-to-diamond
+description: Progress from empty inventory to diamond at three separated surface
+  locations on seed 8675309.
+minecraft:
+  version: 1.21.4
+world:
+  type: default
+  seed: 8675309
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+  difficulty: peaceful
+players:
+  - name: ProgressionBot
+client:
+  command: bun
+  args:
+    - ../../src/client-host.ts
+    - ../../default/progression/progression-to-diamond.ts
+params:
+  logs: 4
+  dirt: 16
+  stone: 12
+  coal: 4
+  rawIron: 3
+  diamonds: 1
+goal:
+  kind: all
+  timeout: 3600
+  goals:
+    - kind: hasItem
+      who: ProgressionBot
+      item: wooden_pickaxe
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: wooden_shovel
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: stone_pickaxe
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: stone_shovel
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: iron_pickaxe
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: dirt
+      count: 2
+    - kind: hasItem
+      who: ProgressionBot
+      item: coal
+      count: 3
+    - kind: hasItem
+      who: ProgressionBot
+      item: diamond
+      count: 1
+    - kind: health
+      who: ProgressionBot
+      health: 20
+    - kind: completion
+      who: ProgressionBot
+verification:
+  radius: 256
+  locations:
+    - [8.5, 64, -19.5]
+    - [-807.5, 105, 800.5]
+    - [1608.5, 75, 1600.5]

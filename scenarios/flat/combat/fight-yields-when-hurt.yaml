@@ -1,0 +1,40 @@
+name: fight-yields-when-hurt
+description: An unarmed wounded bot survives sustained native zombie contact.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+setup:
+  - "difficulty normal"
+entities:
+  - type: zombie
+    pos: [4.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b,NoAI:1b}"
+  - type: zombie
+    pos: [4.5, -60, 3.5]
+    nbt: "{PersistenceRequired:1b,NoAI:1b}"
+players:
+  - name: YieldBot
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: dirt, count: 16 }
+      - { item: cooked_beef, count: 3 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fight-yields-when-hurt.ts"]
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: health, who: YieldBot, health: 1 }
+    - { kind: survive, who: YieldBot, seconds: 1 }
+    - { kind: completion, who: YieldBot }

@@ -1,0 +1,27 @@
+name: end-enderman-gaze-prevention
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+# A flat end-stone platform with clear air above it, away from the fountain.
+geometry:
+  - fill: { block: end_stone, from: [5, 69, -7], to: [19, 69, 7] }
+  - fill: { block: air, from: [5, 70, -7], to: [19, 74, 7] }
+setup:
+  - "kill @e[type=minecraft:enderman]"
+# The dragon spawns when the probe enters the End; it has no part in a gaze test.
+tick:
+  - "kill @e[type=minecraft:ender_dragon]"
+entities:
+  - { type: enderman, pos: [12.5, 70, -4.5], nbt: '{PersistenceRequired:1b,Tags:["gaze_probe"]}' }
+players:
+  - name: GazeProbe
+    pos: [12.5, 70, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/enderman-gaze.ts"]
+goal: { kind: completion, who: GazeProbe, timeout: 60 }

@@ -1,0 +1,90 @@
+name: sealed-in
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+# The second half of the 2026-09-04 livelock. A hide succeeded, walled the bot
+# in and capped it. Thirty seconds later the hide cooldown ran out, the spider was
+# still loaded, and the next hide found every side solid: nothing to dig,
+# nothing to place, and the one failure the hide had. The runtime reported its
+# safety net broken, once a second, from inside a working shelter, and the
+# model could not walk the bot out because each report reclaimed the body.
+#
+# The box here is built by the fixture rather than by a first hide, so the
+# fixture now checks that closed cover prevents contact at the reflex boundary.
+#
+# The bot carries no food, which is the case the live session was in. It
+# regenerates on a full hunger bar until regeneration itself spends the bar
+# below eighteen, and then stops: an observed run reached 12.5 health at 17
+# hunger and held there. The fixture checks natural recovery without asking the
+# reflex to own the body merely because a hostile is loaded behind solid walls.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -4 -60 -4 4 -55 4 air"
+
+setup:
+  - "difficulty normal"
+
+# A three-by-three shell of stone with a one-by-one column of air inside it:
+# four sides at feet height, four at head height, and the cap.
+geometry:
+  - fill: { block: stone, from: [-1, -60, -1], to: [1, -58, 1] }
+  - fill: { block: air, from: [0, -60, 0], to: [0, -59, 0] }
+
+entities:
+  # Fifteen blocks off and unable to move: closed cover must prevent contact.
+  - type: spider
+    pos: [15.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b,NoAI:1b}"
+
+players:
+  - name: SealedBot
+    pos: [0.5, -60, 0.5]
+    # Opped so the driver can bring the bot under the hide bar itself.
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  hurtTo: 7
+  waitTicks: 800
+
+tick:
+  - "gamemode spectator @a[name=!SealedBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 65
+  goals:
+    - kind: health
+      who: SealedBot
+      health: 10
+    - kind: blockAt
+      pos:
+        - 0
+        - -58
+        - 0
+      block: stone
+    - kind: survive
+      who: SealedBot
+      seconds: 1
+    - kind: completion
+      who: SealedBot

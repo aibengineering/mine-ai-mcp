@@ -1,0 +1,71 @@
+name: parkour-ore-gap
+description: Collect coal from an island that is reachable only by a four-block parkour jump, with scaffolding disabled and lava making a missed landing observable.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -10 -64 -6 14 -40 6 air"
+
+geometry:
+  # A sealed lava tray turns an unreliable landing into lost health instead of
+  # a forgiving fall onto ordinary terrain.
+  - fill: { block: bedrock, from: [0, -63, -3], to: [4, -63, 3] }
+  - fill: { block: lava, from: [1, -62, -2], to: [3, -62, 2] }
+
+  # The runway reaches x=0. The landing begins at x=4, leaving three full air
+  # cells: only the four-block parkour movement can cross without scaffolding.
+  - fill: { block: blue_concrete, from: [-6, -55, -1], to: [0, -55, 1] }
+  - fill: { block: blue_concrete, from: [4, -55, -3], to: [10, -55, 3] }
+
+  # Seven blocks from the lip is outside interaction reach. Collect must cross
+  # the gap before it can mine and pick up this safe, supported drop.
+  - setblock: { block: coal_ore, at: [7, -54, 0] }
+
+players:
+  - name: Collector
+    pos: [-4.5, -54, 0.5]
+    inventory:
+      - { item: stone_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+params:
+  block_name: coal_ore
+  count: 1
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: coal
+      count: 1
+    - kind: blockAt
+      who: Collector
+      pos: [7, -54, 0]
+      block: air
+    - kind: health
+      who: Collector
+      health: 20
+    - kind: survive
+      seconds: 1
+    - kind: completion
+      who: Collector

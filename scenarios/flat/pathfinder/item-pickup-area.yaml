@@ -1,0 +1,28 @@
+# Baseline before pick_up_items: pathfinder item goals existed only inside other
+# actions, so no public request could sweep these native scattered entities.
+name: item-pickup-area
+description: Collect filtered native drops scattered across flat ground and a reachable ledge.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: peaceful
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+reset:
+  - "fill -8 -62 -8 22 -50 8 air"
+geometry:
+  - fill: { block: polished_andesite, from: [-8, -61, -8], to: [22, -61, 8] }
+  - fill: { block: polished_andesite, from: [10, -60, -1], to: [14, -58, 2] }
+  - setblock: { at: [9, -60, 0], block: polished_andesite }
+setup:
+  - 'summon item 3.5 -60.0 2.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+  - 'summon item 7.5 -60.0 -2.5 {Item:{id:"minecraft:diamond",count:2},PickupDelay:0s,Age:-32768s}'
+  - 'summon item 13.5 -57.0 0.5 {Item:{id:"minecraft:diamond",count:3},PickupDelay:0s,Age:-32768s}'
+  - 'summon item 5.5 -60.0 6.5 {Item:{id:"minecraft:gravel",count:4},PickupDelay:0s,Age:-32768s}'
+players:
+  - name: PickupBot
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./item-pickup-area.ts"]
+goal: { kind: completion, who: PickupBot, timeout: 60 }

@@ -1,0 +1,70 @@
+name: daylight-spider-at-night
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+# The other half of daylight-spider-ignored. Only the clock differs: everything
+# the bot carries, its health, and where the spider stands are identical. If
+# the daylight rule were written too widely this fixture would report nothing
+# at all, and the safety net would be gone with it.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  # Held still, so that what the bot does is a decision about a hostile in
+  # sight rather than the outcome of a race with an arriving spider.
+  - type: spider
+    pos: [15.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b,NoAI:1b}"
+
+players:
+  - name: MoonlitBot
+    pos: [0.5, -60, 0.5]
+    # Opped so the driver can bring the bot under the hide bar itself.
+    op: true
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 16 }
+      - { item: bread, count: 4 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  hurtTo: 7
+  waitTicks: 2400
+
+tick:
+  - "gamemode spectator @a[name=!MoonlitBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - kind: health
+      who: MoonlitBot
+      health: 12
+    - kind: survive
+      who: MoonlitBot
+      seconds: 1
+    - kind: completion
+      who: MoonlitBot

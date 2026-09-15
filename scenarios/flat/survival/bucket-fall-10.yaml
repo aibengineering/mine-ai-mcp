@@ -1,0 +1,29 @@
+name: bucket-fall-10
+description: Survive a 10-block fall and recover the carried water without losing health.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0, keepInventory: true }
+reset:
+  - "fill -60 -59 -15 60 135 15 air"
+geometry:
+  - fill: { block: end_stone, from: [-60, -60, -15], to: [60, -60, 15] }
+  - fill: { block: glass, from: [0, -50, 0], to: [0, -50, 0] }
+players:
+  - name: BucketBot
+    op: true
+    pos: [0.5, -49, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: water_bucket, count: 1 }
+params: {"name":"10","height":10}
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./bucket-fall.ts"]
+goal:
+  kind: all
+  timeout: 25
+  goals:
+    - { kind: health, who: BucketBot, health: 20 }
+    - { kind: hasItem, who: BucketBot, item: water_bucket, count: 1 }
+    - { kind: completion, who: BucketBot }

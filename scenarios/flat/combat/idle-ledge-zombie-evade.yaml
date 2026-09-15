@@ -1,0 +1,83 @@
+name: idle-ledge-zombie-evade
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill 5 -60 -5 15 -52 5 air"
+
+setup:
+  - "difficulty normal"
+
+# A wide stone ledge four blocks above the bot's feet, walled two high around
+# its rim: too tall to jump, the bot carries nothing to pillar with, and the
+# zombie cannot come down either - it dropped the bare four-block edge to be
+# killed, and a skeleton strafed off every platform it was given. Neither
+# side can reach the other, which is the only fact this fixture is about.
+geometry:
+  - fill: { block: stone, from: [5, -60, -5], to: [15, -57, 5] }
+  - fill: { block: stone, from: [5, -56, -5], to: [15, -55, -5] }
+  - fill: { block: stone, from: [5, -56, 5], to: [15, -55, 5] }
+  - fill: { block: stone, from: [5, -56, -4], to: [5, -55, 4] }
+  - fill: { block: stone, from: [15, -56, -4], to: [15, -55, 4] }
+
+entities:
+  - type: zombie
+    # Nearby but unable to make defensive melee contact through the wall.
+    pos: [6.5, -56, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: LedgeBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  waitTicks: 1260
+
+tick:
+  - "gamemode spectator @a[name=!LedgeBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: entityCount
+      entity: zombie
+      min: 1
+      max: 1
+    - kind: reach
+      who: LedgeBot
+      pos:
+        - 0.5
+        - -60
+        - 0.5
+      radius: 0.5
+    - kind: health
+      who: LedgeBot
+      health: 20
+    - kind: survive
+      who: LedgeBot
+      seconds: 1
+    - kind: completion
+      who: LedgeBot

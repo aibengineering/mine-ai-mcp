@@ -1,0 +1,98 @@
+name: lateral-lava-tunnel
+description: Tunnel to a buried target where the short line is walled by lava on its flank and a longer sealed detour is safe, proving the planner refuses to break a block that laterally retains lava.
+
+# flow-hazard-bypass already covers lava held up by the block above. This
+# fixture covers the other axis: a solid block with lava beside it, which
+# floods the corridor the instant it is removed. The planner models the column
+# above a break but not its sides, so this is the fixture for the lateral
+# guard.
+#
+# The two routes are deliberately asymmetric in length so cost alone prefers
+# the dangerous one. A correct run costs more distance and keeps full health;
+# an incorrect run breaches the lava and the health goal records it.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -6 -64 -12 26 -46 12 air"
+
+geometry:
+  # A solid bedrock mass with exactly two diggable lanes carved into it. Softer
+  # surrounding rock is not enough: given any breakable stone the planner
+  # simply tunnels over the hazard at a higher y, which makes the fixture
+  # measure vertical evasion rather than the lateral guard.
+  - fill: { block: bedrock, from: [-3, -62, -7], to: [21, -52, 7] }
+
+  # Entry and exit halls, open across the mouths of both lanes so neither is
+  # privileged by its approach. They stop at z = 0: extending them to z = 1
+  # would put open air against the end of the lava column, and the lava would
+  # pour into the corridor before the bot moved. A flowing hazard invalidates
+  # the route continuously and the fixture then measures replan thrash instead
+  # of the lateral guard.
+  - fill: { block: air, from: [-2, -60, -4], to: [1, -59, 0] }
+  - fill: { block: air, from: [9, -60, -4], to: [12, -59, 0] }
+
+  # Lane A, the short line: straight east at z = 0, diggable stone, with a
+  # two-block-tall lava face on its northern flank. Every cell of it laterally
+  # retains lava, at both foot and head height.
+  - fill: { block: stone, from: [2, -60, 0], to: [8, -59, 0] }
+  - fill: { block: lava, from: [2, -60, 1], to: [8, -59, 1] }
+
+  # Lane B, the safe detour: same excavation, four blocks south, no lava
+  # anywhere near it. Reaching it costs eight lateral moves the short line does
+  # not, so cost alone prefers Lane A and only the guard redirects.
+  - fill: { block: stone, from: [2, -60, -4], to: [8, -59, -4] }
+
+  - setblock: { block: emerald_block, at: [11, -61, 0] }
+
+players:
+  - name: LateralLavaBot
+    pos: [-1.5, -60, 0.5]
+    # Bare hands take about seven seconds a block through stone, which
+    # turns a seven-cell tunnel into the entire timeout and measures
+    # mining speed rather than route choice.
+    inventory:
+      - item: iron_pickaxe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!LateralLavaBot,gamemode=!spectator]"
+
+params:
+  target: [11, -60, 0]
+  range: 1.5
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - kind: reach
+      who: LateralLavaBot
+      pos: [11.5, -60, 0.5]
+      radius: 1.5
+    # Breaching the channel is survivable if the bot retreats, so health alone
+    # is not enough: the lava must still be where it started.
+    - kind: health
+      who: LateralLavaBot
+      health: 20
+    - kind: blockAt
+      who: LateralLavaBot
+      pos: [8, -60, 1]
+      block: lava
+    - kind: completion
+      who: LateralLavaBot

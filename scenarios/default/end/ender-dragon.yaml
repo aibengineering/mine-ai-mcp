@@ -1,0 +1,35 @@
+name: ender-dragon
+description: Clear the native crystals with mixed weapons, then kill the dragon through successive perches.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+players:
+  - name: DragonFighter
+    pos: [12.5, 64, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 128 }
+      - { item: cooked_beef, count: 64 }
+      - { item: end_stone, count: 256 }
+      - { item: water_bucket, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/ender-dragon.ts"]
+params: { phase: full, crystal_strategy: mixed, call_gap_ticks: 20 }
+goal:
+  kind: all
+  timeout: 1200
+  goals:
+    - { kind: kill, target: ender_dragon }
+    - { kind: survive, seconds: 1 }

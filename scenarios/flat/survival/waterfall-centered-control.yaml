@@ -1,0 +1,51 @@
+name: waterfall-centered-control
+description: A centered bot must survive the same waterfall without overlapping the neighboring overhang.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -60 -8 8 -18 8 air"
+
+geometry:
+  - fill: { block: deepslate, from: [-8, -55, -8], to: [8, -55, 8] }
+  # A source with a native falling column below it, not a source-filled pool.
+  - fill: { block: deepslate, from: [-1, -20, -1], to: [1, -20, 1] }
+  - fill: { block: water, from: [0, -20, 0], to: [0, -20, 0] }
+  - fill: { block: "water[level=8]", from: [0, -54, 0], to: [0, -21, 0] }
+  # Live incident translated by x=-190, z=+288. The center roof cell is
+  # water, but the 0.6-wide body overlaps this north neighbor at head height.
+  - fill: { block: deepslate, from: [0, -31, -1], to: [0, -31, -1] }
+
+players:
+  - name: Diver
+    pos: [0.5, -40, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./waterfall-breath.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!Diver,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: survive
+      who: Diver
+      seconds: 40
+    - kind: completion
+      who: Diver

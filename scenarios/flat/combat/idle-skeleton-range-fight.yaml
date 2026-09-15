@@ -1,0 +1,69 @@
+name: idle-skeleton-range-fight
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+# Skeletons hold and shoot from well outside the reflex's eight-block contact
+# boundary. This fixture starts one where it would stay in real survival, so
+# the only way the encounter can begin is the bot recognising damage as contact.
+entities:
+  - type: skeleton
+    pos: [12.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+
+players:
+  - name: RangeSkelBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  wearArmor: true
+  waitTicks: 1800
+
+tick:
+  - "gamemode spectator @a[name=!RangeSkelBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: kill
+      who: RangeSkelBot
+      target: skeleton
+    - kind: health
+      who: RangeSkelBot
+      health: 10
+    - kind: survive
+      who: RangeSkelBot
+      seconds: 1
+    - kind: completion
+      who: RangeSkelBot

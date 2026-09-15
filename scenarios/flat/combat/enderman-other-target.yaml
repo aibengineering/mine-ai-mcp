@@ -1,0 +1,23 @@
+name: enderman-other-target
+description: Remain unharmed while a native Enderman is angry at another mob.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+players:
+  - name: EndermanWitness
+    pos: [-2.5, -60, 2.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: carved_pumpkin, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-other-target.ts"]
+goal: { kind: completion, who: EndermanWitness, timeout: 30 }

@@ -1,0 +1,56 @@
+name: idle-underwater-survival
+description: Spawn at the bottom of a deep pool with nothing to do and remain alive; the idle water-surface rise keeps the bot breathing.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -61 -12 30 -48 12 air"
+
+geometry:
+  # A deep stone pool with a dry approach at rim height. A narrow submerged
+  # stair gives Pathfinder supported nodes while leaving the target's feet and
+  # head underwater, far from every wall.
+  - fill: { block: stone, from: [6, -60, -10], to: [26, -60, 10] }
+  - fill: { block: stone, from: [6, -59, -10], to: [6, -53, 10] }
+  - fill: { block: stone, from: [26, -59, -10], to: [26, -53, 10] }
+  - fill: { block: stone, from: [7, -59, -10], to: [25, -53, -10] }
+  - fill: { block: stone, from: [7, -59, 10], to: [25, -53, 10] }
+  - fill: { block: water, from: [7, -59, -9], to: [25, -54, 9] }
+  - fill: { block: stone, from: [-4, -53, -3], to: [6, -53, 3] }
+  - fill: { block: stone, from: [7, -54, -1], to: [7, -54, 1] }
+  - fill: { block: stone, from: [8, -55, -1], to: [8, -55, 1] }
+  - fill: { block: stone, from: [9, -56, -1], to: [16, -56, 1] }
+
+players:
+  - name: Navigator
+    pos: [16, -58, 5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-underwater-survival.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!Navigator,gamemode=!spectator]"
+
+goal:
+  kind: all
+  # Forty seconds exceeds vanilla's air supply plus the ordinary drowning
+  # damage window. The extra time bounds setup and navigation on a fresh server.
+  timeout: 60
+  goals:
+    - kind: survive
+      who: Navigator
+      seconds: 40
+    - kind: completion
+      who: Navigator

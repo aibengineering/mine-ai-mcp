@@ -1,0 +1,71 @@
+name: busy-smelt-interrupted
+description: Smelt the requested iron and survive a zombie arriving during the furnace cook.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill 2 -60 0 2 -60 0 air"
+
+setup:
+  - "difficulty normal"
+
+# The arena is still the generated superflat plane. The one placed block is not
+# terrain: it is the prop the interrupted action needs, and the reset above
+# takes it back out again.
+geometry:
+  - setblock: { block: furnace, at: [2, -60, 0] }
+
+entities:
+  - type: zombie
+    pos: [24.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: SmeltBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: raw_iron, count: 3 }
+      - { item: coal, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./busy-reflex.ts"]
+
+params:
+  itemName: raw_iron
+  # Three inputs is thirty seconds of vanilla cook, so the zombie's walk in from
+  # twenty-four blocks lands comfortably inside the wait rather than racing it.
+  count: 3
+  fuelItemName: coal
+  furnace: [2, -60, 0]
+
+tick:
+  - "gamemode spectator @a[name=!SmeltBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: hasItem
+      who: SmeltBot
+      item: iron_ingot
+      count: 3
+    - kind: survive
+      who: SmeltBot
+      seconds: 1
+    - kind: completion
+      who: SmeltBot

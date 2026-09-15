@@ -1,0 +1,47 @@
+name: bridge-hide
+description: "Survive the declared wounded bridge scene; construction and movement choices are diagnostic evidence."
+# Run 14 ended on a fortress walkway on 2026-09-07. The hide refused its first
+# wall because the cell beside the bot had no solid neighbour, the reflex stood
+# down, and the next fireball knocked the bot twenty-two blocks down. A bridge
+# is the ground this asks about: nothing beside the bot but the block it
+# stands on.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: true
+    randomTickSpeed: 0
+    doFireTick: false
+setup:
+  - "difficulty normal"
+geometry:
+  - fill: { block: air, from: [-8, -63, -8], to: [8, -58, 8] }
+  - fill: { block: nether_bricks, from: [-8, -61, 0], to: [8, -61, 0] }
+entities:
+  - type: skeleton
+    pos: [12.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,NoAI:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+players:
+  - name: BridgeHideBot
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: cobblestone, count: 40 }
+      - { item: cooked_beef, count: 8 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+params:
+  hurtTo: 7
+  waitTicks: 2400
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: survive, who: BridgeHideBot, seconds: 1 }
+    - { kind: completion, who: BridgeHideBot }

@@ -1,0 +1,59 @@
+name: netherrack-bridge
+description: Cross a lava gap using only carried netherrack, the material available during Nether exploration.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -3 -62 -2 12 -45 2 air"
+
+geometry:
+  - fill: { block: bedrock, from: [-2, -62, -1], to: [11, -45, -1] }
+  - fill: { block: bedrock, from: [-2, -62, 1], to: [11, -45, 1] }
+  - fill: { block: bedrock, from: [-2, -62, 0], to: [-2, -45, 0] }
+  - fill: { block: bedrock, from: [11, -62, 0], to: [11, -45, 0] }
+  - fill: { block: lava, from: [-1, -62, 0], to: [10, -62, 0] }
+  - fill: { block: bedrock, from: [-1, -60, 0], to: [0, -60, 0] }
+  - fill: { block: bedrock, from: [8, -60, 0], to: [10, -60, 0] }
+
+players:
+  - name: NetherBridgeBot
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - item: netherrack
+        count: 24
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+params:
+  target: [9, -59, 0]
+  range: 0.5
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: reach
+      who: NetherBridgeBot
+      pos: [9.5, -59, 0.5]
+      radius: 0.75
+    - kind: blockAt
+      who: NetherBridgeBot
+      pos: [1, -60, 0]
+      block: netherrack
+    - kind: health
+      who: NetherBridgeBot
+      health: 20
+    - kind: completion
+      who: NetherBridgeBot

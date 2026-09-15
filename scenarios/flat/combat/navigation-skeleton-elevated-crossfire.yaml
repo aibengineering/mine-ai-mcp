@@ -1,0 +1,33 @@
+name: navigation-skeleton-elevated-crossfire
+description: Reach the destination without damage through ground and elevated skeleton fire.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: stone, from: [8, -60, 6], to: [12, -58, 10] }
+entities:
+  - type: skeleton
+    pos: [10.5, -57, 8.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+  - type: skeleton
+    pos: [12.5, -60, -8.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+players:
+  - name: FirstShotWalker
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./navigation-skeleton-first-shot.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: completion, who: FirstShotWalker }
+    - { kind: health, who: FirstShotWalker, health: 20 }

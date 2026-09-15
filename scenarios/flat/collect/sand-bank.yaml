@@ -1,0 +1,49 @@
+name: sand-bank
+description: Collect sand across a wide one-block beach bank without excavating its stone support.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-12, -60, -12], to: [16, -60, 12] }
+  - fill: { block: sand, from: [4, -59, -4], to: [11, -59, 4] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+# The request this world exists to exercise.
+params:
+  block_name: sand
+  count: 10
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: sand
+      count: 10
+    - kind: completion
+      who: Collector

@@ -1,0 +1,45 @@
+name: parkour-low-ceiling
+description: Cross a lava gap without jumping into the fourth cell above the takeoff feet.
+
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "fill -8 -64 -5 10 -46 5 air"
+geometry:
+  - fill: { block: bedrock, from: [-7, -63, -4], to: [9, -63, 4] }
+  - fill: { block: bedrock, from: [-7, -62, -4], to: [9, -62, 4] }
+  - fill: { block: lava, from: [-6, -61, -3], to: [8, -61, 3] }
+  - fill: { block: netherrack, from: [-5, -55, 0], to: [0, -55, 0] }
+  - fill: { block: netherrack, from: [4, -60, 0], to: [7, -55, 0] }
+  # The recorded Nether jump reached feet + 1.249, putting the player's head
+  # just into this cell. Checking only feet, feet + 1 and feet + 2 missed it.
+  - setblock: { block: soul_soil, at: [3, -51, 0] }
+players:
+  - name: CeilingBot
+    pos: [-4.5, -54, 0.5]
+    inventory:
+      - { item: netherrack, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./parkour-low-ceiling.ts"]
+tick:
+  - "gamemode spectator @a[name=!CeilingBot,gamemode=!spectator]"
+params:
+  target: [6, -54, 0]
+  range: 0.5
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: reach, who: CeilingBot, pos: [6.5, -54, 0.5], radius: 0.75 }
+    - { kind: health, who: CeilingBot, health: 20 }
+    - { kind: completion, who: CeilingBot }

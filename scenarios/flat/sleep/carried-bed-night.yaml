@@ -1,0 +1,51 @@
+name: carried-bed-night
+description: Place a carried bed on the only available two-block footprint and sleep through the night.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: 13000
+  gamerules:
+    doDaylightCycle: true
+    doMobSpawning: false
+    doWeatherCycle: false
+    keepInventory: true
+
+reset:
+  - "fill -8 -64 -8 8 -54 8 air"
+
+geometry:
+  - setblock: { at: [0, -60, 0], block: polished_andesite }
+  - fill: { block: polished_andesite, from: [2, -60, 0], to: [3, -60, 0] }
+
+setup:
+  - "difficulty peaceful"
+  - "weather clear"
+
+players:
+  - name: Sleeper
+    pos: [0, -59, 0]
+    op: true
+    inventory:
+      - { item: cyan_bed, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/sleeper.ts"]
+
+params:
+  expect: morning
+  spawn_near: [2, -59, 0]
+  bed_cells:
+    - [2, -59, 0]
+    - [3, -59, 0]
+
+tick:
+  - "gamemode spectator @a[name=!Sleeper,gamemode=!spectator]"
+
+goal:
+  kind: completion
+  who: Sleeper
+  timeout: 30

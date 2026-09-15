@@ -1,0 +1,31 @@
+name: barter-seeded-reward
+description: A native one-gold piglin exchange carries the requested vanilla reward.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+entities:
+  - type: piglin
+    pos: [2, -60, 0.5]
+    nbt: "{IsImmuneToZombification:1b,PersistenceRequired:1b}"
+players:
+  - name: Barterer
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: gold_ingot, count: 3 }
+      - { item: golden_helmet, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "barter.ts"]
+goal:
+  kind: all
+  timeout: 40
+  goals:
+    - { kind: hasItem, who: Barterer, item: blackstone, count: 1 }
+    - { kind: completion, who: Barterer }

@@ -1,0 +1,38 @@
+name: soul-sand-floor
+description: Navigate onto soul sand, start the next route from its fractional height, and step onto a full block.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+reset:
+  - "fill -3 -61 -3 12 -53 3 air"
+geometry:
+  - fill: { block: soul_sand, from: [-2, -61, -2], to: [11, -61, 2] }
+  - setblock: { block: stone, at: [0, -61, 0] }
+  - setblock: { block: stone, at: [9, -60, 0] }
+players:
+  - name: SoulFloorBot
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+params:
+  legs:
+    - { target: [8, -60, 0], range: 0, label: walk onto soul sand }
+    - { target: [9, -59, 0], range: 0, label: step up from soul sand }
+    - { target: [2, -60, 0], range: 0, label: return to soul sand }
+    - { target: [0, -60, 0], range: 0, label: walk off soul sand }
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: reach, who: SoulFloorBot, pos: [0.5, -60, 0.5], radius: 0.7 }
+    - { kind: health, who: SoulFloorBot, health: 20 }
+    - { kind: blockAt, who: SoulFloorBot, pos: [8, -61, 0], block: soul_sand }
+    - { kind: blockAt, who: SoulFloorBot, pos: [2, -61, 0], block: soul_sand }
+    - { kind: completion, who: SoulFloorBot }

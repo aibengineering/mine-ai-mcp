@@ -1,0 +1,90 @@
+name: standing-down
+description: "Starting wounded on bedrock without construction supplies, reach the requested destination alive. Survival chooses how to handle the missing capability."
+
+# The first half of the 2026-09-04 livelock. The hide reported a capability
+# limit, was chosen again the next tick, and each retry claimed the body and
+# cancelled whatever the model had started: forty-three notifications in
+# twenty-four seconds, then eighty-four. The bot could not walk out of it.
+#
+# Here the ground is bedrock and the bot carries no blocks, so a hide can dig
+# nothing and place nothing however often it is tried. The reflex must fail
+# once, say so once, and then leave the body alone.
+#
+# The corridor is one cell wide so the bot can only move along x. That matters:
+# the failed-hide memory clears when the bot changes cell, and moving away from
+# the spider along x takes it out of the sixteen-block observation range in the
+# same step, so there is nothing left to hide from when it clears.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -20 -60 -4 20 -55 4 air"
+
+setup:
+  - "difficulty normal"
+
+geometry:
+  # Bedrock underfoot: the shaft is refused before the first swing.
+  - fill: { block: bedrock, from: [-20, -61, -1], to: [20, -61, 1] }
+  # A one-wide corridor, so the only way out is along x.
+  - fill: { block: stone, from: [-20, -60, -1], to: [20, -59, -1] }
+  - fill: { block: stone, from: [-20, -60, 1], to: [20, -59, 1] }
+
+entities:
+  # 15.9 blocks away: in sight for the trigger, and out of the sixteen-block
+  # observation range as soon as the bot has walked half a block up the corridor.
+  - type: spider
+    pos: [-15.4, -60, 0.5]
+    nbt: "{PersistenceRequired:1b,NoAI:1b}"
+
+players:
+  - name: StandDownBot
+    pos: [0.5, -60, 0.5]
+    # Opped so the driver can bring the bot under the hide bar itself.
+    op: true
+    # A sword and nothing to build with. The hide has no answer here and the
+    # runtime is meant to say so rather than keep trying.
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./standing-down.ts"]
+
+params:
+  hurtTo: 7
+  # The reason is not asserted: both records carry their own sentence in it -
+  # the refusal that stopped the hide, and why the reflex is standing down.
+  waitTicks: 600
+  navigateTo: [16, -60, 0]
+
+tick:
+  - "gamemode spectator @a[name=!StandDownBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    # The model's navigate actually moved the bot, which is the whole point of
+    # handing the body back.
+    - kind: reach
+      who: StandDownBot
+      pos: [16, -60, 0]
+      radius: 2
+    - kind: survive
+      who: StandDownBot
+      seconds: 1
+    - kind: completion
+      who: StandDownBot

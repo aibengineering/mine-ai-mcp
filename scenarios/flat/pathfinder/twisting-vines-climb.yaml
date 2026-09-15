@@ -1,0 +1,36 @@
+name: twisting-vines-climb
+description: Climb twisting vines through plant and tip blocks despite a mid-column sideways velocity packet.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "fill -4 -61 -4 8 -48 4 air"
+geometry:
+  - fill: { block: netherrack, from: [-4, -61, -4], to: [8, -61, 4] }
+  - setblock: { block: twisting_vines_plant, at: [2, -60, 0] }
+  - setblock: { block: twisting_vines_plant, at: [2, -59, 0] }
+  - setblock: { block: twisting_vines_plant, at: [2, -58, 0] }
+  - setblock: { block: twisting_vines_plant, at: [2, -57, 0] }
+  - setblock: { block: twisting_vines_plant, at: [2, -56, 0] }
+  - setblock: { block: twisting_vines_plant, at: [2, -55, 0] }
+  - setblock: { block: twisting_vines_plant, at: [2, -54, 0] }
+  - setblock: { block: twisting_vines_plant, at: [2, -53, 0] }
+  - setblock: { block: twisting_vines_plant, at: [2, -52, 0] }
+  - setblock: { block: twisting_vines, at: [2, -51, 0] }
+  - fill: { block: netherrack, from: [3, -53, 0], to: [5, -53, 0] }
+players:
+  - { name: TwistingBot, pos: [0.5, -60, 0.5] }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./vine-knockback-mid-climb.ts"]
+params:
+  legs:
+    - { target: [4, -52, 0], range: 0.75, label: "climb twisting vines and exit onto side landing" }
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: reach, who: TwistingBot, pos: [4.5, -52, 0.5], radius: 1 }
+    - { kind: health, who: TwistingBot, health: 20 }
+    - { kind: completion, who: TwistingBot }

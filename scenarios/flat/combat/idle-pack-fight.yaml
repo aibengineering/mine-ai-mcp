@@ -1,0 +1,70 @@
+name: idle-pack-fight
+description: An idle bot is approached by two abreast zombies on open superflat and survives both actual kills without being asked to fight.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  - type: zombie
+    pos: [24.5, -60, -0.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: zombie
+    pos: [24.5, -60, 1.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: IdlePackBot
+    # The bot never moves under its own orders. Everything that closes this
+    # twenty-four-block gap is the pack walking in and the reflex answering.
+    pos: [0.5, -60, 0.5]
+    # See navigation-pack-fight: armor keeps one kill's cost clear of the
+    # ten-health threshold, so this fixture measures the policy rather than
+    # whether the damage rolls left the bot above or below it.
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./mixed-fight.ts"]
+
+params:
+  # One encounter can kill both pack members. Observe both entity deaths,
+  # not an assumed one-encounter-per-kill correspondence.
+  {}
+
+tick:
+  - "gamemode spectator @a[name=!IdlePackBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: entityCount
+      entity: zombie
+      max: 0
+    - kind: survive
+      who: IdlePackBot
+      seconds: 1
+    - kind: completion
+      who: IdlePackBot

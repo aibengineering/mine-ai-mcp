@@ -1,0 +1,95 @@
+name: vine-chasm-parkour
+description: Reach the lower ledge by the long way down rather than jumping at the free-hanging vine column strung over the chasm.
+
+# Retained incident bd95619b, 2026-09-13, during a collect_mob_drop leg: the
+# route committed to `69,94,76>73,94,76:parkour`, a four-block sprint parkour
+# whose landing cell was a vine and whose support was the vine beneath it — a
+# free-hanging column over a twenty-block drop. The vine did catch the bot: the
+# descent clamped to 0.15 a tick for seven ticks. It clamps nothing horizontal,
+# and forward and sprint stayed held, so the body crossed the column's one
+# block of width, left by the far side at x=74.34 and fell nineteen blocks.
+#
+# A climbable is support to hang in, never a pad to land on. The column here is
+# a real shortcut and not a dead end — it descends to the ledge the goal sits
+# on — so the jump is the cheapest route on offer until it is refused, and the
+# stairway round is longer. Drifting off the column lands on that same ledge
+# five blocks down, so only the health reading separates the two arrivals.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -12 -61 -12 16 -38 14 air"
+
+geometry:
+  # The chasm floor, well under everything, so nothing routes across the bottom.
+  - fill: { block: andesite, from: [-12, -61, -12], to: [16, -61, 14] }
+
+  # The upper ledge, walked at y=-45, ending at x=0.
+  - fill: { block: stone, from: [-6, -46, -2], to: [0, -46, 2] }
+  # The lower ledge the goal sits on, walked at y=-50.
+  - fill: { block: stone, from: [5, -51, -2], to: [12, -51, 2] }
+
+  # The column: a leaf canopy with vines hanging under it, exactly four blocks
+  # from the upper lip — the parkour span — and reaching the lower ledge, so
+  # jumping at it is a genuine shortcut rather than a dead end.
+  # Placed top down: a hanging vine is held by the one above it, and a column
+  # filled from the bottom breaks as fast as it is written.
+  - fill: { block: oak_leaves, from: [4, -41, -1], to: [4, -41, 1] }
+  - setblock: { block: "vine[up=true]", at: [4, -42, 0] }
+  - setblock: { block: "vine[up=true]", at: [4, -43, 0] }
+  - setblock: { block: "vine[up=true]", at: [4, -44, 0] }
+  - setblock: { block: "vine[up=true]", at: [4, -45, 0] }
+  - setblock: { block: "vine[up=true]", at: [4, -46, 0] }
+  - setblock: { block: "vine[up=true]", at: [4, -47, 0] }
+  - setblock: { block: "vine[up=true]", at: [4, -48, 0] }
+  - setblock: { block: "vine[up=true]", at: [4, -49, 0] }
+  - setblock: { block: "vine[up=true]", at: [4, -50, 0] }
+
+  # The stairway round: north off the upper ledge, down along z=10, and back
+  # south onto the lower ledge. Longer than the jump, which is the point.
+  - fill: { block: stone, from: [0, -46, 3], to: [0, -46, 10] }
+  - setblock: { block: stone, at: [1, -47, 10] }
+  - setblock: { block: stone, at: [2, -48, 10] }
+  - setblock: { block: stone, at: [3, -49, 10] }
+  - setblock: { block: stone, at: [4, -50, 10] }
+  - fill: { block: stone, from: [5, -51, 3], to: [5, -51, 10] }
+
+players:
+  - name: ChasmWalker
+    pos: [-5.5, -45, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!ChasmWalker,gamemode=!spectator]"
+
+params:
+  target: [10, -50, 0]
+  range: 1
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: reach
+      who: ChasmWalker
+      pos: [10.5, -50, 0.5]
+      radius: 1.5
+    - kind: health
+      who: ChasmWalker
+      health: 20
+    - kind: completion
+      who: ChasmWalker

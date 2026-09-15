@@ -1,0 +1,27 @@
+name: melee-lava-edge
+description: Choose melee footing before an outward hit beside lava, then finish the airborne handoff safely.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "kill @e[type=!minecraft:player]"
+geometry:
+  - fill: { block: lava, from: [-8, -61, -8], to: [8, -61, 0] }
+entities:
+  - type: magma_cube
+    pos: [0.5, -60, 3.5]
+    nbt: '{Size:0,NoAI:1b,NoGravity:1b,Invulnerable:1b,PersistenceRequired:1b}'
+players:
+  - name: LedgeBot
+    op: true
+    pos: [0.5, -60, 1.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./melee-lava-edge.ts"]
+goal: { kind: completion, who: LedgeBot, timeout: 45 }

@@ -1,0 +1,32 @@
+name: barter-ground-first
+description: A native one-gold piglin exchange carries the requested vanilla reward.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+entities:
+  - type: item
+    pos: [5, -60, 0.5]
+    nbt: '{Item:{id:"minecraft:ender_pearl",count:3}}'
+players:
+  - name: Barterer
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: gold_ingot, count: 3 }
+      - { item: golden_helmet, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "barter.ts"]
+params: { item_name: ender_pearl, gold_budget: 0 }
+goal:
+  kind: all
+  timeout: 40
+  goals:
+    - { kind: hasItem, who: Barterer, item: ender_pearl, count: 1 }
+    - { kind: completion, who: Barterer }

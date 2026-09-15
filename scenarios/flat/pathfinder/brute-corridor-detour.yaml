@@ -1,0 +1,129 @@
+name: brute-corridor-detour
+description: Three ways through a wall past a piglin brute - the corridor it
+  stands in, a near lane inside its acquisition range, and a far lane outside
+  the field's reach; the route takes the far lane and never enters acquisition
+  range.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  # Midnight so nothing burns, and no daylight cycle so the fixture reads the
+  # same however long a trial takes.
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  # Split in two because the working area is past the 32768-block fill limit.
+  - "fill -54 -61 -40 54 -57 -5 air"
+  - "fill -54 -61 -4 54 -57 30 air"
+
+setup:
+  - "difficulty normal"
+
+geometry:
+  # Ground the whole working area.
+  - fill: { block: smooth_stone, from: [-54, -61, -40], to: [54, -61, 30] }
+
+  # One wall ninety-seven blocks wide and three high. The width is
+  # load-bearing: going round either end is ninety-six blocks of lateral travel
+  # against the far lane's fifty, and diagonals make lateral travel cheap
+  # enough that a narrower wall is walked round instead of used.
+  - fill: { block: smooth_stone, from: [-48, -60, -14], to: [48, -58, -2] }
+
+  # The corridor: straight at the target, with the brute in it. Two blocks
+  # high, so the wall's top layer roofs every lane and none can be entered by
+  # climbing on to something and dropping in from above.
+  - fill: { block: air, from: [0, -60, -14], to: [0, -59, -2] }
+
+  # The near lane, thirteen blocks east. This is the discriminating one: it is
+  # outside the twelve-block radius the field used before, so a field that
+  # stopped pricing at twelve called it free and took the short way - thirteen
+  # blocks from a mob that starts coming at sixteen. It must now cost enough
+  # to lose to the far lane.
+  - fill: { block: air, from: [13, -60, -14], to: [13, -59, -2] }
+
+  # The far lane, twenty-five blocks east: one block beyond the brute's
+  # avoidance radius, so every cell of it is free.
+  - fill: { block: air, from: [25, -60, -14], to: [25, -59, -2] }
+
+entities:
+  # Halfway along the corridor. NoAI so it never moves or swings: what is being
+  # measured is the route, and a mob that walks at the bot measures a fight.
+  # It also means arrival proves nothing on its own, which is why the client
+  # asserts closest approach rather than survival.
+  - type: piglin_brute
+    pos: [0.5, -60, -8.0]
+    nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b}"
+
+players:
+  # Twenty-six blocks out, so the bot starts outside the brute's priced band
+  # and the route is chosen rather than escaped from.
+  - name: Navigator
+    pos: [0.5, -60, 18.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./brute-corridor.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!Navigator,gamemode=!spectator]"
+
+params:
+  # Also outside the priced band, so arriving is not itself a cost the search
+  # has to weigh against the lanes.
+  target: [0, -60, -34]
+  # Land on the destination cell itself, so the reach goal below has the whole
+  # of its radius as slack rather than sharing it with the arrival tolerance.
+  range: 0.5
+  species: piglin_brute
+  # Vanilla follow range: where the brute, not the bot, chooses the fight.
+  acquisitionRange: 16
+  lanes:
+    - ["corridor", 0]
+    - ["near", 13]
+    - ["far", 25]
+  laneZ: [-14, -2]
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - kind: reach
+      who: Navigator
+      pos: [0.5, -60, -33.5]
+      radius: 1.5
+
+    # Never touched: a route that stays out of reach does not fight, and the
+    # brute is still standing where the fixture put it.
+    - kind: health
+      who: Navigator
+      health: 20
+
+    - kind: entityCount
+      entity: piglin_brute
+      min: 1
+
+    # Both walls between the three lanes are intact. A field that made the bot
+    # dig rather than walk would be the failure this is most worried about,
+    # now that the priced band is twice as wide as it was.
+    - kind: blockAt
+      who: Navigator
+      pos: [6, -60, -8]
+      block: smooth_stone
+    - kind: blockAt
+      who: Navigator
+      pos: [19, -60, -8]
+      block: smooth_stone
+
+    # Closest approach is asserted by the client, which fails the trial if the
+    # route ever came inside acquisition range.
+    - kind: completion
+      who: Navigator

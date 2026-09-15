@@ -1,0 +1,17 @@
+name: bucket-fall-corner-drift
+description: A descending body drifts diagonally onto a raised End-stone corner, based on the eighth-tower fatal fall.
+template: bucket-fall-40.yaml
+geometry:
+  - fill: { block: end_stone, from: [0, 60, -15], to: [40, 60, 15] }
+  - setblock: { block: end_stone, at: [15, 61, -12] }
+  - setblock: { block: glass, at: [17, 77, -10] }
+players:
+  - name: BucketBot
+    op: true
+    pos: [17.1654098, 78, -9.8525611]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: water_bucket, count: 1 }
+params:
+  impulseWhenAirborne: true
+  impulse: { x: -1138, y: -10644, z: -973 }

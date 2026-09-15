@@ -1,0 +1,33 @@
+name: piglin-attribution
+description: A prepared bot survives observed piglin aggression overlapping source-less fire damage.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    naturalRegeneration: true
+players:
+  - name: PiglinProbe
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 128 }
+      - { item: bread, count: 16 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./piglin-attribution.ts"]
+goal:
+  kind: completion
+  who: PiglinProbe
+  # Allows arrangement plus a twenty-second native pressure window.
+  timeout: 120

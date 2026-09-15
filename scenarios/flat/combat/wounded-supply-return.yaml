@@ -1,0 +1,38 @@
+name: wounded-supply-return
+description: Bring eight iron ingots home from a wounded, hungry start through native night-time enemies, using the carried food and equipment. Any surviving route or combat strategy is valid.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+players:
+  - name: SupplyReturn
+    op: true
+    pos: [-18.5, -60, 0.5]
+    inventory:
+      - { item: iron_ingot, count: 8 }
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 24 }
+      - { item: cooked_beef, count: 12 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+entities:
+  - { type: zombie, pos: [-8.5, -60, 1.5], nbt: '{PersistenceRequired:1b}' }
+  - { type: skeleton, pos: [0.5, -60, -4.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: zombie, pos: [15.5, -60, 2.5], nbt: '{PersistenceRequired:1b}' }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./wounded-supply-return.ts"]
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: reach, who: SupplyReturn, pos: [30.5, -60, 0.5], radius: 2 }
+    - { kind: hasItem, who: SupplyReturn, item: iron_ingot, count: 8 }
+    - { kind: survive, who: SupplyReturn, seconds: 1 }
+    - { kind: completion, who: SupplyReturn }

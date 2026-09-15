@@ -1,0 +1,27 @@
+name: ascending-jump-magma-landing
+description: Land an ascending two-block jump on its safe pad before the magma block beyond it.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+reset: ["fill -4 -60 -3 6 -30 3 air"]
+geometry:
+  - fill: { block: bedrock, from: [-4, -61, -3], to: [6, -61, 3] }
+  - fill: { block: bedrock, from: [-1, -60, 0], to: [0, -41, 0] }
+  - setblock: { block: magma_block, at: [1, -41, 0] }
+  - setblock: { block: bedrock, at: [2, -40, 0] }
+  - setblock: { block: magma_block, at: [3, -40, 0] }
+players:
+  - name: Jumper
+    pos: [0.10229, -40, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./ascending-jump-magma-landing.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: health, who: Jumper, health: 20 }
+    - { kind: reach, who: Jumper, pos: [2.5, -39, 0.5], radius: 0.3 }
+    - { kind: completion, who: Jumper }

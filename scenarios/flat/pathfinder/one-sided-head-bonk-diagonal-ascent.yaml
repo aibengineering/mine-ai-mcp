@@ -1,0 +1,75 @@
+name: one-sided-head-bonk-diagonal-ascent
+description: Reject a diagonal rise when only one swept corner has a low ceiling, then use the safe cardinal staircase.
+
+# Baritone's MovementDiagonal rejects an ascent if either possible corner
+# corridor has the head-bonk shape: open at feet and head height, blocked one
+# block above the head. Which side the player sweeps through is not stable
+# enough to assume the other clear corridor will save the movement.
+#
+# This is deliberately asymmetric. The live leaf fixture blocks both upper
+# corners; this fixture proves that the less obvious one-sided case is also
+# rejected while diagonal ascent remains enabled by default.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -5 -63 -6 7 -50 6 air"
+
+geometry:
+  - fill: { block: bedrock, from: [-4, -63, -5], to: [6, -63, 5] }
+
+  # Tempting shortcut: a cardinal rise followed by a diagonal rise.
+  - setblock: { block: oak_leaves, at: [0, -61, 0] }
+  - setblock: { block: oak_leaves, at: [-1, -60, 0] }
+  - setblock: { block: dirt, at: [0, -59, -1] }
+
+  # Only one of the two upper corner cells swept by
+  #   (-1,-59,0) -> (0,-58,-1)
+  # is blocked. The other remains air.
+  - setblock: { block: oak_leaves, at: [0, -57, 0] }
+
+  # Safe, longer cardinal route.
+  - fill: { block: blue_concrete, from: [1, -61, 0], to: [2, -61, 0] }
+  - fill: { block: blue_concrete, from: [2, -61, -2], to: [2, -61, -1] }
+  - setblock: { block: gold_block, at: [1, -60, -2] }
+  - setblock: { block: emerald_block, at: [0, -59, -2] }
+
+players:
+  - name: OneSideBot
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./leaf-hemmed-diagonal-ascent.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!OneSideBot,gamemode=!spectator]"
+
+params:
+  target: [0, -58, -1]
+  range: 0.5
+
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - kind: reach
+      who: OneSideBot
+      pos: [0.5, -58, -0.5]
+      radius: 0.75
+    - kind: health
+      who: OneSideBot
+      health: 20
+    - kind: completion
+      who: OneSideBot

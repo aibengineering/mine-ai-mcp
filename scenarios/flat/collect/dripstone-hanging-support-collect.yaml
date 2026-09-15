@@ -1,0 +1,25 @@
+name: dripstone-hanging-support-collect
+description: Refuse to collect an unreachable ceiling support while its stalactite hangs over the bot.
+minecraft: { version: "1.21.4" }
+world: { type: flat, time: noon, gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0 } }
+reset:
+  - "fill -4 -60 -4 4 -50 4 air"
+geometry:
+  - fill: { block: bedrock, from: [-2, -60, -2], to: [2, -52, 2] }
+  - fill: { block: air, from: [0, -59, 0], to: [0, -53, 0] }
+  - setblock: { block: stone, at: [0, -54, 0] }
+  - setblock: { block: "pointed_dripstone[vertical_direction=down,thickness=tip]", at: [0, -55, 0] }
+players:
+  - name: HangingCollector
+    pos: [0.5, -59, 0.5]
+    inventory: [{ item: iron_pickaxe, count: 1 }]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./dripstone-hanging-support-collect.ts"]
+params: {}
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: health, who: HangingCollector, health: 20 }
+    - { kind: completion, who: HangingCollector }

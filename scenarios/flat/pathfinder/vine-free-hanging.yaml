@@ -1,0 +1,43 @@
+name: vine-free-hanging
+description: Ascend inside a regular vine suspended from a leaf canopy without any wall attachment.
+
+# Prismarine Physics 1.21.4 has climbUsingJump: regular vines ascend from
+# jump input without horizontal collision. This fixture checks that physical
+# fact instead of assuming a free-hanging vine is descend-only.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "fill -4 -61 -4 8 -48 4 air"
+geometry:
+  - fill: { block: andesite, from: [-4, -61, -4], to: [8, -61, 4] }
+  - fill: { block: oak_leaves, from: [1, -50, -1], to: [3, -50, 1] }
+  # A side landing below the canopy lets the route leave the hanging column
+  # without passing through the block that physically supports the vine.
+  - fill: { block: stone, from: [3, -54, 0], to: [5, -54, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -51, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -52, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -53, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -54, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -55, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -56, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -57, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -58, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -59, 0] }
+  - setblock: { block: "vine[up=true]", at: [2, -60, 0] }
+players:
+  - { name: FreeVineBot, pos: [0.5, -60, 0.5] }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./vine-climb-reliability.ts"]
+params:
+  legs:
+    - { target: [4, -53, 0], range: 0.75, label: "ascend the hanging vine and exit onto its side landing" }
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: reach, who: FreeVineBot, pos: [4.5, -53, 0.5], radius: 1 }
+    - { kind: health, who: FreeVineBot, health: 20 }
+    - { kind: completion, who: FreeVineBot }

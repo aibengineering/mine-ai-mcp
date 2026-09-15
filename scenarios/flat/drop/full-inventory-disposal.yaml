@@ -1,0 +1,18 @@
+name: full-inventory-disposal
+description: Report a full inventory accurately, make an underground disposal pit, and collect the waiting wool without recovering discarded spoil.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "fill -8 -63 -8 8 -54 8 stone"
+  - "fill 0 -60 -6 0 -59 6 air"
+players:
+  - name: FullDisposer
+    op: true
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./full-inventory-disposal.ts"]
+goal: { kind: completion, who: FullDisposer, timeout: 60 }

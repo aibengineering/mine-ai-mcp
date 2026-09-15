@@ -1,0 +1,15 @@
+name: mcp-synchronous-starvation
+description: The shipped host must return a saved MCP failure when a connected bot executes an infinite synchronous loop, while allowing a seven-second healthy action.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: peaceful
+  time: noon
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+players:
+  - name: HostGuard
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["./host-starvation.ts", "synchronous"]
+goal: { kind: completion, who: HostGuard, timeout: 30 }

@@ -1,0 +1,55 @@
+name: wild-animal-hunt-8675309
+description: Hunt whatever animal seed 8675309's terrain loaded near the spawn, on generated ground, for a guaranteed drop.
+
+# The failure this plan came from was on generated terrain, so the acceptance
+# has to be too: a flat world has nothing to walk around. The species is not in
+# the fixture, because terrain decides what lives there - the driver asks
+# view_status first and hunts the nearest animal it knows a guaranteed
+# drop for. One file per seed because a scenario names one world; the driver is
+# shared, like the loaded-mobs fixtures beside it.
+#
+# `difficulty peaceful`, which most default-world fixtures set, would delete
+# every mob in the world. Easy is the lowest difficulty that keeps animals
+# loaded.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: default
+  seed: 8675309
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    # On, so the terrain's own animals are there to hunt.
+    doMobSpawning: true
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+
+# The server's own spawn point is not stable across fresh worlds even on a fixed
+# seed, so the column is pinned. This is the surface column the terrain and
+# progression fixtures on this seed already use.
+players:
+  - name: WildHunter
+    pos: [8.5, 64, -19.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+setup:
+  - "difficulty easy"
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./wild-animal-hunt.ts"]
+
+params:
+  count: 1
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - kind: completion
+      who: WildHunter

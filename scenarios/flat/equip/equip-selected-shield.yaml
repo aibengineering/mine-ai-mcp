@@ -1,0 +1,18 @@
+name: equip-selected-shield
+description: An explicit inventory source selects a fresh shield over the worn off-hand copy.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: peaceful
+  gamerules: { doMobSpawning: false }
+players:
+  - name: ShieldSelector
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./equip-selected-shield.ts"]
+goal: { kind: completion, who: ShieldSelector, timeout: 30 }

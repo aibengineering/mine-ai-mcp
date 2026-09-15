@@ -1,0 +1,31 @@
+name: magma-cube-knockback-platform
+description: A native large magma cube jumps toward an unshielded bot on the east edge of a small platform above lava.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: netherrack, from: [-138, 21, 188], to: [-118, 21, 206] }
+  - fill: { block: lava, from: [-138, 22, 188], to: [-118, 31, 206] }
+  - fill: { block: netherrack, from: [-131, 46, 195], to: [-129, 46, 197] }
+  - fill: { block: netherrack, from: [-130, 56, 239], to: [-128, 56, 241] }
+players:
+  - name: LedgeFighter
+    # Recorded run-16 position: the east edge is x=-128.
+    pos: [-128.53437787507164, 47, 197.61474899858322]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-idle-ledge.ts"]
+goal: { kind: completion, who: LedgeFighter, timeout: 45 }
+
+params: { mob: magma_cube, arrival: [-129.95, 47, 197.61474899858322] }

@@ -1,0 +1,44 @@
+name: navigation-creeper-wall-pocket
+description: Leave a shallow stone recess alive and reach open ground when a creeper and other monsters approach its mouth. The rear and side walls prevent a simple backward retreat; fighting, building protection, digging or taking another route are all valid.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: true, keepInventory: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: stone, from: [-8, -64, -8], to: [24, -61, 8] }
+  - fill: { block: stone, from: [-2, -60, -3], to: [-1, -57, 3] }
+  - fill: { block: stone, from: [0, -60, -3], to: [7, -57, -2] }
+  - fill: { block: stone, from: [0, -60, 2], to: [7, -57, 3] }
+players:
+  - name: PocketTraveller
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_shovel, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 16 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+entities:
+  - { type: creeper, pos: [3.5, -60, 0.5], nbt: '{PersistenceRequired:1b}' }
+  - { type: spider, pos: [2.5, -60, -0.5], nbt: '{PersistenceRequired:1b}' }
+  - { type: skeleton, pos: [8.5, -60, 0.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./navigation-creeper-pocket.ts"]
+params: { destination: [18, -60, 0] }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: reach, who: PocketTraveller, pos: [18.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: PocketTraveller, seconds: 1 }
+    - { kind: completion, who: PocketTraveller }

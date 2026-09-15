@@ -1,0 +1,25 @@
+name: bow-after-refused-backstop
+description: A shield raised for an unbuildable ledge backstop must be released before drawing the bow. Require native arrows and a target death, not the controller's shot counter.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - setblock: { block: stone, at: [0, -58, 0] }
+entities:
+  - type: blaze
+    pos: [14.5, -57, 0.5]
+    nbt: "{NoAI:1b,NoGravity:1b,PersistenceRequired:1b}"
+players:
+  - name: BowBackstop
+    pos: [0.5, -57, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./bow-after-refused-backstop.ts"]
+goal: { kind: completion, who: BowBackstop, timeout: 30 }

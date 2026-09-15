@@ -1,0 +1,66 @@
+name: idle-lone-zombie-fight
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+# The generated superflat plane is the arena, so there is no fixture geometry to
+# clear - only the scenario's own zombie, which a reset must declare for Mine
+# Labs to run the matching teardown on a reused world.
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  - type: zombie
+    pos: [24.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: IdleBot
+    # The bot never moves under its own orders. Everything that closes this
+    # twenty-four-block gap is the zombie walking in and the reflex answering.
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  waitTicks: 600
+
+tick:
+  - "gamemode spectator @a[name=!IdleBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: kill
+      who: IdleBot
+      target: zombie
+    - kind: health
+      who: IdleBot
+      health: 20
+    - kind: survive
+      who: IdleBot
+      seconds: 1
+    - kind: completion
+      who: IdleBot

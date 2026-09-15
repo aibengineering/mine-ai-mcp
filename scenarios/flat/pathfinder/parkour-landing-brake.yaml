@@ -1,0 +1,18 @@
+name: parkour-landing-brake
+description: Stop a four-block parkour landing on a single block above lava instead of coasting off its far edge.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: air, from: [-3, -60, -3], to: [9, -52, 3] }
+  - fill: { block: lava, from: [-3, -60, -3], to: [9, -60, 3] }
+  - fill: { block: nether_bricks, from: [0, -57, 0], to: [1, -57, 0] }
+  - setblock: { block: nether_bricks, at: [5, -57, 0] }
+players:
+  - name: LandingBot
+    pos: [0.818325143, -56, 0.593665666]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./parkour-landing-brake.ts"]
+goal: { kind: completion, who: LandingBot, timeout: 30 }

@@ -1,0 +1,68 @@
+name: obsidian-under-water
+description: Collect obsidian under flowing water after isolating the water that made route excavation unsafe.
+
+# The third link in run 10's chain: eleven cast obsidian blocks sat under the
+# water that made them, the flood rule refused every break because liquid was
+# above, and the water could not be scooped because no cell over the cast was a
+# source any more. The target rule allows preparation before mining; it must
+# now isolate the flow, because current can displace the stationary miner.
+#
+# The slab is level with the floor and one water source at its edge keeps a
+# shallow flow over the whole of it. There is no lava to seal here and nothing
+# to climb: only the liquid-above refusal stands between the bot and the blocks.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -20 -59 -20 20 -40 20 air"
+
+geometry:
+  # Thick ground: the first run of this fixture tunnelled down through a
+  # two-layer floor into the superflat's dirt and lost its path at y -62.
+  - fill: { block: stone, from: [-20, -63, -20], to: [20, -60, 20] }
+  - fill: { block: obsidian, from: [4, -60, -2], to: [8, -60, 2] }
+  - setblock: { block: water, at: [6, -59, 0] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+params:
+  block_name: obsidian
+  count: 6
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: obsidian
+      count: 6
+    # Completion must not be earned by respawning with keepInventory.
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector

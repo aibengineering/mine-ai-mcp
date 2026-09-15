@@ -1,0 +1,35 @@
+name: explicit-crafting_table-collection
+description: Explicitly collect the named interactive block while preserving its neighbour.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+geometry:
+  - setblock: { block: chest, at: [2, -60, 0] }
+  - setblock: { block: crafting_table, at: [4, -60, 0] }
+players:
+  - name: Collector
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_axe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+params:
+  block_name: crafting_table
+  count: 1
+  x: 4
+  y: -60
+  z: 0
+  scaffold: false
+goal:
+  kind: all
+  timeout: 35
+  goals:
+    - { kind: hasItem, who: Collector, item: crafting_table, count: 1 }
+    - { kind: blockAt, who: Collector, pos: [4, -60, 0], block: air }
+    - { kind: blockAt, who: Collector, pos: [2, -60, 0], block: chest }
+    - { kind: completion, who: Collector }

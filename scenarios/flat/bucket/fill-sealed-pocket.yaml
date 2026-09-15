@@ -1,0 +1,48 @@
+name: fill-sealed-pocket
+description: Dig access above an enclosed underground water pocket and fill from solid dry ground.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -61 -8 12 -48 8 air"
+
+geometry:
+  - fill: { block: stone, from: [-8, -62, -8], to: [12, -52, 8] }
+  # A dry entry chamber, separated from the pocket by solid rock.
+  - fill: { block: air, from: [-2, -56, -1], to: [1, -55, 1] }
+  # Every face of this source is initially enclosed, including its roof.
+  - setblock: { block: water, at: [6, -58, 0] }
+
+players:
+  - name: PocketBucket
+    pos: [0.5, -56, 0.5]
+    inventory:
+      - { item: bucket, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fill-sealed-pocket.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!PocketBucket,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: hasItem
+      who: PocketBucket
+      item: water_bucket
+      count: 1
+    - kind: completion
+      who: PocketBucket

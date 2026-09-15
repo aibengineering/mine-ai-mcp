@@ -1,0 +1,20 @@
+# Build the playthrough image from the public repository instead of this checkout.
+#
+#   docker compose -f compose.yaml -f compose.beatthegame.yaml build
+#
+# Set MINE_AI_MCP_REF to the tag or commit a run was built from to reproduce it;
+# it defaults to the commit that beat the game (tag beat-the-game).
+services:
+  play:
+    build:
+      dockerfile: Dockerfile.beatthegame
+      args:
+        MINE_AI_MCP_REPO: ${MINE_AI_MCP_REPO:-https://github.com/aibengineering/mine-ai-mcp.git}
+        MINE_AI_MCP_REF: ${MINE_AI_MCP_REF:-beat-the-game}
+    environment:
+      # The winning run's settings, re-applied here so they survive changes to
+      # the compose.yaml defaults. Override any of them for a different run.
+      SEED: ${SEED:-97996358}
+      BOT_NAME: ${BOT_NAME:-AI_M1KE}
+      CLAUDE_MODEL: "${CLAUDE_MODEL:-claude-opus-5[1m]}"
+      CLAUDE_EFFORT: ${CLAUDE_EFFORT:-high}

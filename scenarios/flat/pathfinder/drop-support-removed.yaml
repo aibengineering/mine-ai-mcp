@@ -1,0 +1,20 @@
+name: drop-support-removed
+description: Stop a committed descent when the server removes its landing support before the bot leaves the upper ledge.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: bedrock, from: [0, -60, 0], to: [0, -41, 0] }
+  - setblock: { block: cobblestone, at: [1, -42, 0] }
+  - setblock: { block: stone, at: [1, -40, 0] }
+players:
+  - name: LandingBot
+    op: true
+    pos: [0.5, -40, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./drop-support-removed.ts"]
+goal: { kind: completion, who: LandingBot, timeout: 30 }

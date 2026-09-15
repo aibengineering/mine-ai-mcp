@@ -1,0 +1,61 @@
+name: fill-flowing
+description: A fill named at a flowing cell scoops the source three blocks upstream, and a wrong cell is refused before the walk.
+
+# Run 10 named a flowing cell for a fill; the action walked five seconds to it,
+# digging with the pickaxe on the way, and only then read the block and refused
+# it. A cell that is already wrong is wrong now, and flowing water is fed by a
+# source a few cells back, so the check happens before the walk and the flow is
+# traced to what feeds it.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -20 -59 -20 20 -40 20 air"
+
+geometry:
+  - fill: { block: stone, from: [-20, -61, -20], to: [20, -61, 20] }
+  - fill: { block: stone, from: [-20, -60, -20], to: [20, -60, 20] }
+  # A channel one cell wide with walls, so the water runs east and nowhere else.
+  - fill: { block: stone, from: [3, -59, -1], to: [12, -59, 1] }
+  - fill: { block: air, from: [4, -59, 0], to: [11, -59, 0] }
+  - setblock: { block: water, at: [4, -59, 0] }
+
+players:
+  - name: Bucketeer
+    pos: [0, -59, 0]
+    inventory:
+      - { item: bucket, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fill-flowing.ts"]
+
+params:
+  # Three cells downstream of the source at 4,-59,0: flowing water, not a source.
+  cell: { x: 7, y: -59, z: 0 }
+  # A stone cell, which must be refused without a route being run at all.
+  refuse: { x: 15, y: -60, z: 0 }
+
+tick:
+  - "gamemode spectator @a[name=!Bucketeer,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: hasItem
+      who: Bucketeer
+      item: water_bucket
+      count: 1
+    - kind: completion
+      who: Bucketeer

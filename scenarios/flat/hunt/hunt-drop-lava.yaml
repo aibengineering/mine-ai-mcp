@@ -1,0 +1,18 @@
+name: hunt-drop-lava
+description: Retain the last observed lava cell when a native dropped cream disappears without pickup.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, randomTickSpeed: 0 }
+reset:
+  - "kill @e[type=!minecraft:player]"
+geometry:
+  - fill: { block: lava, from: [-1, -61, -1], to: [1, -61, 1] }
+players:
+  - name: DropWitness
+    op: true
+    pos: [5.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./hunt-drop-lava.ts"]
+goal: { kind: completion, who: DropWitness, timeout: 20 }

@@ -1,0 +1,43 @@
+name: lava-advances-during-dig
+description: After a drop, release a contained lava source while navigation digs ahead; native flow must not reach the bot before it reacts.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0, keepInventory: true }
+reset:
+  - "fill -6 -60 -6 6 -47 6 air"
+geometry:
+  - fill: { block: bedrock, from: [-5, -55, -5], to: [5, -55, 5] }
+  - setblock: { block: deepslate, at: [0, -52, 1] }
+  # Source and release gate. The fixture removes the gate after the drop;
+  # subsequent spread and damage are entirely server-driven.
+  - fill: { block: bedrock, from: [-4, -54, -1], to: [-2, -53, 1] }
+  - setblock: { block: lava, at: [-3, -54, 0] }
+  - setblock: { block: stone, at: [-2, -54, 0] }
+  # Long dig ahead of the landing. Bedrock prohibits climbing over or
+  # walking around it, while the open area east allows a safe withdrawal.
+  - fill: { block: bedrock, from: [-1, -54, -4], to: [1, -50, -1] }
+  - fill: { block: air, from: [0, -54, -3], to: [0, -53, -2] }
+  - fill: { block: obsidian, from: [0, -54, -1], to: [0, -53, -1] }
+players:
+  - name: LavaNavigator
+    pos: [0.5, -51, 1.5]
+    op: true
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./lava-navigation.ts"]
+params:
+  kind: released_flow
+  target: [0, -54, -3]
+  lavaCells: [[-3, -54, 0]]
+tick:
+  - "gamemode spectator @a[name=!LavaNavigator,gamemode=!spectator]"
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: health, who: LavaNavigator, health: 20 }
+    - { kind: completion, who: LavaNavigator }

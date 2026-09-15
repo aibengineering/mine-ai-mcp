@@ -1,0 +1,45 @@
+name: stream-slalom
+description: An unarmoured bot runs a narrow zigzag bridge around four falling lava streams without touching them.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0, keepInventory: true }
+reset:
+  - "fill -8 -62 -4 9 -43 11 air"
+geometry:
+  - fill: { block: bedrock, from: [-8, -61, -4], to: [9, -61, 11] }
+  - fill: { block: blue_concrete, from: [-5, -55, 0], to: [0, -55, 0] }
+  - fill: { block: lime_concrete, from: [0, -55, 1], to: [0, -55, 4] }
+  - fill: { block: blue_concrete, from: [1, -55, 4], to: [5, -55, 4] }
+  - fill: { block: lime_concrete, from: [5, -55, 5], to: [5, -55, 8] }
+  - fill: { block: glass, from: [0, -45, -1], to: [2, -45, 1] }
+  - fill: { block: glass, from: [-2, -45, 3], to: [0, -45, 5] }
+  - fill: { block: glass, from: [5, -45, 3], to: [7, -45, 5] }
+  - fill: { block: glass, from: [3, -45, 7], to: [5, -45, 9] }
+  - setblock: { block: lava, at: [1, -45, 0] }
+  - setblock: { block: lava, at: [-1, -45, 4] }
+  - setblock: { block: lava, at: [6, -45, 4] }
+  - setblock: { block: lava, at: [4, -45, 8] }
+  - fill: { block: "lava[level=8]", from: [1, -60, 0], to: [1, -46, 0] }
+  - fill: { block: "lava[level=8]", from: [-1, -60, 4], to: [-1, -46, 4] }
+  - fill: { block: "lava[level=8]", from: [6, -60, 4], to: [6, -46, 4] }
+  - fill: { block: "lava[level=8]", from: [4, -60, 8], to: [4, -46, 8] }
+players:
+  - name: LavaNavigator
+    pos: [-4.5, -54, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./lava-navigation.ts"]
+params:
+  kind: steady_stream
+  target: [5, -54, 8]
+  lavaCells: [[1, -54, 0], [-1, -54, 4], [6, -54, 4], [4, -54, 8]]
+tick:
+  - "gamemode spectator @a[name=!LavaNavigator,gamemode=!spectator]"
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: health, who: LavaNavigator, health: 20 }
+    - { kind: completion, who: LavaNavigator }

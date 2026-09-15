@@ -1,0 +1,33 @@
+name: fortress-crossfire-cover
+description: Build real carried-block cover after native blazes open fire in the live-world fortress, then recover without a shield. This isolates shelter protection, not hunting from cover.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: "-5335131384818472281"
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: true, keepInventory: false }
+entities:
+  - { type: blaze, pos: [-30.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-25.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-30.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-25.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-27.5, 87, 357.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+players:
+  - name: FortressCover
+    pos: [-27.5, 82, 355.5]
+    op: true
+    inventory:
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cooked_beef, count: 64 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fortress-crossfire-cover.ts"]
+goal: { kind: completion, who: FortressCover, timeout: 120 }

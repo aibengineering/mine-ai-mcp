@@ -1,0 +1,24 @@
+name: creeper-retreat-interception
+description: A hostile entering an already committed creeper escape line must make the bot steer around it.
+# Regression for the playthrough observation: escaping a fuse must not freeze
+# crowd awareness. Static NoAI mobs isolate route selection from attack timing.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+entities:
+  - type: creeper
+    pos: [3.5, -60, 0.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b}'
+  - type: husk
+    pos: [0.5, -60, 12.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b}'
+players:
+  - name: RetreatBot
+    pos: [0.5, -60, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./creeper-retreat-interception.ts"]
+goal: { kind: completion, who: RetreatBot, timeout: 20 }

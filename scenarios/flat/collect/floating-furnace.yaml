@@ -1,0 +1,58 @@
+name: floating-furnace
+description: Pick up a furnace that hangs at head height beside the bot with air beneath it, the way one does after the crafting table under it was picked up first.
+
+# The default-world progression driver places its furnace on top of its
+# crafting table, picks the table up from under it, and then asks for the
+# furnace at the exact coordinates. Two runs on 2026-09-04 stopped there
+# with no blocks broken and no reason given. This is that shape alone.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: andesite, from: [-12, -60, -12], to: [18, -60, 12] }
+  - setblock: { block: furnace, at: [2, -58, 0] }
+
+players:
+  - name: Collector
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: stone_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+params:
+  block_name: furnace
+  count: 1
+  x: 2
+  y: -58
+  z: 0
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: furnace
+      count: 1
+    - kind: completion
+      who: Collector

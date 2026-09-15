@@ -1,0 +1,38 @@
+name: dripstone-stairs
+description: Break stalagmites out of a rising passage instead of treating their tips as stair treads.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+reset:
+  - "fill -4 -60 -3 9 -50 3 air"
+geometry:
+  - fill: { block: bedrock, from: [-3, -60, -2], to: [8, -52, 2] }
+  - fill: { block: air, from: [-2, -59, 0], to: [7, -53, 0] }
+  - fill: { block: stone, from: [2, -59, 0], to: [7, -59, 0] }
+  - fill: { block: stone, from: [4, -58, 0], to: [7, -58, 0] }
+  - setblock: { block: "pointed_dripstone[vertical_direction=up,thickness=tip]", at: [2, -58, 0] }
+  - setblock: { block: "pointed_dripstone[vertical_direction=up,thickness=tip]", at: [4, -57, 0] }
+players:
+  - name: DripstoneWalker
+    pos: [-1.5, -59, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+params:
+  target: [6, -57, 0]
+  range: 0
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: reach, who: DripstoneWalker, pos: [6.5, -57, 0.5], radius: 0.7 }
+    - { kind: health, who: DripstoneWalker, health: 20 }
+    - { kind: completion, who: DripstoneWalker }

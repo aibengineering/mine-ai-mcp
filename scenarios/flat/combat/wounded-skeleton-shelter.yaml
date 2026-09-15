@@ -1,0 +1,28 @@
+name: wounded-skeleton-shelter
+description: A wounded shieldless bot recovers to healthy while surviving native skeleton fire.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: true }
+geometry:
+  - fill: { block: bedrock, from: [-8, -61, -8], to: [8, -61, 8] }
+players:
+  - name: WoundedArcherBot
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 32 }
+params: { mob: skeleton }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./wounded-ranged-shelter.ts"]
+goal: { kind: completion, who: WoundedArcherBot, timeout: 90 }

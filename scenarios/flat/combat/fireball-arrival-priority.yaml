@@ -1,0 +1,26 @@
+name: fireball-arrival-priority
+description: A farther fast fireball and a closer newly launched fireball arrive from opposite shield bearings; the retreat guard must block both.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    naturalRegeneration: false
+players:
+  - name: GuardProbe
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fireball-arrival-priority.ts"]
+goal:
+  kind: all
+  timeout: 35
+  goals:
+    - { kind: health, who: GuardProbe, health: 20 }
+    - { kind: completion, who: GuardProbe }

@@ -1,0 +1,55 @@
+name: eyes-of-ender-collection
+description: Collect native blaze rods and ender pearls, craft twelve eyes of ender, and remain alive.
+# Arranged like the twelve-rod fixture: an opped scenario bot with the expedition
+# kit, native mobs summoned then released to normal AI. All killing, looting and
+# crafting use ordinary production actions.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: "-5335131384818472281"
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: false
+# Upper fortress spawner from the run-14 world, as in fortress-twelve-rods:
+# five native blazes wait with their AI off until the driver releases them.
+entities:
+  - { type: blaze, pos: [-30.5, 85, 355.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+  - { type: blaze, pos: [-25.5, 85, 355.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+  - { type: blaze, pos: [-30.5, 85, 359.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+  - { type: blaze, pos: [-25.5, 85, 359.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+  - { type: blaze, pos: [-27.5, 87, 357.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+players:
+  - name: EyesBot
+    pos: [-27.5, 82, 355.5]
+    op: true
+    inventory:
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 192 }
+      - { item: shield, count: 2 }
+      - { item: cooked_beef, count: 64 }
+      - { item: cobblestone, count: 128 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./eyes-of-ender-collection.ts"]
+params:
+  # A separate pearl arena, outside the fortress's loaded threat neighbourhood.
+  # The former site was only fifteen blocks from the active spawner: surviving
+  # blazes followed the teleport and turned the sequential pearl phase into
+  # an unintended mixed encounter. Carry the same spent kit into this phase.
+  ender_start: [-27.5, 82, 84.5]
+goal:
+  kind: all
+  timeout: 1500
+  goals:
+    - { kind: hasItem, who: EyesBot, item: ender_eye, count: 12 }
+    - { kind: completion, who: EyesBot }

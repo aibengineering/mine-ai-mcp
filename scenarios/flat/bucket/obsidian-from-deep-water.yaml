@@ -1,0 +1,58 @@
+name: obsidian-from-deep-water
+description: Fill a bucket from a pool four blocks deep without stepping into it, make obsidian, scoop back, and mine three.
+
+# Both bucket deaths in the playthroughs were drownings: the walk to a water
+# source ended on a cell inside the lake, the fill worked from there, and the
+# bot ran out of air during the next call. Here the pool is four deep, so a
+# fill that stands in the water is a fill from the bottom of it. The bot must
+# choose a dry cell on the shore, fill from there, and carry on.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -63 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-16, -63, -16], to: [20, -60, 16] }
+  - fill: { block: water, from: [-10, -63, -3], to: [-4, -60, 3] }
+  - fill: { block: lava, from: [5, -60, -3], to: [9, -60, 3] }
+
+players:
+  - name: Bucketeer
+    pos: [0, -59, 0]
+    inventory:
+      - { item: bucket, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/bucketeer.ts"]
+
+params:
+  # The air above the stone shore block next to the lava; the pour spreads east from here.
+  pour: { x: 4, y: -59, z: 0 }
+  obsidian: 3
+
+tick:
+  - "gamemode spectator @a[name=!Bucketeer,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - kind: hasItem
+      who: Bucketeer
+      item: obsidian
+      count: 3
+    - kind: completion
+      who: Bucketeer

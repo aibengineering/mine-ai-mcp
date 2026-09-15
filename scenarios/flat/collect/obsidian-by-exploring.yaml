@@ -1,0 +1,70 @@
+name: obsidian-by-exploring
+description: With no obsidian and no lava in any loaded column, one collect call explores outward until a pool loads, casts, and mines three.
+
+# The lava pools sit eighty blocks out on all four sides, past the
+# sixty-four-block loaded scan, so the call must move before it can see one. It
+# uses the mine process's own branch goal, which walks away from where it
+# started while rescanning; lava coming into range ends that walk the way a
+# newly scanned ore would, and the pour follows.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -88 -59 -88 88 -40 88 air"
+
+geometry:
+  - fill: { block: stone, from: [-88, -61, -88], to: [88, -61, 88] }
+  - fill: { block: stone, from: [-88, -60, -88], to: [88, -60, 88] }
+  - fill: { block: lava, from: [78, -60, -3], to: [82, -60, 3] }
+  - fill: { block: lava, from: [-82, -60, -3], to: [-78, -60, 3] }
+  - fill: { block: lava, from: [-3, -60, 78], to: [3, -60, 82] }
+  - fill: { block: lava, from: [-3, -60, -82], to: [3, -60, -78] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: water_bucket, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+params:
+  block_name: obsidian
+  count: 3
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: obsidian
+      count: 3
+    - kind: hasItem
+      who: Collector
+      item: water_bucket
+      count: 1
+    # Completion must not be earned by respawning with keepInventory.
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector

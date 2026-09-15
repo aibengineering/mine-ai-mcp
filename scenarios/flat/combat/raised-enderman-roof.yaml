@@ -1,0 +1,20 @@
+name: raised-enderman-roof
+description: Construct enderman protection from a raised cell whose adjacent support column has no floor at the bot's standing level.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+geometry:
+  - setblock: { block: basalt, at: [0, -60, 0] }
+players:
+  - name: RaisedRoofBot
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: netherrack, count: 17 }
+entities:
+  - { type: enderman, pos: [7.5, -60, 0.5], nbt: "{PersistenceRequired:1b}" }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./raised-enderman-roof.ts"]
+goal: { kind: completion, who: RaisedRoofBot, timeout: 30 }

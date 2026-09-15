@@ -1,0 +1,31 @@
+name: deep-diamond-descent
+description: Descend fifty-two blocks through a solid hill to collect diamonds without environmental damage.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+geometry:
+  - fill: { block: stone, from: [-10, -59, -10], to: [10, -7, 10] }
+  - fill: { block: grass_block, from: [-10, -7, -10], to: [10, -7, 10] }
+  - fill: { block: diamond_ore, from: [-1, -58, 0], to: [1, -58, 0] }
+players:
+  - name: DeepDiamondBot
+    pos: [0.5, -6, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./deep-diamond-descent.ts"]
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, who: DeepDiamondBot, item: diamond, count: 3 }
+    - { kind: health, who: DeepDiamondBot, health: 20 }
+    - { kind: completion, who: DeepDiamondBot }

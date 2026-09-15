@@ -1,0 +1,53 @@
+name: basalt-crossfire
+description: Reach the far side of a basalt traverse alive under native cube, enderman and ghast pressure.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: true, keepInventory: false, randomTickSpeed: 0 }
+# A carved basalt traverse over lava: a start shelf, a gap, two ledges and an
+# emerald marker at the far end. The northern bypass stays intact when the
+# central gap is removed.
+geometry:
+  - fill: { block: air, from: [-8, 90, -18], to: [46, 118, 22] }
+  - fill: { block: bedrock, from: [-7, 95, -17], to: [45, 95, 21] }
+  - fill: { block: lava, from: [-7, 96, -17], to: [45, 96, 21] }
+  - fill: { block: basalt, from: [-3, 96, -5], to: [8, 99, 5] }
+  - fill: { block: basalt, from: [9, 96, -5], to: [15, 100, 5] }
+  - fill: { block: basalt, from: [16, 96, -5], to: [24, 101, 5] }
+  - fill: { block: basalt, from: [25, 96, -5], to: [38, 100, 5] }
+  - fill: { block: air, from: [12, 97, -2], to: [13, 100, 5] }
+  - fill: { block: magma_block, from: [20, 101, -1], to: [22, 101, 1] }
+  - fill: { block: basalt, from: [28, 101, 2], to: [29, 104, 3] }
+  - setblock: { block: emerald_block, at: [36, 100, 0] }
+entities:
+  - { type: magma_cube, pos: [7.5, 100, 0.5], nbt: "{Size:1,NoAI:1b,PersistenceRequired:1b}" }
+  - { type: magma_cube, pos: [15.5, 101, 1.5], nbt: "{Size:3,NoAI:1b,PersistenceRequired:1b}" }
+  - { type: enderman, pos: [6.5, 100, 2.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+  - { type: ghast, pos: [21.5, 106, 12.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+players:
+  - name: BasaltTraveler
+    pos: [0.5, 100, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 48 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./basalt-crossfire.ts"]
+goal:
+  kind: completion
+  who: BasaltTraveler
+  # Native hostile contact and the 36-block traverse.
+  timeout: 120

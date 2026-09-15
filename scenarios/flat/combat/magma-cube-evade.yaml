@@ -1,0 +1,38 @@
+name: magma-cube-evade
+description: Escape native magma cubes along a basalt shelf with lava edges, taking space around the cube in the direct retreat path.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+setup:
+  - "difficulty normal"
+geometry:
+  - fill: { block: lava, from: [-14, -61, -10], to: [65, -60, 10] }
+  - fill: { block: basalt, from: [-10, -61, -5], to: [60, -60, 5] }
+  # The west end is closed; both the short escape and its detour go east.
+  - fill: { block: bedrock, from: [-11, -60, -6], to: [-11, -53, 6] }
+entities:
+  - type: magma_cube
+    pos: [-5.5, -59, 0.5]
+    nbt: "{Size:3,NoAI:1b,PersistenceRequired:1b}"
+  - type: magma_cube
+    pos: [4.5, -59, 0.5]
+    nbt: "{Size:1,NoAI:1b,PersistenceRequired:1b}"
+players:
+  - name: CubeEvader
+    op: true
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./magma-cube-evade.ts"]
+goal:
+  kind: completion
+  who: CubeEvader
+  # One 15-second evade plus arrangement and observation of its settled event.
+  timeout: 30

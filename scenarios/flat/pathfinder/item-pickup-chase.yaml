@@ -1,0 +1,86 @@
+name: item-pickup-chase
+description: Collect four scattered drops by routing onto each item's own cell, including one resting a cell down a step.
+
+# Pickup is one movement boundary, not two. A* routes onto the item's own cell
+# or the one below it, which is inside the server's pickup volume, so arriving
+# is collecting; the local driver stays behind as recovery for a drop that
+# moved out from under the route. The third drop rests one cell across and one
+# cell below the ledge, so reaching it means descending to its level rather
+# than standing above it, which collects nothing.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -12 -62 -12 24 -50 24 air"
+  - "kill @e[type=item]"
+
+geometry:
+  - fill: { block: stone, from: [-10, -61, -10], to: [22, -61, 22] }
+
+  # A ledge the bot has to climb, with the far drop resting at its foot on the
+  # low side. Approaching along the top puts that item one across and one down.
+  - fill: { block: stone, from: [14, -60, -4], to: [20, -60, 10] }
+  - fill: { block: stone, from: [14, -59, -4], to: [20, -59, 10] }
+
+  # A low wall, so the drops on the open floor are not one straight sprint.
+  - fill: { block: stone, from: [4, -60, -6], to: [4, -59, 6] }
+
+  # A walled channel carrying a drop east before it rests. The separate
+  # moving-item-pursuit fixture owns the stronger never-resting discriminator.
+  - fill: { block: stone, from: [-2, -60, 7], to: [13, -60, 7] }
+  - fill: { block: stone, from: [-2, -60, 9], to: [13, -60, 9] }
+  - setblock: { block: stone, at: [13, -60, 8] }
+  # Cap the west end, or the source spreads out over the open floor instead of
+  # running down the channel.
+  - setblock: { block: stone, at: [-3, -60, 8] }
+  - setblock: { block: water, at: [-2, -60, 8] }
+
+# `Age:-32768s` is the never-despawn sentinel, so a slow run fails on the route
+# rather than on the five-minute drop timer. `PickupDelay:0s` lets the server
+# hand the item over the instant the bot's box overlaps it, which is the
+# continuous arrival fact the local driver is closing toward.
+setup:
+  - 'summon item 2.5 -60.0 3.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+  - 'summon item 9.5 -60.0 -3.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+  - 'summon item 13.5 -60.0 4.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+  # In the current, and therefore still drifting when the route is planned.
+  - 'summon item 0.5 -60.0 8.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+
+players:
+  - name: PickupBot
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./item-pickup-chase.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!PickupBot,gamemode=!spectator]"
+
+params:
+  expected: 4
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: hasItem
+      who: PickupBot
+      item: diamond
+      count: 4
+    - kind: health
+      who: PickupBot
+      health: 20
+    - kind: completion
+      who: PickupBot

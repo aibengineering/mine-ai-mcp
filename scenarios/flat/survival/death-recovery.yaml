@@ -1,0 +1,27 @@
+# Baseline before pick_up_items: player_death preserved the coordinates, but no
+# published action could pursue the native scattered item entities after respawn.
+name: death-recovery
+description: Recover at least ninety percent of a native scattered kit using the retained death location.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: peaceful
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, keepInventory: false }
+reset:
+  - "fill -12 -62 -12 12 -55 12 air"
+geometry:
+  - fill: { block: polished_andesite, from: [-12, -61, -12], to: [12, -61, 12] }
+players:
+  - name: RecoveryBot
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: cobblestone, count: 32 }
+      - { item: oak_log, count: 16 }
+      - { item: iron_ingot, count: 8 }
+      - { item: diamond_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./death-recovery.ts"]
+goal: { kind: completion, who: RecoveryBot, timeout: 60 }

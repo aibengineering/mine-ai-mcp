@@ -1,0 +1,58 @@
+name: pathfinder-tower-round-trip-diagonal
+description: A mid-air goal thirty blocks up and eight columns away; the pathfinder must build a tower it can climb back down, unhurt.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -60 -8 8 -20 8 air"
+
+players:
+  - name: TowerBuilder
+    pos: [0.5, -60, 0.5]
+    # More than enough to reach the goal, as the live bot had: forty-six dirt
+    # when it built its tower, twenty-five of which it used.
+    inventory:
+      - item: dirt
+        count: 48
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./tower-round-trip.ts"]
+
+params:
+  height: 30
+  # Off the start column, so the ascent cannot be one straight pillar. A
+  # straight pillar is a solid column the pathfinder digs back down; the live
+  # tower was built around a birch canopy and was not.
+  offset: [8, 8]
+  range: 1.5
+
+tick:
+  - "gamemode spectator @a[name=!TowerBuilder,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    # The bot must have gone up: this is the behaviour under test, not a guard.
+    # And it must come back down to the ground it left from, unhurt.
+    - kind: reach
+      who: TowerBuilder
+      pos: [0.5, -60, 0.5]
+      radius: 2.5
+    - kind: health
+      who: TowerBuilder
+      health: 20
+    - kind: completion
+      who: TowerBuilder

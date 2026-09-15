@@ -1,0 +1,47 @@
+name: nearby-bed-day
+description: Use a nearby bed during daytime to set the spawn point without claiming to have slept.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    doWeatherCycle: false
+    keepInventory: true
+
+reset:
+  - "fill -8 -60 -8 12 -54 8 air"
+
+geometry:
+  - fill: { block: polished_andesite, from: [-8, -60, -8], to: [12, -60, 8] }
+  - setblock: { at: [5, -59, 0], block: "blue_bed[facing=east,part=foot,occupied=false]" }
+  - setblock: { at: [6, -59, 0], block: "blue_bed[facing=east,part=head,occupied=false]" }
+
+setup:
+  - "difficulty peaceful"
+  - "weather clear"
+
+players:
+  - name: Sleeper
+    pos: [0, -59, 0]
+    op: true
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/sleeper.ts"]
+
+params:
+  expect: respawn
+  spawn_near: [5, -59, 0]
+
+tick:
+  - "gamemode spectator @a[name=!Sleeper,gamemode=!spectator]"
+
+goal:
+  kind: completion
+  who: Sleeper
+  timeout: 30

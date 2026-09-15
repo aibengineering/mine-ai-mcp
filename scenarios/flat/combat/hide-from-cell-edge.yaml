@@ -1,0 +1,23 @@
+name: hide-from-cell-edge
+description: Dig and seal a shelter when the bot begins straddling the edge of its footing cell, as in run 12.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+players:
+  - name: EdgeHideBot
+    pos: [0.12, -60, 0.88]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./hide-from-cell-edge.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: health, who: EdgeHideBot, health: 20 }
+    - { kind: completion, who: EdgeHideBot }

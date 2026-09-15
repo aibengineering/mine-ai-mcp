@@ -1,0 +1,53 @@
+name: coal-outcrop
+description: Mine an exposed coal seam from the lower face of a small stone hillside.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: andesite, from: [-12, -60, -12], to: [18, -60, 12] }
+  - fill: { block: stone, from: [5, -59, -5], to: [12, -54, 5] }
+  - fill: { block: coal_ore, from: [5, -58, -2], to: [5, -57, 2] }
+  - setblock: { block: coal_ore, at: [6, -58, 3] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: stone_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+# The request this world exists to exercise.
+params:
+  block_name: coal_ore
+  count: 5
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: coal
+      count: 5
+    - kind: completion
+      who: Collector

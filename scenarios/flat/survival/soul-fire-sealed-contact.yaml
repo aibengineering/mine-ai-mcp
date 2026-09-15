@@ -1,0 +1,19 @@
+name: soul-fire-sealed-contact
+description: Survive soul fire appearing inside the occupied sealed refuge, ending source contact and residual burning.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: soul_soil, from: [-2, -61, -2], to: [2, -61, 2] }
+  - fill: { block: cobblestone, from: [-1, -60, -1], to: [1, -58, 1] }
+  - fill: { block: air, from: [0, -60, 0], to: [0, -59, 0] }
+players:
+  - name: FireSurvivor
+    op: true
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./soul-fire-contact.ts"]
+goal: { kind: completion, who: FireSurvivor, timeout: 35 }

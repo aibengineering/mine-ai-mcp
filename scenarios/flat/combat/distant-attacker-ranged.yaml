@@ -1,0 +1,31 @@
+name: distant-attacker-ranged
+description: Survive native blaze volleys arriving from beyond passive observation range without losing health.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+players:
+  - name: DistantAttacker
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./distant-attacker.ts"]
+goal:
+  kind: completion
+  who: DistantAttacker
+  timeout: 55

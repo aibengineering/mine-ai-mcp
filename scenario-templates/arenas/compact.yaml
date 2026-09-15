@@ -1,0 +1,9 @@
+# 23 x 15 walkable blocks. Feet at y=-60; six-block walls contain mobs.
+geometry:
+  - fill: { block: bedrock, from: [-6, -64, -8], to: [18, -64, 8] }
+  - fill: { block: dirt, from: [-6, -63, -8], to: [18, -62, 8] }
+  - fill: { block: sea_lantern, from: [-6, -61, -8], to: [18, -61, 8] }
+  - fill: { block: bedrock, from: [-6, -63, -8], to: [-6, -55, 8] }
+  - fill: { block: bedrock, from: [18, -63, -8], to: [18, -55, 8] }
+  - fill: { block: bedrock, from: [-5, -63, -8], to: [17, -55, -8] }
+  - fill: { block: bedrock, from: [-5, -63, 8], to: [17, -55, 8] }

@@ -1,0 +1,23 @@
+name: smelt-temporary-furnace
+description: Smelt sixteen raw iron and recover a carried temporary furnace.
+minecraft: { version: "1.21.4" }
+world: { type: flat, gamerules: { doMobSpawning: false } }
+geometry:
+  - fill: { block: stone, from: [-8, -60, -8], to: [8, -60, 8] }
+players:
+  - name: SmeltTempBot
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: furnace, count: 1 }
+      - { item: stone_pickaxe, count: 1 }
+      - { item: raw_iron, count: 16 }
+      - { item: coal, count: 2 }
+params: { count: 16, temporary: true }
+client: { command: bun, args: ["../../src/client-host.ts", "./smelt-batch.ts"] }
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: completion, who: SmeltTempBot }
+    - { kind: hasItem, who: SmeltTempBot, item: furnace, count: 1 }
+    - { kind: hasItem, who: SmeltTempBot, item: iron_ingot, count: 16 }

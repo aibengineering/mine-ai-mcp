@@ -1,0 +1,30 @@
+name: spawner-camp-quarry
+description: Collect carried wool alive when quarry becomes available only at the remembered source.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+setup:
+  - 'setblock 0 -60 0 spawner{SpawnCount:0s,SpawnData:{entity:{id:"minecraft:zombie"}}}'
+  - 'setblock 1 -61 0 glowstone'
+players:
+  - name: CampHunter
+    pos: [20.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+params: { quarryAppears: true }
+# Source-local quarry is arrangement. The verdict is carried wool and survival.
+tick:
+  - 'execute positioned 0 -60 0 if entity @a[name=CampHunter,distance=..4,tag=!camp_quarry] run summon sheep 1 -60 0 {Color:0b,NoAI:1b}'
+  - 'execute positioned 0 -60 0 run tag @a[name=CampHunter,distance=..4] add camp_quarry'
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./spawner-camp.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: completion, who: CampHunter }
+    - { kind: hasItem, who: CampHunter, item: white_wool, count: 1 }

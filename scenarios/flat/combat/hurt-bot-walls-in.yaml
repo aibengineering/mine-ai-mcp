@@ -1,0 +1,80 @@
+name: hurt-bot-walls-in
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+# The first death of the third playthrough: the hide refused to dig because
+# the block two below was air, did nothing else, and was chosen again every
+# second until the creepers arrived. Here the bot stands on a stone platform
+# four blocks above the ground. Digging would drop it into the open, so the
+# hide must place blocks around it instead, cap the cell over its head, eat,
+# and hold until health is back to the fight bar.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -12 -59 -12 24 -50 12 air"
+
+setup:
+  - "difficulty normal"
+
+geometry:
+  - fill: { block: stone, from: [-12, -56, -12], to: [24, -56, 12] }
+
+entities:
+  - type: skeleton
+    pos: [13.5, -55, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+  - type: zombie
+    pos: [12.5, -55, -2.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: zombie
+    pos: [12.5, -55, 3.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: WallingBot
+    pos: [0.5, -55, 0.5]
+    # Opped so the driver can bring the bot under the hide bar itself.
+    op: true
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 16 }
+      - { item: bread, count: 4 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  hurtTo: 7
+  waitTicks: 1500
+
+tick:
+  - "gamemode spectator @a[name=!WallingBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: health
+      who: WallingBot
+      health: 12
+    - kind: survive
+      who: WallingBot
+      seconds: 1
+    - kind: completion
+      who: WallingBot

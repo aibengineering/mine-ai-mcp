@@ -1,0 +1,31 @@
+name: passage-restoration
+description: Preserve an open door, restore a closed door across replanning, leave a cancelled or occupied doorway open with evidence, and close a gate after passage.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "fill -2 -61 -2 8 -56 2 air"
+geometry:
+  - fill: { block: stone, from: [-2, -61, -2], to: [8, -61, 2] }
+  - fill: { block: bedrock, from: [-1, -60, -1], to: [7, -57, 1] }
+  - fill: { block: air, from: [0, -60, 0], to: [6, -58, 0] }
+players:
+  - name: DoorWalker
+    pos: [0.5, -60, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./passage-restoration.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: health, who: DoorWalker, health: 20 }
+    - { kind: completion, who: DoorWalker }

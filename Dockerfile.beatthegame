@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+# Reproducible playthrough image.
+#
+# Dockerfile copies the local checkout, so it builds whatever is in the working
+# tree. This one clones a published commit instead, so a finished run can be
+# rebuilt from source by anyone with the commit it was built from. Nothing is
+# read from the build context. Keep the steps below in sync with Dockerfile;
+# only the source acquisition differs.
+# Base images and the Dockerfile frontend are pinned by digest so the rebuild
+# cannot drift as those tags move. Dockerfile keeps plain tags for development.
+FROM eclipse-temurin:21-jre@sha256:a80c51f2d09a3e7e00d521f1c817bbceb6b3be94109b4a784d46078099882dda AS java
+FROM oven/bun:1.4.0@sha256:5ff609364c049b54eb0ff560ec96319729a972078ef2c755d758f0c6ef89c2d6
+USER root
+COPY --from=java /opt/java/openjdk /opt/java/openjdk
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH=/opt/java/openjdk/bin:$PATH
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git curl tini \
+    && rm -rf /var/lib/apt/lists/*
+
+# Defaults to the commit that beat the game (tag beat-the-game). Pass another
+# tag or commit to rebuild a different run; the clone is not shallow, so any
+# reachable commit works.
+ARG MINE_AI_MCP_REPO=https://github.com/aibengineering/mine-ai-mcp.git
+ARG MINE_AI_MCP_REF=beat-the-game
+WORKDIR /opt/mine-ai-mcp
+RUN git clone "${MINE_AI_MCP_REPO}" . \
+    && git checkout --detach "${MINE_AI_MCP_REF}" \
+    && git rev-parse HEAD > /etc/mine-ai-mcp-commit \
+    && echo "built from $(cat /etc/mine-ai-mcp-commit)"
+RUN bun install --frozen-lockfile
+
+ARG CLAUDE_CODE_VERSION=2.1.268
+RUN curl -fsSL https://claude.ai/install.sh -o /tmp/install-claude.sh \
+    && bash /tmp/install-claude.sh ${CLAUDE_CODE_VERSION} \
+    && cp -L /root/.local/bin/claude /usr/local/bin/claude \
+    && claude --version
+ENV DISABLE_AUTOUPDATER=1
+ARG MINECRAFT_VERSION=1.21.4
+RUN bun docker/download-server.mjs ${MINECRAFT_VERSION}
+ENV MINECRAFT_VERSION=${MINECRAFT_VERSION}
+ENV CLAUDE_CONFIG_DIR=/private/claude
+ENV HOME=/private
+WORKDIR /play
+EXPOSE 25565
+ENTRYPOINT ["/usr/bin/tini", "--", "/bin/bash", "/opt/mine-ai-mcp/docker/entrypoint.sh"]

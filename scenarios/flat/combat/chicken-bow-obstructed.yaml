@@ -1,0 +1,37 @@
+name: chicken-bow-obstructed
+description: Walk out from behind a grass ledge before releasing a bow at a stationary chicken.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+reset:
+  - "kill @e[type=!minecraft:player]"
+setup:
+  - "difficulty normal"
+  - "setblock 3 -59 0 grass_block"
+  - "setblock 3 -60 0 dirt"
+entities:
+  - type: chicken
+    pos: [8.5, -60, 0.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+players:
+  - name: BowHunter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 16 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./chicken-bow-obstructed.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: health, who: BowHunter, health: 20 }
+    - { kind: completion, who: BowHunter }

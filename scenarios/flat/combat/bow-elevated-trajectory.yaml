@@ -1,0 +1,28 @@
+name: bow-elevated-trajectory
+description: Observe six normal full-charge arrows against a stationary equal-height blaze at24metres.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+entities:
+  - type: blaze
+    pos: [3.5, -56, 0.5]
+    nbt: "{NoAI:1b,NoGravity:1b,PersistenceRequired:1b}"
+players:
+  - name: TrajectoryProbe
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./bow-trajectory.ts"]
+goal:
+  kind: completion
+  who: TrajectoryProbe
+  timeout: 45

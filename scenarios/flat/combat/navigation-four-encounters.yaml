@@ -1,0 +1,24 @@
+name: navigation-four-encounters
+description: A single navigation request reaches its destination alive through four native hostile encounters.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+players:
+  - name: FourEncounters
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_axe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./navigation-four-encounters.ts"]
+goal:
+  kind: completion
+  who: FourEncounters
+  timeout: 90

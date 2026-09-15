@@ -1,0 +1,55 @@
+name: chest-round-trip
+description: Bulk-transfer through a real chest, organize its stacks, then independently inspect its physical and memorized slot layout.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -12 -60 -12 12 -50 12 air"
+
+geometry:
+  - fill: { block: polished_andesite, from: [-12, -60, -12], to: [12, -60, 12] }
+  - setblock: { at: [4, -59, 0], block: chest }
+
+setup:
+  - "item replace block 4 -59 0 container.0 with minecraft:cobblestone 40"
+  - "item replace block 4 -59 0 container.5 with minecraft:oak_log 2"
+  - "item replace block 4 -59 0 container.8 with minecraft:cobblestone 30"
+
+players:
+  - name: StorageBot
+    pos: [0, -59, 0]
+    inventory:
+      - { item: cobblestone, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/storage.ts"]
+
+params:
+  x: 4
+  y: -59
+  z: 0
+
+tick:
+  - "gamemode spectator @a[name=!StorageBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - kind: hasItem
+      who: StorageBot
+      item: cobblestone
+      count: 3
+    - kind: completion
+      who: StorageBot

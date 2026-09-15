@@ -1,0 +1,19 @@
+name: preserve-spawner
+description: Navigation must stop at an irreplaceable spawner instead of destroying it to reach the other side.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: bedrock, from: [-1, -61, -1], to: [1, -57, 5] }
+  - fill: { block: air, from: [0, -60, 0], to: [0, -59, 4] }
+  - fill: { block: spawner, from: [0, -60, 2], to: [0, -60, 2] }
+players:
+  - name: SpawnerRouteBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./preserve-spawner.ts"]
+goal: { kind: completion, who: SpawnerRouteBot, timeout: 30 }

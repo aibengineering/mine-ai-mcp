@@ -1,0 +1,25 @@
+name: blaze-retreat-shield
+description: A wounded retreat must hold a server-observed shield guard against
+  native blaze fire and finish escaping without taking a hit.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+players:
+  - name: DistantAttacker
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./distant-attacker.ts"]
+params: { wounded: true }
+goal: { kind: completion, who: DistantAttacker, timeout: 55 }

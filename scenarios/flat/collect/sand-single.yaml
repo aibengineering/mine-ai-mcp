@@ -1,0 +1,49 @@
+name: sand-single
+description: Baseline liveness check that collects one adjacent sand block from ordinary flat ground.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-6, -60, -6], to: [8, -60, 6] }
+  - setblock: { block: sand, at: [2, -59, 0] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+# The request this world exists to exercise.
+params:
+  block_name: sand
+  count: 1
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 15
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: sand
+      count: 1
+    - kind: completion
+      who: Collector

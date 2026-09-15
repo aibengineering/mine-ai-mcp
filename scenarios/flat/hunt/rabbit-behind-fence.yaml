@@ -1,0 +1,56 @@
+name: rabbit-behind-fence
+description: An ordinary rabbit-hide acquisition request must terminate truthfully when a loaded rabbit is physically unreachable.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill 56 -64 -9 74 -51 9 air"
+
+setup:
+  - "difficulty normal"
+
+geometry:
+  # Bedrock extends nine blocks from the rabbit in every horizontal direction
+  # and down to the world floor. No reachable player position is within the
+  # hunt's contact range.
+  - fill: { block: bedrock, from: [56, -64, -9], to: [74, -51, 9] }
+  - fill: { block: air, from: [65, -60, 0], to: [65, -59, 0] }
+
+entities:
+  - type: rabbit
+    pos: [65.5, -60, 0.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+
+players:
+  - name: PennedHunter
+    # Keep the rabbit within the server's tracking range so this tests an
+    # unreachable loaded target rather than missing entity observation.
+    pos: [4.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./rabbit-behind-fence.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!PennedHunter,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: survive, who: PennedHunter, seconds: 1 }
+    - { kind: completion, who: PennedHunter }

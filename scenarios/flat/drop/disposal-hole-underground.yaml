@@ -1,0 +1,30 @@
+name: disposal-hole-underground
+description: Excavate an opening in a stone tunnel wall and retain discards below pickup height.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0, naturalRegeneration: false }
+reset:
+  - "fill -8 -63 -8 8 -54 8 stone"
+  - "fill 0 -60 -5 0 -59 5 air"
+players:
+  - name: Disposer
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: rotten_flesh, count: 16 }
+      - { item: cobblestone, count: 70 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./disposal-hole.ts"]
+params: { expected: dropped }
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: blockAt, who: Disposer, pos: [1, -59, 0], block: air }
+    - { kind: blockAt, who: Disposer, pos: [1, -62, 0], block: air }
+    - { kind: blockAt, who: Disposer, pos: [0, -61, 0], block: stone }
+    - { kind: health, who: Disposer, health: 20 }
+    - { kind: completion, who: Disposer }

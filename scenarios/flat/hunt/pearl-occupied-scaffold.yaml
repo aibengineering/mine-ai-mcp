@@ -1,0 +1,24 @@
+name: pearl-occupied-scaffold
+description: Collect a pearl on a raised ledge while a stationary Enderman occupies the direct scaffold position; use available terrain and supplies to reach the drop.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: stone, from: [3, -60, 0], to: [4, -58, 1] }
+  - fill: { block: stone, from: [1, -60, -1], to: [2, -60, -1] }
+players:
+  - name: PearlCollector
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 16 }
+entities:
+  - { type: enderman, pos: [1.5, -60, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pearl-occupied-scaffold.ts"]
+goal: { kind: completion, who: PearlCollector, timeout: 40 }

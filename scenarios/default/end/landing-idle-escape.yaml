@@ -1,0 +1,30 @@
+name: dragon-landing-idle-escape
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_end
+  seed: "64510673"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+players:
+  - name: LandingBot
+    pos: [12.5, 65, 0.5]
+    health: 20
+    op: true
+    inventory:
+      - { item: stone_pickaxe, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: cooked_beef, count: 10 }
+      - { item: water_bucket, count: 1 }
+      - { item: cobbled_deepslate, count: 107 }
+      - { item: end_stone, count: 6 }
+      - { item: obsidian, count: 4 }
+      - { item: shield, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./landing-idle-escape.ts"]
+goal: { kind: completion, who: LandingBot, timeout: 90 }

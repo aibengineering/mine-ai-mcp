@@ -1,0 +1,5 @@
+name: end-crystals-mixed
+description: Shoot every exposed native crystal, then scaffold up and melee every caged crystal.
+template: ender-dragon.yaml
+params: { phase: crystals, crystal_strategy: mixed }
+goal: { kind: entityCount, entity: end_crystal, max: 0, timeout: 1200 }

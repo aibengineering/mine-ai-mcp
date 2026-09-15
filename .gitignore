@@ -1,0 +1,24 @@
+# Installed dependencies and generated builds
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Local runs, reports, and Mine Labs state
+runs/
+reports/
+.mine-labs/
+.minelabs/
+.tmp/
+*.log
+
+# Authentication and machine-local configuration
+private/
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Editor and OS files
+.DS_Store
+Thumbs.db

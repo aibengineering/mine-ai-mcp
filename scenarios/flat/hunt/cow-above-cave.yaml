@@ -1,0 +1,37 @@
+name: cow-above-cave
+# Run 16 request 40 stopped at y10 with cows at y64. This isolates the height
+# difference without combat interruptions or a particular seed's cave layout.
+# 2026-09-08 / cow-height-before reproduced search_time limit 2000 at 0,10,0.
+# nearEntityGoal must share coordinate navigation's height-aware cost estimate;
+# raising the time budget would leave the zero-progress column unchanged.
+# cow-height-after: both hunts collected beef in 39.7/39.5 seconds; contact-boundary
+# and blaze-rod-bow also passed twice (6/6). Production search limits were unchanged.
+description: Hunt a cow 54 blocks above a cave using carried tools and scaffolds; entity-goal search must credit ascent.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: stone, from: [-16, 9, -16], to: [16, 63, 16] }
+  - fill: { block: air, from: [-15, 10, -15], to: [15, 12, 15] }
+entities:
+  - { type: cow, pos: [0.5, 64, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+players:
+  - name: CaveHunter
+    pos: [0.5, 10, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+params: { mob_name: cow, drop_name: beef, count: 1 }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, who: CaveHunter, item: beef, count: 1 }
+    - { kind: completion, who: CaveHunter }

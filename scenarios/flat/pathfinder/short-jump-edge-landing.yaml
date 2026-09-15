@@ -1,0 +1,28 @@
+name: short-jump-edge-landing
+description: Settle a two-block jump when the body lands on the far edge before its centre is back inside the destination cell.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+reset:
+  - "fill -4 -60 -3 6 -30 3 air"
+geometry:
+  - fill: { block: bedrock, from: [-4, -61, -3], to: [6, -61, 3] }
+  - fill: { block: lava, from: [-4, -60, -3], to: [6, -60, 3] }
+  - fill: { block: bedrock, from: [0, -60, 0], to: [0, -41, 0] }
+  - setblock: { block: bedrock, at: [2, -41, 0] }
+players:
+  - name: Jumper
+    pos: [0.39963, -40, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./short-jump-edge-landing.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: health, who: Jumper, health: 20 }
+    - { kind: reach, who: Jumper, pos: [2.5, -40, 0.5], radius: 0.3 }
+    - { kind: completion, who: Jumper }

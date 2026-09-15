@@ -1,0 +1,594 @@
+{
+  "description": "Native reproduction of ineffective bow draws after a refused backstop leaves server shield use active. Before and after use identical geometry, stationary target, equipment and ten-second deadline. Flags 3 mean active offhand; flags 1 mean active main hand. Controller attack counts are attempts, not evidence of an arrow.",
+  "results": [
+    {
+      "collection": "bow-backstop-before",
+      "run": "2026-09-08T11-13-14-871Z-t00001-w1-c1-bow-after-refused-backstop",
+      "verdict": "fail",
+      "attacks": 7,
+      "outcome": "cancelled",
+      "hits": 0,
+      "arrows": 0,
+      "ticks": 201,
+      "drawHandSamples": [
+        {
+          "serverUse": "3",
+          "samples": 158
+        }
+      ],
+      "firstDrawSamples": [
+        {
+          "phase": {
+            "phase": "shoot",
+            "phaseTicks": 0,
+            "attacks": 0
+          },
+          "held": "bow",
+          "serverUse": 3
+        },
+        {
+          "phase": {
+            "phase": "shoot",
+            "phaseTicks": 1,
+            "attacks": 0
+          },
+          "held": "bow",
+          "serverUse": 3
+        },
+        {
+          "phase": {
+            "phase": "shoot",
+            "phaseTicks": 2,
+            "attacks": 0
+          },
+          "held": "bow",
+          "serverUse": 3
+        }
+      ]
+    },
+    {
+      "collection": "bow-use-after",
+      "run": "2026-09-08T11-15-13-406Z-t00001-w1-c1-bow-after-refused-backstop",
+      "verdict": "pass",
+      "attacks": 3,
+      "outcome": "died",
+      "hits": 3,
+      "arrows": 3,
+      "ticks": 82,
+      "drawHandSamples": [
+        {
+          "serverUse": "1",
+          "samples": 60
+        }
+      ],
+      "firstDrawSamples": [
+        {
+          "phase": {
+            "phase": "shoot",
+            "phaseTicks": 0,
+            "attacks": 0
+          },
+          "held": "bow",
+          "serverUse": 1
+        },
+        {
+          "phase": {
+            "phase": "shoot",
+            "phaseTicks": 1,
+            "attacks": 0
+          },
+          "held": "bow",
+          "serverUse": 1
+        },
+        {
+          "phase": {
+            "phase": "shoot",
+            "phaseTicks": 2,
+            "attacks": 0
+          },
+          "held": "bow",
+          "serverUse": 1
+        }
+      ]
+    },
+    {
+      "collection": "bow-use-after",
+      "run": "2026-09-08T11-16-00-425Z-t00004-w1-c2-bow-after-refused-backstop",
+      "verdict": "pass",
+      "attacks": 3,
+      "outcome": "died",
+      "hits": 3,
+      "arrows": 3,
+      "ticks": 83,
+      "drawHandSamples": [
+        {
+          "serverUse": "1",
+          "samples": 61
+        }
+      ],
+      "firstDrawSamples": [
+        {
+          "phase": {
+            "phase": "shoot",
+            "phaseTicks": 0,
+            "attacks": 0
+          },
+          "held": "bow",
+          "serverUse": 1
+        },
+        {
+          "phase": {
+            "phase": "shoot",
+            "phaseTicks": 1,
+            "attacks": 0
+          },
+          "held": "bow",
+          "serverUse": 1
+        },
+        {
+          "phase": {
+            "phase": "shoot",
+            "phaseTicks": 2,
+            "attacks": 0
+          },
+          "held": "bow",
+          "serverUse": 1
+        }
+      ]
+    }
+  ],
+  "enduranceIncident": {
+    "collection": "fortress-burning-recovery-repeat",
+    "run": "2026-09-08T09-29-35-069Z-t00002-w1-c2-fortress-expedition-kit",
+    "targetId": 264,
+    "note": "Selected original physics records and following arrow observations. Only adjacent retained samples are compared; unrecorded gaps are not counted as firing or waiting.",
+    "countedReleasesWithoutObservedArrows": 9,
+    "selectedReleases": [
+      {
+        "before": {
+          "atMs": 1788860072864,
+          "combat": {
+            "targetId": 264,
+            "position": null,
+            "execution": {
+              "phase": "shoot",
+              "phaseTicks": 19,
+              "attacks": 15
+            }
+          },
+          "serverLivingEntityFlags": 3,
+          "position": {
+            "x": -28.434558893078083,
+            "y": 83,
+            "z": 354.55595334841445
+          }
+        },
+        "after": {
+          "atMs": 1788860072914,
+          "combat": {
+            "targetId": 264,
+            "position": null,
+            "execution": {
+              "phase": "guard",
+              "phaseTicks": 0,
+              "attacks": 16
+            }
+          },
+          "serverLivingEntityFlags": 3
+        },
+        "subsequentArrowSamples": [
+          {
+            "atMs": 1788860072914,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860072965,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073016,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073066,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073117,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073173,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073225,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073276,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073327,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073378,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073430,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073481,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073531,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073582,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073633,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860073684,
+            "arrowIds": []
+          }
+        ]
+      },
+      {
+        "before": {
+          "atMs": 1788860074138,
+          "combat": {
+            "targetId": 264,
+            "position": null,
+            "execution": {
+              "phase": "shoot",
+              "phaseTicks": 19,
+              "attacks": 16
+            }
+          },
+          "serverLivingEntityFlags": 3,
+          "position": {
+            "x": -28.434558893078083,
+            "y": 83,
+            "z": 354.55595334841445
+          }
+        },
+        "after": {
+          "atMs": 1788860074189,
+          "combat": {
+            "targetId": 264,
+            "position": null,
+            "execution": {
+              "phase": "guard",
+              "phaseTicks": 0,
+              "attacks": 17
+            }
+          },
+          "serverLivingEntityFlags": 3
+        },
+        "subsequentArrowSamples": [
+          {
+            "atMs": 1788860074189,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074240,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074291,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074292,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074343,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074393,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074444,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074495,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074545,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074597,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074647,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074697,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074748,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074798,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074848,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860074899,
+            "arrowIds": []
+          }
+        ]
+      },
+      {
+        "before": {
+          "atMs": 1788860081712,
+          "combat": {
+            "targetId": 264,
+            "position": null,
+            "execution": {
+              "phase": "shoot",
+              "phaseTicks": 19,
+              "attacks": 17
+            }
+          },
+          "serverLivingEntityFlags": 3,
+          "position": {
+            "x": -28.434558893078083,
+            "y": 83,
+            "z": 354.55595334841445
+          }
+        },
+        "after": {
+          "atMs": 1788860081765,
+          "combat": {
+            "targetId": 264,
+            "position": null,
+            "execution": {
+              "phase": "guard",
+              "phaseTicks": 0,
+              "attacks": 18
+            }
+          },
+          "serverLivingEntityFlags": 3
+        },
+        "subsequentArrowSamples": [
+          {
+            "atMs": 1788860081765,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860081816,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860081867,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860081918,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860081969,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082020,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082071,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082121,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082172,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082223,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082274,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082325,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082376,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082427,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082485,
+            "arrowIds": []
+          },
+          {
+            "atMs": 1788860082535,
+            "arrowIds": []
+          }
+        ]
+      }
+    ]
+  },
+  "enduranceComparison": {
+    "baselineCommit": "7e88b2a7",
+    "change": "CombatItemUse.drawBow releases prior use before activating the main hand.",
+    "fixture": "scenarios/default/nether/fortress-expedition-kit.yaml",
+    "note": "Identical seed, kit, native spawner, twelve-rod goal and 900-second deadline. Baseline used one worker; after used two workers with three trials. elapsedMs includes setup; activeMs starts at the arranged fight. This small sample is not a statistical reliability guarantee.",
+    "results": [
+      {
+        "collection": "fortress-throughput-baseline",
+        "run": "2026-09-08T11-01-09-734Z-t00001-w1-c1-fortress-expedition-kit",
+        "outcome": "pass",
+        "elapsedMs": 682220,
+        "activeMs": 668115,
+        "rods": 12,
+        "deaths": 0,
+        "minimumHealth": 9.190476417541504,
+        "finalHealth": 20,
+        "shieldBlocks": 82,
+        "fireballs": 490,
+        "shield": null,
+        "supplies": [
+          {
+            "name": "cooked_beef",
+            "count": 51,
+            "durabilityUsed": null
+          }
+        ],
+        "spawner": "spawner"
+      },
+      {
+        "collection": "fortress-bow-use-after",
+        "run": "2026-09-08T11-16-59-346Z-t00001-w1-c1-fortress-expedition-kit",
+        "outcome": "pass",
+        "elapsedMs": 533360,
+        "activeMs": 518396,
+        "rods": 12,
+        "deaths": 0,
+        "minimumHealth": 10.590473175048828,
+        "finalHealth": 20,
+        "shieldBlocks": 36,
+        "fireballs": 172,
+        "shield": {
+          "durabilityUsed": 30,
+          "maxDurability": 336
+        },
+        "supplies": [
+          {
+            "name": "cobblestone",
+            "count": 39,
+            "durabilityUsed": null
+          },
+          {
+            "name": "cooked_beef",
+            "count": 59,
+            "durabilityUsed": null
+          }
+        ],
+        "spawner": "spawner"
+      },
+      {
+        "collection": "fortress-bow-use-after",
+        "run": "2026-09-08T11-16-59-346Z-t00002-w2-c2-fortress-expedition-kit",
+        "outcome": "pass",
+        "elapsedMs": 485737,
+        "activeMs": 469579,
+        "rods": 13,
+        "deaths": 0,
+        "minimumHealth": 6.590473175048828,
+        "finalHealth": 20,
+        "shieldBlocks": 37,
+        "fireballs": 201,
+        "shield": {
+          "durabilityUsed": 18,
+          "maxDurability": 336
+        },
+        "supplies": [
+          {
+            "name": "cooked_beef",
+            "count": 57,
+            "durabilityUsed": null
+          },
+          {
+            "name": "cobblestone",
+            "count": 14,
+            "durabilityUsed": null
+          }
+        ],
+        "spawner": "spawner"
+      },
+      {
+        "collection": "fortress-bow-use-after",
+        "run": "2026-09-08T11-25-08-427Z-t00003-w2-c3-fortress-expedition-kit",
+        "outcome": "pass",
+        "elapsedMs": 563518,
+        "activeMs": 549823,
+        "rods": 13,
+        "deaths": 0,
+        "minimumHealth": 8.309521675109863,
+        "finalHealth": 20,
+        "shieldBlocks": 35,
+        "fireballs": 135,
+        "shield": {
+          "durabilityUsed": 275,
+          "maxDurability": 336
+        },
+        "supplies": [
+          {
+            "name": "cobblestone",
+            "count": 1,
+            "durabilityUsed": null
+          },
+          {
+            "name": "cobblestone",
+            "count": 63,
+            "durabilityUsed": null
+          },
+          {
+            "name": "cooked_beef",
+            "count": 58,
+            "durabilityUsed": null
+          },
+          {
+            "name": "shield",
+            "count": 1,
+            "durabilityUsed": 0
+          }
+        ],
+        "spawner": "spawner"
+      }
+    ],
+    "retainedDrawSamples": {
+      "minimumPhaseTicks": 5,
+      "before": {
+        "collection": "fortress-burning-recovery-repeat",
+        "run": "2026-09-08T09-29-35-069Z-t00002-w1-c2-fortress-expedition-kit",
+        "mainHand": 126,
+        "offHand": 413,
+        "sampledReleases": 30,
+        "offHandAtRelease": 23
+      },
+      "after": {
+        "collection": "fortress-bow-use-after",
+        "mainHand": 303,
+        "offHand": 0,
+        "sampledReleases": 16,
+        "offHandAtRelease": 0
+      }
+    }
+  }
+}

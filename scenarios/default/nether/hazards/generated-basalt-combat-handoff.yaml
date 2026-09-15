@@ -1,0 +1,26 @@
+name: generated-basalt-combat-handoff
+description: Retain safe footing when a target dies during recorded pack knockback on a generated basalt ledge.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+entities:
+  - { type: magma_cube, pos: [204.5, 48, -21.5], nbt: '{Tags:["first"],Size:0,NoAI:1b,NoGravity:1b,Invulnerable:1b,PersistenceRequired:1b}' }
+  - { type: magma_cube, pos: [205.5, 48, -24.5], nbt: '{Tags:["second"],Size:0,NoAI:1b,NoGravity:1b,Invulnerable:1b,PersistenceRequired:1b}' }
+players:
+  - name: BasaltGuard
+    pos: [204.27330421077394, 48, -23.610706032259472]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./generated-basalt-combat-handoff.ts"]
+goal:
+  kind: completion
+  who: BasaltGuard
+  timeout: 45

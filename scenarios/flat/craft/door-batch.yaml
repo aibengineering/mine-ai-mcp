@@ -1,0 +1,25 @@
+name: door-batch
+description: A request for one door observes and confirms Minecraft's three-door recipe output.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+geometry:
+  - fill: { block: crafting_table, from: [1, -60, 0], to: [1, -60, 0] }
+players:
+  - name: DoorBatchBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: birch_planks, count: 6 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./door-batch.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: hasItem, who: DoorBatchBot, item: birch_door, count: 3 }
+    - { kind: completion, who: DoorBatchBot }

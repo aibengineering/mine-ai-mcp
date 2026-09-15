@@ -1,0 +1,30 @@
+name: wounded-bot-eats
+description: A wounded bot eats carried bread when hunger is above the ordinary eating threshold but too low for regeneration.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+players:
+  - name: HurtHungryBot
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: bread, count: 3 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./wounded-bot-eats.ts"]
+goal:
+  kind: all
+  timeout: 35
+  goals:
+    - { kind: health, who: HurtHungryBot, health: 18 }
+    - { kind: survive, who: HurtHungryBot, seconds: 1 }
+    - { kind: completion, who: HurtHungryBot }

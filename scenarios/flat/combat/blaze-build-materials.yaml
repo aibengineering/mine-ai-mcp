@@ -1,0 +1,59 @@
+name: blaze-build-materials
+description: Defeat a native blaze and survive the declared terrain and supply
+  constraints. This finite-mob test does not qualify blaze_rod acquisition or
+  prescribe a tactic.
+minecraft:
+  version: 1.21.4
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+players:
+  - name: BlazeMaterials
+    op: true
+    pos:
+      - 0.5
+      - -60
+      - 0.5
+    inventory:
+      - item: diamond_sword
+        count: 1
+entities:
+  - type: blaze
+    pos:
+      - 20.5
+      - -60
+      - 0.5
+    nbt: "{PersistenceRequired:1b}"
+  - type: blaze
+    pos:
+      - -20.5
+      - -60
+      - 0.5
+    nbt: "{PersistenceRequired:1b}"
+client:
+  command: bun
+  args:
+    - ../../src/client-host.ts
+    - ../../src/hunter.ts
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - kind: kill
+      who: BlazeMaterials
+      target: blaze
+    - kind: survive
+      who: BlazeMaterials
+      seconds: 1
+    - kind: completion
+      who: BlazeMaterials
+params:
+  mob_name: blaze
+  drop_name: blaze_rod
+  count: 1
+  defeat_count: 1

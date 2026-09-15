@@ -1,0 +1,41 @@
+name: dripstone-wedged-raw
+description: Break the supporting stalagmite with the production raw action while stationary and airborne in a narrow pit.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+reset:
+  - "fill -5 -60 -5 8 -50 5 air"
+geometry:
+  - fill: { block: bedrock, from: [-4, -60, -4], to: [7, -56, 4] }
+  - fill: { block: air, from: [-2, -59, 0], to: [5, -55, 0] }
+  - setblock: { block: stone, at: [0, -59, 0] }
+  - setblock: { block: "pointed_dripstone[vertical_direction=up,thickness=tip]", at: [0, -58, 0] }
+  - setblock: { block: stone, at: [1, -58, 0] }
+  - setblock: { block: stone, at: [2, -57, 0] }
+players:
+  - name: DripstoneRaw
+    op: true
+    pos: [-1.5, -59, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./dripstone-wedged-raw.ts"]
+params:
+  wedge: [0.5, -57, 0.5]
+  dig: [0, -58, 0]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: blockAt, who: DripstoneRaw, pos: [0, -58, 0], block: air }
+    - { kind: blockAt, who: DripstoneRaw, pos: [-1, -59, 0], block: cobblestone }
+    - { kind: health, who: DripstoneRaw, health: 20 }
+    - { kind: completion, who: DripstoneRaw }

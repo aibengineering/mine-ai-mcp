@@ -1,0 +1,88 @@
+name: night-hostile-haul-8674349
+description: The same 120-block night crossing on the progression seed, from a surveyed land column rather than the one that drops the bot into water.
+
+# The corridor fixtures show the hostile avoidance field choosing a detour in a
+# hand-built world with one mob standing still. They cannot show whether it
+# breaks a route that has to work. This is that question: 120 blocks of
+# generated terrain the planner has not seen, at midnight with mobs spawning,
+# through the production runtime, so the contact reflex is attached and the
+# session registers the real field the way the live host does.
+#
+# A route that arrives with the field off and fails with it on is the finding,
+# and the fix would belong in the species table or the cap in hostile-field.ts,
+# never in this fixture.
+#
+# The seed pins the terrain. The spawn column is pinned too, because omitting
+# it takes the server's own spawn choice, which is not stable across fresh
+# worlds even on a fixed seed.
+#
+# The former craft-after-collect column, 8.5,67,-19.5, is not a
+# surface point: it drops the bot eleven blocks into water. This one is
+# verified land, and the bearing below was surveyed from it: north, north-east
+# and east are all open water at forty blocks, while south-east is land at
+# forty (y96) and eighty (y102) against a spawn surface of y98.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: default
+  seed: 8674349
+  time: midnight
+  gamerules:
+    # Night that stays night, and mobs that actually arrive.
+    doDaylightCycle: false
+    doMobSpawning: true
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+
+setup:
+  # Easy, not normal: hostiles still spawn and still fight, but on normal one
+  # arriving during the arrangement wait moved the bot off its pinned column
+  # and the trial never started.
+  - "difficulty easy"
+
+players:
+  - name: NightHauler
+    pos: [-25.5, 99, 6.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./night-hostile-haul.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!NightHauler,gamemode=!spectator]"
+
+params:
+  # Choose the observed surface at feet y=83, above this column's cave floors.
+  destinationHeight: 83
+  # Measured from where the bot actually stands, since the surface height in a
+  # pinned column is still the generator's business.
+  eastward: 84.9
+  northward: -84.9
+  range: 3.0
+
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    # Health is deliberately not asserted. A night crossing with mobs spawning
+    # is expected to cost some, and a fixture that demanded twenty would be
+    # measuring the damage roll rather than the route.
+    - kind: survive
+      who: NightHauler
+      seconds: 1
+    - kind: completion
+      who: NightHauler

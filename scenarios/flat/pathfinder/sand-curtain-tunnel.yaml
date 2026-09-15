@@ -1,0 +1,95 @@
+name: sand-curtain-tunnel
+description: Tunnel through a sand plug that is the only way to the target, proving a route prices a falling column and takes it down from the top rather than being buried by it.
+
+# `prepareCell` used to refuse any cell with a falling block above it, so a sand
+# column was a wall to every route in the package, not only to mining. It now
+# does what Baritone's `getMiningDurationTicks(..., includeFalling)` does:
+# charges the whole column into the cell's cost and mines through it. That
+# widened what every route may do, and nothing else measures it — the mining
+# fixtures reach these cells through a mining goal, which is a different code
+# path from an ordinary navigation leg.
+#
+# Two failures are worth catching here, and they need each other. Refusing the
+# column again is caught by never arriving. Breaking it bottom first is caught
+# by health: the cells above drop into the hole the bot is standing in and it
+# suffocates. A run that arrives at full health did both parts right.
+#
+# What this does NOT cover: whether the column's cost is *preferred against*
+# anything. There is deliberately no detour, because a fixture with two lanes
+# measures which is cheaper rather than whether the expensive one is possible
+# at all. Pricing wants its own fixture with a measured pair of routes.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -6 -64 -6 18 -46 6 air"
+
+geometry:
+  # Bedrock, so the only route is the one carved into it. Softer rock lets the
+  # planner tunnel over the plug at a higher y, which would make this fixture
+  # measure vertical evasion instead of the falling column.
+  - fill: { block: bedrock, from: [-3, -62, -3], to: [15, -52, 3] }
+
+  # One corridor, one block wide, two tall. Entry and exit halls at each end so
+  # the bot starts and finishes on open floor.
+  - fill: { block: air, from: [-2, -60, 0], to: [13, -59, 0] }
+
+  # The plug. Four sand blocks in one column: the two corridor cells the bot
+  # must pass through, and two more above them carved up into the bedrock
+  # ceiling. Taking the bottom one first drops three blocks into the corridor
+  # the bot is standing in; taking the top one first leaves nothing to fall.
+  - fill: { block: sand, from: [6, -60, 0], to: [6, -57, 0] }
+
+  - setblock: { block: emerald_block, at: [13, -61, 0] }
+
+players:
+  - name: SandCurtainBot
+    pos: [-1.5, -60, 0.5]
+    # A shovel keeps this a route-choice fixture rather than a dig-speed one.
+    inventory:
+      - item: iron_shovel
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!SandCurtainBot,gamemode=!spectator]"
+
+params:
+  target: [13, -60, 0]
+  range: 1.5
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: reach
+      who: SandCurtainBot
+      pos: [13.5, -60, 0.5]
+      radius: 1.5
+    # Suffocation is the failure that matters, and it is survivable if the bot
+    # digs itself out, so full health rather than merely being alive.
+    - kind: health
+      who: SandCurtainBot
+      health: 20
+    # The corridor must actually be open. Arriving with sand still standing
+    # would mean the bot got there by some route this fixture did not intend.
+    - kind: blockAt
+      who: SandCurtainBot
+      pos: [6, -60, 0]
+      block: air
+    - kind: completion
+      who: SandCurtainBot

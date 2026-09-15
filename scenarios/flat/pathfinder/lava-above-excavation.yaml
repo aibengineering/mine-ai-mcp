@@ -1,0 +1,33 @@
+name: lava-above-excavation
+description: Refuse a drop excavation that redirects lava from beside the cell above into the landing.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "fill -5 -62 -4 3 -53 4 air"
+geometry:
+  - fill: { block: bedrock, from: [-4, -61, -3], to: [2, -54, 3] }
+  - fill: { block: air, from: [0, -58, -1], to: [0, -57, 0] }
+  - setblock: { block: warped_nylium, at: [0, -59, 0] }
+  - setblock: { block: nether_sprouts, at: [0, -58, 0] }
+  # Lava initially drains south. Excavating the nylium opens an east drain.
+  - fill: { block: air, from: [-1, -60, 1], to: [-1, -58, 1] }
+  - setblock: { block: air, at: [-1, -58, 0] }
+  - setblock: { block: lava, at: [-2, -58, 0] }
+players:
+  - name: LavaExcavator
+    pos: [0.5, -58, -0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./lava-above-excavation.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: health, who: LavaExcavator, health: 20 }
+    - { kind: blockAt, who: LavaExcavator, pos: [0, -59, 0], block: warped_nylium }
+    - { kind: completion, who: LavaExcavator }

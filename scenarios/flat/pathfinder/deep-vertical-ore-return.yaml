@@ -1,0 +1,63 @@
+name: deep-vertical-ore-return
+description: Mine an iron seam almost directly beneath the bot, then reach the surface chest and deposit the drops.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -14 -59 -14 24 -37 14 air"
+
+geometry:
+  # A compact stone hill. The seam is eleven blocks down but only two blocks
+  # east, making this a much steeper excavation than underground-ore-return.
+  - fill: { block: stone, from: [-12, -59, -12], to: [22, -45, 12] }
+  - fill: { block: grass_block, from: [-12, -45, -12], to: [22, -45, 12] }
+  - setblock: { block: iron_ore, at: [2, -56, -1] }
+  - setblock: { block: iron_ore, at: [2, -56, 0] }
+  - setblock: { block: iron_ore, at: [2, -56, 1] }
+  - setblock: { block: chest, at: [-4, -44, 0] }
+
+players:
+  - name: Miner
+    pos: [0, -44, 0]
+    inventory:
+      - item: iron_pickaxe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./ore-return.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!Miner,gamemode=!spectator]"
+
+params:
+  ore: iron_ore
+  drop: raw_iron
+  count: 3
+  chest: [-4, -44, 0]
+
+goal:
+  kind: all
+  # The comparison budget covers the complete collect-and-deposit journey.
+  # The repaired candidate first proved correct movement but
+  # exceeded the former 60-second budget during its deliberately segmented
+  # excavation; both implementations receive the same 120 seconds.
+  timeout: 120
+  goals:
+    - kind: blockAt
+      who: Miner
+      pos: [-4, -44, 0]
+      block: chest
+    - kind: completion
+      who: Miner

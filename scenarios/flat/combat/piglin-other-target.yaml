@@ -1,0 +1,25 @@
+name: piglin-other-target
+description: Gold-equipped uninvolved bot beside a piglin retaliating against a hoglin.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    naturalRegeneration: false
+players:
+  - name: PiglinBystander
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: golden_boots, count: 1 }
+      - { item: iron_sword, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./piglin-other-target.ts"]
+goal:
+  kind: completion
+  who: PiglinBystander
+  timeout: 40

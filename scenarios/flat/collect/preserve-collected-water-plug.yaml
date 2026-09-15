@@ -1,0 +1,32 @@
+name: preserve-collected-water-plug
+description: Collect one log beneath flowing water without spending carried logs to plug the flow.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+reset:
+  - "fill -10 -59 -10 12 -40 10 air"
+geometry:
+  - fill: { block: bedrock, from: [-10, -63, -10], to: [12, -60, 10] }
+  - setblock: { block: oak_log, at: [2, -60, 0] }
+  - setblock: { block: water, at: [3, -59, 0] }
+players:
+  - name: Collector
+    pos: [0.5, -59, 0.5]
+    op: true
+    inventory:
+      - { item: oak_log, count: 64 }
+      - { item: dirt, count: 8 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./preserve-collected-water-plug.ts"]
+goal:
+  kind: all
+  # One barehand log and a draining source need seconds; the deadline catches
+  # a failed exact-target collection without waiting for world-wide exploration.
+  timeout: 60
+  goals:
+    - { kind: hasItem, who: Collector, item: oak_log, count: 65 }
+    - { kind: completion, who: Collector }

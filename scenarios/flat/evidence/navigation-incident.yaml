@@ -1,0 +1,32 @@
+name: navigation-incident
+description: Remove support during a real navigation call and independently inspect the automatically saved fall evidence.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "fill -5 -60 -5 15 -45 5 air"
+geometry:
+  - fill: { block: stone, from: [-5, -61, -5], to: [15, -61, 5] }
+  - fill: { block: glass, from: [-2, -55, -2], to: [12, -55, 2] }
+players:
+  - name: IncidentBot
+    pos: [0.5, -54, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./runtime-incident.ts"]
+params:
+  disturbance: remove_support
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: health, who: IncidentBot, health: 1 }
+    - { kind: completion, who: IncidentBot }

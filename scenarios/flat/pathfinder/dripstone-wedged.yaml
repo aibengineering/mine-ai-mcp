@@ -1,0 +1,43 @@
+name: dripstone-wedged
+description: Navigate normally after settling on a physically supported upward dripstone tip.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+reset:
+  - "fill -5 -60 -5 8 -50 5 air"
+geometry:
+  - fill: { block: bedrock, from: [-4, -60, -4], to: [7, -56, 4] }
+  - fill: { block: air, from: [-2, -59, 0], to: [5, -55, 0] }
+  # The start shaft is one cell wide. Native physics settles the player on the
+  # supported tip before the ordinary navigation action begins.
+  - setblock: { block: stone, at: [0, -59, 0] }
+  - setblock: { block: "pointed_dripstone[vertical_direction=up,thickness=tip]", at: [0, -58, 0] }
+  - setblock: { block: stone, at: [1, -58, 0] }
+  - setblock: { block: stone, at: [2, -57, 0] }
+players:
+  - name: DripstoneWedged
+    op: true
+    # The handshake starts on an ordinary floor. The driver teleports onto the
+    # tip only after Mine Labs and the client agree that arrangement is ready.
+    pos: [-1.5, -59, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./dripstone-wedged.ts"]
+params:
+  target: [4, -59, 0]
+  range: 0
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: reach, who: DripstoneWedged, pos: [4.5, -59, 0.5], radius: 0.7 }
+    - { kind: health, who: DripstoneWedged, health: 20 }
+    - { kind: completion, who: DripstoneWedged }

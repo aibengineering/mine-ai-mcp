@@ -1,0 +1,55 @@
+name: two-white-sheep
+description: Intentionally hunt two nearby sheep and independently observe two white wool drops in inventory.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -12 -60 -12 20 -50 12 air"
+
+geometry:
+  - fill: { block: grass_block, from: [-12, -60, -12], to: [20, -60, 12] }
+
+entities:
+  - type: sheep
+    pos: [5, -59, -2]
+    nbt: "{Color:0b,PersistenceRequired:1b}"
+  - type: sheep
+    pos: [7, -59, 2]
+    nbt: "{Color:0b,PersistenceRequired:1b}"
+
+players:
+  - name: Hunter
+    pos: [0, -59, 0]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+
+params:
+  mob_name: sheep
+  drop_name: white_wool
+  count: 2
+
+tick:
+  - "gamemode spectator @a[name=!Hunter,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - kind: hasItem
+      who: Hunter
+      item: white_wool
+      count: 2
+    - kind: completion
+      who: Hunter

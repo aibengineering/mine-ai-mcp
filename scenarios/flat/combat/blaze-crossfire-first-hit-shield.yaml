@@ -1,0 +1,54 @@
+name: blaze-crossfire-first-hit-shield
+description: An unarmoured bot crosses open ground to hunt a distant blaze and
+  walks into two sword-armed wither skeletons on the way; the shield is raised
+  before the first hit lands rather than after it.
+
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  # No regeneration and no armour, so a lost guard shows as damage instead of
+  # being absorbed; no daylight cycle so a trial reads the same however long it
+  # takes, and no spawning so the only hostiles are the three placed here.
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false, keepInventory: true }
+
+geometry:
+  # Open ground with nothing to break a line of sight: the fixture is about what
+  # the bot observed, not about what the terrain hid.
+  - fill: { block: stone, from: [-18, -61, -6], to: [18, -61, 36] }
+
+entities:
+  # The errand. Pinned, so it never charges and never shoots: a charging blaze
+  # would raise the guard for its own sake through volleyActive, which reads the
+  # selected target, and that would hide the very gap being measured. Far enough
+  # out that reaching it is a committed approach rather than a step.
+  - type: blaze
+    pos: [0.5, -58, 32.5]
+    nbt: "{NoAI:1b,NoGravity:1b,PersistenceRequired:1b}"
+
+  # What the bot walks into. AI left on, because a pinned mob never swings and
+  # the swing is the whole subject. Both carry the stone sword a fortress
+  # skeleton carries, so neither is a shooter and neither can be seen coming by
+  # any windup on the wire. Set either side of the line so the crossing meets
+  # them rather than passing them.
+  - type: wither_skeleton
+    pos: [-1.5, -60, 13.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}]}'
+  - type: wither_skeleton
+    pos: [2.5, -60, 14.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}]}'
+
+players:
+  - name: Guarded
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./blaze-crossfire-first-hit-shield.ts"]
+
+goal: { kind: completion, who: Guarded, timeout: 150 }

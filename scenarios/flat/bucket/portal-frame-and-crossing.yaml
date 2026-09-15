@@ -1,0 +1,53 @@
+name: portal-frame-and-crossing
+description: Build a portal frame from exactly 10 carried obsidian and four cobblestone supports, light it, walk in, and arrive in the Nether.
+
+# The second half of the Nether milestone. The bot carries the obsidian the
+# first fixture makes, plus flint and steel, and does what the model would ask
+# for: build-structure with the portal preset, activate-portal on a frame block, and
+# navigate into the portal. The crossing itself is the thing under test: a
+# route that ends inside a portal, a dimension change the runtime has to
+# survive, and a status that reads the_nether afterwards. Cobblestone corners
+# support placement of the frame without spending additional obsidian.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-16, -61, -16], to: [20, -61, 16] }
+  - fill: { block: stone, from: [-16, -60, -16], to: [20, -60, 16] }
+
+players:
+  - name: PortalBuilder
+    pos: [0, -59, 0]
+    inventory:
+      - { item: obsidian, count: 10 }
+      - { item: cobblestone, count: 4 }
+      - { item: flint_and_steel, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/portal-builder.ts"]
+
+params:
+  # The interior's lowest, nearest corner, one block above the floor so the bottom row sits on it; the frame spans x from here.
+  interior: { x: 5, y: -58, z: 0 }
+
+tick:
+  - "gamemode spectator @a[name=!PortalBuilder,gamemode=!spectator]"
+
+goal:
+  kind: completion
+  who: PortalBuilder
+  timeout: 240

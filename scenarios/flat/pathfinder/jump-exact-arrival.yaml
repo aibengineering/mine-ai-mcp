@@ -1,0 +1,26 @@
+name: jump-exact-arrival
+description: A sprint, two-block drop, turn, and short jump must settle in the requested final cell.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+reset:
+  - "fill -3 -63 -3 9 -53 5 air"
+geometry:
+  - fill: { block: sandstone, from: [-1, -59, 0], to: [2, -59, 0] }
+  - fill: { block: sandstone, from: [3, -61, 0], to: [3, -61, 2] }
+  - fill: { block: sandstone, from: [5, -61, 2], to: [7, -61, 2] }
+players:
+  - name: Jumper
+    pos: [0.42, -58, 0.37]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "jump-exact-arrival.ts"]
+goal:
+  kind: completion
+  who: Jumper
+  timeout: 30

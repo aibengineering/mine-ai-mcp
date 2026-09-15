@@ -1,0 +1,24 @@
+name: bucket-drop-route
+description: Reach the foot of an unbreakable 15-block tower using carried water, with no scaffold or digging.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: bedrock, from: [-8, -60, -8], to: [8, -60, 8] }
+  - fill: { block: bedrock, from: [0, -59, 0], to: [0, -45, 0] }
+players:
+  - name: BucketBot
+    pos: [0.5, -44, 0.5]
+    inventory:
+      - { item: water_bucket, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./bucket-drop-route.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: health, who: BucketBot, health: 20 }
+    - { kind: hasItem, who: BucketBot, item: water_bucket, count: 1 }
+    - { kind: completion, who: BucketBot }

@@ -1,0 +1,109 @@
+name: gauntlet-lava-parkour
+description: Chain every gap-crossing and ascent kind at the limit of what each can reach, over an open lava bed, where a single missed landing is a burn rather than a retry.
+
+# The other fixtures each force one capability in isolation and forgive a miss:
+# a failed jump lands on stone and the route replans. This one removes the
+# forgiveness. Every gap is spanned at the maximum reach of the movement that
+# has to cross it, and everything under the course is lava, so a short jump is
+# recorded as damage and a badly short one as a death.
+#
+# That makes it a reliability fixture rather than a capability fixture. Passing
+# once says the chain can be flown; the value is in running it repeatedly and
+# watching the health goal, which turns a marginal takeoff into a visible
+# failure instead of a silent replan.
+#
+# Reach used per section, all at the documented maximum:
+#   jump          2 blocks   (one block of air)
+#   sprint_jump   3 blocks   (two blocks of air)
+#   parkour       4 blocks   (three blocks of air)
+#   parkour rise  3 blocks + 1 up
+#   diagonal ascent, three isolated treads with no cardinal alternative
+#   drop          2 blocks onto the finish shelf
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -9 -64 -6 26 -46 10 air"
+
+geometry:
+  # Sealed basin. The lava is a single layer in a bedrock tray so it cannot
+  # spread and generate block updates that would replan the route from under
+  # the bot mid-jump.
+  - fill: { block: bedrock, from: [-6, -63, -3], to: [23, -63, 7] }
+  - fill: { block: bedrock, from: [-6, -62, -3], to: [-6, -50, 7] }
+  - fill: { block: bedrock, from: [23, -62, -3], to: [23, -50, 7] }
+  - fill: { block: bedrock, from: [-6, -62, -3], to: [23, -50, -3] }
+  - fill: { block: bedrock, from: [-6, -62, 7], to: [23, -50, 7] }
+  - fill: { block: lava, from: [-5, -62, -2], to: [22, -62, 6] }
+
+  # Landing pads are one block deep on purpose. A wider pad lets a four-block
+  # parkour jump swallow the shorter gaps whole, and the course stops testing
+  # the kind each section is named for. Spacing is chosen so that from every
+  # takeoff exactly one reach finds ground.
+
+  # Start apron, long enough to reach sprint speed.
+  - fill: { block: blue_concrete, from: [-5, -60, -1], to: [0, -60, 1] }
+
+  # jump, two blocks: one block of air at x = 1.
+  - fill: { block: blue_concrete, from: [2, -60, -1], to: [2, -60, 1] }
+
+  # sprint_jump, three blocks: air at x = 3..4.
+  - fill: { block: blue_concrete, from: [5, -60, -1], to: [5, -60, 1] }
+
+  # parkour, four blocks: air at x = 6..8. Nothing shorter reaches.
+  - fill: { block: blue_concrete, from: [9, -60, -1], to: [9, -60, 1] }
+
+  # ascending parkour, three blocks and a block up: air at x = 10..11. The
+  # shelf stops at z = 0 so the treads that follow have no cardinal approach.
+  - fill: { block: blue_concrete, from: [12, -59, -1], to: [12, -59, 0] }
+
+  # Diagonal ascent: three isolated treads, each reachable only diagonally.
+  # The orthogonal corners are open air over lava, so a step that balances on
+  # the takeoff corner falls in.
+  - setblock: { block: cut_copper, at: [13, -58, 1] }
+  - setblock: { block: cut_copper, at: [14, -57, 2] }
+  - setblock: { block: cut_copper, at: [15, -56, 3] }
+
+  # Finish shelf, two blocks below the last tread.
+  - fill: { block: emerald_block, from: [16, -58, 2], to: [20, -58, 4] }
+players:
+  - name: GauntletBot
+    pos: [-4.5, -59, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!GauntletBot,gamemode=!spectator]"
+
+params:
+  target: [19, -57, 3]
+  range: 1.5
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: reach
+      who: GauntletBot
+      pos: [19.5, -57, 3.5]
+      radius: 1.5
+    # Full health is the whole point. Anything less means it touched the lava,
+    # which on this course means a landing was missed.
+    - kind: health
+      who: GauntletBot
+      health: 20
+    - kind: completion
+      who: GauntletBot

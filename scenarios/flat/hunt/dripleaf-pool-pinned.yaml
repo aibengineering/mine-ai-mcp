@@ -1,0 +1,83 @@
+name: dripleaf-pool-pinned
+description: Hunt a zombie from under a flat big dripleaf in a one-deep pool, where the server keeps the body crouched and mineflayer keeps standing it up.
+
+# The second half of the live 2026-09-12 incident that `dripleaf-pool-trap`
+# reproduces from its start: the hunter is already in the pool cell with the
+# leaf reset flat above it. Its feet are at -60 and the leaf's underside is at
+# -58.3125, so a 1.8-block body does not fit and the server keeps the player
+# crouched at 1.5. Every position mineflayer sends with its standing body is
+# refused and put back, and no control moves it. The ledge to the west is two
+# blocks up and out of reach; the bank to the east is one block up, a jump
+# once nothing is overhead.
+#
+# The way out is to break the leaf. It is diggable by hand in a fraction of a
+# second, but its box holds the eye, so no face of it is in view: the break
+# has to aim straight up, as a downward dig aims straight down. Once the
+# navigation run notices the hold after its first failed step, it breaks the
+# leaf, walks the same goal again, and the hunt goes on to the zombie and its
+# drop. Before that, this layout held the body for the rest of the request.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -6 -61 -3 10 -50 3 air"
+
+geometry:
+  # Shell: floor at -62, roof at -54, walled at both ends.
+  - fill: { block: stone, from: [-6, -62, -3], to: [9, -54, 3] }
+  # West ledge: floor top at -58, two above the pool floor and out of reach.
+  - fill: { block: air, from: [-4, -57, 0], to: [-1, -55, 0] }
+  # The pool cell: clay bed, waterlogged stem, leaf head over the hunter.
+  - fill: { block: air, from: [0, -60, 0], to: [0, -55, 0] }
+  - setblock: { block: clay, at: [0, -61, 0] }
+  - setblock: { block: "big_dripleaf_stem[facing=east,waterlogged=true]", at: [0, -60, 0] }
+  - setblock: { block: "big_dripleaf[facing=east,tilt=none,waterlogged=false]", at: [0, -59, 0] }
+  # East bank: floor top at -60, one step up from the pool, ending at a wall at 7.
+  - fill: { block: air, from: [1, -59, 0], to: [6, -55, 0] }
+
+entities:
+  - type: zombie
+    pos: [5.5, -59, 0.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,attributes:[{id:"minecraft:max_health",base:100.0d}],Health:100.0f}'
+
+players:
+  - name: PinnedHunter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!PinnedHunter,gamemode=!spectator]"
+
+# A zombie drops rotten flesh two times in three, so this is a defeat goal, as
+# the blaze fixtures are; the loot is recorded, not required.
+params:
+  mob_name: zombie
+  drop_name: rotten_flesh
+  count: 1
+  defeat_count: 1
+
+goal:
+  kind: all
+  # One failed step, one break, one jump, and a ten-second kill.
+  timeout: 90
+  goals:
+    - { kind: kill, who: PinnedHunter, target: zombie }
+    - { kind: survive, who: PinnedHunter, seconds: 1 }
+    - { kind: completion, who: PinnedHunter }

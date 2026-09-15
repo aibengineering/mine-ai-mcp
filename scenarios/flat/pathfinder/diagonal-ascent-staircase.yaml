@@ -1,0 +1,85 @@
+name: diagonal-ascent-staircase
+description: Climb a staircase whose every tread sits diagonally from the last, with no cardinal alternative, using the production-default diagonal ascent.
+
+# Baritone gates diagonal ascent behind `allowDiagonalAscend`, which defaults
+# off even though its own setting documentation calls the movement pretty
+# safe. Issue #650 reported an upward diagonal that could not execute without
+# placing a block. This fixture keeps placing and digging unavailable and
+# verifies that our production default can physically execute the movement.
+#
+# The forcing is geometric, not a matter of cost. Each corner cell orthogonal
+# to a tread is open at foot and head height, which is what `diagonalClear`
+# requires, but has no support beneath it, so the bot cannot stand there and
+# convert one diagonal step into two cardinal ones. Every solid block is
+# bedrock, so there is no digging or pillaring alternative either.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -4 -63 -4 12 -46 12 air"
+
+geometry:
+  # Sealed shaft. The floor is seven blocks below the highest tread, so a
+  # missed diagonal is a survivable fall that the health goal still records,
+  # and the treads cannot be re-entered from it.
+  - fill: { block: bedrock, from: [-2, -63, -2], to: [10, -63, 10] }
+  - fill: { block: bedrock, from: [-2, -62, -2], to: [-2, -47, 10] }
+  - fill: { block: bedrock, from: [10, -62, -2], to: [10, -47, 10] }
+  - fill: { block: bedrock, from: [-2, -62, -2], to: [10, -47, -2] }
+  - fill: { block: bedrock, from: [-2, -62, 10], to: [10, -47, 10] }
+
+  # The staircase. Tread i sits at (i, -61 + i, i); the bot stands one above it.
+  # Nothing is placed at the orthogonal corners, so each rise is diagonal or
+  # it is nothing.
+  - setblock: { block: bedrock, at: [0, -61, 0] }
+  - setblock: { block: bedrock, at: [1, -60, 1] }
+  - setblock: { block: bedrock, at: [2, -59, 2] }
+  - setblock: { block: bedrock, at: [3, -58, 3] }
+  - setblock: { block: bedrock, at: [4, -57, 4] }
+  - setblock: { block: bedrock, at: [5, -56, 5] }
+
+  # Finish shelf, reachable by ordinary cardinal travel once the climb is done.
+  # Emerald marks it apart from the bedrock so a watch run reads at a glance.
+  - fill: { block: emerald_block, from: [6, -56, 4], to: [8, -56, 6] }
+
+players:
+  - name: DiagonalBot
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!DiagonalBot,gamemode=!spectator]"
+
+params:
+  target: [7, -55, 5]
+  range: 1.5
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: reach
+      who: DiagonalBot
+      pos: [7.5, -55, 5.5]
+      radius: 1.5
+    # A fall to the shaft floor is the expected failure shape, so health
+    # separates "climbed it" from "fell and was lucky".
+    - kind: health
+      who: DiagonalBot
+      health: 20
+    - kind: completion
+      who: DiagonalBot

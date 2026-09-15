@@ -1,0 +1,34 @@
+name: cow-contact-boundary
+description: A stationary cow lies inside the eight-cell approach range but outside eight blocks of actual contact.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+entities:
+  - { type: cow, pos: [8.9, -60, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+players:
+  - name: CowHunter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: stone_sword, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+params:
+  mob_name: cow
+  drop_name: beef
+  count: 1
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: hasItem, who: CowHunter, item: beef, count: 1 }
+    - { kind: completion, who: CowHunter }

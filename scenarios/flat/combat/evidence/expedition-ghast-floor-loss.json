@@ -1,0 +1,567 @@
+{
+  "source": "manual-nether-expedition-ready / 4ae71df9-d33b-49b2-bbba-b6dbcd4c75d8.jsonl",
+  "minecraftVersion": "1.21.4",
+  "worldSeed": "-5335131384818472281",
+  "dimension": "the_nether",
+  "finding": "Combat was guarding a blaze when a large fireball explosion removed its support. The bot had already completed its landing. The incoming-fireball-during-fight fixture isolates the unanswered projectile, not the entire expedition.",
+  "records": [
+    {
+      "kind": "physics",
+      "atMs": 1788855486638,
+      "position": {
+        "x": -32.495632659744736,
+        "y": 81,
+        "z": 351.6198124350952
+      },
+      "onGround": true,
+      "health": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 41,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855486688,
+      "position": {
+        "x": -32.495632659744736,
+        "y": 81,
+        "z": 351.6198124350952
+      },
+      "onGround": true,
+      "health": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 42,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855486738,
+      "position": {
+        "x": -32.495632659744736,
+        "y": 81,
+        "z": 351.6198124350952
+      },
+      "onGround": true,
+      "health": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 43,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855486788,
+      "position": {
+        "x": -32.495632659744736,
+        "y": 81,
+        "z": 351.6198124350952
+      },
+      "onGround": true,
+      "health": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 44,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855486839,
+      "position": {
+        "x": -32.495632659744736,
+        "y": 81,
+        "z": 351.6198124350952
+      },
+      "onGround": true,
+      "health": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 45,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855486890,
+      "position": {
+        "x": -32.495632659744736,
+        "y": 81,
+        "z": 351.6198124350952
+      },
+      "onGround": true,
+      "health": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 46,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855486941,
+      "position": {
+        "x": -32.495632659744736,
+        "y": 81,
+        "z": 351.6198124350952
+      },
+      "onGround": true,
+      "health": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 47,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "packet",
+      "atMs": 1788855486954,
+      "packet": "explosion",
+      "fields": {
+        "x": -31.895632635902878,
+        "y": 82.00120685498254,
+        "z": 351.7281990895482,
+        "playerKnockback": {
+          "x": -0.2858567948226233,
+          "y": 0.29481036571190994,
+          "z": -0.051638434020542474
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855486991,
+      "position": {
+        "x": -32.7,
+        "y": 81.21641036418603,
+        "z": 351.5681740010746
+      },
+      "onGround": false,
+      "health": 17.908571243286133,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 48,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "nearby_block_change",
+      "atMs": 1788855487001,
+      "dimension": "the_nether",
+      "change": {
+        "position": {
+          "x": -33,
+          "y": 80,
+          "z": 351
+        },
+        "before": {
+          "kind": "loaded",
+          "stateId": 6020,
+          "collisionShapes": [
+            {
+              "minX": 0,
+              "minY": 0,
+              "minZ": 0,
+              "maxX": 1,
+              "maxY": 1,
+              "maxZ": 1
+            }
+          ],
+          "traits": {
+            "empty": false,
+            "liquid": null,
+            "liquidSource": false,
+            "climbable": false,
+            "openable": false,
+            "open": false,
+            "activationGroup": null,
+            "upperHalf": false,
+            "falling": false,
+            "damaging": false,
+            "interactive": false,
+            "parkourTakeoff": "normal",
+            "safeToBreak": true
+          }
+        },
+        "after": {
+          "kind": "loaded",
+          "stateId": 0,
+          "collisionShapes": [],
+          "traits": {
+            "empty": true,
+            "liquid": null,
+            "liquidSource": false,
+            "climbable": false,
+            "openable": false,
+            "open": false,
+            "activationGroup": null,
+            "upperHalf": false,
+            "falling": false,
+            "damaging": false,
+            "interactive": false,
+            "parkourTakeoff": "normal",
+            "safeToBreak": false
+          }
+        },
+        "worldRevision": 3742
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855487042,
+      "position": {
+        "x": -32.68007459247014,
+        "y": 81.35009252369017,
+        "z": 351.54170514341536
+      },
+      "onGround": false,
+      "health": 17.908571243286133,
+      "controls": {
+        "forward": false,
+        "back": true,
+        "left": true,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 49,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855487093,
+      "position": {
+        "x": -32.64201706408811,
+        "y": 81.40270104102812,
+        "z": 351.5193442102614
+      },
+      "onGround": false,
+      "health": 17.908571243286133,
+      "controls": {
+        "forward": false,
+        "back": true,
+        "left": true,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 50,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855487348,
+      "position": {
+        "x": -32.49734316796794,
+        "y": 80.50526899158386,
+        "z": 351.4343401793166
+      },
+      "onGround": false,
+      "health": 16.222856521606445,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 55,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855487398,
+      "position": {
+        "x": -32.47573146779111,
+        "y": 80.10437395429494,
+        "z": 351.42164209293156
+      },
+      "onGround": false,
+      "health": 16.222856521606445,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 56,
+          "attacks": 3
+        }
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788855487449,
+      "position": {
+        "x": -32.45606482063019,
+        "y": 79.63309680857945,
+        "z": 351.41008683432113
+      },
+      "onGround": false,
+      "health": 16.222856521606445,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      },
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T08:17:51.591Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": 567,
+        "position": null,
+        "execution": {
+          "phase": "guard",
+          "phaseTicks": 57,
+          "attacks": 3
+        }
+      }
+    }
+  ]
+}

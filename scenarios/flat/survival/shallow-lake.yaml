@@ -1,0 +1,24 @@
+name: shallow-lake
+description: Survive a two-block-deep lake with a full air supply at the end of the observation interval.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0, naturalRegeneration: false }
+reset:
+  - "fill -8 -61 -8 8 -54 8 air"
+geometry:
+  - fill: { block: stone, from: [-8, -61, -8], to: [8, -61, 8] }
+  - fill: { block: water, from: [-7, -60, -7], to: [7, -59, 7] }
+players:
+  - name: LakeDiver
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./shallow-lake.ts"]
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: survive, who: LakeDiver, seconds: 1 }
+    - { kind: completion, who: LakeDiver }

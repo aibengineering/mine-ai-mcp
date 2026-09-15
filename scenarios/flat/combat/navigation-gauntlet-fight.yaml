@@ -1,0 +1,76 @@
+name: navigation-gauntlet-fight
+description: "Reach the declared destinations alive through hostile terrain in the production runtime. Combat and avoidance choices are diagnostic evidence."
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  - type: zombie
+    pos: [20.5, -60, -1.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: zombie
+    pos: [20.5, -60, 1.5]
+    nbt: "{PersistenceRequired:1b}"
+  # Far enough down the road that it plays no part in the zombie fight, and
+  # holds its ground at bow range when the re-issued route brings the bot in.
+  - type: skeleton
+    pos: [46.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+
+players:
+  - name: GauntletBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./combat-handoff.ts"]
+
+params:
+  wearArmor: true
+  firstTarget:
+    - 60
+    - -60
+    - 0
+
+tick:
+  - "gamemode spectator @a[name=!GauntletBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - kind: survive
+      who: GauntletBot
+      seconds: 1
+    - kind: completion
+      who: GauntletBot
+    - kind: reach
+      who: GauntletBot
+      pos:
+        - 60.5
+        - -60
+        - 0.5
+      radius: 2

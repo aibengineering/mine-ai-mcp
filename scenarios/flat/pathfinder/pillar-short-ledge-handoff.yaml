@@ -1,0 +1,26 @@
+name: pillar-short-ledge-handoff
+description: Record a high pillar's complete departure onto a two-block ledge without masking a fall.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "fill -4 -61 -4 6 -48 4 air"
+geometry:
+  - fill: { block: bedrock, from: [-4, -61, -4], to: [6, -61, 4] }
+  - fill: { block: stone, from: [1, -52, 0], to: [2, -52, 0] }
+players:
+  - name: PillarHandoffBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: dirt, count: 16 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pillar-short-ledge-handoff.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: reach, who: PillarHandoffBot, pos: [2.5, -51, 0.5], radius: 0.7 }
+    - { kind: health, who: PillarHandoffBot, health: 20 }
+    - { kind: completion, who: PillarHandoffBot }

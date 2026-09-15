@@ -1,0 +1,21 @@
+name: application-capacity
+description: Refuse a full two-log intermediate without dropping planks, but allow a free slot or the slot freed by consuming the last log.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  gamerules:
+    doMobSpawning: false
+geometry:
+  - fill: { block: crafting_table, from: [1, -60, 0], to: [1, -60, 0] }
+players:
+  - name: CraftSpace
+    pos: [0.5, -60, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./application-capacity.ts"]
+goal:
+  kind: completion
+  who: CraftSpace
+  timeout: 30

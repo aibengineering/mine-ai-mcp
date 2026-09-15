@@ -1,0 +1,59 @@
+name: combat-side-bridge
+description: Cross a two-block bridge above lava while a native skeleton fires from its side platform, then reach the far bank.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+geometry:
+  - fill: { block: air, from: [-1, -60, -6], to: [33, -41, 14] }
+  - fill: { block: lava, from: [-1, -60, -6], to: [33, -60, 14] }
+  - fill: { block: stone, from: [-12, -60, -4], to: [-1, -40, 5] }
+  - fill: { block: stone, from: [33, -60, -4], to: [44, -40, 5] }
+  - fill: { block: stone, from: [0, -40, 0], to: [32, -40, 1] }
+  - fill: { block: stone, from: [13, -40, 4], to: [19, -40, 10] }
+  - fill: { block: oak_fence, from: [13, -39, 4], to: [19, -39, 4] }
+  - fill: { block: oak_fence, from: [13, -39, 10], to: [19, -39, 10] }
+  - fill: { block: oak_fence, from: [13, -39, 5], to: [13, -39, 9] }
+  - fill: { block: oak_fence, from: [19, -39, 5], to: [19, -39, 9] }
+players:
+  - name: TerrainBot
+    op: true
+    pos: [-8.5, -39, 0.5]
+    inventory:
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./terrain-combat.ts"]
+params:
+  mob: skeleton
+  spawns: [[16.5, -39, 6.5]]
+  destination: [38, -39, 0]
+  deckY: -39
+  lavaY: -60
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: survive, who: TerrainBot, seconds: 1 }
+    - { kind: health, who: TerrainBot }
+    - { kind: reach, who: TerrainBot, pos: [38.5, -39, 0.5], radius: 2 }
+    - { kind: completion, who: TerrainBot }

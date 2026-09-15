@@ -1,0 +1,38 @@
+name: locate-stronghold-resume
+description: Real Eyes of Ender locate a generated stronghold; cancel during the first flight and after the second, reopen SQLite, return an estimate, check supplies, then travel and refine with a third eye before confirming a native portal frame.
+minecraft:
+  version: "1.21.4"
+world:
+  type: default
+  seed: 8674349
+  structures: true
+  difficulty: peaceful
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+players:
+  - name: StrongholdFinder
+    pos: [336.5, 64, -1550.5]
+    inventory:
+      - { item: ender_eye, count: 16 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cooked_beef, count: 64 }
+# This ocean seed gets a dry survey surface. The generated stronghold at
+# y=-22 is untouched; native eyes choose their target without fixture hints.
+geometry:
+  - fill: { block: stone, from: [200, 63, -1660], to: [420, 63, -1480] }
+  - fill: { block: air, from: [200, 64, -1660], to: [420, 67, -1480] }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./locate-resume.ts"]
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: completion, who: StrongholdFinder }
+    - { kind: blockAt, pos: [269, -22, -1595], block: end_portal_frame }
+    - { kind: reach, who: StrongholdFinder, pos: [271, 64, -1596], radius: 190 }
+    - { kind: hasItem, who: StrongholdFinder, item: ender_eye, count: 13 }

@@ -1,0 +1,61 @@
+# One real world, one script, several independently judged locations.
+# Surface heights surveyed on vanilla 1.21.4; no terrain is placed or reset.
+name: cast-obsidian
+description: Collect ten obsidian and recover the water bucket at three
+  separated surface locations on seed 8675309.
+minecraft:
+  version: 1.21.4
+world:
+  type: default
+  seed: 8675309
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+  difficulty: peaceful
+players:
+  - name: Collector
+    inventory:
+      - item: diamond_pickaxe
+        count: 1
+      - item: iron_pickaxe
+        count: 1
+      - item: water_bucket
+        count: 1
+      - item: cobblestone
+        count: 32
+client:
+  command: bun
+  args:
+    - ../../src/client-host.ts
+    - ../../src/collector.ts
+params:
+  block_name: obsidian
+  count: 10
+goal:
+  kind: all
+  timeout: 900
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: obsidian
+      count: 10
+    - kind: hasItem
+      who: Collector
+      item: water_bucket
+      count: 1
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector
+verification:
+  radius: 256
+  locations:
+    - [8.5, 64, -19.5]
+    - [-807.5, 114, 800.5]
+    - [1608.5, 75, 1600.5]

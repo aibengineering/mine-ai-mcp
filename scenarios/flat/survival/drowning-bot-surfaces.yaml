@@ -1,0 +1,57 @@
+name: drowning-bot-surfaces
+description: An idle bot in a flooded chamber under a stone roof, where rising alone cannot reach air, digs through the roof and surfaces on its own when the air bar halves.
+
+# The eighth playthrough's bot drowned mining iron at the bottom of a lake:
+# a route owns the controls while an action runs, and the idle water-surface
+# rise stands aside for it. The breath reflex now claims the body at half
+# air whoever holds the controls, like the hunger reflex claims it at
+# fourteen hunger, rises, digs the roof if there is one, and hands the body
+# back with a full bar. Here the rise alone cannot work: the chamber is
+# sealed, so the roof block has to go.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -61 -8 12 -48 8 air"
+
+geometry:
+  - fill: { block: stone, from: [-4, -60, -4], to: [8, -55, 8] }
+  - fill: { block: water, from: [0, -59, 0], to: [4, -57, 4] }
+
+players:
+  - name: Diver
+    pos: [2.5, -59, 2.5]
+    inventory:
+      - { item: stone_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./breath.ts"]
+
+params:
+  waitTicks: 1200
+  minHealth: 14
+
+tick:
+  - "gamemode spectator @a[name=!Diver,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: survive
+      who: Diver
+      seconds: 1
+    - kind: completion
+      who: Diver

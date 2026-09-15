@@ -1,0 +1,51 @@
+name: spreading-lava-obstacle-course
+description: Cross a wide open arena as three overhead sources spread across the initially clear route; avoid the flows and reach the goal, with a dry route remaining after full spread.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0, keepInventory: true }
+reset:
+  - "fill -3 -60 -16 82 -51 16 air"
+geometry:
+  # Broad open floor, not a maze or a prescribed bypass. Low outer walls
+  # retain the experiment; there are no interior corridor walls or roof.
+  - fill: { block: bedrock, from: [-2, -60, -15], to: [81, -60, 15] }
+  - fill: { block: bedrock, from: [-2, -59, -15], to: [81, -57, -15] }
+  - fill: { block: bedrock, from: [-2, -59, 15], to: [81, -57, 15] }
+  - fill: { block: bedrock, from: [-2, -59, -15], to: [-2, -57, 15] }
+  - fill: { block: bedrock, from: [81, -59, -15], to: [81, -57, 15] }
+  - setblock: { block: gold_block, at: [78, -60, 0] }
+  # Scattered rocks beside the streams make this an obstacle course, while
+  # leaving generous room on either side even once every lava fan settles.
+  - fill: { block: stone, from: [36, -59, -5], to: [38, -58, -3] }
+  - fill: { block: stone, from: [52, -59, 3], to: [54, -58, 5] }
+  - fill: { block: stone, from: [68, -59, -6], to: [70, -58, -4] }
+  # Suspended glass cups with removable bottoms. The feet/head cells below
+  # are clear at plan time. Opening the gates lets native lava fall, then
+  # spread across the floor. No command places lava in front of the bot.
+  - fill: { block: glass, from: [31, -57, -1], to: [33, -56, 1] }
+  - setblock: { block: lava, at: [32, -56, 0] }
+  - setblock: { block: stone, at: [32, -57, 0] }
+  - fill: { block: glass, from: [47, -57, 0], to: [49, -56, 2] }
+  - setblock: { block: lava, at: [48, -56, 1] }
+  - setblock: { block: stone, at: [48, -57, 1] }
+  - fill: { block: glass, from: [63, -57, -2], to: [65, -56, 0] }
+  - setblock: { block: lava, at: [64, -56, -1] }
+  - setblock: { block: stone, at: [64, -57, -1] }
+players:
+  - name: LavaRerouteBot
+    pos: [0.5, -59, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./spreading-lava-obstacle-course.ts"]
+tick:
+  - "gamemode spectator @a[name=!LavaRerouteBot,gamemode=!spectator]"
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: reach, who: LavaRerouteBot, pos: [78.5, -59, 0.5], radius: 0.8 }
+    - { kind: health, who: LavaRerouteBot, health: 20 }
+    - { kind: completion, who: LavaRerouteBot }

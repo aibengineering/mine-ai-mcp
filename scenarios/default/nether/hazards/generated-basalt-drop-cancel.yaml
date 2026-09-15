@@ -1,0 +1,31 @@
+name: generated-basalt-drop-cancel
+description: Cancel while descending a native basalt ledge and retain movement until supported ground.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: true, keepInventory: false, randomTickSpeed: 0 }
+params: { kind: cancel_drop }
+players:
+  - name: BasaltTraveler
+    pos: [204.5, 49, -16.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./generated-basalt-gap.ts"]
+goal:
+  kind: completion
+  who: BasaltTraveler
+  timeout: 60

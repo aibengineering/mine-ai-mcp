@@ -1,0 +1,41 @@
+name: enderman-close-pair
+description: Defeat an enderman in the close native pair and survive with at
+  least twelve health. Roof choices and safe refusals are diagnostic evidence,
+  not successful defeat.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: true }
+players:
+  - name: PairHunter
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: netherrack, count: 17 }
+      - { item: cooked_beef, count: 36 }
+entities:
+  - { type: enderman, pos: [0.5, -60, 1.03], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pair"]}' }
+  - { type: enderman, pos: [0.8, -60, 6.7], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pair"]}' }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-close-pair.ts"]
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: health
+      who: PairHunter
+      health: 12
+    - kind: survive
+      who: PairHunter
+      seconds: 1
+    - kind: completion
+      who: PairHunter

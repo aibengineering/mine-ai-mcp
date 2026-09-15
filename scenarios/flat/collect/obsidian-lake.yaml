@@ -1,0 +1,70 @@
+name: obsidian-lake
+description: A lava lake ringed with obsidian, cobblestone carried; ten are sealed and mined and nothing floods.
+
+# Run 10 found 107 loaded obsidian blocks and mined none: obsidian forms where
+# lava meets water, so every natural block has a lava face, and the flood rule
+# refuses any break that opens into liquid. The rule is right for a route break
+# and wrong for a target break. Here the process closes each lava face with a
+# carried block before the swing, then breaks the obsidian where it stands.
+#
+# The ring stands in the stone floor around the pool, so each block has lava on
+# one side and stone on the others, and a seal that is missed would let the
+# lake into the mined cell.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -20 -59 -20 20 -40 20 air"
+
+geometry:
+  - fill: { block: stone, from: [-20, -61, -20], to: [20, -61, 20] }
+  - fill: { block: stone, from: [-20, -60, -20], to: [20, -60, 20] }
+  - fill: { block: lava, from: [5, -60, -3], to: [11, -60, 3] }
+  - fill: { block: obsidian, from: [4, -60, -4], to: [12, -60, -4] }
+  - fill: { block: obsidian, from: [4, -60, 4], to: [12, -60, 4] }
+  - fill: { block: obsidian, from: [4, -60, -4], to: [4, -60, 4] }
+  - fill: { block: obsidian, from: [12, -60, -4], to: [12, -60, 4] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+params:
+  block_name: obsidian
+  count: 10
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: obsidian
+      count: 10
+    # Completion must not be earned by respawning with keepInventory.
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector

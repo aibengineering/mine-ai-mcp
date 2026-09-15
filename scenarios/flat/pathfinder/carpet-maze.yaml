@@ -1,0 +1,136 @@
+name: carpet-maze
+description: "Walk a hallway of moss carpets: onto one where a tall gallery drops to a low passage, around a stack that blocks the body, and through the wall of them that has no way round."
+
+# Moss carpets are the thinnest block the planner calls passable: one sixteenth
+# of a block, walked over as a matter of course. Live on 2026-09-04 the bot met
+# them in a lush cave, stalled dead against one, reported the ledge unreachable
+# and climbed back out of the cave to do something else.
+#
+# Three checks in a line, each isolating one reason that happens, easiest first.
+#
+# Check one is not our bug at all. A carpet is walkable, but only if the step
+# onto it is allowed: `prismarine-physics` rises by its whole 0.6 stepHeight
+# rather than the sixteenth actually needed, and limits that rise by the
+# ceiling of the cell the bot is *standing in* rather than the one it is
+# entering. Walk from a tall gallery into a two-high passage whose first cell
+# holds a carpet and the step overshoots into the low ceiling and is refused —
+# forever, since nothing about standing still changes it. Give the bot's own
+# cell a low ceiling too and the identical move succeeds, which is how the
+# defect was isolated. A whole hallway of one height hides it.
+#
+# Check two is ours. A carpet resting on the carpet below it sits at feet+1.0
+# and cuts through the bot's 1.8-block body, so it is not passable at all — but
+# `isPassable` judges thinness alone and never asks whether the cell is being
+# entered by the feet or the chest. The blocked lanes therefore look free, and a
+# clear lane beside them is never preferred. It must go round.
+#
+# Check three has no way round, so the carpets have to come down.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -10 -62 -4 12 -46 4 air"
+
+geometry:
+  # Solid bedrock, then the hallway cut out of it.
+  - fill: { block: bedrock, from: [-9, -61, -3], to: [11, -53, 3] }
+
+  # A tall gallery, four cells high, ceiling at y=-55.
+  - fill: { block: air, from: [-8, -59, -1], to: [-1, -56, 1] }
+
+  # The passage it leads into is two cells high, ceiling at y=-57. The drop in
+  # headroom at x=0 is what makes check one bite.
+  - fill: { block: air, from: [0, -59, -1], to: [10, -58, 1] }
+
+  # Check one: a carpet on the floor of the first low cell, right across the
+  # width. Walkable in principle, and the only way on. Nothing to break here.
+  - setblock: { block: moss_carpet, at: [0, -59, -1] }
+  - setblock: { block: moss_carpet, at: [0, -59, 0] }
+  - setblock: { block: moss_carpet, at: [0, -59, 1] }
+
+  # Check two: stacked carpets fill the body of two lanes; the third is open.
+  # A carpet supports the carpet above it, which is how these come to stand at
+  # chest height in a cave. Going round is free; breaking through is not.
+  - setblock: { block: moss_carpet, at: [5, -59, -1] }
+  - setblock: { block: moss_carpet, at: [5, -58, -1] }
+  - setblock: { block: moss_carpet, at: [5, -59, 0] }
+  - setblock: { block: moss_carpet, at: [5, -58, 0] }
+
+  # Check three: stacked carpets across every lane. Nothing is walkable and
+  # nothing goes around, so the only way to the goal is to break through.
+  - setblock: { block: moss_carpet, at: [8, -59, -1] }
+  - setblock: { block: moss_carpet, at: [8, -58, -1] }
+  - setblock: { block: moss_carpet, at: [8, -59, 0] }
+  - setblock: { block: moss_carpet, at: [8, -58, 0] }
+  - setblock: { block: moss_carpet, at: [8, -59, 1] }
+  - setblock: { block: moss_carpet, at: [8, -58, 1] }
+
+  # The goal marker, under the far end of the hallway.
+  - setblock: { block: gold_block, at: [10, -60, 0] }
+
+players:
+  - name: CarpetWalker
+    pos: [-7.5, -59, 0.5]
+    inventory:
+      - item: iron_pickaxe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!CarpetWalker,gamemode=!spectator]"
+
+params:
+  target: [10, -59, 0]
+  range: 0.75
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    # The far end of the hallway, past all three checks.
+    - kind: reach
+      who: CarpetWalker
+      pos: [10.5, -59, 0.5]
+      radius: 1.0
+
+    # Check one is crossed by walking. A bot that quarried its way onto the
+    # carpet would satisfy the reach goal while hiding the physics defect.
+    - kind: blockAt
+      who: CarpetWalker
+      pos: [0, -59, -1]
+      block: moss_carpet
+    - kind: blockAt
+      who: CarpetWalker
+      pos: [0, -59, 0]
+      block: moss_carpet
+    - kind: blockAt
+      who: CarpetWalker
+      pos: [0, -59, 1]
+      block: moss_carpet
+
+    # Check two has an open lane, so its stack must still be standing.
+    - kind: blockAt
+      who: CarpetWalker
+      pos: [5, -58, 0]
+      block: moss_carpet
+
+    - kind: health
+      who: CarpetWalker
+      health: 20
+
+    - kind: completion
+      who: CarpetWalker

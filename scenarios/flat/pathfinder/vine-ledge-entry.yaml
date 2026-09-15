@@ -1,0 +1,77 @@
+name: vine-ledge-entry
+description: Carry a run-up off the ledge into the vine column hanging past its lip and ride it down instead of crossing straight through it.
+
+# Retained incident 97c795ac, 2026-09-13, during a collect_block leg: the route
+# committed to `-7,102,30>-6,102,29:sprint`, a traverse off a ledge into a cell
+# whose feet, head, and support were all vine. The column caught the bot at
+# 0.15 a tick and the inherited speed carried it from z=29.8 to z=28.9, out of
+# the column and into the gap where the next one stood a block over; it fell
+# five blocks.
+#
+# The lip is what makes this a sprint rather than a gentle entry: the cell past
+# it is held up by nothing but the vine below it, so the run-up is spent inside
+# a column one block wide with open air beyond. As in vine-sprint-entry the
+# wall is north of the vines while the approach runs east, so the speed the bot
+# brings points out of an open side instead of into the block it is climbing.
+# Fifteen blocks of air are under the lip and the column is the only way down,
+# so the route has no second option and the health reading is the whole
+# difference between climbing down and falling.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -12 -61 -12 14 -36 12 air"
+
+geometry:
+  - fill: { block: andesite, from: [-12, -61, -12], to: [14, -61, 12] }
+
+  # The ledge, walked at y=-45, ending at x=1 with a straight run-up along it.
+  - fill: { block: stone, from: [-8, -46, -2], to: [1, -46, 2] }
+
+  # The wall the vines hang on, north of them and tall enough that standing on
+  # it is never an alternative to the column. Each vine is held by the wall
+  # rather than by the vine above it, so the column survives being written.
+  - fill: { block: stone, from: [2, -60, -1], to: [2, -37, -1] }
+  - fill: { block: "vine[north=true]", from: [2, -60, 0], to: [2, -45, 0] }
+
+players:
+  - name: LedgeVineBot
+    pos: [-7.5, -45, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./vine-climb-reliability.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!LedgeVineBot,gamemode=!spectator]"
+
+params:
+  legs:
+    - { target: [7, -60, 0], range: 1, label: "enter the hanging column off the lip and climb down it" }
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: reach
+      who: LedgeVineBot
+      pos: [7.5, -60, 0.5]
+      radius: 1.5
+    # Crossing straight through the column is a fifteen-block fall onto the
+    # same floor the goal sits on, so only the health reading separates them.
+    - kind: health
+      who: LedgeVineBot
+      health: 20
+    - kind: completion
+      who: LedgeVineBot

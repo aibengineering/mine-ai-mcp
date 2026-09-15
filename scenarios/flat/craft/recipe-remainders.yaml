@@ -1,0 +1,21 @@
+name: recipe-remainders
+description: Preserve honey bottles and cake buckets through native 2x2 and 3x3 recipes, and refuse insufficient per-application storage before mutation.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  gamerules:
+    doMobSpawning: false
+geometry:
+  - fill: { block: crafting_table, from: [1, -60, 0], to: [1, -60, 0] }
+players:
+  - name: RemainderBot
+    pos: [0.5, -60, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./recipe-remainders.ts"]
+goal:
+  kind: completion
+  who: RemainderBot
+  timeout: 60

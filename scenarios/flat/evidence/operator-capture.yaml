@@ -1,0 +1,19 @@
+name: operator-capture
+description: Freeze the running recorder through the diagnostic HTTP endpoint during ordinary navigation, then verify normal arrival and request correlation.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+players:
+  - name: CaptureBot
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./operator-capture.ts"]
+goal:
+  kind: completion
+  who: CaptureBot
+  timeout: 60

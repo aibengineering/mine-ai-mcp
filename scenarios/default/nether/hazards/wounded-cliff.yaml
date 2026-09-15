@@ -1,0 +1,39 @@
+name: wounded-cliff
+description: Survive native enderman pursuit while wounded beside a surveyed fourteen-block Nether cliff without entering lava or falling more than three unsupported blocks.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  structures: true
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: false, keepInventory: false }
+entities:
+  - { type: enderman, pos: [70.5, 66, -17.5], nbt: "{PersistenceRequired:1b}" }
+players:
+  - name: EnderExpedition
+    pos: [71.5, 65, -19.5]
+    health: 11
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./wounded-cliff.ts"]
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: completion, who: EnderExpedition }
+    - { kind: survive, who: EnderExpedition, seconds: 1 }
+    - { kind: health, who: EnderExpedition, health: 1 }

@@ -1,0 +1,73 @@
+name: navigation-mixed-creeper-management
+description: Cross a large bounded arena through two creepers and three zombies that begin outside contact range. Safe fighting and fuse retreats must preserve the route without using an emergency hide.
+template: ../../../scenario-templates/arenas/traverse.yaml
+
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+# The bot starts on the west side. Every hostile begins beyond the eight-block
+# contact boundary, so the route creates the encounter instead of the fixture
+# starting with an already completed encirclement.
+entities:
+  - type: creeper
+    pos: [0.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: creeper
+    pos: [6.5, -60, -2.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: zombie
+    pos: [3.5, -60, 3.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: zombie
+    pos: [9.5, -60, -4.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: zombie
+    pos: [12.5, -60, 4.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: MixedRouteBot
+    pos: [-42.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./navigation-mixed-creeper-management.ts"]
+
+params:
+  firstTarget: [42, -60, 0]
+  forbidHide: true
+  requireEncounter: true
+  maxExplosions: 2
+
+tick:
+  - "gamemode spectator @a[name=!MixedRouteBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: MixedRouteBot, pos: [42.5, -60, 0.5], radius: 2 }
+    - { kind: health, who: MixedRouteBot, health: 12 }
+    - { kind: survive, who: MixedRouteBot, seconds: 1 }
+    - { kind: completion, who: MixedRouteBot }

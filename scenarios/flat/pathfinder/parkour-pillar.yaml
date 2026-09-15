@@ -1,0 +1,34 @@
+name: parkour-pillar
+description: Settle a rising parkour landing before centering and placing the next pillar block beside a wall.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+reset:
+  - "fill -3 -62 -3 3 -52 5 air"
+geometry:
+  - setblock: { block: netherrack, at: [0, -61, 0] }
+  - setblock: { block: netherrack, at: [0, -60, 2] }
+  - fill: { block: soul_sand, from: [-1, -59, 1], to: [-1, -56, 3] }
+  - fill: { block: soul_sand, from: [0, -59, 3], to: [1, -57, 3] }
+players:
+  - name: PillarJumpBot
+    pos: [0.3, -60, 0.5]
+    inventory:
+      - { item: cobblestone, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./parkour-pillar.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: reach, who: PillarJumpBot, pos: [0.5, -58, 2.5], radius: 0.7 }
+    - { kind: blockAt, who: PillarJumpBot, pos: [0, -59, 2], block: cobblestone }
+    - { kind: health, who: PillarJumpBot, health: 20 }
+    - { kind: completion, who: PillarJumpBot }

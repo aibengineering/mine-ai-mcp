@@ -1,0 +1,46 @@
+name: enderman-six-pearls-rate
+description: Hunt native endermen across uneven generated nylium, collect six pearls across repeated hunts at one pearl per minute and return alive with ordinary digging and scaffolding available.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  structures: true
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: true, keepInventory: false }
+entities:
+  - { type: enderman, pos: [104.5, 55, 2.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: enderman, pos: [106.5, 56, 8.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: enderman, pos: [108.5, 58, 12.5], nbt: "{PersistenceRequired:1b}" }
+players:
+  - name: EnderExpedition
+    pos: [98.5, 59, 8.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      # Repeated native kills and roof relocation exhausted the one-pearl kit.
+      - { item: cobblestone, count: 192 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-expedition.ts"]
+params:
+  collection: { drops: 6, minimumDropsPerMinute: 1 }
+  approach: [100, 56, 2]
+goal:
+  kind: all
+  timeout: 480
+  goals:
+    - { kind: completion, who: EnderExpedition }
+    - { kind: survive, who: EnderExpedition, seconds: 1 }
+    - { kind: health, who: EnderExpedition, health: 1 }
+    - { kind: hasItem, who: EnderExpedition, item: ender_pearl, count: 6 }
+    - { kind: reach, who: EnderExpedition, pos: [98, 59, 8], radius: 2 }

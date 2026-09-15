@@ -1,0 +1,41 @@
+name: generated-basalt-islands-hunt
+description: Hunt two native medium magma cubes on small generated islands beside the lava ocean and return with cream.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: true, keepInventory: false, randomTickSpeed: 0 }
+entities:
+  - { type: magma_cube, pos: [182.5, 36, -31.5], nbt: '{Size:1,NoAI:1b,PersistenceRequired:1b,Tags:["basalt_hunt"]}' }
+  - { type: magma_cube, pos: [186.5, 36, -35.5], nbt: '{Size:1,NoAI:1b,PersistenceRequired:1b,Tags:["basalt_hunt"]}' }
+players:
+  - name: BasaltTraveler
+    pos: [184.5, 35, -33.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 48 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./generated-basalt-hunt.ts"]
+goal:
+  kind: all
+
+  # Arrangement, native combat, loot pickup, return, and a three-second dwell.
+  timeout: 180
+  goals:
+    - { kind: completion, who: BasaltTraveler }
+    - { kind: hasItem, who: BasaltTraveler, item: magma_cream, count: 1 }
+    - { kind: survive, who: BasaltTraveler, seconds: 1 }
+    - { kind: health, who: BasaltTraveler, health: 1 }

@@ -1,0 +1,39 @@
+name: generated-basalt-lower_ledge
+description: Verify a journey past an exposed cube on a lower ledge in native basalt terrain.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, keepInventory: false, randomTickSpeed: 0 }
+params: { kind: lower_ledge }
+# The exposed shelf five blocks below the start, inside eight-block proximity.
+entities:
+  - { type: magma_cube, pos: [199.5, 44, -23.5], nbt: '{Size:0,NoAI:1b,PersistenceRequired:1b,Tags:["reflex_trial"]}' }
+players:
+  - name: BasaltTraveler
+    pos: [198.5, 49, -18.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./generated-basalt-reflex.ts"]
+goal:
+  kind: all
+
+  # Navigate past a visible lower ledge without turning the journey into a hunt.
+  timeout: 90
+  goals:
+    - { kind: completion, who: BasaltTraveler }
+    - { kind: survive, who: BasaltTraveler, seconds: 1 }
+    - { kind: health, who: BasaltTraveler, health: 1 }

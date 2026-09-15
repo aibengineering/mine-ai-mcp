@@ -1,0 +1,40 @@
+name: flat-east-frontier
+description: Extend the remembered eastern boundary by one chunk column across ordinary flat ground.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+
+players:
+  - name: Explorer
+    pos: [0, -59, 0]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/explorer.ts"]
+
+params:
+  heading: 90
+  chunks: 1
+
+tick:
+  - "gamemode spectator @a[name=!Explorer,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    # External movement evidence: the starting point is outside this radius.
+    - kind: reach
+      who: Explorer
+      pos: [18, -59, 0]
+      radius: 12
+    - kind: completion
+      who: Explorer

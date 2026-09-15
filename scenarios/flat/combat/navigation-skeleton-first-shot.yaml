@@ -1,0 +1,31 @@
+name: navigation-skeleton-first-shot
+description: Navigate past native bow skeletons from outside contact range without taking damage, starting before any hostile response.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: false }
+entities:
+  - type: skeleton
+    pos: [12.5, -60, 10.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+  - type: skeleton
+    pos: [28.5, -60, 10.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+players:
+  - name: FirstShotWalker
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./navigation-skeleton-first-shot.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: completion, who: FirstShotWalker }
+    - { kind: health, who: FirstShotWalker, health: 20 }

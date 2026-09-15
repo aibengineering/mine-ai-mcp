@@ -1,0 +1,8 @@
+{
+  // The build compiles shipped code only. This adds the tests, so a test that
+  // calls a signature that no longer exists fails here rather than passing
+  // silently under a transpile-only runner.
+  "extends": "./tsconfig.build.json",
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist"]
+}

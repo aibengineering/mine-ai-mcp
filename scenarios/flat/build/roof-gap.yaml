@@ -1,0 +1,33 @@
+name: roof-gap
+description: Build the run-12 camp around its furnace and bed and verify every requested roof cell.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+geometry:
+  - fill: { block: air, from: [0, -61, 4], to: [4, -61, 4] }
+  - fill: { block: furnace, from: [1, -60, 2], to: [1, -60, 2] }
+  - fill: { block: crafting_table, from: [1, -60, 3], to: [1, -60, 3] }
+setup:
+  - "setblock 3 -60 2 white_bed[facing=south,part=foot]"
+  - "setblock 3 -60 3 white_bed[facing=south,part=head]"
+players:
+  - name: RoofGapBot
+    pos: [2.48, -60, 3.43]
+    op: true
+    inventory:
+      - { item: cooked_beef, count: 8 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./roof-gap.ts"]
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: health, who: RoofGapBot, health: 20 }
+    - { kind: completion, who: RoofGapBot }

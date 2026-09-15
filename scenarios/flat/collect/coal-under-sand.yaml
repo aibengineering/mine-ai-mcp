@@ -1,0 +1,82 @@
+name: coal-under-sand
+description: Collect a coal seam buried inside a sand dune without being buried by what each dig releases.
+
+# Taken from a live run: `collect_block coal_ore count 8 scaffold true`
+# broke nine blocks across three y levels of one cluster and the bot took
+# suffocation damage. The existing sand scenarios all collect sand itself from
+# an exposed top downward, which is the safe direction, so none of them covers
+# this: the targets are not falling blocks, they are buried in a body of sand,
+# and reaching the seam means standing inside the excavation while opening
+# cells above and below.
+#
+# Collection used to bypass the catalogue's column preparation for reachable
+# shaft targets. Shared excavation must price and execute the complete dig
+# sequence from a position that can reach it, including any released sand.
+# Full health at completion is the regression assertion.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -20 -59 -20 20 -40 20 air"
+
+geometry:
+  - fill: { block: stone, from: [-16, -60, -16], to: [16, -60, 16] }
+  # A dune eight blocks deep. Everything above the seam is unsupported the
+  # moment the seam goes.
+  - fill: { block: sand, from: [-8, -59, -4], to: [0, -52, 4] }
+  # The seam, shaped like the live cluster: nine blocks over three levels,
+  # reached only by tunnelling in through the sand.
+  - setblock: { block: coal_ore, at: [-4, -57, 0] }
+  - setblock: { block: coal_ore, at: [-4, -57, 1] }
+  - setblock: { block: coal_ore, at: [-4, -56, 1] }
+  - setblock: { block: coal_ore, at: [-4, -58, 1] }
+  - setblock: { block: coal_ore, at: [-5, -58, 1] }
+  - setblock: { block: coal_ore, at: [-3, -57, 1] }
+  - setblock: { block: coal_ore, at: [-4, -57, 2] }
+  - setblock: { block: coal_ore, at: [-4, -58, 2] }
+  - setblock: { block: coal_ore, at: [-4, -56, 2] }
+
+players:
+  - name: Collector
+    pos: [6, -59, 0]
+    inventory:
+      - { item: stone_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+# The request this world exists to exercise, as the live run made it.
+params:
+  block_name: coal_ore
+  count: 8
+  scaffold: true
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: coal
+      count: 8
+    # The point of the fixture: the dune must not land on the bot.
+    - kind: health
+      who: Collector
+      health: 20
+    - kind: completion
+      who: Collector

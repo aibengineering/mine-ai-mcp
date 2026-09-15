@@ -1,0 +1,21 @@
+name: soul-sand-lava-contact
+description: The fire reflex escapes shallow lava contact at a soul-sand edge even when Mineflayer's swimming flag is false.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: air, from: [-5, -63, -5], to: [5, -54, 5] }
+  - fill: { block: netherrack, from: [-5, -63, -5], to: [5, -62, 5] }
+  - fill: { block: soul_sand, from: [-4, -61, -4], to: [0, -61, 4] }
+  - fill: { block: lava, from: [1, -61, -4], to: [4, -61, 4] }
+players:
+  - name: EdgeSurvivor
+    op: true
+    pos: [-0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./soul-sand-lava-contact.ts"]
+goal: { kind: completion, who: EdgeSurvivor, timeout: 30 }

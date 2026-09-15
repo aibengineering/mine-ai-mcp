@@ -1,0 +1,102 @@
+name: pillar-descent-over-lava
+description: Ride a one-wide pillar down to a gold block on a plinth in a lava lake, where any horizontal drift during a dig is a fatal fall.
+
+# Every other descent fixture digs inside rock, so the shaft walls hold the bot
+# on its cell no matter what the executor does with the controls. This one
+# removes the walls: the bot stands on a free-standing column of stone rising
+# out of a lava lake and mines the block under its own feet twelve times,
+# riding the column down as it shortens. At every height the four neighbouring
+# cells are open air over lava.
+#
+# That makes it the discriminating fixture for control ownership during a
+# break. A control still held from the previous movement, an approach input
+# that is not released before the dig, or a rotation that turns the bot and
+# then walks it off its cell, all read as "reached the gold slightly slower"
+# in a walled shaft and as a death here. The health goal is the assertion.
+#
+# The plinth is one column wide on purpose. A three-wide landing would catch a
+# bot that drifted off near the bottom and let the run pass on the strength of
+# the last few blocks.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -14 -62 -14 14 -40 14 air"
+
+geometry:
+  # A bedrock basin. The lake has to be a sealed volume of source blocks: a
+  # lake that can flow invalidates the route every tick and the fixture then
+  # measures replan thrash instead of the descent.
+  - fill: { block: bedrock, from: [-13, -62, -13], to: [13, -62, 13] }
+  - fill: { block: bedrock, from: [-13, -61, -13], to: [13, -57, -13] }
+  - fill: { block: bedrock, from: [-13, -61, 13], to: [13, -57, 13] }
+  - fill: { block: bedrock, from: [-13, -61, -13], to: [-13, -57, 13] }
+  - fill: { block: bedrock, from: [13, -61, -13], to: [13, -57, 13] }
+  - fill: { block: lava, from: [-12, -61, -12], to: [12, -57, 12] }
+
+  # The plinth, one column wide, replacing the lava at the centre. Its top is
+  # the gold block the bot is sent to, so arriving and standing on the target
+  # are the same event.
+  - fill: { block: bedrock, from: [0, -61, 0], to: [0, -58, 0] }
+  - setblock: { block: gold_block, at: [0, -57, 0] }
+
+  # The pillar: twelve blocks of stone standing on the gold, one wide, with
+  # nothing to lean on. Bedrock would make it undiggable and stone is the
+  # material every other descent fixture uses, so the dig times stay
+  # comparable.
+  - fill: { block: stone, from: [0, -56, 0], to: [0, -45, 0] }
+
+players:
+  - name: PlinthBot
+    pos: [0, -44, 0]
+    # Twelve stone blocks bare-handed is roughly the whole timeout, which would
+    # make this a fixture about mining speed. The pickaxe keeps it about
+    # whether the bot stays on its cell.
+    inventory:
+      - item: iron_pickaxe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!PlinthBot,gamemode=!spectator]"
+
+params:
+  # The gold block itself. A range of 1.5 is satisfied only by standing on it:
+  # from the cell one block higher the distance is 2.
+  target: [0, -57, 0]
+  range: 1.5
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: reach
+      who: PlinthBot
+      pos: [0.5, -56, 0.5]
+      radius: 1.0
+    # Untouched health is the real assertion. Lava is instant and keepInventory
+    # hides the death, so without this the run reports a plausible failure
+    # rather than the reason for it.
+    - kind: health
+      who: PlinthBot
+      health: 20
+    - kind: blockAt
+      who: PlinthBot
+      pos: [0, -57, 0]
+      block: gold_block
+    - kind: completion
+      who: PlinthBot

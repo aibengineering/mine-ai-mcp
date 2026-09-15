@@ -1,0 +1,31 @@
+name: enderman-expedition-site
+description: Defeat one native enderman alive at the recorded expedition site where nearby endermen obstruct local roof positions.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: "-5335131384818472281"
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: true }
+# The recorded group whose bodies obstruct local roof positions at the site.
+entities:
+  - { type: enderman, pos: [-242.5, 80, 470.045], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pair"]}' }
+  - { type: enderman, pos: [-243.5, 80, 468.609], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pair"]}' }
+  - { type: enderman, pos: [-242.199, 77, 475.744], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pair"]}' }
+players:
+  - name: SiteHunter
+    pos: [-242.4928921050065, 80, 469.5170031068518]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: netherrack, count: 17 }
+      - { item: cooked_beef, count: 36 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-expedition-site.ts"]
+goal: { kind: completion, who: SiteHunter, timeout: 90 }

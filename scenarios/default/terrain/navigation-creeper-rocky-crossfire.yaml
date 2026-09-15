@@ -1,0 +1,46 @@
+name: navigation-creeper-rocky-crossfire
+description: Continue a wounded nighttime journey from the rocky slope where a real mixed-creeper encounter failed. A nearby creeper, spider and ranged attacker leave little retreat room; reach the original onward waypoint alive using any effective response.
+# Terrain and approximate actor positions come from the 2026-09-12 seed
+# 20260912 playtest, immediately before its fatal retreat/target change.
+# Fresh native fuses and equipped gear allow a response; this is not a replay
+# of an already-expiring fuse. Ambient spawning is disabled to bound the cast.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  seed: 20260912
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: true, keepInventory: false }
+players:
+  - name: RockyTraveller
+    pos: [-223.5, 63, -83.5]
+    health: 13
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_shovel, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 16 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+entities:
+  - { type: creeper, pos: [-224.5, 64, -84.5], nbt: '{PersistenceRequired:1b}' }
+  - { type: spider, pos: [-221.5, 64, -83.5], nbt: '{PersistenceRequired:1b}' }
+  - { type: zombie, pos: [-217.5, 64, -82.5], nbt: '{PersistenceRequired:1b}' }
+  - { type: skeleton, pos: [-214.5, 64, -81.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../flat/combat/navigation-creeper-pocket.ts"]
+params: { destination: [-220, 68, -109] }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: reach, who: RockyTraveller, pos: [-219.5, 68, -108.5], radius: 2 }
+    - { kind: survive, who: RockyTraveller, seconds: 1 }
+    - { kind: completion, who: RockyTraveller }

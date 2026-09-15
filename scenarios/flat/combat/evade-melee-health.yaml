@@ -1,0 +1,43 @@
+name: evade-melee-health
+description: An iron-armored hurt bot survives twenty seconds of pressure from two real wither skeletons.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+setup:
+  - "difficulty normal"
+geometry:
+  - fill: { block: nether_bricks, from: [-60, -61, -60], to: [60, -61, 60] }
+entities:
+  - type: wither_skeleton
+    pos: [1.5, -60, 0]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}]}'
+  - type: wither_skeleton
+    pos: [1.5, -60, 1]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}]}'
+players:
+  - name: Evader
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 32 }
+      - { item: bread, count: 16 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./evade-melee-health.ts"]
+goal:
+  kind: completion
+  who: Evader
+  timeout: 35

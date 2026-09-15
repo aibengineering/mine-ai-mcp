@@ -1,0 +1,17 @@
+template: basalt-crossfire.yaml
+name: basalt-crossfire-melee
+description: Reach the far side of the mixed basalt traverse alive without a bow and without attacking neutral endermen.
+players:
+  - name: BasaltTraveler
+    pos: [0.5, 100, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }

@@ -1,0 +1,53 @@
+name: hungry-bot-eats
+description: An idle bot drained to a hunger of ten restores hunger using its carried food without being asked.
+
+# The first playthrough went seventy minutes without a bite, and the one time
+# the model asked, the body was busy. Eating is a reflex now: when hunger
+# crosses the bar the runtime claims the body, eats, and hands it back. The
+# fixture carries bread and rotten flesh; food choice is policy, not a verdict.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+players:
+  - name: HungryBot
+    pos: [0.5, -60, 0.5]
+    # Opped so the driver can drain the bot's hunger itself.
+    op: true
+    inventory:
+      - { item: bread, count: 3 }
+      - { item: rotten_flesh, count: 3 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./hunger.ts"]
+
+params:
+  hungerTo: 10
+  waitTicks: 600
+
+tick:
+  - "gamemode spectator @a[name=!HungryBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: survive
+      who: HungryBot
+      seconds: 1
+    - kind: completion
+      who: HungryBot

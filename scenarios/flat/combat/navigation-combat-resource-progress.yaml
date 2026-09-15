@@ -1,0 +1,34 @@
+name: navigation-combat-resource-progress
+description: One ordinary navigation request crosses native ranged crossfire; its waits and settlement report independently observed combat resource costs.
+minecraft: { version: "1.21.4" }
+world: { type: flat, time: midnight, difficulty: normal, gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 } }
+players:
+  - name: ResourceReporter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 6 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 32 }
+      - { item: cooked_beef, count: 8 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+client: { command: bun, args: ["../../src/client-host.ts", "./navigation-combat-resource-progress.ts"] }
+geometry:
+  - fill: { block: polished_andesite, from: [-8, -61, -12], to: [38, -61, 12] }
+entities:
+  # Opposing native volleys make open-ground guarding insufficient. Combat owns
+  # its protection choice; the fixture merely supplies building material.
+  - { type: skeleton, pos: [8.5, -60, -7.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [10.5, -60, 7.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [18.5, -60, -6.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: ResourceReporter, pos: [30.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: ResourceReporter, seconds: 1 }
+    - { kind: completion, who: ResourceReporter }

@@ -1,0 +1,21 @@
+template: basalt-crossfire.yaml
+name: basalt-crossfire-provoked
+description: Reach the far side alive after a wounded gaze provokes a native enderman amid basalt, cubes, lava and a ghast.
+params: { trial: wounded_gaze }
+players:
+  - name: BasaltTraveler
+    pos: [0.5, 100, 0.5]
+    health: 11
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 48 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }

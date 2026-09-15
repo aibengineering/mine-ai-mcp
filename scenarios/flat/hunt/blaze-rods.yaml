@@ -1,0 +1,73 @@
+name: blaze-rods
+description: Defeat 2 native blaze and survive with the declared equipment. This
+  finite-mob goal does not qualify drop acquisition or prescribe a weapon.
+
+# The Nether's gate to brewing and the End is a blaze rod, and a blaze is the
+# first hostile the bot must seek out rather than be found by. The hunt fights
+# it through the production hunt. Rod drops are random, so this finite fixture
+# asks for both defeats and records any loot.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  - type: blaze
+    pos: [8.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: blaze
+    pos: [14.5, -60, 6.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: BlazeHunter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+
+params:
+  mob_name: blaze
+  drop_name: blaze_rod
+  count: 2
+  wear_armor: true
+  defeat_count: 2
+
+tick:
+  - "gamemode spectator @a[name=!BlazeHunter,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - kind: kill
+      who: BlazeHunter
+      target: blaze
+    - kind: survive
+      who: BlazeHunter
+      seconds: 1
+    - kind: completion
+      who: BlazeHunter

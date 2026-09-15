@@ -1,0 +1,49 @@
+name: chicken-bow-uneven
+description: Hunt naturally moving chickens across short grass terraces with a bow, arrows, and sword while recording shot geometry.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+geometry:
+  - fill: { block: grass_block, from: [5, -60, -4], to: [10, -60, 4] }
+  - fill: { block: grass_block, from: [10, -60, -4], to: [14, -59, 4] }
+  - fill: { block: grass_block, from: [14, -60, -4], to: [18, -60, 4] }
+entities:
+  - { type: chicken, pos: [7.5, -59, 0.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: chicken, pos: [8.5, -59, 2.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: chicken, pos: [9.5, -59, -2.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: chicken, pos: [11.5, -58, 0.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: chicken, pos: [12.5, -58, 2.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: chicken, pos: [13.5, -58, -2.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: chicken, pos: [15.5, -59, 0.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: chicken, pos: [16.5, -59, 2.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: chicken, pos: [17.5, -59, -2.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: chicken, pos: [18.5, -60, 0.5], nbt: "{PersistenceRequired:1b}" }
+players:
+  - name: ChickenHunter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./chicken-bow-uneven.ts"]
+params:
+  mob_name: chicken
+  drop_name: feather
+  count: 6
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: hasItem, who: ChickenHunter, item: feather, count: 6 }
+    - { kind: completion, who: ChickenHunter }

@@ -1,0 +1,38 @@
+name: open-ocean-surface
+description: Rise from just below an open ocean surface over deep water, then swim to the beach through normal navigation.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "fill -17 49 -9 17 68 9 air"
+geometry:
+  # A contained twelve-deep ocean with a two-step beach on its east edge.
+  - fill: { block: stone, from: [-17, 50, -9], to: [17, 62, 9] }
+  - fill: { block: water, from: [-16, 51, -8], to: [9, 62, 8] }
+  - fill: { block: sand, from: [10, 51, -8], to: [16, 62, 8] }
+  - fill: { block: sand, from: [11, 63, -8], to: [16, 63, 8] }
+players:
+  - name: Swimmer
+    # Wait on shore during setup. The driver pins the live incident's
+    # fractional water height immediately before calling navigation.
+    pos: [12.5, 64, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./open-ocean-surface.ts"]
+goal:
+  kind: all
+  # Twelve metres of swimming normally takes seconds; 45 seconds also lets
+  # a stuck swimmer exhaust its air instead of passing on a transient rise.
+  timeout: 45
+  goals:
+    - { kind: reach, who: Swimmer, pos: [12.5, 64, 0.5], radius: 1 }
+    - { kind: health, who: Swimmer, health: 20 }
+    - { kind: completion, who: Swimmer }

@@ -1,0 +1,45 @@
+name: evade-new-contact
+description: A wounded bot survives native blaze contact arriving from both sides.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+setup:
+  - "difficulty normal"
+geometry:
+  # Keep the second blaze on the escape corridor. With hostile route costs,
+  # open ground lets the bot avoid its observation range entirely, leaving
+  # the new-contact contract unexercised.
+  - fill: { block: bedrock, from: [-90, -61, -3], to: [10, -61, 3] }
+  - fill: { block: bedrock, from: [-12, -60, -3], to: [10, -54, -3] }
+  - fill: { block: bedrock, from: [-12, -60, 3], to: [10, -54, 3] }
+  - fill: { block: bedrock, from: [10, -60, -3], to: [10, -54, 3] }
+entities:
+  - type: blaze
+    pos: [4.5, -60, 0.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+  - type: blaze
+    pos: [-26.5, -60, 0.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+players:
+  - name: Evader
+    op: true
+    pos: [0.5, -60, 0.5]
+    # Hurt ranged contact without a shield selects shelter before an escape.
+    # This fixture exercises new threats joining an already admitted evade.
+    inventory:
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "evade-new-contact.ts"]
+goal:
+  kind: completion
+  who: Evader
+  # The existing evade owns a 15-second budget; allow fixture setup and event settlement.
+  timeout: 30

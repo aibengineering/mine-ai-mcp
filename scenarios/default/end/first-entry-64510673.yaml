@@ -1,0 +1,14 @@
+name: end-dragon-first-entry-64510673
+template: claude-first-entry.yaml
+world:
+  type: default
+  dimension: the_end
+  seed: "64510673"
+  difficulty: normal
+  gamerules: { doMobSpawning: true }
+players:
+  - name: DragonFighter
+    # Surveyed clear surface beside this seed's native fountain.
+    pos: [12.5, 65, 0.5]
+    health: 20
+    op: true

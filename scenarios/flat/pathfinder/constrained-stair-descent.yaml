@@ -1,0 +1,26 @@
+name: constrained-stair-descent
+description: Sprint into three one-block constrained drops matching the death17 escape's local descent, without combat pressure.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+geometry:
+  - fill: { block: nether_bricks, from: [0, -61, -10], to: [1, -61, 6] }
+  - fill: { block: nether_bricks, from: [0, -60, 0], to: [1, -58, 6] }
+  - fill: { block: nether_bricks, from: [0, -60, -1], to: [1, -59, -1] }
+  - fill: { block: nether_bricks, from: [0, -60, -2], to: [1, -60, -2] }
+  - fill: { block: bedrock, from: [-1, -60, -10], to: [-1, -53, 6] }
+  - fill: { block: bedrock, from: [2, -60, -10], to: [2, -53, 6] }
+players:
+  - name: StairBot
+    pos: [1.068, -57, 4.508]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./constrained-stair-descent.ts"]
+goal:
+  kind: completion
+  who: StairBot
+  timeout: 30

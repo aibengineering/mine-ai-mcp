@@ -1,0 +1,88 @@
+name: flow-hazard-bypass
+description: Navigate to an underground target through solid rock while avoiding breaking blocks that contain an overhead lava reservoir.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -62 -12 24 -48 12 air"
+
+geometry:
+  # Seal the experiment so the declared direct tunnel and southern bypass are
+  # the only diggable routes. The earlier fixture accidentally left an open
+  # northern corridor around every hazard.
+  - fill: { block: bedrock, from: [-6, -61, -10], to: [20, -54, 10] }
+
+  # Unbreakable foundation prevents a lower tunnel from bypassing both choices.
+  - fill: { block: bedrock, from: [-6, -61, -10], to: [20, -60, 10] }
+
+  # Starting room and approach
+  - fill: { block: stone, from: [-4, -59, -3], to: [2, -56, 3] }
+  - fill: { block: air, from: [-3, -59, -2], to: [1, -58, 2] }
+
+  # The direct path toward the target is blocked by stone beneath a lava reservoir.
+  # Breaking the ceiling at y: -58 would cause lava to pour into the tunnel.
+  - fill: { block: stone, from: [2, -59, -2], to: [11, -58, 2] }
+  - fill: { block: stone, from: [3, -57, -2], to: [10, -55, 2] }
+  - fill: { block: lava, from: [4, -57, -2], to: [9, -56, 2] }
+
+  # Safe bypass corridor through solid stone to the south (z: -7 to -3), clear of lava
+  - fill: { block: stone, from: [2, -59, -7], to: [11, -57, -3] }
+
+  # Destination chamber with gold marker
+  - fill: { block: stone, from: [12, -59, -7], to: [18, -56, 3] }
+  - fill: { block: air, from: [13, -59, -6], to: [17, -58, 2] }
+  - setblock: { block: gold_block, at: [14, -60, 0] }
+
+players:
+  - name: LavaTunnelBot
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - item: diamond_pickaxe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!LavaTunnelBot,gamemode=!spectator]"
+
+params:
+  target: [14, -59, 0]
+  range: 1.5
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: reach
+      who: LavaTunnelBot
+      pos: [14.5, -59, 0.5]
+      # GoalNear measures integer feet cells; the external observer measures
+      # the fractional entity position. Include the cell-centre margin.
+      radius: 2.25
+    # The lava reservoir containment ceiling must not be breached
+    - kind: blockAt
+      who: LavaTunnelBot
+      pos: [5, -58, 0]
+      block: stone
+    - kind: blockAt
+      who: LavaTunnelBot
+      pos: [7, -58, 0]
+      block: stone
+    - kind: health
+      who: LavaTunnelBot
+      health: 20
+    - kind: completion
+      who: LavaTunnelBot

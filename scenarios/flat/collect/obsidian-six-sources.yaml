@@ -1,0 +1,48 @@
+name: obsidian-six-sources
+description: Six lava sources must yield six collected obsidian with the water bucket recovered.
+
+# Exact resource budget: replacing even one lava source with the poured water
+# makes the requested quantity impossible. Larger pools hide that loss.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  difficulty: peaceful
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "fill -16 -59 -16 16 -40 16 air"
+geometry:
+  - fill: { block: stone, from: [-16, -61, -16], to: [16, -60, 16] }
+  - fill: { block: lava, from: [3, -60, 0], to: [5, -60, 1] }
+players:
+  - name: Collector
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: water_bucket, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./obsidian-in-rock.ts"]
+params:
+  block_name: obsidian
+  count: 6
+  scaffold: false
+  census:
+    from: [2, -61, -1]
+    to: [6, -58, 2]
+goal:
+  kind: all
+  # Allows six normal diamond-pickaxe digs and navigation; catches a collect
+  # searching indefinitely after a source has been destroyed by the pour.
+  timeout: 180
+  goals:
+    - { kind: hasItem, who: Collector, item: obsidian, count: 6 }
+    - { kind: hasItem, who: Collector, item: water_bucket, count: 1 }
+    - { kind: survive, who: Collector, seconds: 1 }
+    - { kind: completion, who: Collector }

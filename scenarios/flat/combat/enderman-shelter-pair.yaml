@@ -1,0 +1,32 @@
+name: enderman-shelter-pair
+description: Defeat two native endermen and survive with only enough blocks for one shelter.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+players:
+  - name: RoofFighter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+      - { item: cobblestone, count: 11 }
+entities:
+  - { type: enderman, pos: [6.5, -60, -2.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: enderman, pos: [6.5, -60, 2.5], nbt: "{PersistenceRequired:1b}" }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-shelter-pair.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: kill, who: RoofFighter, target: enderman }
+    - { kind: survive, who: RoofFighter, seconds: 1 }
+    - { kind: completion, who: RoofFighter }

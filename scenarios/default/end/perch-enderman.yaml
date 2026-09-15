@@ -1,0 +1,29 @@
+name: end-dragon-perch-enderman-contact
+minecraft: { version: "1.21.4" }
+world: { type: default, dimension: the_end, seed: "8675309", difficulty: normal, gamerules: { doMobSpawning: false } }
+players:
+  - name: DragonFighter
+    # The island surface east of the fountain, as surveyed on this seed.
+    pos: [12.5, 64, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cooked_beef, count: 64 }
+      - { item: cobblestone, count: 64 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/dragon-mixed-contact.ts"]
+goal:
+  kind: all
+  # Detect a stranded handoff even if there is no longer reachable contact.
+  timeout: 120
+  goals:
+    - { kind: entityCount, entity: enderman, max: 0 }
+    - { kind: survive, who: DragonFighter, seconds: 1 }
+    - { kind: completion, who: DragonFighter }

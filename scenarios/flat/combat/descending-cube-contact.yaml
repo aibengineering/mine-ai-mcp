@@ -1,0 +1,22 @@
+name: descending-cube-contact
+description: Retain the body and raise the shield while a native cube is above swing reach, before it descends.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+players:
+  - name: DescendingBot
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./descending-cube-contact.ts"]
+goal: { kind: completion, who: DescendingBot, timeout: 45 }

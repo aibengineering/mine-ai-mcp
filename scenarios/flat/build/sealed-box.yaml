@@ -1,0 +1,55 @@
+name: sealed-box
+description: Build a hollow 3×3×3 cobblestone box around the cell the bot starts in, finishing it from outside.
+
+# The shape that catches a builder building itself in. The bot begins in the
+# box's interior column. A builder that places whatever is nearest seals the
+# roof over its own head; this one refuses any placement that would leave its
+# feet with no way out, walks out when only such placements remain, and
+# closes the box from outside. The goal asks for the box to be complete and
+# for the bot's completion report, which fails if the bot ended inside.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-16, -61, -16], to: [20, -61, 16] }
+  - fill: { block: stone, from: [-16, -60, -16], to: [20, -60, 16] }
+
+players:
+  - name: Builder
+    pos: [1.5, -59, 1.5]
+    inventory:
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/builder.ts"]
+
+params:
+  box: { origin: { x: 0, y: -59, z: 0 }, size: 3, block_name: cobblestone }
+  end_outside: true
+
+tick:
+  - "gamemode spectator @a[name=!Builder,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - kind: blockAt
+      pos: [1, -57, 1]
+      block: cobblestone
+    - kind: completion
+      who: Builder

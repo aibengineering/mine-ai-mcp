@@ -1,0 +1,53 @@
+name: loaded-mobs-8674349
+description: Read view_status on seed 8674349 in daylight with mob spawning on, and hold the loaded-mob summary to its published schema.
+
+# The flat fixtures can only summon species someone chose in advance, so they
+# prove the grouping and nothing about the registry. This one asks a generated
+# world what it loaded: whatever the seed put on this surface has to carry a
+# kind the contract publishes, sort nearest first, and appear in the Markdown.
+# The seed is pinned so the terrain, and therefore the mob population, is the
+# same every run. One file per seed because a scenario names one world; the
+# driver is shared.
+#
+# `difficulty peaceful`, which every other default-world fixture sets, would
+# delete every mob in the world. This one runs on easy, which is also the
+# lowest difficulty that keeps animals loaded.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: default
+  seed: 8674349
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: true
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+
+# The server's own spawn point is not stable across fresh worlds even on a
+# fixed seed, so the column is pinned. Not the (8.5, 67, -19.5) the progression
+# fixtures use on this seed: from there the bot falls eleven blocks into water
+# and reads the world while swimming. This column came from a discovery run
+# with no `pos`, and the bot stands on the ground there.
+players:
+  - name: MobWatcher
+    pos: [-25.5, 99, 6.5]
+
+setup:
+  - "difficulty easy"
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./loaded-mobs.ts"]
+
+params:
+  settle_ms: 5000
+
+goal:
+  kind: completion
+  who: MobWatcher
+  timeout: 180

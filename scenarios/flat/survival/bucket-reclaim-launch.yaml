@@ -1,0 +1,26 @@
+name: bucket-reclaim-launch
+description: A slow approach to a scaffold landing is interrupted by the recorded second dragon launch before water contact.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0, keepInventory: true }
+geometry:
+  - fill: { block: end_stone, from: [-60, 62, -20], to: [40, 62, 60] }
+  - fill: { block: dirt, from: [7, 63, 39], to: [7, 81, 39] }
+  - fill: { block: glass, from: [7, 84, 38], to: [7, 84, 38] }
+players:
+  - name: BucketBot
+    op: true
+    pos: [7.514, 85, 38.607]
+    inventory: [{ item: iron_pickaxe, count: 1 }, { item: water_bucket, count: 1 }]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./bucket-followup-launch.ts"]
+params: { secondAt: 8, requireReclaim: true }
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: health, who: BucketBot, health: 20 }
+    - { kind: hasItem, who: BucketBot, item: water_bucket, count: 1 }
+    - { kind: completion, who: BucketBot }

@@ -1,0 +1,31 @@
+name: door-replace-after-pickup
+description: Recover a door, then replace it while the bot occupies the now-empty doorway.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+geometry:
+  - fill: { block: andesite, from: [-4, -60, -4], to: [8, -60, 4] }
+  - setblock: { block: "birch_door[facing=east,half=lower,hinge=left,open=true]", at: [2, -59, 0] }
+  - setblock: { block: "birch_door[facing=east,half=upper,hinge=left,open=true]", at: [2, -58, 0] }
+players:
+  - name: Collector
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: iron_axe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "door-replace-after-pickup.ts"]
+goal:
+  kind: all
+  # The nearby collection and replacement each take seconds; include the old five-second refusal path.
+  timeout: 30
+  goals:
+    - { kind: blockAt, who: Collector, pos: [2, -59, 0], block: birch_door }
+    - { kind: blockAt, who: Collector, pos: [2, -58, 0], block: birch_door }
+    - { kind: completion, who: Collector }

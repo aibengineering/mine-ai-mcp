@@ -1,0 +1,26 @@
+name: generated-basalt-knockback-drop
+description: Replay the measured cube impulse during cancellation on the native basalt landing; retain the first safe ledge instead of coasting into a second fall.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, keepInventory: false, randomTickSpeed: 0 }
+params: { kind: knockback_drop }
+players:
+  - name: BasaltTraveler
+    pos: [199.5, 48, -19.5]
+    op: true
+    inventory:
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./generated-basalt-gap.ts"]
+goal:
+  kind: completion
+  who: BasaltTraveler
+  timeout: 60

@@ -1,0 +1,20 @@
+name: flowing-water-tree-no-material
+description: Collect the dry logs available beside a waterfall, then report the missing isolation material promptly instead of flooding or searching indefinitely.
+template: flowing-water-tree.yaml
+players:
+  - name: FlowCollector
+    pos: [0.36, -58, 0.48]
+    op: true
+params:
+  tree_base: [0, -59, 1]
+  block_name: logs
+  count: 6
+  scaffold: true
+  allow_full_inventory: false
+  expect_safe_partial: true
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: health, who: FlowCollector, health: 20 }
+    - { kind: completion, who: FlowCollector }

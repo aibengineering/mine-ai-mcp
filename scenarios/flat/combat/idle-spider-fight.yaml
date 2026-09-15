@@ -1,0 +1,63 @@
+name: idle-spider-fight
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  - type: spider
+    # Inside the reflex's sixteen-block hostile radius. At twenty blocks the
+    # spider also remained outside its own pursuit range, so no encounter began.
+    pos: [14.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: SpiderBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  waitTicks: 900
+
+tick:
+  - "gamemode spectator @a[name=!SpiderBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: kill
+      who: SpiderBot
+      target: spider
+    - kind: health
+      who: SpiderBot
+      health: 10
+    - kind: survive
+      who: SpiderBot
+      seconds: 1
+    - kind: completion
+      who: SpiderBot

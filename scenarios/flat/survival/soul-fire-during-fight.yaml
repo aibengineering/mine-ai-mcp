@@ -1,0 +1,24 @@
+name: soul-fire-during-fight
+description: Survive soul fire appearing under the body during hostile defence, ending source contact and residual burning.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  time: midnight
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+params: { duringCombat: true }
+geometry:
+  - fill: { block: air, from: [-8, -60, -8], to: [8, -54, 8] }
+  - fill: { block: soul_soil, from: [-8, -62, -8], to: [8, -61, 8] }
+entities:
+  - { type: zombie, pos: [3.5, -60, 0.5] }
+players:
+  - name: FireSurvivor
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./soul-fire-contact.ts"]
+goal: { kind: completion, who: FireSurvivor, timeout: 35 }

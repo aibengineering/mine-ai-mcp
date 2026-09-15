@@ -1,0 +1,36 @@
+name: activate-end-and-cross
+description: Activate an End portal above lava, navigate into its unsupported opening, and then walk on the End arrival platform.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+reset:
+  - "fill -16 -59 -16 16 -45 16 air"
+geometry:
+  - fill: { block: stone_bricks, from: [-16, -60, -16], to: [16, -60, 16] }
+  - fill: { block: lava, from: [-1, -60, -1], to: [1, -60, 1] }
+  - fill: { block: "end_portal_frame[facing=south,eye=true]", from: [-1, -59, -2], to: [1, -59, -2] }
+  - fill: { block: "end_portal_frame[facing=north,eye=true]", from: [-1, -59, 2], to: [1, -59, 2] }
+  - fill: { block: "end_portal_frame[facing=east,eye=true]", from: [-2, -59, -1], to: [-2, -59, 1] }
+  - fill: { block: "end_portal_frame[facing=west,eye=true]", from: [2, -59, -1], to: [2, -59, 1] }
+  - setblock: { block: "end_portal_frame[facing=east,eye=false]", at: [-2, -59, 0] }
+players:
+  - name: EndVisitor
+    pos: [-7.5, -59, 0.5]
+    inventory:
+      - { item: ender_eye, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: arrow, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./activate-end-and-cross.ts"]
+goal:
+  kind: completion
+  who: EndVisitor
+  timeout: 180

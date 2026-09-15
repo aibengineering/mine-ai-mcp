@@ -1,0 +1,62 @@
+name: obsidian-from-lava
+description: Fill a bucket from a pool, pour it over a lava pool to make obsidian, scoop the water back, and mine three obsidian.
+
+# The bucket's whole job for the Nether, in one flat world: a water pool and a
+# lava pool of sources, both level with the floor, with the bot between them
+# holding an empty bucket and a diamond pickaxe. The water is poured onto the
+# shore cell beside the pool, since a full bucket needs a solid face to land
+# on, and spreads across the pool turning every source it covers into
+# obsidian; the poured cell stays a source, so it is scooped back and the
+# flowing water drains, which is what lets the obsidian be mined afterwards
+# since the policy refuses a dig that would let liquid into the route.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-16, -61, -16], to: [20, -61, 16] }
+  - fill: { block: stone, from: [-16, -60, -16], to: [20, -60, 16] }
+  - fill: { block: water, from: [-8, -60, -2], to: [-6, -60, 2] }
+  - fill: { block: lava, from: [5, -60, -3], to: [9, -60, 3] }
+
+players:
+  - name: Bucketeer
+    pos: [0, -59, 0]
+    inventory:
+      - { item: bucket, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/bucketeer.ts"]
+
+params:
+  # The air above the stone shore block next to the pool; the pour spreads east over the lava from here.
+  pour: { x: 4, y: -59, z: 0 }
+  obsidian: 3
+
+tick:
+  - "gamemode spectator @a[name=!Bucketeer,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - kind: hasItem
+      who: Bucketeer
+      item: obsidian
+      count: 3
+    - kind: completion
+      who: Bucketeer

@@ -1,0 +1,29 @@
+name: fire-route
+description: Existing and newly ignited fire and soul fire require contact-free detours.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+    naturalRegeneration: false
+    doFireTick: false
+    randomTickSpeed: 0
+reset:
+  - "fill -3 -61 -4 15 -56 4 air"
+geometry:
+  - fill: { block: soul_soil, from: [-3, -61, -4], to: [15, -61, 4] }
+players:
+  - name: FireWalker
+    pos: [0.5, -60, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fire-route.ts"]
+goal:
+  kind: all
+  timeout: 75
+  goals:
+    - { kind: health, who: FireWalker, health: 20 }
+    - { kind: completion, who: FireWalker }

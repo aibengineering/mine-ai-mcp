@@ -1,0 +1,25 @@
+name: respawn-metadata
+description: Own metadata from burning in lava must not survive a death respawn that clears entity data.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+    naturalRegeneration: false
+    doDaylightCycle: false
+geometry:
+  - fill: { block: stone, from: [4, -61, -1], to: [6, -60, 1] }
+  - fill: { block: lava, from: [5, -60, 0], to: [5, -60, 0] }
+players:
+  - name: Respawner
+    op: true
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./respawn-metadata.ts"]
+goal:
+  kind: completion
+  who: Respawner
+  timeout: 35

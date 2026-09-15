@@ -1,0 +1,30 @@
+name: creeper-crowd-live-fuse
+description: Escape an observed live creeper fuse while a nearby husk biases crowd separation in the opposite direction.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+    naturalRegeneration: false
+setup:
+  - "difficulty normal"
+entities:
+  - type: husk
+    pos: [-0.5, -60, 0.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+players:
+  - name: RetreatBot
+    op: true
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "creeper-crowd-live-fuse.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: health, who: RetreatBot, health: 20 }
+    - { kind: completion, who: RetreatBot }

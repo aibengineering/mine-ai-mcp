@@ -1,0 +1,53 @@
+name: navigation-creeper-desert-crossfire
+description: Cross open sand through a native skeleton, husk and creeper; complete the journey with at least twelve health and default survival policy.
+template: ../../../scenario-templates/arenas/traverse.yaml
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "kill @e[type=!minecraft:player]"
+players:
+  - name: CrossfireBot
+    pos: [-22.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./navigation-creeper-crossfire.ts"]
+params: { destination: [22, -60, 0] }
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: CrossfireBot, pos: [22.5, -60, 0.5], radius: 2 }
+    - { kind: health, who: CrossfireBot, health: 12 }
+    - { kind: completion, who: CrossfireBot }
+
+geometry:
+  - fill: { block: sandstone, from: [-47, -62, -19], to: [47, -62, 19] }
+  - fill: { block: sand, from: [-47, -61, -19], to: [47, -61, 19] }
+# The nearby melee attacker starts contact while the creeper approaches from
+# farther back. Two native shooters keep the encounter mixed as targets die.
+entities:
+  - type: skeleton
+    pos: [-16.5, -60, -2.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+  - type: skeleton
+    pos: [-12.5, -60, 2.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+  - type: husk
+    pos: [-16.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b}'
+  - type: creeper
+    pos: [-12.5, -60, -0.5]
+    nbt: '{PersistenceRequired:1b}'

@@ -1,0 +1,42 @@
+name: camp-door-replan
+description: Leave a furnished camp through a birch door after turning around the adjacent chest.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+    randomTickSpeed: 0
+reset:
+  - "fill -5 -61 -5 6 -55 5 air"
+geometry:
+  - fill: { block: andesite, from: [-5, -61, -5], to: [6, -61, 5] }
+  - fill: { block: oak_planks, from: [0, -60, -2], to: [0, -58, 2] }
+  - setblock: { block: "birch_door[facing=east,half=lower,hinge=left,open=false,powered=false]", at: [0, -60, 0] }
+  - setblock: { block: "birch_door[facing=east,half=upper,hinge=left,open=false,powered=false]", at: [0, -59, 0] }
+  - setblock: { block: chest, at: [2, -60, 0] }
+  - setblock: { block: chest, at: [3, -60, 0] }
+  - setblock: { block: furnace, at: [2, -60, 2] }
+  - setblock: { block: crafting_table, at: [1, -60, 2] }
+players:
+  - name: Navigator
+    pos: [2.31, -60, 1.59]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./camp-door-replan.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - kind: reach
+      who: Navigator
+      pos: [-0.5, -60, 0.5]
+      radius: 0.8
+    - kind: blockAt
+      who: Navigator
+      pos: [0, -60, 0]
+      block: birch_door
+    - kind: completion
+      who: Navigator

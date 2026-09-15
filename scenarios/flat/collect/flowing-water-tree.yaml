@@ -1,0 +1,130 @@
+name: flowing-water-tree
+description: Collect all six logs barehanded from a single oak beside a waterfall, using carried dirt to isolate its current.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -12 -60 -12 12 -42 12 air"
+
+geometry:
+  # Bank geometry read from the live site; (56,64,27) maps to (0,-58,0).
+  - fill: { block: stone, from: [-12, -61, -12], to: [12, -61, 12] }
+  # Continue the cliff outside the sampled box so the waterfall drains west.
+  - fill: { block: stone, from: [5, -60, -5], to: [10, -54, 5] }
+  - fill: { block: stone, from: [4, -54, -4], to: [4, -54, -4] }
+  - fill: { block: stone, from: [4, -54, -3], to: [4, -54, -3] }
+  - fill: { block: stone, from: [4, -54, -2], to: [4, -54, -2] }
+  - fill: { block: grass_block, from: [3, -54, 2], to: [3, -54, 2] }
+  - fill: { block: dirt, from: [4, -54, 2], to: [4, -54, 2] }
+  - fill: { block: grass_block, from: [1, -54, 3], to: [1, -54, 3] }
+  - fill: { block: dirt, from: [2, -54, 3], to: [4, -54, 3] }
+  - fill: { block: dirt, from: [-1, -54, 4], to: [4, -54, 4] }
+  - fill: { block: dirt, from: [3, -55, 2], to: [4, -55, 2] }
+  - fill: { block: dirt, from: [1, -55, 3], to: [4, -55, 3] }
+  - fill: { block: copper_ore, from: [-1, -55, 4], to: [-1, -55, 4] }
+  - fill: { block: dirt, from: [0, -55, 4], to: [4, -55, 4] }
+  - fill: { block: dirt, from: [3, -56, 2], to: [4, -56, 2] }
+  - fill: { block: dirt, from: [1, -56, 3], to: [2, -56, 3] }
+  - fill: { block: stone, from: [3, -56, 3], to: [4, -56, 3] }
+  - fill: { block: stone, from: [-1, -56, 4], to: [-1, -56, 4] }
+  - fill: { block: dirt, from: [0, -56, 4], to: [0, -56, 4] }
+  - fill: { block: gravel, from: [1, -56, 4], to: [3, -56, 4] }
+  - fill: { block: stone, from: [4, -56, 4], to: [4, -56, 4] }
+  - fill: { block: dirt, from: [3, -57, 2], to: [3, -57, 2] }
+  - fill: { block: stone, from: [4, -57, 2], to: [4, -57, 2] }
+  - fill: { block: grass_block, from: [0, -57, 3], to: [0, -57, 3] }
+  - fill: { block: dirt, from: [1, -57, 3], to: [1, -57, 3] }
+  - fill: { block: stone, from: [2, -57, 3], to: [4, -57, 3] }
+  - fill: { block: stone, from: [-2, -57, 4], to: [4, -57, 4] }
+  - fill: { block: grass_block, from: [0, -58, 1], to: [0, -58, 1] }
+  - fill: { block: grass_block, from: [2, -58, 2], to: [2, -58, 2] }
+  - fill: { block: stone, from: [3, -58, 2], to: [4, -58, 2] }
+  - fill: { block: dirt, from: [0, -58, 3], to: [0, -58, 3] }
+  - fill: { block: stone, from: [1, -58, 3], to: [4, -58, 3] }
+  - fill: { block: stone, from: [-2, -58, 4], to: [4, -58, 4] }
+  - fill: { block: grass_block, from: [3, -59, -4], to: [4, -59, -4] }
+  - fill: { block: grass_block, from: [3, -59, -3], to: [4, -59, -3] }
+  - fill: { block: grass_block, from: [2, -59, -2], to: [4, -59, -2] }
+  - fill: { block: grass_block, from: [2, -59, -1], to: [4, -59, -1] }
+  - fill: { block: grass_block, from: [1, -59, 0], to: [3, -59, 0] }
+  - fill: { block: dirt, from: [4, -59, 0], to: [4, -59, 0] }
+  - fill: { block: grass_block, from: [1, -59, 1], to: [4, -59, 1] }
+  - fill: { block: grass_block, from: [1, -59, 2], to: [1, -59, 2] }
+  - fill: { block: dirt, from: [2, -59, 2], to: [2, -59, 2] }
+  - fill: { block: stone, from: [3, -59, 2], to: [4, -59, 2] }
+  - fill: { block: grass_block, from: [-3, -59, 3], to: [-1, -59, 3] }
+  - fill: { block: dirt, from: [0, -59, 3], to: [0, -59, 3] }
+  - fill: { block: stone, from: [1, -59, 3], to: [4, -59, 3] }
+  - fill: { block: grass_block, from: [-4, -59, 4], to: [-3, -59, 4] }
+  - fill: { block: stone, from: [-2, -59, 4], to: [4, -59, 4] }
+  - fill: { block: grass_block, from: [0, -60, -4], to: [2, -60, -4] }
+  - fill: { block: dirt, from: [3, -60, -4], to: [4, -60, -4] }
+  - fill: { block: grass_block, from: [0, -60, -3], to: [2, -60, -3] }
+  - fill: { block: dirt, from: [3, -60, -3], to: [4, -60, -3] }
+  - fill: { block: grass_block, from: [0, -60, -2], to: [1, -60, -2] }
+  - fill: { block: dirt, from: [2, -60, -2], to: [4, -60, -2] }
+  - fill: { block: grass_block, from: [-1, -60, -1], to: [-1, -60, -1] }
+  - fill: { block: dirt, from: [0, -60, -1], to: [4, -60, -1] }
+  - fill: { block: grass_block, from: [-2, -60, 0], to: [-1, -60, 0] }
+  - fill: { block: dirt, from: [0, -60, 0], to: [4, -60, 0] }
+  - fill: { block: grass_block, from: [-3, -60, 1], to: [-1, -60, 1] }
+  - fill: { block: dirt, from: [0, -60, 1], to: [4, -60, 1] }
+  - fill: { block: grass_block, from: [-4, -60, 2], to: [-1, -60, 2] }
+  - fill: { block: dirt, from: [1, -60, 2], to: [2, -60, 2] }
+  - fill: { block: stone, from: [3, -60, 2], to: [4, -60, 2] }
+  - fill: { block: grass_block, from: [-4, -60, 3], to: [-4, -60, 3] }
+  - fill: { block: dirt, from: [-3, -60, 3], to: [0, -60, 3] }
+  - fill: { block: stone, from: [1, -60, 3], to: [4, -60, 3] }
+  - fill: { block: dirt, from: [-4, -60, 4], to: [-3, -60, 4] }
+  - fill: { block: stone, from: [-2, -60, 4], to: [4, -60, 4] }
+  # Restore the single six-log oak removed by the later live collection.
+  - fill: { block: oak_leaves, from: [-2, -56, -1], to: [2, -54, 3] }
+  - fill: { block: oak_leaves, from: [-1, -53, 0], to: [1, -53, 2] }
+  - fill: { block: oak_log, from: [0, -59, 1], to: [0, -54, 1] }
+  - fill: { block: water, from: [4, -54, 0], to: [4, -54, 0] }
+
+players:
+  - name: FlowCollector
+    pos: [0.36, -58, 0.48]
+    op: true
+    inventory: [{ item: dirt, count: 24 }]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./flowing-water-tree.ts"]
+
+params:
+  tree_base: [0, -59, 1]
+  block_name: logs
+  # The screenshot requests 16. This single-tree fixture requests its six logs
+  # so a timeout cannot be explained by missing resources elsewhere.
+  count: 6
+  scaffold: true
+  allow_full_inventory: false
+
+tick:
+  - "gamemode spectator @a[name=!FlowCollector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  # Six barehand logs need tens of seconds. Two minutes exposes the reported
+  # multi-minute stall while letting the harness stop and preserve evidence.
+  timeout: 120
+  goals:
+    - kind: hasItem
+      who: FlowCollector
+      item: oak_log
+      count: 6
+    - kind: completion
+      who: FlowCollector
+

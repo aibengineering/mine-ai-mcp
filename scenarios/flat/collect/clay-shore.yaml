@@ -1,0 +1,51 @@
+name: clay-shore
+description: Collect clay from a broad riverbank while water remains just outside the ordinary work patch.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-12, -60, -12], to: [18, -60, 12] }
+  - fill: { block: dirt, from: [2, -59, -5], to: [8, -59, 5] }
+  - fill: { block: clay, from: [4, -59, -3], to: [7, -59, 3] }
+  - fill: { block: water, from: [10, -59, -8], to: [18, -59, 8] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+# The request this world exists to exercise.
+params:
+  block_name: clay
+  count: 8
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: clay_ball
+      count: 8
+    - kind: completion
+      who: Collector

@@ -1,0 +1,110 @@
+name: primitive-progression-to-diamond
+description: Progress from an empty inventory to one diamond through dependent collection, placement, crafting, smelting, and navigation actions.
+
+minecraft:
+  version: "1.21.4"
+
+# Flat geometry isolates action primitives from random terrain while the named
+# seed keeps every regenerated world and its evidence attributable to one
+# immutable fixture definition.
+world:
+  type: flat
+  seed: 8675310
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+
+reset:
+  # Remove the native superflat layers throughout the client's 64-block scan
+  # radius so every collectable block belongs to this fixture.
+  - "forceload add -64 -64 96 64"
+  - "fill -64 -64 -64 96 -40 64 air"
+  - "forceload remove all"
+
+geometry:
+  - fill: { block: polished_andesite, from: [-8, -60, -8], to: [48, -60, 8] }
+  - fill: { block: oak_log, from: [6, -59, 0], to: [6, -56, 0] }
+  - fill: { block: dirt, from: [10, -59, 0], to: [11, -59, 0] }
+  - fill: { block: stone, from: [15, -59, -1], to: [18, -57, 1] }
+  - fill: { block: coal_ore, from: [24, -59, -1], to: [26, -57, 1] }
+  - fill: { block: iron_ore, from: [33, -59, 0], to: [35, -59, 0] }
+  - setblock: { block: diamond_ore, at: [41, -59, 0] }
+
+setup:
+  - "difficulty peaceful"
+
+players:
+  - name: ProgressionBot
+    pos: [0, -59, 0]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./primitive-progression-to-diamond.ts"]
+
+params:
+  table: [2, -59, 3]
+  furnace: [4, -59, 3]
+  logs: 4
+  dirt: 2
+  stone: 12
+  coal: 4
+  rawIron: 3
+  diamonds: 1
+
+tick:
+  - "gamemode spectator @a[name=!ProgressionBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 300
+  goals:
+    - kind: hasItem
+      who: ProgressionBot
+      item: crafting_table
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: furnace
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: wooden_pickaxe
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: wooden_shovel
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: stone_pickaxe
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: stone_shovel
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: iron_pickaxe
+      count: 1
+    - kind: hasItem
+      who: ProgressionBot
+      item: dirt
+      count: 2
+    - kind: hasItem
+      who: ProgressionBot
+      item: coal
+      count: 3
+    - kind: hasItem
+      who: ProgressionBot
+      item: diamond
+      count: 1
+    - kind: health
+      who: ProgressionBot
+      health: 20
+    - kind: completion
+      who: ProgressionBot

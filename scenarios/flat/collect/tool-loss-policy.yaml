@@ -1,0 +1,19 @@
+name: tool-loss-policy
+description: Native collection proves stop, continue, and last-tool behavior after a selected diamond pickaxe breaks.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: peaceful
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+reset:
+  - "fill -3 -61 -3 8 -61 3 bedrock"
+  - "fill -3 -60 -3 8 -55 3 air"
+players:
+  - name: ToolLossCollect
+    pos: [0.5, -60, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./tool-loss-policy.ts"]
+goal: { kind: completion, who: ToolLossCollect, timeout: 90 }

@@ -1,0 +1,40 @@
+name: frontier-biome-exhausted
+description: Exhaust one frontier column without entering the target; loaded biome samples above the bot cannot satisfy entry.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+
+setup:
+  - "fillbiome -16 -56 -16 63 -53 15 warped_forest"
+
+players:
+  - name: Explorer
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/explorer.ts"]
+
+params:
+  heading: 90
+  chunks: 1
+  biome: warped_forest
+  expect_biome_status: not_observed
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: reach
+      who: Explorer
+      pos: [18, -60, 0.5]
+      radius: 12
+    - kind: completion
+      who: Explorer

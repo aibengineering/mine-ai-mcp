@@ -1,0 +1,37 @@
+name: elevated-bow-target
+description: Shoot a nearby stationary blaze above melee height using a carried bow and arrows.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+setup:
+  - "difficulty normal"
+entities:
+  - type: blaze
+    pos: [3.5, -56, 0.5]
+    nbt: "{NoAI:1b,NoGravity:1b,PersistenceRequired:1b}"
+players:
+  - name: BowHunter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 16 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./elevated-bow-target.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: health, who: BowHunter, health: 20 }
+    - { kind: completion, who: BowHunter }

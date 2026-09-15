@@ -1,0 +1,71 @@
+name: idle-creeper-pair-evade
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+# Two abreast, inside their own sixteen-block follow range so both walk in,
+# and outside the eight-block contact boundary so the decision is made on
+# arrival. The live bot met exactly this pair on leaving a mine and fought:
+# the first explosion took it from eighteen health to eleven, the second to
+# four. Closing on either creeper starts both fuses, and a sword can only
+# reset one of them, so a bot without a bow does not close.
+entities:
+  - type: creeper
+    pos: [12.5, -60, -1.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: creeper
+    pos: [12.5, -60, 2.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: CreeperPairBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  wearArmor: true
+  waitTicks: 960
+
+tick:
+  - "gamemode spectator @a[name=!CreeperPairBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: health
+      who: CreeperPairBot
+      health: 20
+    - kind: survive
+      who: CreeperPairBot
+      seconds: 1
+    - kind: completion
+      who: CreeperPairBot

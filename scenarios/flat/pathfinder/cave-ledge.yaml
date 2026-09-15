@@ -1,0 +1,226 @@
+name: cave-ledge
+description: Reproduce the observed run-12 stone ledge ascent from y29 to y34 without hostiles.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+geometry:
+  - fill: { block: stone, from: [0, -60, 0], to: [0, -60, 2] }
+  - fill: { block: diorite, from: [0, -60, 3], to: [0, -60, 6] }
+  - fill: { block: stone, from: [0, -60, 7], to: [0, -60, 11] }
+  - fill: { block: stone, from: [1, -60, 0], to: [1, -60, 2] }
+  - fill: { block: diorite, from: [1, -60, 3], to: [1, -60, 6] }
+  - fill: { block: stone, from: [1, -60, 7], to: [1, -60, 11] }
+  - fill: { block: stone, from: [2, -60, 0], to: [2, -60, 1] }
+  - fill: { block: diorite, from: [2, -60, 2], to: [2, -60, 6] }
+  - fill: { block: stone, from: [2, -60, 7], to: [2, -60, 11] }
+  - fill: { block: stone, from: [3, -60, 0], to: [3, -60, 0] }
+  - fill: { block: diorite, from: [3, -60, 1], to: [3, -60, 5] }
+  - fill: { block: stone, from: [3, -60, 6], to: [3, -60, 11] }
+  - fill: { block: diorite, from: [4, -60, 0], to: [4, -60, 5] }
+  - fill: { block: stone, from: [4, -60, 6], to: [4, -60, 11] }
+  - fill: { block: diorite, from: [5, -60, 0], to: [5, -60, 5] }
+  - fill: { block: stone, from: [5, -60, 6], to: [5, -60, 8] }
+  - fill: { block: diorite, from: [6, -60, 0], to: [6, -60, 5] }
+  - fill: { block: stone, from: [6, -60, 6], to: [6, -60, 7] }
+  - fill: { block: diorite, from: [7, -60, 0], to: [7, -60, 5] }
+  - fill: { block: stone, from: [7, -60, 6], to: [7, -60, 7] }
+  - fill: { block: diorite, from: [8, -60, 0], to: [8, -60, 4] }
+  - fill: { block: stone, from: [8, -60, 5], to: [8, -60, 8] }
+  - fill: { block: cobblestone, from: [8, -60, 11], to: [8, -60, 11] }
+  - fill: { block: diorite, from: [9, -60, 0], to: [9, -60, 3] }
+  - fill: { block: stone, from: [9, -60, 4], to: [9, -60, 11] }
+  - fill: { block: diorite, from: [10, -60, 1], to: [10, -60, 3] }
+  - fill: { block: stone, from: [10, -60, 4], to: [10, -60, 11] }
+  - fill: { block: diorite, from: [11, -60, 0], to: [11, -60, 2] }
+  - fill: { block: stone, from: [11, -60, 3], to: [11, -60, 11] }
+  - fill: { block: stone, from: [0, -59, 0], to: [0, -59, 11] }
+  - fill: { block: stone, from: [1, -59, 0], to: [1, -59, 11] }
+  - fill: { block: stone, from: [2, -59, 0], to: [2, -59, 11] }
+  - fill: { block: stone, from: [3, -59, 0], to: [3, -59, 11] }
+  - fill: { block: stone, from: [4, -59, 0], to: [4, -59, 1] }
+  - fill: { block: diorite, from: [4, -59, 2], to: [4, -59, 3] }
+  - fill: { block: stone, from: [4, -59, 4], to: [4, -59, 11] }
+  - fill: { block: stone, from: [5, -59, 0], to: [5, -59, 1] }
+  - fill: { block: diorite, from: [5, -59, 2], to: [5, -59, 4] }
+  - fill: { block: stone, from: [5, -59, 5], to: [5, -59, 8] }
+  - fill: { block: stone, from: [6, -59, 0], to: [6, -59, 1] }
+  - fill: { block: diorite, from: [6, -59, 2], to: [6, -59, 3] }
+  - fill: { block: stone, from: [6, -59, 4], to: [6, -59, 8] }
+  - fill: { block: stone, from: [7, -59, 0], to: [7, -59, 8] }
+  - fill: { block: stone, from: [8, -59, 0], to: [8, -59, 8] }
+  - fill: { block: cobblestone, from: [8, -59, 10], to: [8, -59, 10] }
+  - fill: { block: stone, from: [9, -59, 1], to: [9, -59, 11] }
+  - fill: { block: stone, from: [10, -59, 1], to: [10, -59, 11] }
+  - fill: { block: stone, from: [11, -59, 0], to: [11, -59, 11] }
+  - fill: { block: stone, from: [0, -58, 8], to: [0, -58, 11] }
+  - fill: { block: stone, from: [1, -58, 8], to: [1, -58, 11] }
+  - fill: { block: stone, from: [2, -58, 7], to: [2, -58, 11] }
+  - fill: { block: stone, from: [3, -58, 7], to: [3, -58, 11] }
+  - fill: { block: stone, from: [4, -58, 5], to: [4, -58, 11] }
+  - fill: { block: stone, from: [5, -58, 0], to: [5, -58, 4] }
+  - fill: { block: copper_ore, from: [5, -58, 5], to: [5, -58, 6] }
+  - fill: { block: stone, from: [5, -58, 7], to: [5, -58, 8] }
+  - fill: { block: stone, from: [6, -58, 0], to: [6, -58, 4] }
+  - fill: { block: copper_ore, from: [6, -58, 5], to: [6, -58, 6] }
+  - fill: { block: stone, from: [6, -58, 7], to: [6, -58, 8] }
+  - fill: { block: stone, from: [7, -58, 0], to: [7, -58, 8] }
+  - fill: { block: cobblestone, from: [7, -58, 9], to: [7, -58, 10] }
+  - fill: { block: cobblestone, from: [8, -58, 0], to: [8, -58, 0] }
+  - fill: { block: stone, from: [8, -58, 1], to: [8, -58, 8] }
+  - fill: { block: stone, from: [9, -58, 1], to: [9, -58, 11] }
+  - fill: { block: stone, from: [10, -58, 1], to: [10, -58, 11] }
+  - fill: { block: stone, from: [11, -58, 0], to: [11, -58, 11] }
+  - fill: { block: stone, from: [0, -57, 11], to: [0, -57, 11] }
+  - fill: { block: stone, from: [1, -57, 10], to: [1, -57, 11] }
+  - fill: { block: stone, from: [2, -57, 8], to: [2, -57, 11] }
+  - fill: { block: stone, from: [3, -57, 8], to: [3, -57, 11] }
+  - fill: { block: stone, from: [4, -57, 7], to: [4, -57, 11] }
+  - fill: { block: copper_ore, from: [5, -57, 6], to: [5, -57, 6] }
+  - fill: { block: stone, from: [5, -57, 7], to: [5, -57, 8] }
+  - fill: { block: stone, from: [6, -57, 0], to: [6, -57, 4] }
+  - fill: { block: copper_ore, from: [6, -57, 5], to: [6, -57, 6] }
+  - fill: { block: stone, from: [6, -57, 7], to: [6, -57, 8] }
+  - fill: { block: stone, from: [7, -57, 0], to: [7, -57, 7] }
+  - fill: { block: cobblestone, from: [7, -57, 9], to: [7, -57, 9] }
+  - fill: { block: stone, from: [8, -57, 1], to: [8, -57, 8] }
+  - fill: { block: stone, from: [9, -57, 1], to: [9, -57, 11] }
+  - fill: { block: stone, from: [10, -57, 0], to: [10, -57, 10] }
+  - fill: { block: diorite, from: [10, -57, 11], to: [10, -57, 11] }
+  - fill: { block: stone, from: [11, -57, 0], to: [11, -57, 11] }
+  - fill: { block: stone, from: [0, -56, 11], to: [0, -56, 11] }
+  - fill: { block: stone, from: [1, -56, 10], to: [1, -56, 11] }
+  - fill: { block: stone, from: [2, -56, 9], to: [2, -56, 11] }
+  - fill: { block: stone, from: [3, -56, 8], to: [3, -56, 11] }
+  - fill: { block: stone, from: [4, -56, 7], to: [4, -56, 11] }
+  - fill: { block: stone, from: [5, -56, 6], to: [5, -56, 8] }
+  - fill: { block: stone, from: [6, -56, 5], to: [6, -56, 7] }
+  - fill: { block: cobblestone, from: [7, -56, 1], to: [7, -56, 1] }
+  - fill: { block: stone, from: [7, -56, 3], to: [7, -56, 7] }
+  - fill: { block: cobblestone, from: [7, -56, 8], to: [7, -56, 8] }
+  - fill: { block: stone, from: [8, -56, 1], to: [8, -56, 8] }
+  - fill: { block: stone, from: [9, -56, 0], to: [9, -56, 11] }
+  - fill: { block: stone, from: [10, -56, 0], to: [10, -56, 10] }
+  - fill: { block: diorite, from: [10, -56, 11], to: [10, -56, 11] }
+  - fill: { block: stone, from: [11, -56, 0], to: [11, -56, 11] }
+  - fill: { block: stone, from: [0, -55, 10], to: [0, -55, 11] }
+  - fill: { block: stone, from: [1, -55, 10], to: [1, -55, 11] }
+  - fill: { block: stone, from: [2, -55, 9], to: [2, -55, 11] }
+  - fill: { block: stone, from: [3, -55, 9], to: [3, -55, 11] }
+  - fill: { block: stone, from: [4, -55, 8], to: [4, -55, 11] }
+  - fill: { block: stone, from: [5, -55, 7], to: [5, -55, 8] }
+  - fill: { block: stone, from: [6, -55, 5], to: [6, -55, 8] }
+  - fill: { block: cobblestone, from: [7, -55, 2], to: [7, -55, 2] }
+  - fill: { block: copper_ore, from: [7, -55, 3], to: [7, -55, 3] }
+  - fill: { block: stone, from: [7, -55, 4], to: [7, -55, 7] }
+  - fill: { block: stone, from: [8, -55, 2], to: [8, -55, 9] }
+  - fill: { block: stone, from: [9, -55, 0], to: [9, -55, 11] }
+  - fill: { block: stone, from: [10, -55, 0], to: [10, -55, 11] }
+  - fill: { block: stone, from: [11, -55, 0], to: [11, -55, 9] }
+  - fill: { block: iron_ore, from: [11, -55, 10], to: [11, -55, 11] }
+  - fill: { block: stone, from: [0, -54, 10], to: [0, -54, 11] }
+  - fill: { block: stone, from: [1, -54, 10], to: [1, -54, 11] }
+  - fill: { block: stone, from: [2, -54, 9], to: [2, -54, 11] }
+  - fill: { block: stone, from: [3, -54, 9], to: [3, -54, 11] }
+  - fill: { block: stone, from: [4, -54, 8], to: [4, -54, 11] }
+  - fill: { block: stone, from: [5, -54, 7], to: [5, -54, 8] }
+  - fill: { block: stone, from: [6, -54, 5], to: [6, -54, 7] }
+  - fill: { block: stone, from: [7, -54, 3], to: [7, -54, 7] }
+  - fill: { block: stone, from: [8, -54, 2], to: [8, -54, 8] }
+  - fill: { block: stone, from: [9, -54, 1], to: [9, -54, 11] }
+  - fill: { block: stone, from: [10, -54, 0], to: [10, -54, 11] }
+  - fill: { block: stone, from: [11, -54, 0], to: [11, -54, 9] }
+  - fill: { block: granite, from: [11, -54, 10], to: [11, -54, 11] }
+  - fill: { block: stone, from: [0, -53, 10], to: [0, -53, 11] }
+  - fill: { block: stone, from: [1, -53, 9], to: [1, -53, 11] }
+  - fill: { block: stone, from: [2, -53, 9], to: [2, -53, 11] }
+  - fill: { block: stone, from: [3, -53, 8], to: [3, -53, 11] }
+  - fill: { block: stone, from: [4, -53, 7], to: [4, -53, 11] }
+  - fill: { block: stone, from: [5, -53, 6], to: [5, -53, 7] }
+  - fill: { block: stone, from: [7, -53, 7], to: [7, -53, 7] }
+  - fill: { block: stone, from: [8, -53, 1], to: [8, -53, 7] }
+  - fill: { block: stone, from: [9, -53, 0], to: [9, -53, 11] }
+  - fill: { block: stone, from: [10, -53, 0], to: [10, -53, 9] }
+  - fill: { block: granite, from: [10, -53, 10], to: [10, -53, 11] }
+  - fill: { block: stone, from: [11, -53, 0], to: [11, -53, 8] }
+  - fill: { block: granite, from: [11, -53, 9], to: [11, -53, 11] }
+  - fill: { block: stone, from: [0, -52, 9], to: [0, -52, 11] }
+  - fill: { block: stone, from: [1, -52, 9], to: [1, -52, 11] }
+  - fill: { block: stone, from: [2, -52, 8], to: [2, -52, 11] }
+  - fill: { block: stone, from: [3, -52, 8], to: [3, -52, 11] }
+  - fill: { block: stone, from: [4, -52, 9], to: [4, -52, 11] }
+  - fill: { block: stone, from: [6, -52, 0], to: [6, -52, 0] }
+  - fill: { block: stone, from: [7, -52, 0], to: [7, -52, 1] }
+  - fill: { block: stone, from: [8, -52, 0], to: [8, -52, 2] }
+  - fill: { block: stone, from: [9, -52, 0], to: [9, -52, 3] }
+  - fill: { block: stone, from: [9, -52, 9], to: [9, -52, 9] }
+  - fill: { block: stone, from: [9, -52, 11], to: [9, -52, 11] }
+  - fill: { block: diorite, from: [10, -52, 0], to: [10, -52, 0] }
+  - fill: { block: stone, from: [10, -52, 1], to: [10, -52, 4] }
+  - fill: { block: stone, from: [10, -52, 8], to: [10, -52, 8] }
+  - fill: { block: granite, from: [10, -52, 9], to: [10, -52, 11] }
+  - fill: { block: stone, from: [11, -52, 0], to: [11, -52, 4] }
+  - fill: { block: stone, from: [11, -52, 7], to: [11, -52, 7] }
+  - fill: { block: granite, from: [11, -52, 8], to: [11, -52, 11] }
+  - fill: { block: stone, from: [0, -51, 8], to: [0, -51, 11] }
+  - fill: { block: stone, from: [1, -51, 8], to: [1, -51, 11] }
+  - fill: { block: stone, from: [2, -51, 7], to: [2, -51, 11] }
+  - fill: { block: stone, from: [3, -51, 10], to: [3, -51, 11] }
+  - fill: { block: stone, from: [5, -51, 0], to: [5, -51, 1] }
+  - fill: { block: stone, from: [6, -51, 0], to: [6, -51, 3] }
+  - fill: { block: stone, from: [7, -51, 0], to: [7, -51, 4] }
+  - fill: { block: diorite, from: [8, -51, 0], to: [8, -51, 0] }
+  - fill: { block: stone, from: [8, -51, 1], to: [8, -51, 5] }
+  - fill: { block: diorite, from: [9, -51, 0], to: [9, -51, 1] }
+  - fill: { block: stone, from: [9, -51, 2], to: [9, -51, 7] }
+  - fill: { block: diorite, from: [10, -51, 0], to: [10, -51, 1] }
+  - fill: { block: stone, from: [10, -51, 2], to: [10, -51, 8] }
+  - fill: { block: granite, from: [10, -51, 11], to: [10, -51, 11] }
+  - fill: { block: diorite, from: [11, -51, 0], to: [11, -51, 1] }
+  - fill: { block: stone, from: [11, -51, 2], to: [11, -51, 7] }
+  - fill: { block: granite, from: [11, -51, 8], to: [11, -51, 8] }
+  - fill: { block: granite, from: [11, -51, 11], to: [11, -51, 11] }
+  - fill: { block: stone, from: [0, -50, 7], to: [0, -50, 11] }
+  - fill: { block: stone, from: [1, -50, 6], to: [1, -50, 11] }
+  - fill: { block: stone, from: [2, -50, 6], to: [2, -50, 11] }
+  - fill: { block: stone, from: [3, -50, 4], to: [3, -50, 10] }
+  - fill: { block: stone, from: [4, -50, 0], to: [4, -50, 7] }
+  - fill: { block: stone, from: [5, -50, 0], to: [5, -50, 7] }
+  - fill: { block: stone, from: [6, -50, 0], to: [6, -50, 7] }
+  - fill: { block: diorite, from: [7, -50, 0], to: [7, -50, 0] }
+  - fill: { block: stone, from: [7, -50, 1], to: [7, -50, 7] }
+  - fill: { block: diorite, from: [8, -50, 0], to: [8, -50, 1] }
+  - fill: { block: stone, from: [8, -50, 2], to: [8, -50, 7] }
+  - fill: { block: diorite, from: [9, -50, 0], to: [9, -50, 1] }
+  - fill: { block: stone, from: [9, -50, 2], to: [9, -50, 8] }
+  - fill: { block: stone, from: [9, -50, 11], to: [9, -50, 11] }
+  - fill: { block: diorite, from: [10, -50, 0], to: [10, -50, 2] }
+  - fill: { block: stone, from: [10, -50, 3], to: [10, -50, 9] }
+  - fill: { block: granite, from: [10, -50, 10], to: [10, -50, 11] }
+  - fill: { block: diorite, from: [11, -50, 0], to: [11, -50, 2] }
+  - fill: { block: stone, from: [11, -50, 3], to: [11, -50, 8] }
+  - fill: { block: granite, from: [11, -50, 9], to: [11, -50, 11] }
+players:
+  - name: CaveLedgeBot
+    pos: [10.47, -60, 0.42]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./cave-ledge.ts"]
+params:
+  target: [4, -51, 10]
+  range: 0
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: reach, who: CaveLedgeBot, pos: [4.5, -51, 10.5], radius: 0.7 }
+    - { kind: health, who: CaveLedgeBot, health: 20 }
+    - { kind: completion, who: CaveLedgeBot }

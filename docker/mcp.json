@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "minecraft": {
+      "type": "http",
+      "url": "http://127.0.0.1:25575/mcp",
+      "timeout": 3600000
+    }
+  }
+}

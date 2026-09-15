@@ -1,0 +1,31 @@
+name: gravel-overhang-mining
+description: Approach Nether gold through the recorded mining tunnel without descending onto suspended gravel above lava.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: "5831896158372390619"
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  # The observed tunnel, ending above a naturally suspended gravel column.
+  # Never place/reset gravel: that would wake gravity before the action starts.
+  - fill: { block: air, from: [83, 41, -21], to: [87, 42, -21] }
+players:
+  - name: GravelMiner
+    pos: [86.5, 41, -20.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: netherrack, count: 83 }
+      - { item: cooked_mutton, count: 12 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./gravel-overhang-mining.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: completion, who: GravelMiner }
+    - { kind: health, who: GravelMiner, health: 20 }
+    - { kind: survive, who: GravelMiner, seconds: 1 }

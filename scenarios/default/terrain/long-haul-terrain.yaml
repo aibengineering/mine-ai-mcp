@@ -1,0 +1,88 @@
+name: long-haul-terrain
+description: Cross 160 blocks of generated overworld terrain on a seeded default world, streaming chunks the planner has not seen when the route starts.
+
+# Every other fixture is a superflat world with hand-built geometry inside a
+# single loaded area, and the longest route in the set is about thirty blocks.
+# Production is neither of those things. `explore-frontier` and `navigate` are
+# routinely asked to cross a hundred blocks or more of real generated terrain,
+# which means:
+#
+#   * The destination is in chunks that are not loaded when planning starts, so
+#     the planner must extend a route into world it has not seen. The candidate
+#     answers this with a sixteen-step segment budget and continuation
+#     searches; no fixture is long enough to need a second segment, so that
+#     mechanism has never actually run under a live server.
+#   * Real terrain supplies the movement mix by itself — slopes, overhangs,
+#     water, one-block ledges — rather than the specific obstacle each hand-built
+#     fixture was written to pose.
+#
+# The seed is pinned so the terrain is the same every run. The goals are what
+# can be asserted without knowing which hill the generator put where: the bot
+# ends up near the destination column, alive, having reported completion.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: default
+  seed: 8675309
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+
+# The spawn is pinned, and it has to be.
+#
+# Omitting `pos` takes the server's own spawn point, and that is not stable
+# across fresh worlds even on a fixed seed: block generation is seed-
+# deterministic but Minecraft's choice of *where* to put the player is not.
+# Two runs of this fixture started at (8.5, 67, -19.5) and (279.5, 71, -14.5),
+# so they crossed terrain 271 blocks apart and could not be compared to each
+# other at all. This column is a surface point for seed 8675309, verified by
+# a run that actually spawned there; the surface is grass at y63, so the
+# player stands at y64.
+players:
+  - name: HaulBot
+    pos: [8.5, 64, -19.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./long-haul-terrain.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!HaulBot,gamemode=!spectator]"
+
+params:
+  # Measured from wherever the server spawned the bot, not from world origin,
+  # since the spawn point is the generator's choice too.
+  #
+  # The bearing is not arbitrary. The original 160 east / 64 north put the
+  # destination column at 169,-83, which on this seed is open ocean: water at
+  # y62 for the whole last stretch. The bot walked the coast, bridged out over
+  # the water on its 64 cobblestone, spent every block, and stopped 14.9 short
+  # with no legal move but stepping back along its own bridge. The fixture was
+  # asking for a sea crossing, not a terrain crossing.
+  #
+  # These offsets land on 63,-170 — surveyed land at y78, with no water
+  # anywhere on the line and its lowest point at y68. Same 160-block haul,
+  # over ground the bot can actually walk.
+  eastward: 54.5
+  northward: 150.5
+  range: 3.0
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - kind: health
+      who: HaulBot
+      health: 20
+    - kind: completion
+      who: HaulBot

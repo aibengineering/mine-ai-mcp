@@ -1,0 +1,29 @@
+name: disposal-hole-bedrock
+description: Refuse disposal on unbreakable ground without tossing any of the requested items.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0 }
+reset:
+  - "fill -8 -63 -8 8 -54 8 air"
+geometry:
+  - fill: { block: bedrock, from: [-8, -63, -8], to: [8, -61, 8] }
+players:
+  - name: Disposer
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_shovel, count: 1 }
+      - { item: rotten_flesh, count: 16 }
+      - { item: cobblestone, count: 70 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./disposal-hole.ts"]
+params: { expected: unavailable }
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: hasItem, who: Disposer, item: rotten_flesh, count: 16 }
+    - { kind: hasItem, who: Disposer, item: cobblestone, count: 70 }
+    - { kind: completion, who: Disposer }

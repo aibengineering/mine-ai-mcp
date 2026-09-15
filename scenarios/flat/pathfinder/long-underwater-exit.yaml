@@ -1,0 +1,84 @@
+name: long-underwater-exit
+description: Leave an air cavern beneath a lake by taking the distant dry exit instead of digging its dirt ceiling, then navigate home above ground.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  # Distant fixture commands need their destination chunks loaded while the
+  # arrangement is built.
+  - "forceload add -8 -8 96 88"
+  - "fill -8 -61 -8 96 -48 8 air"
+  - "fill 76 -61 9 96 -48 88 air"
+
+geometry:
+  # A dry two-block-high cavern runs beneath a contained lake. Its dirt ceiling
+  # is diggable, but every ceiling block touches water. Pathfinder's default
+  # dontCreateFlow policy must therefore reject the tempting upward shortcut.
+  - fill: { block: bedrock, from: [-4, -58, -4], to: [73, -58, 4] }
+  - fill: { block: bedrock, from: [-4, -57, -4], to: [-4, -55, 4] }
+  - fill: { block: bedrock, from: [-4, -57, -4], to: [73, -55, -4] }
+  - fill: { block: bedrock, from: [-4, -57, 4], to: [73, -55, 4] }
+  - fill: { block: dirt, from: [-3, -55, -3], to: [72, -55, 3] }
+
+  # The water is held above the dirt roof. The eastern bedrock dam leaves the
+  # cavern open below it, so the legitimate route continues roughly 80 blocks
+  # before rising outside the lake.
+  - fill: { block: bedrock, from: [-4, -54, -4], to: [-4, -49, 4] }
+  - fill: { block: bedrock, from: [-4, -54, -4], to: [73, -49, -4] }
+  - fill: { block: bedrock, from: [-4, -54, 4], to: [73, -49, 4] }
+  - fill: { block: bedrock, from: [73, -55, -4], to: [73, -49, 4] }
+  - fill: { block: water, from: [-3, -54, -3], to: [72, -50, 3] }
+
+  # Dry stairs rise beyond the lake. A separate surface causeway returns west
+  # to the gold home marker above the starting cavern.
+  - fill: { block: stone, from: [74, -58, -2], to: [74, -58, 2] }
+  - fill: { block: stone, from: [75, -57, -2], to: [75, -57, 2] }
+  - fill: { block: stone, from: [76, -56, -2], to: [76, -56, 2] }
+  - fill: { block: stone, from: [77, -55, -2], to: [77, -55, 2] }
+  - fill: { block: stone, from: [78, -54, -2], to: [78, -54, 2] }
+  - fill: { block: stone, from: [79, -53, -2], to: [79, -53, 2] }
+  - fill: { block: stone, from: [80, -52, -2], to: [83, -52, 12] }
+  - fill: { block: stone, from: [0, -52, 8], to: [83, -52, 12] }
+  - setblock: { block: gold_block, at: [0, -52, 10] }
+
+players:
+  - name: Navigator
+    pos: [0, -57, 0]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./long-underwater-exit.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!Navigator,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: reach
+      who: Navigator
+      pos: [0, -51, 10]
+      radius: 3
+    # This makes the flow policy part of the external verdict: reaching home by
+    # punching through the lake floor is not a pass.
+    - kind: blockAt
+      who: Navigator
+      pos: [0, -55, 0]
+      block: dirt
+    - kind: health
+      who: Navigator
+      health: 20
+    - kind: completion
+      who: Navigator

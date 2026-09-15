@@ -1,0 +1,27 @@
+name: underwater-current
+description: The production runtime crosses a qualified shallow current in both directions and exits to dry footing.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, doDaylightCycle: false }
+geometry:
+  - fill: { block: stone, from: [-2, -60, -1], to: [7, -60, 1] }
+  - fill: { block: stone, from: [-2, -59, -1], to: [7, -58, -1] }
+  - fill: { block: stone, from: [-2, -59, 1], to: [7, -58, 1] }
+  - fill: { block: stone, from: [-2, -59, 0], to: [-1, -59, 0] }
+  - fill: { block: stone, from: [7, -59, 0], to: [7, -59, 0] }
+  - fill: { block: water, from: [0, -59, 0], to: [0, -59, 0] }
+players:
+  - name: Diver
+    pos: [1.5, -59, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./underwater.ts"]
+params:
+  legs: [[5, -59, 0], [1, -59, 0], [-1, -58, 0]]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: completion, who: Diver }
+    - { kind: health, who: Diver, health: 20 }

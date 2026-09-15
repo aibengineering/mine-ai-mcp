@@ -1,0 +1,44 @@
+name: mixed-fight-cover-fire
+description: Extinguish fire ignited in an adopted cover passage, retain the position, defeat native mixed attackers and leave.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    { doFireTick: false, doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: true, keepInventory: false }
+geometry:
+  - fill: { block: stone, from: [-1, -60, -1], to: [2, -58, 0] }
+  - fill: { block: air, from: [0, -60, 0], to: [1, -59, 0] }
+  - fill: { block: stone, from: [0, -60, 1], to: [0, -59, 1] }
+entities:
+  - {
+      type: skeleton,
+      pos: [1.5, -60, 10.5],
+      nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}',
+    }
+  - { type: zombie, pos: [5.5, -60, 10.5], nbt: "{PersistenceRequired:1b}" }
+players:
+  - name: CoverMixed
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+      - { item: cooked_beef, count: 16 }
+params: { passageFires: 2 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./existing-cover.ts"]
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: kill, who: CoverMixed, target: skeleton }
+    - { kind: kill, who: CoverMixed, target: zombie }
+    - { kind: completion, who: CoverMixed }

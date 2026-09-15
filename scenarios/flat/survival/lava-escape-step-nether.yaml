@@ -1,0 +1,25 @@
+name: lava-escape-step-nether
+description: In the Nether, escape onto one placed step while carrying an unusable water bucket; normal regeneration supports survival of residual burning.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  dimension: the_nether
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: true }
+# The overworld fixture's pool, carved into Nether terrain at the same layout.
+geometry:
+  - fill: { block: air, from: [-9, 97, -9], to: [9, 105, 9] }
+  - fill: { block: netherrack, from: [-9, 97, -9], to: [9, 97, 9] }
+  - fill: { block: lava, from: [-6, 98, -6], to: [6, 98, 6] }
+  - fill: { block: netherrack, from: [7, 98, -9], to: [9, 98, 9] }
+players:
+  - name: LavaSurvivor
+    pos: [8.5, 99, 0.5]
+    op: true
+    inventory:
+      - { item: cobblestone, count: 8 }
+      - { item: water_bucket, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./lava-escape-step.ts"]
+goal: { kind: completion, who: LavaSurvivor, timeout: 70 }

@@ -1,0 +1,29 @@
+name: full-inventory-workstations
+description: From 36 occupied slots, craft and place a chest, deposit spoil, then craft and place a furnace and cook food using published actions.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules:
+    doMobSpawning: false
+geometry:
+  - fill: { block: stone, from: [-8, -60, -8], to: [8, -60, 8] }
+  - setblock: { at: [2, -59, 0], block: crafting_table }
+players:
+  - name: WorkshopBot
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: cobblestone, count: 2112 }
+      # Consuming these eight planks frees the output slot. A stack of 64
+      # would not, and must not be advertised as the same capacity case.
+      - { item: oak_planks, count: 8 }
+      - { item: coal, count: 4 }
+      - { item: beef, count: 2 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./full-inventory-workstations.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: hasItem, who: WorkshopBot, item: cooked_beef, count: 2 }
+    - { kind: completion, who: WorkshopBot }

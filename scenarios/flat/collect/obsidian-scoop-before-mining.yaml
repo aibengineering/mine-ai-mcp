@@ -1,0 +1,27 @@
+name: obsidian-scoop-before-mining
+description: Scoop the natural water feeding obsidian before starting the long dig beside lava.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+reset: ["fill -6 -61 -5 10 -54 5 air"]
+geometry:
+  - fill: { block: stone, from: [-5, -61, -4], to: [9, -60, 4] }
+  - setblock: { block: obsidian, at: [2, -60, 0] }
+  - setblock: { block: water, at: [3, -59, 0] }
+  - setblock: { block: lava, at: [2, -60, 1] }
+players:
+  - name: DrainMiner
+    pos: [0.5, -59, 0.5]
+    inventory: [{ item: diamond_pickaxe, count: 1 }, { item: cobblestone, count: 32 }, { item: bucket, count: 1 }]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./water-mining-regression.ts"]
+params: { mode: scoop }
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: completion, who: DrainMiner }
+    - { kind: health, who: DrainMiner, health: 20 }

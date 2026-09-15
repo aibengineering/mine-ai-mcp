@@ -1,0 +1,49 @@
+name: fill-planted-shore-approach
+description: Approach a higher bank from outside bucket reach and fill two buckets without entering submerged plants.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -61 -8 12 -50 8 air"
+
+geometry:
+  - fill: { block: stone, from: [-8, -62, -8], to: [12, -61, 8] }
+  - fill: { block: stone, from: [-8, -60, -8], to: [12, -59, 8] }
+  # Water lies two cells below the bank's standing height, still within use reach.
+  - fill: { block: water, from: [-7, -60, -7], to: [4, -59, 7] }
+  - fill: { block: air, from: [-7, -59, -7], to: [4, -59, 7] }
+  # This is a wet cell, although its collision bounding box is empty.
+  - setblock: { block: seagrass, at: [3, -60, 0] }
+
+players:
+  - name: ShoreBucket
+    pos: [9.5, -58, 0.5]
+    inventory:
+      - { item: bucket, count: 2 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fill-planted-shore.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!ShoreBucket,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: hasItem
+      who: ShoreBucket
+      item: water_bucket
+      count: 2
+    - kind: completion
+      who: ShoreBucket

@@ -1,0 +1,31 @@
+name: surface-from-cave
+description: An ambiguous column requires a height; naming its surface then climbs out of the cave onto the roof.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+reset:
+  - "fill -10 -60 -10 10 -45 10 air"
+geometry:
+  - fill: { block: stone, from: [-8, -60, -8], to: [8, -55, 8] }
+  - fill: { block: air, from: [-5, -59, -5], to: [5, -58, 5] }
+players:
+  - name: SurfaceWalker
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./surface-from-cave.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: reach, who: SurfaceWalker, pos: [3.5, -54, 0.5], radius: 0.7 }
+    - { kind: completion, who: SurfaceWalker }

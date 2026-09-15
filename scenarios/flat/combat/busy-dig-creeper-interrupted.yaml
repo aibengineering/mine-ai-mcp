@@ -1,0 +1,76 @@
+name: busy-dig-creeper-interrupted
+description: Collect the requested stone and survive a creeper approaching during the job without an explosion.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill 3 -60 -6 11 -55 6 air"
+
+setup:
+  - "difficulty normal"
+
+# The zombie fixture's stone face, three blocks nearer. What changes with a
+# creeper is the retreat: a sprint straight away from a creeper that arrived
+# from behind runs into the rock the bot was digging, which is how a bot at a
+# mine face meets one.
+geometry:
+  - fill: { block: stone, from: [5, -60, -3], to: [8, -57, 3] }
+
+entities:
+  - type: creeper
+    # Behind the bot, so the dig is what the reflex interrupts, not an approach.
+    # A creeper only follows from sixteen blocks, not a zombie's thirty-five:
+    # outside the eight-block contact boundary at spawn, and still inside its
+    # own follow range once the bot is standing at the face.
+    pos: [-9.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: DigCreeperBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: stone_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./busy-collect-reflex.ts"]
+
+params:
+  maxExplosions: 0
+  blockName: stone
+  count: 28
+
+tick:
+  - "gamemode spectator @a[name=!DigCreeperBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: hasItem
+      who: DigCreeperBot
+      item: cobblestone
+      count: 28
+    # Preserve enough health to establish that the collection was completed
+    # safely, rather than merely surviving a damaging blast.
+    - kind: health
+      who: DigCreeperBot
+      health: 15
+    - kind: survive
+      who: DigCreeperBot
+      seconds: 1
+    - kind: completion
+      who: DigCreeperBot

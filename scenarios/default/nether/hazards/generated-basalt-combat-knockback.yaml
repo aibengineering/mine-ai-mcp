@@ -1,0 +1,23 @@
+name: generated-basalt-combat-knockback
+description: Replay two recorded cube impulses through navigation's stationary controller on the generated basalt ledge and require a supported landing above lava.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+players:
+  - name: BasaltGuard
+    pos: [181.44870172693697, 33, -31.40260679552038]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./generated-basalt-combat-knockback.ts"]
+goal:
+  kind: completion
+  who: BasaltGuard
+  timeout: 45

@@ -1,0 +1,44 @@
+name: birch-door-exact-target
+description: Recover one explicitly addressed open birch door, observe both halves removed and its item collected, and preserve the neighbouring door.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+reset:
+  - "fill -4 -59 -4 10 -54 4 air"
+geometry:
+  - fill: { block: andesite, from: [-4, -60, -4], to: [10, -60, 4] }
+  - setblock: { block: "birch_door[facing=east,half=lower,hinge=left,open=true,powered=false]", at: [2, -59, 0] }
+  - setblock: { block: "birch_door[facing=east,half=upper,hinge=left,open=true,powered=false]", at: [2, -58, 0] }
+  - setblock: { block: "oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]", at: [5, -59, 0] }
+  - setblock: { block: "oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]", at: [5, -58, 0] }
+players:
+  - name: Collector
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: iron_axe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+params:
+  block_name: birch_door
+  count: 1
+  x: 2
+  y: -59
+  z: 0
+  scaffold: false
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: hasItem, who: Collector, item: birch_door, count: 1 }
+    - { kind: blockAt, who: Collector, pos: [2, -59, 0], block: air }
+    - { kind: blockAt, who: Collector, pos: [2, -58, 0], block: air }
+    - { kind: blockAt, who: Collector, pos: [5, -59, 0], block: oak_door }
+    - { kind: blockAt, who: Collector, pos: [5, -58, 0], block: oak_door }
+    - { kind: completion, who: Collector }

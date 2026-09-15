@@ -1,0 +1,20 @@
+name: footing-takeover-during-ascent
+description: Reach the step-up destination safely after a recorded cube impulse during ascent.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false, keepInventory: true }
+reset: ["fill -8 -59 -8 8 -35 8 air"]
+geometry:
+  - fill: { block: bedrock, from: [-8, -61, -8], to: [8, -61, 8] }
+  - fill: { block: lava, from: [-8, -60, -8], to: [8, -60, 8] }
+  - fill: { block: bedrock, from: [-1, -41, -1], to: [1, -41, 1] }
+  - setblock: { block: bedrock, at: [2, -40, 0] }
+players:
+  - name: AscentRecovery
+    pos: [1.4, -40, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./footing-takeover-during-ascent.ts"]
+goal: { kind: completion, who: AscentRecovery, timeout: 35 }

@@ -1,0 +1,29 @@
+name: cobweb-overhead
+description: Break a reachable overhead cobweb and collect its string, rather than completing empty excavation steps.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+geometry:
+  - setblock: { block: cobweb, at: [3, -57, 0] }
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: iron_sword, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "cobweb-overhead.ts"]
+goal:
+  kind: all
+  # A single sword break and nearby pickup need seconds; allow chunk and drop settlement.
+  timeout: 30
+  goals:
+    - { kind: hasItem, who: Collector, item: string, count: 1 }
+    - { kind: blockAt, who: Collector, pos: [3, -57, 0], block: air }
+    - { kind: completion, who: Collector }

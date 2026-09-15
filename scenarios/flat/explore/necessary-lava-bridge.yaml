@@ -1,0 +1,29 @@
+name: exploration-necessary-lava-bridge
+description: A higher exploration placement cost must still allow a necessary lava crossing.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: air, from: [1, -60, -32], to: [10, -59, 32] }
+  - fill: { block: lava, from: [1, -61, -32], to: [10, -61, 32] }
+  # Walls reach world-bottom: a shallow wall permits a legitimate tunnel beneath it.
+  - fill: { block: bedrock, from: [-8, -64, -1], to: [16, -30, -1] }
+  - fill: { block: bedrock, from: [-8, -64, 1], to: [16, -30, 1] }
+  - fill: { block: bedrock, from: [-8, -64, -1], to: [-8, -30, 1] }
+players:
+  - name: BridgeExplorer
+    pos: [0.5, -59, 0.5]
+    inventory: [{ item: netherrack, count: 64 }]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./scaffold-preference.ts"]
+params: { heading: 90, chunks: 1 }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: health, who: BridgeExplorer, health: 20 }
+    - { kind: completion, who: BridgeExplorer }

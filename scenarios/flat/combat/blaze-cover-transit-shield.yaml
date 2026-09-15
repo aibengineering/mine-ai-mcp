@@ -1,0 +1,29 @@
+name: blaze-cover-transit-shield
+description: Keep a usable shield through an exposed move out of cover when a native blaze fireball crosses the passage.
+# Isolates the cover/navigation handoff implicated by the 2026-09-08 spawner
+# death. This is a controlled projectile replay, not a simulation of blaze AI.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: stone, from: [-1, -60, -1], to: [2, -58, 0] }
+  - fill: { block: air, from: [0, -60, 0], to: [1, -59, 0] }
+  - fill: { block: stone, from: [0, -60, 1], to: [0, -59, 1] }
+entities:
+  - type: blaze
+    pos: [1.5, -60, 4.5]
+    nbt: "{NoAI:1b,NoGravity:1b,PersistenceRequired:1b}"
+players:
+  - name: CoverWalker
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./blaze-cover-transit-shield.ts"]
+goal: { kind: completion, who: CoverWalker, timeout: 35 }

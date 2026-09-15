@@ -1,0 +1,24 @@
+name: lava-escape-step
+description: With no natural bank or water, place a solid step into a lava pool and climb out before burning to death.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+reset:
+  - "fill -9 -61 -9 9 -54 9 air"
+geometry:
+  - fill: { block: netherrack, from: [-9, -61, -9], to: [9, -61, 9] }
+  - fill: { block: lava, from: [-6, -60, -6], to: [6, -60, 6] }
+  - fill: { block: netherrack, from: [7, -60, -9], to: [9, -60, 9] }
+players:
+  - name: LavaSurvivor
+    op: true
+    pos: [8.5, -59, 0.5]
+    inventory:
+      - { item: cobblestone, count: 8 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./lava-escape-step.ts"]
+goal: { kind: completion, who: LavaSurvivor, timeout: 40 }

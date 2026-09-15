@@ -1,0 +1,40 @@
+name: canopy-gap-hunt
+description: Hunt a native enderman across an exposed generated canopy gap with a ten-block drop and recover its pearl without an unsafe fall.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  structures: true
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: true, keepInventory: false }
+entities:
+  - { type: enderman, pos: [108.5, 64, -11.5], nbt: "{PersistenceRequired:1b}" }
+players:
+  - name: EnderExpedition
+    pos: [104.5, 64, -11.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../../src/client-host.ts", "./canopy-gap-hunt.ts"]
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: completion, who: EnderExpedition }
+    - { kind: survive, who: EnderExpedition, seconds: 1 }
+    - { kind: health, who: EnderExpedition, health: 1 }
+    - { kind: hasItem, who: EnderExpedition, item: ender_pearl, count: 1 }
+    - { kind: reach, who: EnderExpedition, pos: [102, 65, -15], radius: 2 }

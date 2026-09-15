@@ -1,0 +1,25 @@
+name: inventory-batch
+description: Craft a table and retain 32 planks from nine logs through repeated inventory-grid recipes.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+players:
+  - name: GridBatchBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: oak_log, count: 9 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./inventory-batch.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: hasItem, who: GridBatchBot, item: crafting_table, count: 1 }
+    - { kind: hasItem, who: GridBatchBot, item: oak_planks, count: 32 }
+    - { kind: completion, who: GridBatchBot }

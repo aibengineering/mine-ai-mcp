@@ -1,0 +1,46 @@
+name: enderman-six-pearls-slope-rate
+description: Descend a generated warped-forest slope, collect six native pearls across repeated hunts at one pearl per minute, and return uphill alive.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  structures: true
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: true, keepInventory: false }
+entities:
+  - { type: enderman, pos: [112.5, 56, 10.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: enderman, pos: [110.5, 57, 12.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: enderman, pos: [114.5, 58, 16.5], nbt: "{PersistenceRequired:1b}" }
+players:
+  - name: EnderExpedition
+    pos: [100.5, 64, 18.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      # Repeated native kills and roof relocation exhausted the one-pearl kit.
+      - { item: cobblestone, count: 192 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-expedition.ts"]
+params:
+  collection: { drops: 6, minimumDropsPerMinute: 1 }
+  approach: [108, 58, 12]
+goal:
+  kind: all
+  timeout: 480
+  goals:
+    - { kind: completion, who: EnderExpedition }
+    - { kind: survive, who: EnderExpedition, seconds: 1 }
+    - { kind: health, who: EnderExpedition, health: 1 }
+    - { kind: hasItem, who: EnderExpedition, item: ender_pearl, count: 6 }
+    - { kind: reach, who: EnderExpedition, pos: [100, 64, 18], radius: 2 }

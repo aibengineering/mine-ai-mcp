@@ -1,0 +1,105 @@
+name: obstacle-course-scaffolding
+description: Complete an enclosed 3D obstacle course requiring a scaffolded cliff ascent, a bridge placement over a 4-block void gap, and barrier excavation.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -4 -62 -4 20 -40 4 air"
+
+geometry:
+  # Falling beneath the course is a failed route, not an alternate solution.
+  # The health verdict below makes that independently observable.
+  - fill: { block: lava, from: [-4, -62, -4], to: [20, -62, 4] }
+
+  # An unbreakable perimeter makes this a course rather than an invitation to
+  # scaffold around an arbitrarily wide hazard strip.
+  - fill: { block: bedrock, from: [-3, -62, -3], to: [17, -40, -3] }
+  - fill: { block: bedrock, from: [-3, -62, 3], to: [17, -40, 3] }
+  - fill: { block: bedrock, from: [-3, -62, -3], to: [-3, -40, 3] }
+  - fill: { block: bedrock, from: [17, -62, -3], to: [17, -40, 3] }
+
+  # Section 1: Starting pad below a sheer 5-block cliff
+  - fill: { block: stone, from: [-2, -60, 0], to: [0, -60, 0] }
+  - fill: { block: stone, from: [1, -60, -1], to: [3, -55, 1] }
+
+  # Section 2: Void gap from x: 4 to x: 7 (air down to void)
+  # Landing pad at the other side of the gap
+  - fill: { block: stone, from: [8, -55, 0], to: [9, -55, 0] }
+
+  # Section 3: a floor-to-ceiling barrier touching both perimeter walls. The
+  # finish is beyond it, so reaching the goal independently proves that the bot
+  # excavated a passage; climbing over or walking around is not another answer.
+  - fill: { block: stone, from: [10, -61, -2], to: [10, -40, 2] }
+
+  # Section 4: Descending steps down to the finish chest platform
+  - setblock: { block: stone, at: [11, -56, 0] }
+  - setblock: { block: stone, at: [12, -57, 0] }
+  - fill: { block: stone, from: [13, -58, -1], to: [16, -58, 1] }
+  - setblock: { block: chest, at: [14, -57, 0] }
+
+players:
+  - name: ScaffoldRunner
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - item: dirt
+        count: 24
+      - item: diamond_pickaxe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!ScaffoldRunner,gamemode=!spectator]"
+
+params:
+  target: [14, -57, 0]
+  range: 1.5
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: reach
+      who: ScaffoldRunner
+      pos: [14.5, -57, 0.5]
+      # navigate applies range to integer feet cells; Mine Labs observes
+      # the entity within the accepted cell.
+      radius: 2.25
+    - kind: health
+      who: ScaffoldRunner
+      # Permit a controlled drop without accepting a fall into the lava floor.
+      health: 18
+    # Prove the advertised route rather than accepting a walk beneath it.
+    - kind: any
+      goals:
+        - kind: blockAt
+          who: ScaffoldRunner
+          pos: [4, -55, -1]
+          block: dirt
+        - kind: blockAt
+          who: ScaffoldRunner
+          pos: [4, -55, 0]
+          block: dirt
+        - kind: blockAt
+          who: ScaffoldRunner
+          pos: [4, -55, 1]
+          block: dirt
+    - kind: blockAt
+      who: ScaffoldRunner
+      pos: [14, -57, 0]
+      block: chest
+    - kind: completion
+      who: ScaffoldRunner

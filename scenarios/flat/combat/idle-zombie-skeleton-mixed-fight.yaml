@@ -1,0 +1,65 @@
+name: idle-zombie-skeleton-mixed-fight
+description: An idle armored bot defeats a zombie and bow skeleton together, then releases the body.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+# The zombie closes while the skeleton draws; both must be defeated, whether
+# contact defence handles them inside one engagement or separate engagements.
+entities:
+  - type: zombie
+    pos: [6.5, -60, -1.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: skeleton
+    pos: [7.5, -60, 2.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+
+players:
+  - name: MixedBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./mixed-fight.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!MixedBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: kill
+      who: MixedBot
+      target: zombie
+    - kind: kill
+      who: MixedBot
+      target: skeleton
+    - kind: survive
+      who: MixedBot
+      seconds: 1
+    - kind: completion
+      who: MixedBot

@@ -1,0 +1,39 @@
+name: netherrack-loaded-scan
+description: Collect 32 netherrack through the production runtime while native Nether chunks surround a controlled bank; expose the multi-second pauses seen in live request 124 on 2026-09-08.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: "-5335131384818472281"
+  difficulty: peaceful
+  gamerules:
+    doMobSpawning: false
+    randomTickSpeed: 0
+# A controlled netherrack bank with a standing pocket, surrounded by native
+# terrain of whichever dimension the world names.
+geometry:
+  - fill: { block: air, from: [-6, 60, -6], to: [6, 72, 6] }
+  - fill: { block: bedrock, from: [-6, 60, -6], to: [6, 60, 6] }
+  - fill: { block: netherrack, from: [-4, 61, -4], to: [4, 67, 4] }
+  - fill: { block: air, from: [0, 64, 0], to: [0, 65, 0] }
+players:
+  - name: ScanCollector
+    pos: [0.5, 64, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: netherrack, count: 4 }
+      - { item: cobblestone, count: 11 }
+      - { item: dirt, count: 20 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./netherrack-loaded-scan.ts"]
+goal:
+  kind: all
+  # The live call took 274 seconds. Allow its full duration so the driver can
+  # report both inventory settlement and physics gaps, rather than only timeout.
+  timeout: 360
+  goals:
+    - { kind: hasItem, who: ScanCollector, item: netherrack, count: 36 }
+    - { kind: health, who: ScanCollector, health: 20 }
+    - { kind: completion, who: ScanCollector }

@@ -1,0 +1,409 @@
+{
+  "description": "Selected native results isolating the enderman expedition gaps. Site baseline drives a full hunt; the fixed site fixture checks the first neutral engagement refuses without a roof, not a pearl outcome. Contact before and after use the identical reachable-opportunity assertion, reverting only the contact classifier for the before run. Per-tick samples remain in local run artifacts; replay geometry and native setup are encoded in the fixtures.",
+  "worldSeed": "-5335131384818472281",
+  "results": [
+    {
+      "collection": "enderman-site-observe",
+      "run": "2026-09-08T10-13-33-108Z-t00001-w1-c1-enderman-expedition-site",
+      "scenario": "enderman-expedition-site",
+      "verdict": "fail",
+      "evidence": {
+        "result": {
+          "status": "partial",
+          "error": "[HUNT_DISENGAGED] The fight with the selected enderman was given up: Health 10.733331680297852 fell below the active response's minimum of 12.; the target was last observed at -258,91,464, 21.2 blocks away",
+          "hunt": {
+            "mob": "enderman",
+            "drop": "ender_pearl",
+            "requested": 1,
+            "inventoryBefore": 0,
+            "inventoryAfter": 0,
+            "gained": 0,
+            "targetsEngaged": 1,
+            "targetDeathsObserved": 0,
+            "attacks": 1,
+            "combatStyles": [
+              "melee"
+            ],
+            "projectileGuards": 0,
+            "otherDropsCollected": 0,
+            "targets": [
+              {
+                "species": "enderman",
+                "id": 56,
+                "x": -244,
+                "y": 80,
+                "z": 468,
+                "distance": 1.4
+              },
+              {
+                "species": "enderman",
+                "id": 57,
+                "x": -243,
+                "y": 77,
+                "z": 475,
+                "distance": 6.9
+              },
+              {
+                "species": "enderman",
+                "id": 55,
+                "x": -258,
+                "y": 91,
+                "z": 464,
+                "distance": 21.2
+              }
+            ],
+            "drops": []
+          }
+        },
+        "decisions": [
+          {
+            "kind": "roof_prepared",
+            "targetId": 55,
+            "cell": {
+              "x": -243,
+              "y": 80,
+              "z": 469
+            },
+            "stopped": "netherrack against warped_nylium face -1,0,0: Placement cell (-243, 82, 469) overlaps enderman #55 at (-242.5, 80, 470.045)."
+          }
+        ],
+        "kills": 0,
+        "minimumHealth": 10.733331680297852,
+        "died": false
+      }
+    },
+    {
+      "collection": "enderman-site-observe",
+      "run": "2026-09-08T10-14-08-986Z-t00002-w1-c2-enderman-expedition-site",
+      "scenario": "enderman-expedition-site",
+      "verdict": "fail",
+      "evidence": {
+        "result": {
+          "status": "partial",
+          "error": "[HUNT_DISENGAGED] The fight with the selected enderman was given up: Health 10.733333587646484 fell below the active response's minimum of 12.; the target was last observed at -243,77,475, 2.3 blocks away",
+          "hunt": {
+            "mob": "enderman",
+            "drop": "ender_pearl",
+            "requested": 1,
+            "inventoryBefore": 0,
+            "inventoryAfter": 0,
+            "gained": 0,
+            "targetsEngaged": 1,
+            "targetDeathsObserved": 0,
+            "attacks": 2,
+            "combatStyles": [
+              "melee"
+            ],
+            "projectileGuards": 0,
+            "otherDropsCollected": 0,
+            "targets": [
+              {
+                "species": "enderman",
+                "id": 56,
+                "x": -244,
+                "y": 80,
+                "z": 468,
+                "distance": 1.4
+              },
+              {
+                "species": "enderman",
+                "id": 55,
+                "x": -243,
+                "y": 77,
+                "z": 475,
+                "distance": 2.3
+              },
+              {
+                "species": "enderman",
+                "id": 57,
+                "x": -243,
+                "y": 77,
+                "z": 475,
+                "distance": 6.9
+              }
+            ],
+            "drops": []
+          }
+        },
+        "decisions": [
+          {
+            "kind": "roof_prepared",
+            "targetId": 55,
+            "cell": {
+              "x": -243,
+              "y": 80,
+              "z": 469
+            },
+            "stopped": "netherrack against warped_nylium face -1,0,0: Placement cell (-243, 82, 469) overlaps enderman #55 at (-242.5, 80, 470.045)."
+          }
+        ],
+        "kills": 0,
+        "minimumHealth": 1.6533331871032715,
+        "died": true
+      }
+    },
+    {
+      "collection": "enderman-contact-after",
+      "run": "2026-09-08T10-29-03-794Z-t00002-w1-c1-enderman-expedition-site",
+      "scenario": "enderman-expedition-site",
+      "verdict": "pass",
+      "evidence": {
+        "outcome": {
+          "kind": "unreachable",
+          "targetId": 55,
+          "attacks": 0,
+          "stylesUsed": [
+            "melee"
+          ],
+          "weaponsUsed": [
+            "diamond_pickaxe"
+          ],
+          "shieldRaisedSwings": 0,
+          "projectileGuards": 0,
+          "explosions": 0,
+          "observation": "Enderman protection unavailable: No supported roof position can be reached or built with carried blocks."
+        },
+        "decisions": [
+          {
+            "kind": "roof_prepared",
+            "targetId": 55,
+            "cell": {
+              "x": -243,
+              "y": 80,
+              "z": 469
+            },
+            "stopped": "No supported roof position can be reached or built with carried blocks."
+          }
+        ],
+        "minimumHealth": 20
+      }
+    },
+    {
+      "collection": "enderman-contact-after",
+      "run": "2026-09-08T10-29-40-275Z-t00004-w1-c2-enderman-expedition-site",
+      "scenario": "enderman-expedition-site",
+      "verdict": "pass",
+      "evidence": {
+        "outcome": {
+          "kind": "unreachable",
+          "targetId": 55,
+          "attacks": 0,
+          "stylesUsed": [
+            "melee"
+          ],
+          "weaponsUsed": [
+            "diamond_pickaxe"
+          ],
+          "shieldRaisedSwings": 0,
+          "projectileGuards": 0,
+          "explosions": 0,
+          "observation": "Enderman protection unavailable: No supported roof position can be reached or built with carried blocks."
+        },
+        "decisions": [
+          {
+            "kind": "roof_prepared",
+            "targetId": 55,
+            "cell": {
+              "x": -243,
+              "y": 80,
+              "z": 469
+            },
+            "stopped": "No supported roof position can be reached or built with carried blocks."
+          }
+        ],
+        "minimumHealth": 20
+      }
+    },
+    {
+      "collection": "angry-contact-opportunities-before",
+      "run": "2026-09-08T10-34-58-936Z-t00001-w1-c1-angry-enderman-contact",
+      "scenario": "angry-enderman-contact",
+      "verdict": "fail",
+      "evidence": {
+        "requested": 8,
+        "angryContact": 9,
+        "hitIds": [],
+        "ticks": 92,
+        "contactTicks": 41,
+        "health": 20,
+        "outcome": {
+          "kind": "cancelled",
+          "targetId": 8,
+          "attacks": 0,
+          "stylesUsed": [
+            "shielded_melee"
+          ],
+          "weaponsUsed": [
+            "hand",
+            "diamond_sword"
+          ],
+          "shieldRaisedSwings": 0,
+          "projectileGuards": 0,
+          "explosions": 0
+        }
+      }
+    },
+    {
+      "collection": "angry-contact-opportunities",
+      "run": "2026-09-08T10-33-26-231Z-t00001-w1-c1-angry-enderman-contact",
+      "scenario": "angry-enderman-contact",
+      "verdict": "pass",
+      "evidence": {
+        "requested": 8,
+        "angryContact": 9,
+        "hitIds": [
+          9
+        ],
+        "ticks": 60,
+        "contactTicks": 6,
+        "health": 20,
+        "outcome": {
+          "kind": "cancelled",
+          "targetId": 8,
+          "attacks": 1,
+          "stylesUsed": [
+            "shielded_melee"
+          ],
+          "weaponsUsed": [
+            "diamond_sword"
+          ],
+          "shieldRaisedSwings": 0,
+          "projectileGuards": 0,
+          "explosions": 0
+        }
+      }
+    },
+    {
+      "collection": "angry-contact-opportunities",
+      "run": "2026-09-08T10-33-41-882Z-t00002-w1-c2-angry-enderman-contact",
+      "scenario": "angry-enderman-contact",
+      "verdict": "pass",
+      "evidence": {
+        "requested": 8,
+        "angryContact": 9,
+        "hitIds": [
+          9
+        ],
+        "ticks": 39,
+        "contactTicks": 6,
+        "health": 20,
+        "outcome": {
+          "kind": "cancelled",
+          "targetId": 8,
+          "attacks": 1,
+          "stylesUsed": [
+            "shielded_melee"
+          ],
+          "weaponsUsed": [
+            "diamond_sword"
+          ],
+          "shieldRaisedSwings": 0,
+          "projectileGuards": 0,
+          "explosions": 0
+        }
+      }
+    },
+    {
+      "collection": "angry-contact-opportunities",
+      "run": "2026-09-08T10-33-56-144Z-t00003-w1-c3-angry-enderman-contact",
+      "scenario": "angry-enderman-contact",
+      "verdict": "pass",
+      "evidence": {
+        "requested": 8,
+        "angryContact": 9,
+        "hitIds": [
+          9
+        ],
+        "ticks": 7,
+        "contactTicks": 7,
+        "health": 20,
+        "outcome": {
+          "kind": "cancelled",
+          "targetId": 8,
+          "attacks": 1,
+          "stylesUsed": [
+            "shielded_melee"
+          ],
+          "weaponsUsed": [
+            "diamond_sword"
+          ],
+          "shieldRaisedSwings": 0,
+          "projectileGuards": 0,
+          "explosions": 0
+        }
+      }
+    },
+    {
+      "collection": "enderman-pinned-admission",
+      "run": "2026-09-08T10-49-33-557Z-t00001-w1-c1-enderman-expedition-site",
+      "scenario": "enderman-expedition-site",
+      "verdict": "pass",
+      "evidence": {
+        "outcome": {
+          "kind": "unreachable",
+          "targetId": 55,
+          "attacks": 0,
+          "stylesUsed": [
+            "melee"
+          ],
+          "weaponsUsed": [
+            "diamond_pickaxe"
+          ],
+          "shieldRaisedSwings": 0,
+          "projectileGuards": 0,
+          "explosions": 0,
+          "observation": "Enderman protection unavailable: No supported roof position can be reached or built with carried blocks."
+        },
+        "decisions": [
+          {
+            "kind": "roof_prepared",
+            "targetId": 55,
+            "cell": {
+              "x": -243,
+              "y": 80,
+              "z": 469
+            },
+            "stopped": "No supported roof position can be reached or built with carried blocks."
+          }
+        ],
+        "minimumHealth": 20
+      }
+    },
+    {
+      "collection": "enderman-pinned-admission",
+      "run": "2026-09-08T10-49-55-466Z-t00002-w1-c2-enderman-expedition-site",
+      "scenario": "enderman-expedition-site",
+      "verdict": "pass",
+      "evidence": {
+        "outcome": {
+          "kind": "unreachable",
+          "targetId": 55,
+          "attacks": 0,
+          "stylesUsed": [
+            "melee"
+          ],
+          "weaponsUsed": [
+            "diamond_pickaxe"
+          ],
+          "shieldRaisedSwings": 0,
+          "projectileGuards": 0,
+          "explosions": 0,
+          "observation": "Enderman protection unavailable: No supported roof position can be reached or built with carried blocks."
+        },
+        "decisions": [
+          {
+            "kind": "roof_prepared",
+            "targetId": 55,
+            "cell": {
+              "x": -243,
+              "y": 80,
+              "z": 469
+            },
+            "stopped": "No supported roof position can be reached or built with carried blocks."
+          }
+        ],
+        "minimumHealth": 20
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+name: fortress-six-rods-rate
+description: Collect six native blaze rods at one rod per minute at the run-14 fortress spawner while surviving repeated volleys on its generated bridges.
+# Exact seed and upper spawner from the live death on 2026-09-07. No arena
+# blocks are replaced. Five native blazes provide the initial crossfire;
+# the untouched spawner supplies the rest, with ordinary health and loot.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: "-5335131384818472281"
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: false
+entities:
+  - { type: blaze, pos: [-30.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-25.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-30.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-25.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-27.5, 87, 357.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+players:
+  - name: FortressHunter
+    pos: [-27.5, 82, 355.5]
+    op: true
+    inventory:
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 256 }
+      - { item: cooked_beef, count: 64 }
+      - { item: cobblestone, count: 256 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fortress-twelve-rods.ts"]
+goal:
+  kind: all
+  # Eight minutes bounds stalled collection; six rods must average at least one per minute.
+  timeout: 480
+  goals:
+    - { kind: hasItem, who: FortressHunter, item: blaze_rod, count: 6 }
+    - { kind: completion, who: FortressHunter }
+
+params: { drops: 6, minimumDropsPerMinute: 1 }

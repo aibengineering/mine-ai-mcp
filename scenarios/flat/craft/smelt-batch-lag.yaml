@@ -1,0 +1,22 @@
+name: smelt-batch-lag
+description: Smelt sixteen raw iron while the server advances at sixteen ticks per second.
+minecraft: { version: "1.21.4" }
+world: { type: flat, gamerules: { doMobSpawning: false } }
+setup: ["tick rate 16"]
+geometry:
+  - fill: { block: stone, from: [-8, -60, -8], to: [8, -60, 8] }
+  - setblock: { at: [2, -59, 0], block: furnace }
+players:
+  - name: SmeltLagBot
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: raw_iron, count: 16 }
+      - { item: coal, count: 2 }
+params: { count: 16, temporary: false }
+client: { command: bun, args: ["../../src/client-host.ts", "./smelt-batch.ts"] }
+goal:
+  kind: all
+  timeout: 300
+  goals:
+    - { kind: completion, who: SmeltLagBot }
+    - { kind: hasItem, who: SmeltLagBot, item: iron_ingot, count: 16 }

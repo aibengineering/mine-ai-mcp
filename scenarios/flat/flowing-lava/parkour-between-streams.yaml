@@ -1,0 +1,37 @@
+name: parkour-between-streams
+description: Jump a three-block gap through a one-block opening between two falling lava streams, then brake on the far runway.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0, keepInventory: true }
+reset:
+  - "fill -8 -62 -5 10 -45 5 air"
+geometry:
+  - fill: { block: bedrock, from: [-8, -61, -5], to: [10, -61, 5] }
+  - fill: { block: blue_concrete, from: [-5, -55, 0], to: [0, -55, 0] }
+  - fill: { block: lime_concrete, from: [4, -55, 0], to: [7, -55, 0] }
+  - fill: { block: glass, from: [1, -47, -2], to: [3, -47, 2] }
+  - setblock: { block: lava, at: [2, -47, -1] }
+  - setblock: { block: lava, at: [2, -47, 1] }
+  - fill: { block: "lava[level=8]", from: [2, -60, -1], to: [2, -48, -1] }
+  - fill: { block: "lava[level=8]", from: [2, -60, 1], to: [2, -48, 1] }
+players:
+  - name: LavaNavigator
+    pos: [-4.5, -54, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./lava-navigation.ts"]
+params:
+  kind: steady_stream
+  target: [7, -54, 0]
+  requireParkour: true
+  lavaCells: [[2, -54, -1], [2, -54, 1]]
+tick:
+  - "gamemode spectator @a[name=!LavaNavigator,gamemode=!spectator]"
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: health, who: LavaNavigator, health: 20 }
+    - { kind: completion, who: LavaNavigator }

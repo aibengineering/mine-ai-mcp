@@ -1,0 +1,7 @@
+name: end-dragon-bow
+description: Kill a native flying dragon using only the explicit bow action after setup removes crystals.
+template: ender-dragon.yaml
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/dragon-bow.ts"]
+params: { phase: perch, hitbox_margin: 0.5 }

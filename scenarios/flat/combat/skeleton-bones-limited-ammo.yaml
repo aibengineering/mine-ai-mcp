@@ -1,0 +1,40 @@
+name: skeleton-bones-limited-ammo
+description: Acquire three bones from native skeletons with one carried arrow, a bow, sword and shield. The bot may choose any weapons or positioning; inventory and survival determine success.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: true, randomTickSpeed: 0 }
+players:
+  - name: BoneGatherer
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cooked_beef, count: 12 }
+      - { item: cobblestone, count: 24 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+entities:
+  - { type: skeleton, pos: [12.5, -60, 0.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [22.5, -60, 7.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [30.5, -60, -8.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [38.5, -60, 5.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [45.5, -60, -4.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [50.5, -60, 9.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+params: { mob_name: skeleton, drop_name: bone, count: 3, wear_armor: true }
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: hasItem, who: BoneGatherer, item: bone, count: 3 }
+    - { kind: survive, who: BoneGatherer, seconds: 1 }
+    - { kind: completion, who: BoneGatherer }

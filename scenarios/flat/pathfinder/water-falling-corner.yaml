@@ -1,0 +1,38 @@
+# Extracted from seed 20260904 near 5,-55,6 after obsidian collection.
+# A waterfall fills the pickup holes and pushes the body toward a stone corner.
+name: water-falling-corner
+description: Leave a two-deep falling current through its narrow sideways ledge.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+reset:
+  - "fill 2 -60 2 8 -40 9 air"
+geometry:
+  - fill: { block: stone, from: [3, -62, 3], to: [7, -55, 8] }
+  - fill: { block: air, from: [4, -60, 4], to: [5, -58, 6] }
+  - fill: { block: air, from: [5, -60, 7], to: [5, -58, 7] }
+  - fill: { block: air, from: [4, -61, 6], to: [4, -61, 6] }
+  - fill: { block: air, from: [6, -59, 4], to: [6, -56, 5] }
+  - fill: { block: stone, from: [6, -57, 5], to: [6, -56, 5] }
+  - fill: { block: water, from: [6, -56, 4], to: [6, -56, 4] }
+players:
+  - name: Collector
+    pos: [5.5, -60, 6.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./water-traversal.ts"]
+params:
+  legs:
+    - { target: [6, -59, 5], range: 0.1, label: exit }
+    - { target: [5, -60, 6], range: 0.1, label: return-to-current }
+    - { target: [6, -59, 5], range: 0.1, label: repeat-exit }
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: survive, who: Collector, seconds: 0.05 }
+    - { kind: health, who: Collector, health: 20 }
+    - { kind: completion, who: Collector }

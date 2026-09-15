@@ -1,0 +1,81 @@
+name: ender-pearl
+description: Defeat 1 native enderman and survive with the declared equipment.
+  This finite-mob goal does not qualify drop acquisition or prescribe a weapon.
+
+# An enderman is neutral until looked at, and once angry it teleports beside
+# whoever provoked it. The hunt uses both rules: the controller walks under the
+# cobblestone roof beside the bot's start, which an enderman is too tall to
+# follow into, and stares at the enderman's eyes until it comes. A pearl falls
+# half the time, so the fixture asks for the kill and takes the pearl when it
+# comes.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    doWeatherCycle: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -8 -60 -8 8 -50 8 air"
+
+setup:
+  - "difficulty normal"
+  - "weather clear"
+
+geometry:
+  # A roof two above the ground over a 3x3 patch beside the bot: cover it can walk under.
+  - fill: { block: cobblestone, from: [-4, -58, -1], to: [-2, -58, 1] }
+
+entities:
+  - type: enderman
+    pos: [7.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: EnderHunter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 16 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "ender-pearl.ts"]
+
+params:
+  mob_name: enderman
+  drop_name: ender_pearl
+  count: 1
+  wear_armor: true
+  defeat_count: 1
+
+tick:
+  - "gamemode spectator @a[name=!EnderHunter,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - kind: kill
+      who: EnderHunter
+      target: enderman
+    - kind: survive
+      who: EnderHunter
+      seconds: 1
+    - kind: completion
+      who: EnderHunter

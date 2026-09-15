@@ -1,0 +1,101 @@
+name: house-door-exit
+description: Start inside an enclosed house and navigate to a destination behind the back wall, exiting through the front door rather than digging through the walls.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -61 -10 8 -40 10 air"
+
+geometry:
+  # Foundation / ground floor
+  - fill: { block: smooth_stone, from: [-8, -61, -10], to: [8, -61, 10] }
+
+  # House floor
+  - fill: { block: oak_planks, from: [-3, -61, -3], to: [3, -61, 3] }
+
+  # House outer walls (5x5 interior, 7x7 outer footprint)
+  # Height y: -60 to -58 (3 blocks high)
+  - fill: { block: oak_planks, from: [-3, -60, -3], to: [3, -58, 3] }
+  - fill: { block: air, from: [-2, -60, -2], to: [2, -58, 2] }
+
+  # House roof
+  - fill: { block: oak_planks, from: [-3, -57, -3], to: [3, -57, 3] }
+
+  # Front doorway opening at z = 3
+  - fill: { block: air, from: [0, -60, 3], to: [0, -59, 3] }
+  - setblock: { block: "oak_door[facing=south,half=lower,hinge=left,open=false,powered=false]", at: [0, -60, 3] }
+  - setblock: { block: "oak_door[facing=south,half=upper,hinge=left,open=false,powered=false]", at: [0, -59, 3] }
+
+  # Destination marker behind the house at z = -6
+  - setblock: { block: gold_block, at: [0, -61, -6] }
+
+players:
+  - name: Navigator
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - item: iron_pickaxe
+        count: 1
+      - item: iron_axe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./house-door-exit.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!Navigator,gamemode=!spectator]"
+
+params:
+  target: [0, -60, -6]
+  # Ask for the target cell; the external goal below measures continuous position.
+  # A 1.5-cell route can finish in a diagonal neighbour outside that physical radius.
+  range: 0
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    # Reached the destination behind the house
+    - kind: reach
+      who: Navigator
+      # The centre of the cell the marker at 0,-61,-6 is standing room for, so
+      # this verifies the same place `params.target` asks the action to reach.
+      # At -6.5 it demanded a cell beyond the target and could not be satisfied
+      # by a route that did exactly what it was told.
+      pos: [0.5, -60, -5.5]
+      radius: 1.5
+
+    # Back wall directly on the straight line must remain intact (not broken through)
+    - kind: blockAt
+      who: Navigator
+      pos: [0, -60, -3]
+      block: oak_planks
+
+    - kind: blockAt
+      who: Navigator
+      pos: [0, -59, -3]
+      block: oak_planks
+
+    - kind: blockAt
+      who: Navigator
+      pos: [-1, -60, -3]
+      block: oak_planks
+
+    - kind: blockAt
+      who: Navigator
+      pos: [1, -60, -3]
+      block: oak_planks
+
+    - kind: completion
+      who: Navigator

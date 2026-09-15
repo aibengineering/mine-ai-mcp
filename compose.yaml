@@ -1,0 +1,38 @@
+services:
+  play:
+    build:
+      context: .
+    environment:
+      EULA: ${EULA:-false}
+      SEED: ${SEED:-97996358}
+      BOT_NAME: ${BOT_NAME:-AI_M1KE}
+      JAVA_MEMORY: ${JAVA_MEMORY:-2G}
+      RUN_MODE: ${RUN_MODE:-play}
+      CLAUDE_MODEL: "${CLAUDE_MODEL:-claude-opus-5[1m]}"
+      CLAUDE_EFFORT: ${CLAUDE_EFFORT:-high}
+      CLAUDE_RESUME_SESSION: ${CLAUDE_RESUME_SESSION:-}
+      CLAUDE_RESUME_PROMPT: ${CLAUDE_RESUME_PROMPT:-}
+      PROMPT: >-
+        ${PROMPT:-Play Minecraft in survival mode and defeat the Ender Dragon. Do not stop until you have defeated the Ender Dragon. Use the Minecraft MCP tools for everything you need to do. Report success only when you observe that the dragon has been defeated.
+        Here are some tips and strategies that can help. Treat them as suggestions, not a checklist or a fixed order: adapt to the resources, opportunities, threats, and supplies you actually observe.
+        - A useful progression is to turn your first few resources into better tools, then use those tools to gather more of the same resource for protection. For example, use an iron pickaxe to gather enough iron for armor, a weapon, and a shield before a deeper diamond run. Iron armor helps you survive finding your first diamonds; diamond tools can then help you gather more diamonds for diamond armor.
+        - After obtaining stone tools, a good idea is to leverage explore_frontier and navigate to find an area rich with animals including sheep and pigs, and to get a bed for skipping nights and establish a home base with your respawn there.
+        - An early shield is valuable protection and can make your trip significantly safer. Try to prioritize getting one as soon as you can. Keeping a spare and replacing a worn shield can help on longer trips.
+        - After getting iron equipment, it is a good opportunity to stockpile a large amount of cooked food. A stack of cooked porkchops or steak could last you the rest of the playthrough. Prefer seeking out pigs or cows when practical, while using available food to keep yourself fed along the way. Check your supplies before deeper diamond mining, the Nether, and other long adventures, and replenish as needed.
+        - Avoid hunting for fish; underwater food gathering is not reliable right now.
+        - Diamond armor is useful preparation for the Nether, and wearing gold boots can help with piglins. Judge your readiness from your actual equipment, food, and surroundings.
+        - On reaching diamond, a good idea is to gather enough for a second set of tools and armor and keep them in a chest by home base for faster recovery in case of unexpected death and to replenish that backup set in case you need it.
+        - Hunting Endermen is a good way to get ender pearls. Favor exploring for them over spending a long time gathering gold for piglin bartering; collecting pearls in the Overworld before entering the Nether can be useful as the overworld is safer. If an endermen rich biome is discovered in the nether that can be much faster though!
+        - A bed can help you skip dangerous Overworld nights and set a useful respawn point while travelling. Only use beds in the Overworld; they explode in the Nether and the End.
+        - Blaze rods and ender pearls let you make Eyes of Ender, find the stronghold, and open its End portal. Choose when to tackle each part based on your current situation, and reassess supplies and equipment before entering the End.
+        - Before entering the End, a bow and a full stack of arrows are strongly recommended so you can destroy crystals from a distance. If you go without them, multiple stacks of scaffolding material are essential for reaching the crystals and getting back down; even with those materials, climbing the towers exposes you to dangerous falls and dragon attacks. Take time to prepare before committing to the fight.}
+    ports:
+      - "127.0.0.1:${MINECRAFT_PORT:-25569}:25565"
+      - "127.0.0.1:${MCP_PORT:-25575}:25575"
+    volumes:
+      - ${RUN_DIR:-./runs/default}:/data
+      - ${PRIVATE_DIR:-./private}:/private
+      - ./docker/observers.json:/config/observers.json:ro
+    stdin_open: true
+    tty: true
+    stop_grace_period: 120s

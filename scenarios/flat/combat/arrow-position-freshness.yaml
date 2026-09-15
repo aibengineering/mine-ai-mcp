@@ -1,0 +1,18 @@
+name: arrow-position-freshness
+description: "Diagnose frozen arrow positions and non-counting-down impact estimates: one stationary shield holder, one native skeleton, packet-to-prediction evidence, no combat/navigation controller."
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: false }
+players:
+  - name: ArrowObserver
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./arrow-position-freshness.ts"]
+goal: { kind: completion, who: ArrowObserver, timeout: 40 }

@@ -1,0 +1,77 @@
+name: vine-ladder-column
+description: Climb a five-block column by the vines on its west face, descend the ladder on its east face, climb back up the ladder, and descend the vines, without a head snap on the way.
+
+# Vines and ladders are the two climbables the catalogue offers `climb` for,
+# and each is entered from both ends here: from the ground by walking into the
+# column, and from the top by stepping down into it. The column is too tall
+# to jump and too tall to drop from without damage, so an unhurt route must
+# use them. The heading figures in the finish detail are the point of the
+# fixture: a climb has no horizontal heading, so nothing on the way up or down
+# should turn the head, and a walk into the vine cell that presses the body
+# against the wall must not spin it while the vine lifts it.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -4 -61 -4 12 -50 4 air"
+
+geometry:
+  - fill: { block: andesite, from: [-4, -61, -4], to: [12, -61, 4] }
+  # The column: three wide along x so the ladder hangs off a solid face of its own.
+  - fill: { block: stone, from: [3, -60, -1], to: [5, -56, 1] }
+  # Vines on the column's west face, one per block of height, plus one above
+  # the top edge so the climb can carry the feet onto the top.
+  - setblock: { block: "vine[east=true]", at: [2, -60, 0] }
+  - setblock: { block: "vine[east=true]", at: [2, -59, 0] }
+  - setblock: { block: "vine[east=true]", at: [2, -58, 0] }
+  - setblock: { block: "vine[east=true]", at: [2, -57, 0] }
+  - setblock: { block: "vine[east=true]", at: [2, -56, 0] }
+  # A ladder down the column's east face.
+  - setblock: { block: "ladder[facing=east]", at: [6, -60, 0] }
+  - setblock: { block: "ladder[facing=east]", at: [6, -59, 0] }
+  - setblock: { block: "ladder[facing=east]", at: [6, -58, 0] }
+  - setblock: { block: "ladder[facing=east]", at: [6, -57, 0] }
+  - setblock: { block: "ladder[facing=east]", at: [6, -56, 0] }
+
+players:
+  - name: ClimberBot
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!ClimberBot,gamemode=!spectator]"
+
+params:
+  legs:
+    - { target: [4, -55, 0], range: 1, label: "up the vines" }
+    - { target: [9, -60, 0], range: 1, label: "down the ladder" }
+    - { target: [4, -55, 0], range: 1, label: "up the ladder" }
+    - { target: [-1, -60, 0], range: 1, label: "down the vines" }
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - kind: reach
+      who: ClimberBot
+      pos: [-0.5, -60, 0.5]
+      radius: 1.5
+    - kind: health
+      who: ClimberBot
+      health: 20
+    - kind: completion
+      who: ClimberBot

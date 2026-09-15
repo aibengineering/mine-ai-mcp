@@ -1,0 +1,31 @@
+name: exploration-lava-shore-preference
+description: Prefer the existing shore around a ten-block lava gap over spending
+  netherrack on a direct bridge.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  # A long shore competes with a short bridge; the route may go around either end.
+  # 2026-09-08 native evidence: exploration-cost-long-shore-before spent 11 blocks
+  # at penalty 20 (failed this assertion). exploration-cost-qualified at 80 passed
+  # both trials with zero placements; necessary-lava-bridge and flat-east also passed twice.
+  - fill: { block: air, from: [1, -60, -80], to: [10, -59, 80] }
+  - fill: { block: lava, from: [1, -61, -80], to: [10, -61, 80] }
+players:
+  - name: ShoreExplorer
+    pos: [0.5, -59, 0.5]
+    inventory: [{ item: netherrack, count: 64 }]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./scaffold-preference.ts"]
+params: { heading: 90, chunks: 1 }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, who: ShoreExplorer, item: netherrack, count: 64 }
+    - { kind: health, who: ShoreExplorer, health: 20 }
+    - { kind: completion, who: ShoreExplorer }

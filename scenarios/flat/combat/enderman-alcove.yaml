@@ -1,0 +1,40 @@
+name: enderman-alcove
+description: Defeat the native enderman beside a narrow two-high stone alcove and survive with no building supplies.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: stone, from: [-1, -60, -1], to: [1, -59, 1] }
+  - fill: { block: air, from: [0, -60, 0], to: [1, -59, 0] }
+  - fill: { block: stone, from: [0, -58, 0], to: [1, -58, 0] }
+players:
+  - name: RoofFighter
+    pos: [2.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+entities:
+  - { type: enderman, pos: [7.5, -60, 0.5], nbt: "{PersistenceRequired:1b}" }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+params:
+  mob_name: enderman
+  drop_name: ender_pearl
+  count: 1
+  defeat_count: 1
+  wear_armor: true
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: kill, who: RoofFighter, target: enderman }
+    - { kind: survive, who: RoofFighter, seconds: 1 }
+    - { kind: completion, who: RoofFighter }

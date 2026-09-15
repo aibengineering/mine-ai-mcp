@@ -1,0 +1,30 @@
+name: partial-detour
+description: Follow a searched detour beyond its initial retreat instead of repeatedly reversing a truncated prefix.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+geometry:
+  - fill: { block: bedrock, from: [-23, -61, -3], to: [23, -54, 7] }
+  - fill: { block: air, from: [-20, -60, 0], to: [0, -59, 0] }
+  - fill: { block: air, from: [-20, -60, 0], to: [-20, -59, 4] }
+  - fill: { block: air, from: [-20, -60, 4], to: [20, -59, 4] }
+  - fill: { block: air, from: [20, -60, 0], to: [20, -59, 4] }
+players:
+  - name: DetourBot
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./partial-detour.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: reach, who: DetourBot, pos: [20.5, -60, 0.5], radius: 0.7 }
+    - { kind: health, who: DetourBot, health: 20 }
+    - { kind: completion, who: DetourBot }

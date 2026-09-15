@@ -1,0 +1,53 @@
+name: moving-item-pursuit
+description: Begin navigating immediately toward one continuously moving dropped item and collect it.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -62 -8 32 -50 8 air"
+  - "kill @e[type=item]"
+
+geometry:
+  - fill: { block: stone, from: [-6, -61, -4], to: [30, -61, 4] }
+
+setup:
+  - 'summon item 8.5 -60.0 0.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s,Tags:["moving_pickup"]}'
+
+players:
+  - name: MovingPickupBot
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./moving-item-pursuit.ts"]
+
+tick:
+  # Keep the sole target moving slowly enough to catch but too long to satisfy
+  # the removed pre-navigation rest gate.
+  - "execute as @e[type=item,tag=moving_pickup] at @s run tp @s ~0.08 ~ ~"
+  - "gamemode spectator @a[name=!MovingPickupBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: hasItem
+      who: MovingPickupBot
+      item: diamond
+      count: 1
+    - kind: health
+      who: MovingPickupBot
+      health: 20
+    - kind: completion
+      who: MovingPickupBot

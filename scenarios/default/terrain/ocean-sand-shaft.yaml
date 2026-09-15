@@ -1,0 +1,36 @@
+name: ocean-sand-shaft
+description: Reproduce surface bobbing while collecting the sand directly below the bot above an ocean stronghold; live seed and coordinates from 11 September 2026.
+minecraft:
+  version: "1.21.4"
+world:
+  type: default
+  seed: "-06163879"
+  structures: true
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+players:
+  - name: OceanMiner
+    pos: [1414.536, 62.3, -90.464]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: ender_eye, count: 13 }
+      - { item: bread, count: 33 }
+      - { item: netherrack, count: 8 }
+      - { item: nether_bricks, count: 13 }
+      - { item: acacia_log, count: 13 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./ocean-sand-shaft.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: hasItem, who: OceanMiner, item: sand, count: 1 }
+    - { kind: completion, who: OceanMiner }
+    - { kind: health, who: OceanMiner, health: 20 }

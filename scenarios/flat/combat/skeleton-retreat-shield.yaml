@@ -1,0 +1,19 @@
+name: skeleton-retreat-shield
+description: A wounded bot must block a native skeleton arrow, then finish its retreat without taking damage.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: false }
+players:
+  - name: SkeletonRetreat
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./skeleton-retreat-shield.ts"]
+goal: { kind: completion, who: SkeletonRetreat, timeout: 60 }

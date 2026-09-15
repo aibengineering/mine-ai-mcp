@@ -1,0 +1,120 @@
+name: wounded-cave-ascent
+description: A bot at two health with no food reaches the surface alive from a cavern floor while a zombie watches from an isolated ledge.
+
+# The 2026-09-09 livelock. EnderSeeker was at two health with no food, fifty-
+# eight blocks under the surface in a cave, with a zombie idling eleven to
+# seventeen blocks off on a ledge above. The model asked for a withdraw
+# navigate to the grass where cows were grazing. Under the hide bar a hostile
+# in sight is contact, so the reflex walled the bot in; with nothing to eat and
+# hunger below the regeneration bar the ninety-second hold recovered nothing;
+# the hide still reported `hidden`, so the withdrawal resumed, the route dug
+# straight out of the box, the zombie was in sight again, and the reflex walled
+# the bot in again. Seven times, ten minutes and forty-nine seconds, and the
+# navigate never returned to the model. When the model then asked to tunnel
+# straight up its own column, the reflex cancelled that too, inside two seconds.
+#
+# This is that cave, built to the block. The bot starts in the open on the
+# cavern floor; a three-wide staircase leaves the cavern at +z and climbs
+# sixteen steps to a plateau; the zombie stands in an alcove two blocks up the
+# -x wall, eleven blocks away, unable to move, in plain sight of the floor and
+# the foot of the stairs. The driver brings the bot to two health while nothing
+# is watching, issues the withdraw navigate, and puts the zombie on its ledge
+# once the route is under way.
+#
+# The pass is the bot on the plateau, alive. The two ways to fail are told
+# apart in the detail: the reflex claiming the body a second time after the
+# first hide handed the route back is the loop; a navigate that returns without
+# arriving is the runtime handing the situation to the model, with whatever
+# reason it gave. A run that fails is a finding, not a flaky fixture.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    # No food carried and hunger below eighteen: nothing heals the bot in a box.
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  # The cavern and the stairwell, cleared of any box a previous cycle built.
+  - "fill -8 -59 -8 8 -53 8 air"
+
+setup:
+  - "difficulty normal"
+
+geometry:
+  # A block of stone sitting on the flat ground: seventeen layers, the plateau
+  # on top at y -44, so the surface the bot is asked to reach is feet at y -43.
+  - fill: { block: stone, from: [-16, -60, -16], to: [16, -44, 32] }
+  # The cavern: seventeen wide, seven high, floor at y -60.
+  - fill: { block: air, from: [-8, -59, -8], to: [8, -53, 8] }
+  # The zombie's alcove in the -x wall, its floor two blocks above the cavern's,
+  # open to the cavern so the ledge is in sight of the floor.
+  - fill: { block: air, from: [-11, -57, -1], to: [-9, -53, 1] }
+  # The staircase: one step up per block of +z, three wide and three high, from
+  # the cavern's +z edge to the plateau.
+  - fill: { block: air, from: [-1, -58, 9], to: [1, -56, 9] }
+  - fill: { block: air, from: [-1, -57, 10], to: [1, -55, 10] }
+  - fill: { block: air, from: [-1, -56, 11], to: [1, -54, 11] }
+  - fill: { block: air, from: [-1, -55, 12], to: [1, -53, 12] }
+  - fill: { block: air, from: [-1, -54, 13], to: [1, -52, 13] }
+  - fill: { block: air, from: [-1, -53, 14], to: [1, -51, 14] }
+  - fill: { block: air, from: [-1, -52, 15], to: [1, -50, 15] }
+  - fill: { block: air, from: [-1, -51, 16], to: [1, -49, 16] }
+  - fill: { block: air, from: [-1, -50, 17], to: [1, -48, 17] }
+  - fill: { block: air, from: [-1, -49, 18], to: [1, -47, 18] }
+  - fill: { block: air, from: [-1, -48, 19], to: [1, -46, 19] }
+  - fill: { block: air, from: [-1, -47, 20], to: [1, -45, 20] }
+  - fill: { block: air, from: [-1, -46, 21], to: [1, -44, 21] }
+  - fill: { block: air, from: [-1, -45, 22], to: [1, -43, 22] }
+  - fill: { block: air, from: [-1, -44, 23], to: [1, -42, 23] }
+
+players:
+  - name: AscentBot
+    pos: [0.5, -59, 0.5]
+    # Opped so the driver can bring the bot under the hide bar and put the
+    # zombie on its ledge once the route is under way.
+    op: true
+    # What EnderSeeker carried: tools, blocks enough to go wall-first, no food.
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 40 }
+      - { item: dirt, count: 11 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./wounded-cave-ascent.ts"]
+
+params:
+  hurtTo: 2
+  # The plateau, four blocks past the top of the stairs.
+  target: [0, -43, 28]
+  # Two blocks up the -x wall, eleven blocks from the start: inside the
+  # sixteen-block observation range, outside the eight-block contact range.
+  zombie: [-10.5, -57, 0.5]
+
+tick:
+  - "gamemode spectator @a[name=!AscentBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 300
+  goals:
+    - kind: reach
+      who: AscentBot
+      pos: [0, -43, 28]
+      radius: 2
+    - kind: survive
+      who: AscentBot
+      seconds: 1
+    - kind: completion
+      who: AscentBot

@@ -1,0 +1,30 @@
+name: enderman-quarry-below-shelter
+description: Defeat the native angry Enderman on the ground below an elevated shelter, using the available terrain and supplies, and survive.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: stone, from: [-3, -60, -3], to: [3, -56, 3] }
+  - fill: { block: cobblestone, from: [-1, -53, -1], to: [1, -53, 1] }
+players:
+  - name: RoofRecovery
+    op: true
+    pos: [0.5, -55, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+entities:
+  - { type: enderman, pos: [7.5, -60, 0.5], nbt: "{PersistenceRequired:1b}" }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-shelter-recovery.ts"]
+goal: { kind: completion, who: RoofRecovery, timeout: 100 }

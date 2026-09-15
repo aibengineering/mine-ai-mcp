@@ -1,0 +1,61 @@
+name: enderman-build-materials
+description: Defeat a native enderman and survive the declared terrain and
+  supply constraints. This finite-mob test does not qualify ender_pearl
+  acquisition or prescribe a tactic.
+minecraft:
+  version: 1.21.4
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+players:
+  - name: RoofMaterials
+    op: true
+    pos:
+      - 0.5
+      - -60
+      - 0.5
+    inventory:
+      - item: diamond_sword
+        count: 1
+      - item: shield
+        count: 1
+entities:
+  - type: enderman
+    pos:
+      - 20.5
+      - -60
+      - 0.5
+    nbt: "{PersistenceRequired:1b}"
+  - type: enderman
+    pos:
+      - -20.5
+      - -60
+      - 0.5
+    nbt: "{PersistenceRequired:1b}"
+client:
+  command: bun
+  args:
+    - ../../src/client-host.ts
+    - ../../src/hunter.ts
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - kind: kill
+      who: RoofMaterials
+      target: enderman
+    - kind: survive
+      who: RoofMaterials
+      seconds: 1
+    - kind: completion
+      who: RoofMaterials
+params:
+  mob_name: enderman
+  drop_name: ender_pearl
+  count: 1
+  defeat_count: 1

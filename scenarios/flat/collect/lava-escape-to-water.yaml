@@ -1,0 +1,26 @@
+name: lava-escape-to-water
+description: Escape a one-cell lava pocket over its bank and extinguish in nearby water without model input.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+reset: ["fill -6 -62 -5 10 -54 5 air"]
+geometry:
+  - fill: { block: stone, from: [-5, -62, -4], to: [9, -60, 4] }
+  - setblock: { block: lava, at: [0, -60, 0] }
+  - setblock: { block: water, at: [2, -60, 0] }
+players:
+  - name: FireMiner
+    pos: [0.5, -60, 0.5]
+    inventory: [{ item: diamond_pickaxe, count: 1 }]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./water-mining-regression.ts"]
+params: { mode: lava }
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: completion, who: FireMiner }
+    - { kind: survive, who: FireMiner, seconds: 1 }

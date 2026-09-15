@@ -1,0 +1,29 @@
+name: enderman-roof-obstructed
+description: Report the sealed-target limitation while honouring explicit no-dig
+  and no-place permissions. Movement and planning choices are unrestricted.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  # A stone foundation cannot randomly decay beneath the sealed masonry.
+  - fill: { block: stone, from: [4, -61, -3], to: [10, -61, 3] }
+  - fill: { block: cobblestone, from: [-1, -58, -1], to: [1, -58, 1] }
+  - fill: { block: cobblestone, from: [4, -60, -3], to: [10, -56, 3] }
+  - fill: { block: air, from: [5, -60, -2], to: [9, -57, 2] }
+players:
+  - name: PatientRoofBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 64 }
+entities:
+  - { type: enderman, pos: [6.5, -60, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+  - { type: enderman, pos: [7.5, -60, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-roof-no-approach.ts"]
+goal: { kind: completion, who: PatientRoofBot, timeout: 40 }

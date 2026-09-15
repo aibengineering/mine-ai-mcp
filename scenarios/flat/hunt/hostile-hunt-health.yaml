@@ -1,0 +1,29 @@
+name: hostile-hunt-health
+description: An ongoing hostile fight stops attacking below its health boundary and reports blocked recovery when regeneration is disabled.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+entities:
+  - { type: zombie, pos: [2.5, -60, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+players:
+  - name: HurtHunter
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: stone_sword, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./hostile-hunt-health.ts"]
+goal:
+  kind: completion
+  who: HurtHunter
+  timeout: 120

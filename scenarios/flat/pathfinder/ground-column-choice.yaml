@@ -1,0 +1,31 @@
+name: ground-column-choice
+description: Refuse omitted height beneath foliage, an overhang, and bedrock, then reach the explicitly selected floor.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "fill -3 -60 -3 16 -45 3 air"
+geometry:
+  - fill: { block: stone, from: [-3, -61, -3], to: [16, -61, 3] }
+  - setblock: { block: "oak_leaves[persistent=true]", at: [4, -54, 0] }
+  - setblock: { block: stone, at: [8, -54, 0] }
+  - setblock: { block: bedrock, at: [12, -54, 0] }
+players:
+  - name: GroundBot
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./ground-column-choice.ts"]
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: health, who: GroundBot, health: 20 }
+    - { kind: completion, who: GroundBot }

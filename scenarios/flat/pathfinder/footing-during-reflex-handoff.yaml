@@ -1,0 +1,20 @@
+name: footing-during-reflex-handoff
+description: Recover from an airborne impulse while a hostile reflex is waiting for navigation to release.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false, keepInventory: true }
+reset: ["fill -8 -59 -8 8 -35 8 air"]
+geometry:
+  - fill: { block: bedrock, from: [-8, -61, -8], to: [8, -61, 8] }
+  - fill: { block: lava, from: [-8, -60, -8], to: [8, -60, 8] }
+  - fill: { block: bedrock, from: [-1, -41, -1], to: [1, -41, 1] }
+  - setblock: { block: bedrock, at: [2, -40, 0] }
+players:
+  - name: QueuedRecovery
+    pos: [1.4, -40, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./footing-during-reflex-handoff.ts"]
+goal: { kind: completion, who: QueuedRecovery, timeout: 35 }

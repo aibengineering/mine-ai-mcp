@@ -1,0 +1,53 @@
+name: craft-after-collect
+description: Collect logs and craft a table with wooden tools in one batch, three rounds over, on generated terrain, with every inventory packet logged; the seventh playthrough's crafts failed right after collecting.
+
+# Two crafts in the seventh playthrough failed straight after a log
+# collection: the first reported no results, the second "missing
+# ingredient" with five of ten recipe steps counted done and nothing gained.
+# Crafts that followed a placement or a walk went through. This fixture
+# repeats the exact sequence - collect, then a batch that begins with a
+# crafting table - on the progression fixture's world, and keeps the last
+# inventory packets so a failure says what the server answered.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: default
+  seed: 8674349
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+
+players:
+  - name: CraftCollector
+    # The former 8.5,67,-19.5 start falls into water before collection.
+    # This seed's surveyed dry land lets the immediate craft sequence run.
+    pos: [-25.5, 99, 6.5]
+
+setup:
+  - "difficulty peaceful"
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./craft-after-collect.ts"]
+
+params:
+  rounds: 3
+  logs: 8
+
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    - kind: hasItem
+      who: CraftCollector
+      item: wooden_pickaxe
+      count: 1
+    - kind: completion
+      who: CraftCollector

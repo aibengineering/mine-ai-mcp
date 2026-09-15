@@ -1,0 +1,32 @@
+# Baseline at 96e0a60: production's fixed scaffold allowlist excluded end_stone,
+# so this inventory offered no scaffold. Post-change evidence is retained in the run artifact.
+name: scaffold-end-stone
+description: In the End, build a five-block pillar using only carried end stone from the survival-policy default.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, keepInventory: true, naturalRegeneration: false }
+reset:
+  - "fill 24 55 -6 36 66 6 air"
+geometry:
+  - fill: { block: end_stone, from: [29, 55, -1], to: [31, 55, 1] }
+players:
+  - name: EndStoneBuilder
+    pos: [30.5, 56, 0.5]
+    inventory: [{ item: end_stone, count: 16 }]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../flat/pathfinder/scaffold-policy-pillar.ts"]
+params: { material: end_stone }
+tick:
+  - "gamemode spectator @a[name=!EndStoneBuilder,gamemode=!spectator]"
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: reach, who: EndStoneBuilder, pos: [30.5, 61, 0.5], radius: 0.7 }
+    - { kind: blockAt, who: EndStoneBuilder, pos: [30, 60, 0], block: end_stone }
+    - { kind: completion, who: EndStoneBuilder }

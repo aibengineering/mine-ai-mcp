@@ -1,0 +1,28 @@
+name: incoming-fireball-during-fight
+description: A blaze engagement must yield to a large incoming fireball before its explosion removes the narrow floor.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: air, from: [-8, -60, -8], to: [24, -45, 20] }
+  - fill: { block: netherrack, from: [-2, -55, 0], to: [20, -55, 0] }
+  - fill: { block: netherrack, from: [0, -55, 12], to: [0, -55, 12] }
+players:
+  - name: CrossfireBot
+    pos: [0.5, -54, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./incoming-fireball-during-fight.ts"]
+goal: { kind: completion, who: CrossfireBot, timeout: 45 }

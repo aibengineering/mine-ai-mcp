@@ -1,0 +1,78 @@
+name: hurt-bot-hides
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+# The shape of every death in the first playthrough: too hurt to fight, a
+# pack in open ground, and nowhere to run. The pack is the one the runs met:
+# walkers with one archer behind them. Three archers at seven health kill the
+# bot before any hole closes more often than not; that remains open. Below the hide bar
+# the reflex no longer runs. It digs three blocks straight down, caps the hole
+# with a carried block, eats what it carries, and holds until health is back
+# to the fight bar. The fixture grants the tools of a normal night: an iron
+# pickaxe, some cobblestone, and bread.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  - type: skeleton
+    pos: [13.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+  - type: zombie
+    pos: [12.5, -60, -2.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: zombie
+    pos: [12.5, -60, 3.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: HidingBot
+    pos: [0.5, -60, 0.5]
+    # Opped so the driver can bring the bot under the hide bar itself.
+    op: true
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 16 }
+      - { item: bread, count: 4 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  hurtTo: 7
+  waitTicks: 1500
+
+tick:
+  - "gamemode spectator @a[name=!HidingBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: health
+      who: HidingBot
+      health: 12
+    - kind: survive
+      who: HidingBot
+      seconds: 1
+    - kind: completion
+      who: HidingBot

@@ -1,0 +1,14 @@
+name: bucket-fall-40-edge
+description: The body's edge lands on a one-block-higher End-stone step while its centre remains above the lower floor.
+template: bucket-fall-40.yaml
+geometry:
+  - fill: { block: end_stone, from: [-60, -60, -15], to: [60, -60, 15] }
+  - fill: { block: end_stone, from: [1, -59, -5], to: [8, -59, 5] }
+  - setblock: { block: glass, at: [0, -20, 0] }
+players:
+  - name: BucketBot
+    op: true
+    pos: [0.95, -19, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: water_bucket, count: 1 }

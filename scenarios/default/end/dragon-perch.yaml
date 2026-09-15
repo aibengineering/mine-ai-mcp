@@ -1,0 +1,10 @@
+name: end-dragon-perch
+description: Start with the native crystals removed and kill the full-health dragon through successive perches.
+template: ender-dragon.yaml
+params: { phase: perch }
+goal:
+  kind: all
+  timeout: 1200
+  goals:
+    - { kind: kill, target: ender_dragon }
+    - { kind: survive, seconds: 1 }

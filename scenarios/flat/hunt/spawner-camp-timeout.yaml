@@ -1,0 +1,23 @@
+name: spawner-camp-timeout
+description: An explicitly quiet spawner returns a bounded no-quarry result after the bot returns to its source.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+setup:
+  - 'setblock 0 -60 0 spawner{SpawnCount:0s,SpawnData:{entity:{id:"minecraft:zombie"}}}'
+  - 'setblock 1 -61 0 glowstone'
+players:
+  - name: CampHunter
+    pos: [20.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./spawner-camp.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: completion, who: CampHunter }
+    - { kind: reach, who: CampHunter, pos: [0, -60, 0], radius: 4 }

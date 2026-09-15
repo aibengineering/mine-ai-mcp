@@ -1,0 +1,21 @@
+name: hunt-drop-cancel
+description: Cancellation during requested-drop observation must not install another full sweep wait before handing over the body.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+reset:
+  - "kill @e[type=!minecraft:player]"
+players:
+  - name: DropHunter
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./hunt-drop-cancel.ts"]
+goal:
+  kind: completion
+  who: DropHunter
+  timeout: 30

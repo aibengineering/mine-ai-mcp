@@ -1,0 +1,20 @@
+name: eye-chain
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  gamerules:
+    doMobSpawning: false
+players:
+  - name: EyeCrafter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: blaze_rod, count: 3 }
+      - { item: ender_pearl, count: 7 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./eye-chain.ts"]
+goal:
+  kind: completion
+  who: EyeCrafter
+  timeout: 30

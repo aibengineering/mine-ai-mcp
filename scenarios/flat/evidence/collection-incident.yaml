@@ -1,0 +1,34 @@
+name: collection-incident
+description: Collect 32 cobblestone and inspect a later damage incident for preceding-request context and real recording overhead.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+geometry:
+  - fill: { block: polished_andesite, from: [-12, -60, -12], to: [18, -60, 12] }
+  - fill: { block: stone, from: [5, -59, -5], to: [12, -56, 5] }
+players:
+  - name: IncidentBot
+    pos: [0.5, -59, 0.5]
+    op: true
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./runtime-incident.ts"]
+params:
+  disturbance: after_collection
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, who: IncidentBot, item: cobblestone, count: 32 }
+    - { kind: completion, who: IncidentBot }

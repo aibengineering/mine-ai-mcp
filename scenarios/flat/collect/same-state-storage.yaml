@@ -1,0 +1,36 @@
+name: same-state-storage-collection
+description: Exact chest collection preserves an unrelated same-state stocked chest on its approach.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+geometry:
+  - fill: { block: bedrock, from: [-3, -61, -23], to: [9, -61, 18] }
+  - fill: { block: bedrock, from: [-3, -58, -23], to: [9, -58, 18] }
+  - fill: { block: bedrock, from: [1, -60, -20], to: [5, -59, 15] }
+  - fill: { block: air, from: [1, -60, 0], to: [5, -59, 0] }
+  - setblock:
+      {
+        block: 'chest{Items:[{Slot:0b,id:"minecraft:ender_pearl",count:12},{Slot:1b,id:"minecraft:gold_ingot",count:64},{Slot:2b,id:"minecraft:gold_ingot",count:15}]}',
+        at: [2, -60, 0],
+      }
+  - setblock: { block: chest, at: [4, -60, 0] }
+players:
+  - name: StorageRoute
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_axe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./same-state-storage.ts"]
+goal:
+  kind: all
+  timeout: 70
+  goals:
+    - { kind: blockAt, who: StorageRoute, pos: [2, -60, 0], block: chest }
+    - { kind: blockAt, who: StorageRoute, pos: [4, -60, 0], block: air }
+    - { kind: hasItem, who: StorageRoute, item: chest, count: 1 }
+    - { kind: completion, who: StorageRoute }

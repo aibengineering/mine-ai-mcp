@@ -1,0 +1,93 @@
+name: iron-around-lava
+description: Collect three iron ore from six choices, leaving the three suspended over lava because there is nowhere safe to stand to mine them.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -62 -16 20 -40 16 air"
+
+geometry:
+  # A continuous floor gives Pathfinder a safe route around either end of the
+  # pool. The three nearby ores float directly over lava. Nothing predicts where
+  # their drops would land — that rule is gone — but mining a block means
+  # standing in its cell, and these have lava for a floor. The search finds no
+  # footing to arrive on, so they are left alone as a consequence of how mining
+  # works rather than of a rule about drops.
+  - fill: { block: stone, from: [-16, -61, -16], to: [20, -61, 16] }
+  - fill: { block: stone, from: [-16, -60, -16], to: [20, -60, 16] }
+  - fill: { block: lava, from: [3, -60, -4], to: [7, -60, 4] }
+  - setblock: { block: iron_ore, at: [5, -59, -2] }
+  - setblock: { block: iron_ore, at: [5, -59, 0] }
+  - setblock: { block: iron_ore, at: [5, -59, 2] }
+
+  # These three are farther away but stand on solid stone, so the bot can occupy
+  # their cells. Meeting the count means walking around the pool to reach them.
+  - setblock: { block: iron_ore, at: [11, -59, -2] }
+  - setblock: { block: iron_ore, at: [11, -59, 0] }
+  - setblock: { block: iron_ore, at: [11, -59, 2] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+params:
+  block_name: iron_ore
+  count: 3
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: raw_iron
+      count: 3
+    # The ores over lava must remain untouched — not because their drops were
+    # predicted lost, but because the bot never found a safe cell to mine them
+    # from. Staying out of the lava is the invariant worth holding.
+    - kind: blockAt
+      who: Collector
+      pos: [5, -59, -2]
+      block: iron_ore
+    - kind: blockAt
+      who: Collector
+      pos: [5, -59, 0]
+      block: iron_ore
+    - kind: blockAt
+      who: Collector
+      pos: [5, -59, 2]
+      block: iron_ore
+    - kind: blockAt
+      who: Collector
+      pos: [11, -59, -2]
+      block: air
+    - kind: blockAt
+      who: Collector
+      pos: [11, -59, 0]
+      block: air
+    - kind: blockAt
+      who: Collector
+      pos: [11, -59, 2]
+      block: air
+    - kind: completion
+      who: Collector

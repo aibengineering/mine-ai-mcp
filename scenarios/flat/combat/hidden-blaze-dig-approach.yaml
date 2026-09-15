@@ -1,0 +1,42 @@
+name: hidden-blaze-dig-approach
+# Run 16 incident d66040d1: a hidden charged blaze interrupted every turn
+# toward the first staircase dig, alternating pickaxe and sword at y72.
+# hidden-blaze-dig-pinned-before timed out at the first dig. With exposure-aware
+# volley admission, hidden-blaze-dig-after passed both fresh repetitions.
+description: Finish an approach dig behind terrain despite a native blaze retaining its charged flag, then fight it.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: netherrack, from: [-8, 71, -8], to: [8, 77, 8] }
+  - fill: { block: air, from: [0, 72, 0], to: [0, 75, 0] }
+  - fill: { block: air, from: [0, 73, 1], to: [0, 75, 1] }
+  - fill: { block: air, from: [0, 74, 2], to: [0, 76, 2] }
+  - fill: { block: air, from: [1, 75, 2], to: [1, 77, 2] }
+  - fill: { block: air, from: [1, 76, 1], to: [1, 78, 1] }
+  - fill: { block: air, from: [1, 77, 0], to: [1, 79, 0] }
+  - fill: { block: cobblestone, from: [0, 73, 1], to: [0, 73, 1] }
+players:
+  - name: HiddenBlazeBot
+    op: true
+    pos: [0.5, 78, -5.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./hidden-blaze-dig-approach.ts"]
+goal:
+  kind: all
+  timeout: 65
+  goals:
+    - { kind: kill, who: HiddenBlazeBot, target: blaze }
+    - { kind: completion, who: HiddenBlazeBot }

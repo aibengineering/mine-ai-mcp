@@ -1,0 +1,75 @@
+name: stair-block-ramp
+description: Walk up a ramp of oak stairs onto a platform and down another ramp on the far side, without a head snap on any tread.
+
+# Stair blocks are half-height treads the player walks up without jumping, so
+# every tread is a movement whose arrival sits above its start. The fixture
+# measures the head while those treads are taken: the heading figures in the
+# finish detail should show no snaps on either ramp.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -4 -61 -4 16 -52 4 air"
+
+geometry:
+  - fill: { block: andesite, from: [-4, -61, -4], to: [16, -61, 4] }
+  # Ramp up, ascending east: tread i at x = 1 + i, y = -60 + i, with solid
+  # fill beneath each tread so nothing is undercut.
+  - setblock: { block: "oak_stairs[facing=east,half=bottom]", at: [1, -60, 0] }
+  - setblock: { block: stone, at: [2, -60, 0] }
+  - setblock: { block: "oak_stairs[facing=east,half=bottom]", at: [2, -59, 0] }
+  - fill: { block: stone, from: [3, -60, 0], to: [3, -59, 0] }
+  - setblock: { block: "oak_stairs[facing=east,half=bottom]", at: [3, -58, 0] }
+  - fill: { block: stone, from: [4, -60, 0], to: [4, -58, 0] }
+  - setblock: { block: "oak_stairs[facing=east,half=bottom]", at: [4, -57, 0] }
+  # Platform.
+  - fill: { block: stone, from: [5, -60, -1], to: [7, -57, 1] }
+  # Ramp down, descending east.
+  - fill: { block: stone, from: [8, -60, 0], to: [8, -58, 0] }
+  - setblock: { block: "oak_stairs[facing=west,half=bottom]", at: [8, -57, 0] }
+  - fill: { block: stone, from: [9, -60, 0], to: [9, -59, 0] }
+  - setblock: { block: "oak_stairs[facing=west,half=bottom]", at: [9, -58, 0] }
+  - setblock: { block: stone, at: [10, -60, 0] }
+  - setblock: { block: "oak_stairs[facing=west,half=bottom]", at: [10, -59, 0] }
+  - setblock: { block: "oak_stairs[facing=west,half=bottom]", at: [11, -60, 0] }
+
+players:
+  - name: StairBot
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!StairBot,gamemode=!spectator]"
+
+params:
+  legs:
+    - { target: [6, -56, 0], range: 1, label: "up the ramp" }
+    - { target: [13, -60, 0], range: 1, label: "down the ramp" }
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: reach
+      who: StairBot
+      pos: [13.5, -60, 0.5]
+      radius: 1.5
+    - kind: health
+      who: StairBot
+      health: 20
+    - kind: completion
+      who: StairBot

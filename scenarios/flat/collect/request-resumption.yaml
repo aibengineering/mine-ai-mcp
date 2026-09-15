@@ -1,0 +1,30 @@
+name: request-resumption
+description: Preserve a two-coal request and navigation origin through real mid-action cancellation and resumption.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+geometry:
+  - fill: { block: andesite, from: [-8, -60, -8], to: [40, -60, 8] }
+  - setblock: { block: coal_ore, at: [3, -59, 0] }
+  - setblock: { block: coal_ore, at: [12, -59, 0] }
+  - setblock: { block: coal_ore, at: [22, -59, 0] }
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: stone_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "request-resumption.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: hasItem, who: Collector, item: coal, count: 2 }
+    - { kind: completion, who: Collector }

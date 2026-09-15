@@ -1,0 +1,10 @@
+# 95 x 39 walkable blocks, providing the default 36-block evade distance on
+# either side of a central encounter. Feet at y=-60; six-block walls contain mobs.
+geometry:
+  - fill: { block: bedrock, from: [-48, -64, -20], to: [48, -64, 20] }
+  - fill: { block: dirt, from: [-48, -63, -20], to: [48, -62, 20] }
+  - fill: { block: sea_lantern, from: [-48, -61, -20], to: [48, -61, 20] }
+  - fill: { block: bedrock, from: [-48, -63, -20], to: [-48, -55, 20] }
+  - fill: { block: bedrock, from: [48, -63, -20], to: [48, -55, 20] }
+  - fill: { block: bedrock, from: [-47, -63, -20], to: [47, -55, -20] }
+  - fill: { block: bedrock, from: [-47, -63, 20], to: [47, -55, 20] }

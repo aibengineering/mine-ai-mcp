@@ -1,0 +1,53 @@
+name: generated-fortress-blaze-sortie
+description: Hunt native blaze rods through a generated fortress stair room with a wither-skeleton bystander, then return to the surveyed western bridge exit.
+
+# Survey seed 20260906: fortress anchor -432,272; lower bridge feet Y60,
+# upper room Y66. Both the stair approach and western exit were physically
+# reached without digging/scaffolding in the threat-free survey control.
+minecraft:
+  version: "1.21.4"
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: 20260906
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    # Pin the arranged crowd; its AI, fireballs and loot remain native.
+    doMobSpawning: false
+players:
+  - name: FortressBot
+    pos: [-432.5, 60, 270.5]
+    op: true
+    inventory:
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fortress-sortie.ts"]
+params:
+  exit: [-452, 60, 270]
+entities:
+  - { type: blaze, pos: [-414.5, 66, 269.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-415.5, 66, 271.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: wither_skeleton, pos: [-422.5, 60, 270.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+goal:
+  kind: all
+  # Owns one hunt, return, and five seconds of continued threat observation.
+  timeout: 240
+  goals:
+    - { kind: survive, who: FortressBot, seconds: 1 }
+    - { kind: health, who: FortressBot }
+    - { kind: reach, who: FortressBot, pos: [-451.5, 60, 270.5], radius: 2 }
+    - { kind: hasItem, who: FortressBot, item: blaze_rod, count: 1 }
+    - { kind: completion, who: FortressBot }

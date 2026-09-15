@@ -1,0 +1,45 @@
+name: blaze-bystander
+description: Kill the selected blaze without damaging the neutral zombified piglin standing beside it.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+setup:
+  - "difficulty normal"
+entities:
+  - type: blaze
+    pos: [2.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b,NoAI:1b}"
+  - type: zombified_piglin
+    pos: [2.5, -60, 1.2]
+    nbt: "{PersistenceRequired:1b,NoAI:1b}"
+players:
+  - name: BystanderBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: stone_axe, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./blaze-bystander.ts"]
+params:
+  mob_name: blaze
+  drop_name: blaze_rod
+  count: 1
+  defeat_count: 1
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: kill, who: BystanderBot, target: blaze }
+    - { kind: health, who: BystanderBot, health: 20 }
+    - { kind: completion, who: BystanderBot }

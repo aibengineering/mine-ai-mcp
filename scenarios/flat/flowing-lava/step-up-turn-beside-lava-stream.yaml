@@ -1,0 +1,44 @@
+name: step-up-turn-beside-lava-stream
+description: Climb consecutive steps and turn west beside a falling lava stream without the body's northward momentum touching it.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0, keepInventory: true }
+reset:
+  - "fill -7 -60 -5 5 -36 5 air"
+geometry:
+  - fill: { block: bedrock, from: [-6, -56, -4], to: [4, -56, 4] }
+  # The last three ascents of request 205, translated x=-189, z=+288.
+  - setblock: { block: deepslate, at: [0, -45, -2] }
+  - setblock: { block: deepslate, at: [0, -44, -1] }
+  - setblock: { block: deepslate, at: [0, -43, 0] }
+  - fill: { block: deepslate, from: [-3, -42, 0], to: [-1, -42, 0] }
+  # A supported source feeds level-2 lava beside head height and a falling
+  # stream beyond the landing. The stream settles before navigation starts.
+  - setblock: { block: bedrock, at: [0, -42, 2] }
+  - setblock: { block: bedrock, at: [-1, -41, 2] }
+  - setblock: { block: bedrock, at: [1, -41, 2] }
+  - setblock: { block: bedrock, at: [0, -41, 3] }
+  - setblock: { block: lava, at: [0, -41, 2] }
+  - setblock: { block: "lava[level=2]", at: [0, -41, 1] }
+  - fill: { block: "lava[level=8]", from: [0, -55, 1], to: [0, -42, 1] }
+players:
+  - name: LavaNavigator
+    pos: [0.5, -44, -1.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./lava-navigation.ts"]
+params:
+  kind: steady_stream
+  target: [-3, -41, 0]
+  minimumStepUps: 3
+  lavaCells: [[0, -42, 1]]
+tick:
+  - "gamemode spectator @a[name=!LavaNavigator,gamemode=!spectator]"
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: health, who: LavaNavigator, health: 20 }
+    - { kind: completion, who: LavaNavigator }

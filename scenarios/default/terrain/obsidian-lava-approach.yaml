@@ -1,0 +1,43 @@
+name: obsidian-lava-approach
+description: Brake on the last dry tread before turning onto the shore of a generated lava source.
+
+# Seed 8674349's obsidian collection burned here before it ever poured water.
+# The drop to 50,-21,71 handed forward momentum into the eastward step-up.
+# Its feet cell was safe, but its body crossed into the lava at z=72.
+minecraft:
+  version: "1.21.4"
+world:
+  type: default
+  seed: 8674349
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+setup:
+  - "difficulty peaceful"
+players:
+  - name: Collector
+    pos: [48.5, -19, 68.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../flat/pathfinder/pathfinder-runner.ts"]
+params:
+  target: [51, -20, 71]
+  range: 0.1
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: health
+      who: Collector
+      health: 20
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector

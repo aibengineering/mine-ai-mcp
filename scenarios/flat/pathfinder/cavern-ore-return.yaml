@@ -1,0 +1,66 @@
+# Integration regression for PrismarineJS/mineflayer-pathfinder PR #365:
+# https://github.com/PrismarineJS/mineflayer-pathfinder/pull/365
+# This ordinary mine-return-deposit workflow repeatedly enters jumping placement.
+# It verifies that the shared post-movement futility check can reset a placement
+# that stops making progress instead of leaving goto() pending indefinitely.
+name: cavern-ore-return
+description: Tunnel down into a natural-sized cavern, collect an exposed seam, then return to the surface chest and deposit the drops.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -14 -59 -14 26 -37 14 air"
+
+geometry:
+  # The bot begins on a stone hill with no prepared entrance. Its route to the
+  # exposed seam must cut through the hill and eventually open into this cave.
+  - fill: { block: stone, from: [-12, -59, -12], to: [24, -45, 12] }
+  - fill: { block: grass_block, from: [-12, -45, -12], to: [24, -45, 12] }
+  - fill: { block: air, from: [8, -57, -4], to: [18, -52, 4] }
+  - setblock: { block: iron_ore, at: [19, -56, -1] }
+  - setblock: { block: iron_ore, at: [19, -56, 0] }
+  - setblock: { block: iron_ore, at: [19, -56, 1] }
+  - setblock: { block: chest, at: [-4, -44, 0] }
+
+players:
+  - name: Miner
+    pos: [0, -44, 0]
+    inventory:
+      - item: iron_pickaxe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./ore-return.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!Miner,gamemode=!spectator]"
+
+params:
+  ore: iron_ore
+  drop: raw_iron
+  count: 3
+  chest: [-4, -44, 0]
+
+goal:
+  kind: all
+  # Match deep-vertical-ore-return's full comparison transaction budget.
+  timeout: 120
+  goals:
+    - kind: blockAt
+      who: Miner
+      pos: [-4, -44, 0]
+      block: chest
+    - kind: completion
+      who: Miner

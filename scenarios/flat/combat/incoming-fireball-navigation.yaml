@@ -1,0 +1,36 @@
+name: incoming-fireball-navigation
+description: A bridge crossing yields to an incoming fireball, reflects it, and resumes to observed arrival without damage.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -8 -60 -8 24 -45 8 air"
+setup:
+  - "difficulty normal"
+geometry:
+  - fill: { block: netherrack, from: [-2, -55, 0], to: [20, -55, 0] }
+players:
+  - name: FireballBot
+    pos: [0.5, -54, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./incoming-fireball.ts"]
+params:
+  navigating: true
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: health, who: FireballBot, health: 20 }
+    - { kind: completion, who: FireballBot }

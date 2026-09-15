@@ -1,0 +1,59 @@
+name: cow-mixed-combat
+description: "Acquire eight beef and survive native mixed hostile contact across terraces. Posture is recorded for diagnosis."
+# The hostiles start around the hunting area and remain present, making the
+# requested acquisition occur under native mixed contact.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0 }
+reset:
+  - "kill @e[type=!minecraft:player]"
+geometry:
+  - fill: { block: grass_block, from: [5, -60, -5], to: [11, -60, 5] }
+  - fill: { block: grass_block, from: [10, -60, -5], to: [17, -59, 5] }
+  - fill: { block: grass_block, from: [16, -60, -5], to: [22, -58, 5] }
+  - fill: { block: dirt_path, from: [5, -60, -2], to: [9, -60, 2] }
+  - fill: { block: "stone_slab[type=bottom]", from: [2, -60, -3], to: [4, -60, 3] }
+entities:
+  - { type: cow, pos: [7.5, -59, 0.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: cow, pos: [8.5, -59, 3.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: cow, pos: [12.5, -58, 0.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: cow, pos: [14.5, -58, -2.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: cow, pos: [18.5, -57, 0.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: cow, pos: [20.5, -57, 3.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: cow, pos: [25.5, -60, 0.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: cow, pos: [27.5, -60, -3.5], nbt: "{PersistenceRequired:1b}" }
+  # A zombie follows from thirty-five blocks, a skeleton and a creeper from
+  # sixteen; the far pair meet the hunt at the far terraces.
+  - { type: zombie, pos: [-18.5, -60, 12.5], nbt: "{PersistenceRequired:1b}" }
+  - { type: zombie, pos: [32.5, -60, -12.5], nbt: "{PersistenceRequired:1b}" }
+  - type: skeleton
+    pos: [14.5, -60, 16.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+  - { type: creeper, pos: [-4.5, -60, -16.5], nbt: "{PersistenceRequired:1b}" }
+players:
+  - name: MixedHunter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+      - { item: cooked_beef, count: 8 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/posture-hunter.ts"]
+params: { mob_name: cow, drop_name: beef, count: 8, wear_armor: true }
+goal:
+  kind: all
+  timeout: 300
+  goals:
+    - { kind: hasItem, who: MixedHunter, item: beef, count: 8 }
+    - { kind: survive, who: MixedHunter, seconds: 1 }
+    - { kind: completion, who: MixedHunter }

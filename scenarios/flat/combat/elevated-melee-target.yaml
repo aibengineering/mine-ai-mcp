@@ -1,0 +1,35 @@
+name: elevated-melee-target
+description: Walk on existing ground to strike a stationary blaze two blocks above the floor, then release combat on the observed hit.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+setup:
+  - "difficulty normal"
+entities:
+  - type: blaze
+    pos: [8.5, -58, 0.5]
+    nbt: "{NoAI:1b,NoGravity:1b,PersistenceRequired:1b}"
+players:
+  - name: MeleeWalker
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: iron_sword, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./elevated-melee-target.ts"]
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: health, who: MeleeWalker, health: 20 }
+    - { kind: completion, who: MeleeWalker }

@@ -1,0 +1,43 @@
+name: player-death-runtime-event
+description: Kill the bot during foreground navigation, read one durable death event, respawn, and complete new work.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    doWeatherCycle: false
+    keepInventory: true
+
+reset:
+  - "fill -6 -62 -6 64 -50 6 air"
+
+geometry:
+  - fill: { block: polished_andesite, from: [-4, -61, -3], to: [60, -61, 3] }
+  - fill: { block: polished_andesite, from: [-4, -60, -3], to: [60, -59, -3] }
+  - fill: { block: polished_andesite, from: [-4, -60, 3], to: [60, -59, 3] }
+
+setup:
+  - "difficulty peaceful"
+  - "weather clear"
+
+players:
+  - name: DeathBot
+    pos: [0.5, -60, 0.5]
+    op: true
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./player-death-runtime-event.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!DeathBot,gamemode=!spectator]"
+
+goal:
+  kind: completion
+  who: DeathBot
+  timeout: 60

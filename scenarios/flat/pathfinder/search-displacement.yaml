@@ -1,0 +1,22 @@
+name: search-displacement
+description: A yielded stationary search must not execute its old start after a single ledge impulse.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+geometry:
+  - fill: { block: basalt, from: [-8, -40, 0], to: [2, -40, 1] }
+players:
+  - name: SearchStart
+    pos: [0.687, -39, 0.163]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "search-displacement.ts"]
+goal:
+  kind: completion
+  who: SearchStart
+  timeout: 30

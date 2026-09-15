@@ -1,0 +1,82 @@
+name: stranded-platform-descent
+description: Report a stopped route and remain safely above an unsupported eight-block descent.
+
+# Reported from a live world: a bot that had scaffolded out a few blocks above
+# the ground could not path back to a chest or a bed, and every attempt spent
+# the whole failure budget before reporting `search_time limit`. That signature
+# is the tell — a bot boxed into a small space exhausts it and reports `no_path`
+# quickly, so burning the full budget means a large reachable area none of which
+# contained a descent.
+#
+# `drop` permits three blocks by default, but the ground is eight below.
+# `downward` needs support below the destination; this thin platform has none.
+# `pillar` builds upward and has no supported downward equivalent.
+#
+# The bot is given a stack of blocks on purpose. Having materials does not help,
+# and a run that fails with a full inventory says the gap is the movement and
+# not the resources.
+#
+# CURRENT EXPECTATION: navigation must NOT reach the ground target. A reported
+# stopped route, outside target range, grounded at or above the starting level,
+# and full health passes this fixture. Cancellation and unexpected errors do not.
+# Revisit this expectation when we implement a physical descent capability,
+# such as water-bucket descent with a supplied bucket or an explicitly supported
+# downward-placement technique. Do not turn an unsafe fall into a passing route.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -64 -16 24 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-16, -61, -16], to: [24, -60, 16] }
+
+  # One block thick, floating, with nothing beneath it. Thickness is the whole
+  # point: a solid tower would let the bot dig down through its own support,
+  # which is a descent this fixture is not asking about.
+  - fill: { block: stone, from: [0, -52, 0], to: [4, -52, 4] }
+
+  - setblock: { block: emerald_block, at: [16, -60, 2] }
+
+players:
+  - name: StrandedBot
+    pos: [2.5, -51, 2.5]
+    inventory:
+      - item: cobblestone
+        count: 64
+      - item: iron_pickaxe
+        count: 1
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./stranded-platform-descent.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!StrandedBot,gamemode=!spectator]"
+
+params:
+  target: [16, -59, 2]
+  range: 1.5
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    # The driver asserts the stopped result and non-arrival; the server
+    # independently verifies that this expected refusal costs no health.
+    - kind: health
+      who: StrandedBot
+      health: 20
+    - kind: completion
+      who: StrandedBot

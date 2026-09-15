@@ -1,0 +1,26 @@
+name: direct-hunt-scaffold-resource-progress
+description: A direct combat request makes its bounded scaffold approach toward one unreachable elevated zombie and reports each native placement in wait and settled progress.
+minecraft: { version: "1.21.4" }
+world: { type: flat, time: midnight, difficulty: normal, gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: true, randomTickSpeed: 0 } }
+players:
+  - name: ScaffoldReporter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 24 }
+      - { item: cooked_beef, count: 8 }
+geometry:
+  - fill: { block: polished_andesite, from: [-6, -61, -6], to: [16, -61, 6] }
+  - fill: { block: bedrock, from: [7, -60, -2], to: [11, -56, 2] }
+entities:
+  - type: zombie
+    pos: [9.5, -55, 0.5]
+    nbt: '{PersistenceRequired:1b,NoAI:1b,HandItems:[{id:"minecraft:bone",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+client: { command: bun, args: ["../../src/client-host.ts", "./direct-hunt-scaffold-resource-progress.ts"] }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: survive, who: ScaffoldReporter, seconds: 1 }
+    - { kind: completion, who: ScaffoldReporter }

@@ -1,0 +1,37 @@
+name: navigation-skeleton-crossfire
+description: Reach the destination without damage through three skeletons in a compact, brightly lit arena. Walls keep the shooters within the engagement area.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: false }
+template: ../../../scenario-templates/arenas/compact.yaml
+entities:
+  - type: skeleton
+    pos: [6.5, -60, 5.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+  - type: skeleton
+    pos: [6.5, -60, -5.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+  - type: skeleton
+    pos: [11.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+players:
+  - name: FirstShotWalker
+    pos: [-4.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./navigation-skeleton-first-shot.ts"]
+params: { destination: [14, -60, 0] }
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: completion, who: FirstShotWalker }
+    - { kind: health, who: FirstShotWalker, health: 20 }

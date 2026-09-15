@@ -1,0 +1,1070 @@
+{
+  "description": "Selected records from the natural-world expedition enderman death. No roof-preparation result was recorded, so these records do not establish why no roof was built.",
+  "source": "manual-nether-expedition-deflection / a5b317ba-f7a2-4d82-bbae-ed0344e37b9a.jsonl",
+  "worldSeed": "-5335131384818472281",
+  "records": [
+    {
+      "kind": "physics",
+      "atMs": 1788859835118,
+      "session": {
+        "busy": false,
+        "activeAction": null,
+        "owner": "idle"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "position": {
+        "x": -242.4928921050065,
+        "y": 80,
+        "z": 469.5170031068518
+      },
+      "health": 20,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "request_started",
+      "atMs": 1788859845773,
+      "requestId": 42,
+      "action": "hunt_mob"
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859845807,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "swing",
+          "phaseTicks": 0,
+          "attacks": 1
+        }
+      },
+      "position": {
+        "x": -242.4928921050065,
+        "y": 80,
+        "z": 469.5170031068518
+      },
+      "health": 20,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "hit",
+      "atMs": 1788859847321,
+      "requestId": 42,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "swing",
+          "phaseTicks": 13,
+          "attacks": 2
+        }
+      },
+      "precedingRequestId": null,
+      "sourceTypeId": 28,
+      "sourceType": "minecraft:mob_attack",
+      "observedShieldUseTicks": 0,
+      "shieldReadyFromObservedUse": false,
+      "bearingBand": "front",
+      "cause": {
+        "id": 4626,
+        "name": "enderman",
+        "position": {
+          "x": -242.50080699526606,
+          "y": 80,
+          "z": 470.20422687415146
+        },
+        "bearingRadians": -0.008898692105637984
+      },
+      "direct": {
+        "id": 4626,
+        "name": "enderman",
+        "position": {
+          "x": -242.50080699526606,
+          "y": 80,
+          "z": 470.20422687415146
+        },
+        "bearingRadians": -0.008898692105637984
+      },
+      "yaw": 3.138974659711802,
+      "mineflayerUsingHeldItem": false,
+      "serverLivingEntityFlags": 0,
+      "offHand": null,
+      "burning": false
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859847337,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "swing",
+          "phaseTicks": 13,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.4928921050065,
+        "y": 80,
+        "z": 469.5170031068518
+      },
+      "health": 17.479999542236328,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859847542,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 0,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.4928921050065,
+        "y": 80.6037636546968,
+        "z": 469.5170031068518
+      },
+      "health": 17.479999542236328,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859847796,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 5,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.4936617875962,
+        "y": 80,
+        "z": 469.6150001228324
+      },
+      "health": 17.779998779296875,
+      "food": 20,
+      "controls": {
+        "forward": true,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859848302,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 16,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.49699702820945,
+        "y": 79,
+        "z": 470.59477734780484
+      },
+      "health": 18.079998016357422,
+      "food": 20,
+      "controls": {
+        "forward": true,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "hit",
+      "atMs": 1788859848317,
+      "requestId": 42,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 17,
+          "attacks": 2
+        }
+      },
+      "precedingRequestId": null,
+      "sourceTypeId": 28,
+      "sourceType": "minecraft:mob_attack",
+      "observedShieldUseTicks": 0,
+      "shieldReadyFromObservedUse": false,
+      "bearingBand": "rear",
+      "cause": {
+        "id": 4626,
+        "name": "enderman",
+        "position": {
+          "x": -242.91193980776606,
+          "y": 80,
+          "z": 469.89343585852646
+        },
+        "bearingRadians": -2.604723733057951
+      },
+      "direct": {
+        "id": 4626,
+        "name": "enderman",
+        "position": {
+          "x": -242.91193980776606,
+          "y": 80,
+          "z": 469.89343585852646
+        },
+        "bearingRadians": -2.604723733057951
+      },
+      "yaw": 3.138974659711802,
+      "mineflayerUsingHeldItem": false,
+      "serverLivingEntityFlags": 0,
+      "offHand": null,
+      "burning": false
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859848352,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 17,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.4972535914173,
+        "y": 79,
+        "z": 470.7601647628301
+      },
+      "health": 15.55999755859375,
+      "food": 20,
+      "controls": {
+        "forward": true,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859848772,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 25,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.49817721272453,
+        "y": 78.9433887594788,
+        "z": 471.99144312630915
+      },
+      "health": 15.693330764770508,
+      "food": 20,
+      "controls": {
+        "forward": true,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859849281,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 6,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.49935740342008,
+        "y": 78,
+        "z": 473.1699351789677
+      },
+      "health": 15.826663970947266,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "hit",
+      "atMs": 1788859849471,
+      "requestId": 42,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 10,
+          "attacks": 2
+        }
+      },
+      "precedingRequestId": null,
+      "sourceTypeId": 28,
+      "sourceType": "minecraft:mob_attack",
+      "observedShieldUseTicks": 0,
+      "shieldReadyFromObservedUse": false,
+      "bearingBand": "rear",
+      "cause": {
+        "id": 5509,
+        "name": "enderman",
+        "position": {
+          "x": -242.46785311226986,
+          "y": 78.23139726566956,
+          "z": 471.92803769686424
+        },
+        "bearingRadians": 3.121002361812541
+      },
+      "direct": {
+        "id": 5509,
+        "name": "enderman",
+        "position": {
+          "x": -242.46785311226986,
+          "y": 78.23139726566956,
+          "z": 471.92803769686424
+        },
+        "bearingRadians": 3.121002361812541
+      },
+      "yaw": 3.138974659711802,
+      "mineflayerUsingHeldItem": false,
+      "serverLivingEntityFlags": 0,
+      "offHand": null,
+      "burning": false
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859849484,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 10,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.49961396662792,
+        "y": 78,
+        "z": 473.39343098405374
+      },
+      "health": 13.306663513183594,
+      "food": 20,
+      "controls": {
+        "forward": true,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859849791,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 16,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.5035877556989,
+        "y": 78.42527412219724,
+        "z": 473.930363974956
+      },
+      "health": 13.439996719360352,
+      "food": 20,
+      "controls": {
+        "forward": true,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "hit",
+      "atMs": 1788859849970,
+      "requestId": 42,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 20,
+          "attacks": 2
+        }
+      },
+      "precedingRequestId": null,
+      "sourceTypeId": 28,
+      "sourceType": "minecraft:mob_attack",
+      "observedShieldUseTicks": 0,
+      "shieldReadyFromObservedUse": false,
+      "bearingBand": "front",
+      "cause": {
+        "id": 4626,
+        "name": "enderman",
+        "position": {
+          "x": -242.6489060382516,
+          "y": 78,
+          "z": 472.61596874802115
+        },
+        "bearingRadians": 0.12518127174818727
+      },
+      "direct": {
+        "id": 4626,
+        "name": "enderman",
+        "position": {
+          "x": -242.6489060382516,
+          "y": 78,
+          "z": 472.61596874802115
+        },
+        "bearingRadians": 0.12518127174818727
+      },
+      "yaw": -0.007853981633778595,
+      "mineflayerUsingHeldItem": false,
+      "serverLivingEntityFlags": 0,
+      "offHand": null,
+      "burning": false
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859849995,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "approach",
+          "phaseTicks": 20,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.5029720098692,
+        "y": 77.17012203007599,
+        "z": 473.7934466923767
+      },
+      "health": 10.639997482299805,
+      "food": 20,
+      "controls": {
+        "forward": true,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859850097,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hunt_mob",
+          "startedAt": "2026-09-08T09:30:45.773Z"
+        },
+        "owner": "foreground"
+      },
+      "combat": {
+        "targetId": 5509,
+        "position": null,
+        "execution": {
+          "phase": "release",
+          "phaseTicks": 0,
+          "attacks": 2
+        }
+      },
+      "position": {
+        "x": -242.42140498815905,
+        "y": 77,
+        "z": 474.49518274501634
+      },
+      "health": 10.639997482299805,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "request_settled",
+      "atMs": 1788859850097,
+      "requestId": 42,
+      "action": "hunt_mob",
+      "status": "partial",
+      "interruptions": []
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859850147,
+      "session": {
+        "busy": false,
+        "activeAction": null,
+        "owner": "idle"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "position": {
+        "x": -242.4001864591502,
+        "y": 77,
+        "z": 474.67772964298206
+      },
+      "health": 10.639997482299805,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859850300,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T09:30:50.147Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "position": {
+        "x": -242.37882179100262,
+        "y": 77,
+        "z": 474.87775732051546
+      },
+      "health": 10.773330688476562,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "hit",
+      "atMs": 1788859851078,
+      "requestId": null,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T09:30:50.147Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "precedingRequestId": 42,
+      "sourceTypeId": 28,
+      "sourceType": "minecraft:mob_attack",
+      "observedShieldUseTicks": 0,
+      "shieldReadyFromObservedUse": false,
+      "bearingBand": "front",
+      "cause": {
+        "id": 5509,
+        "name": "enderman",
+        "position": {
+          "x": -242.57383720706014,
+          "y": 77.92159999847412,
+          "z": 473.8230424840269
+        },
+        "bearingRadians": 0.22504713030593615
+      },
+      "direct": {
+        "id": 5509,
+        "name": "enderman",
+        "position": {
+          "x": -242.57383720706014,
+          "y": 77.92159999847412,
+          "z": 473.8230424840269
+        },
+        "bearingRadians": 0.22504713030593615
+      },
+      "yaw": -0.044505895925657235,
+      "mineflayerUsingHeldItem": false,
+      "serverLivingEntityFlags": 0,
+      "offHand": null,
+      "burning": false
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859851111,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T09:30:50.147Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "position": {
+        "x": -242.37882179100262,
+        "y": 77,
+        "z": 474.8914518514208
+      },
+      "health": 7.973330974578857,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "hit",
+      "atMs": 1788859852076,
+      "requestId": null,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T09:30:50.147Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "precedingRequestId": 42,
+      "sourceTypeId": 28,
+      "sourceType": "minecraft:mob_attack",
+      "observedShieldUseTicks": 0,
+      "shieldReadyFromObservedUse": false,
+      "bearingBand": "front",
+      "cause": {
+        "id": 4626,
+        "name": "enderman",
+        "position": {
+          "x": -242.52664332012296,
+          "y": 77.76636799395752,
+          "z": 474.00249123853825
+        },
+        "bearingRadians": -0.5463522966499724
+      },
+      "direct": {
+        "id": 4626,
+        "name": "enderman",
+        "position": {
+          "x": -242.52664332012296,
+          "y": 77.76636799395752,
+          "z": 474.00249123853825
+        },
+        "bearingRadians": -0.5463522966499724
+      },
+      "yaw": 0.6675884388879849,
+      "mineflayerUsingHeldItem": false,
+      "serverLivingEntityFlags": 0,
+      "offHand": null,
+      "burning": false
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859852090,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T09:30:50.147Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "position": {
+        "x": -242.3,
+        "y": 77,
+        "z": 475.86276004874276
+      },
+      "health": 5.173331260681152,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "hit",
+      "atMs": 1788859852618,
+      "requestId": null,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T09:30:50.147Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "precedingRequestId": 42,
+      "sourceTypeId": 28,
+      "sourceType": "minecraft:mob_attack",
+      "observedShieldUseTicks": 0,
+      "shieldReadyFromObservedUse": false,
+      "bearingBand": "front",
+      "cause": {
+        "id": 5509,
+        "name": "enderman",
+        "position": {
+          "x": -242.51587235766965,
+          "y": 77,
+          "z": 475.0434827741496
+        },
+        "bearingRadians": 0.1885106141333352
+      },
+      "direct": {
+        "id": 5509,
+        "name": "enderman",
+        "position": {
+          "x": -242.51587235766965,
+          "y": 77,
+          "z": 475.0434827741496
+        },
+        "bearingRadians": 0.1885106141333352
+      },
+      "yaw": 0.12042771838779665,
+      "mineflayerUsingHeldItem": false,
+      "serverLivingEntityFlags": 0,
+      "offHand": null,
+      "burning": false
+    },
+    {
+      "kind": "physics",
+      "atMs": 1788859852660,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T09:30:50.147Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "position": {
+        "x": -242.13805959335872,
+        "y": 77,
+        "z": 476.23102529367713
+      },
+      "health": 2.3733315467834473,
+      "food": 20,
+      "controls": {
+        "forward": false,
+        "back": false,
+        "left": false,
+        "right": false,
+        "jump": false,
+        "sprint": false,
+        "sneak": false
+      }
+    },
+    {
+      "kind": "hit",
+      "atMs": 1788859853179,
+      "requestId": null,
+      "session": {
+        "busy": true,
+        "activeAction": {
+          "action": "hostile_reflex",
+          "startedAt": "2026-09-08T09:30:50.147Z"
+        },
+        "owner": "takeover"
+      },
+      "combat": {
+        "targetId": null,
+        "position": null,
+        "execution": null
+      },
+      "precedingRequestId": 42,
+      "sourceTypeId": 28,
+      "sourceType": "minecraft:mob_attack",
+      "observedShieldUseTicks": 0,
+      "shieldReadyFromObservedUse": false,
+      "bearingBand": "front",
+      "cause": {
+        "id": 5509,
+        "name": "enderman",
+        "position": {
+          "x": -242.33276688891965,
+          "y": 77,
+          "z": 475.3691663678996
+        },
+        "bearingRadians": 0.1113157823887223
+      },
+      "direct": {
+        "id": 5509,
+        "name": "enderman",
+        "position": {
+          "x": -242.33276688891965,
+          "y": 77,
+          "z": 475.3691663678996
+        },
+        "bearingRadians": 0.1113157823887223
+      },
+      "yaw": 0.26965336943330254,
+      "mineflayerUsingHeldItem": false,
+      "serverLivingEntityFlags": 0,
+      "offHand": null,
+      "burning": false
+    },
+    {
+      "kind": "server_death",
+      "atMs": 1788859853181,
+      "message": "ExpeditionBot was slain by Enderman"
+    }
+  ]
+}

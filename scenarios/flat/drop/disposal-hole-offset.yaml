@@ -1,0 +1,31 @@
+name: disposal-hole-offset
+description: Dispose from an off-centre stance, aiming into the nearer western hole while retaining the bot's footing.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0, naturalRegeneration: false }
+reset:
+  - "fill -8 -63 -8 8 -54 8 air"
+geometry:
+  - fill: { block: dirt, from: [-8, -63, -8], to: [8, -61, 8] }
+players:
+  - name: Disposer
+    pos: [0.35, -60, 0.5]
+    inventory:
+      - { item: iron_shovel, count: 1 }
+      - { item: rotten_flesh, count: 16 }
+      - { item: cobblestone, count: 70 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./disposal-hole.ts"]
+params: { expected: dropped }
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: blockAt, who: Disposer, pos: [-1, -61, 0], block: air }
+    - { kind: blockAt, who: Disposer, pos: [-1, -62, 0], block: air }
+    - { kind: blockAt, who: Disposer, pos: [0, -61, 0], block: dirt }
+    - { kind: health, who: Disposer, health: 20 }
+    - { kind: completion, who: Disposer }

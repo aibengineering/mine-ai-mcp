@@ -1,0 +1,58 @@
+name: pathfinder-tower-round-trip-canopy
+description: A mid-air goal straight above a bot under a birch canopy, as on 1 September; the tower must go around the leaves and still be one the bot can climb back down.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -60 -8 8 -20 8 air"
+
+# The live column: the bot beside a birch trunk with the canopy two blocks
+# above its head. A straight pillar from here runs into the leaves.
+geometry:
+  - fill: { block: birch_log, from: [0, -60, 0], to: [0, -55, 0] }
+  - fill: { block: birch_leaves, from: [-2, -57, -2], to: [2, -56, 2] }
+  - fill: { block: birch_leaves, from: [-1, -55, -1], to: [1, -55, 1] }
+
+players:
+  - name: TowerBuilder
+    pos: [1.5, -60, 0.5]
+    inventory:
+      - item: dirt
+        count: 48
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./tower-round-trip.ts"]
+
+params:
+  height: 30
+  offset: [0, 0]
+  range: 1.5
+
+tick:
+  - "gamemode spectator @a[name=!TowerBuilder,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: reach
+      who: TowerBuilder
+      pos: [1.5, -60, 0.5]
+      radius: 2.5
+    - kind: health
+      who: TowerBuilder
+      health: 20
+    - kind: completion
+      who: TowerBuilder

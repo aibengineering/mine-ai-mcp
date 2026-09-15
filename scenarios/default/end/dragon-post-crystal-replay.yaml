@@ -1,0 +1,48 @@
+name: end-dragon-post-crystal-replay
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_end
+  seed: "64510673"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+players:
+  - name: DragonFighter
+    # Latest safe pre-death status in the retained zero-crystal fight.
+    pos: [-28.5, 62, 35.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: bow, count: 3 }
+      - { item: arrow, count: 1 }
+      - { item: cooked_beef, count: 9 }
+      - { item: cooked_porkchop, count: 3 }
+      - { item: cobbled_deepslate, count: 91 }
+      - { item: end_stone, count: 26 }
+      - { item: shield, count: 3 }
+      - { item: water_bucket, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+    # This is the retained fight's practical combat subset, not full inventory
+    # parity. Setup restores observed sword/pick and armour durability.
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/dragon-post-crystal-replay.ts"]
+params:
+  phase: perch
+  call_gap_ticks: 20
+  damage_stall_seconds: 180
+  dragon_health: 190
+  # Sparse recorded slots supplement the practical combat inventory above.
+  loadout:
+    - [5, diamond_helmet, 1, 124]
+    - [6, diamond_chestplate, 1, 124]
+    - [7, diamond_leggings, 1, 124]
+    - [8, diamond_boots, 1, 63]
+    - [36, diamond_sword, 1, 780]
+    - [37, diamond_pickaxe, 1, 585]
+    - [45, shield, 1, 0]
+goal: { kind: kill, target: ender_dragon, timeout: 900 }

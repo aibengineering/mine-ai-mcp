@@ -1,0 +1,35 @@
+name: hidden-portal-corner
+description: Replace a leaf at a portal's upper corner that the completed frame hides from the initial stance.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+geometry:
+  - fill: { block: obsidian, from: [0, -60, 0], to: [3, -60, 0] }
+  - fill: { block: obsidian, from: [0, -59, 0], to: [0, -56, 0] }
+  - fill: { block: obsidian, from: [3, -59, 0], to: [3, -57, 0] }
+  - fill: { block: obsidian, from: [1, -56, 0], to: [2, -56, 0] }
+  - fill: { block: oak_leaves, from: [3, -56, -2], to: [4, -56, 0] }
+  - fill: { block: oak_leaves, from: [4, -56, 1], to: [4, -56, 1] }
+  - fill: { block: oak_leaves, from: [4, -57, -1], to: [4, -57, -1] }
+players:
+  - name: PortalCornerBot
+    pos: [2.49, -59, 0.46]
+    inventory:
+      - { item: obsidian, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./hidden-portal-corner.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: health, who: PortalCornerBot, health: 20 }
+    - { kind: completion, who: PortalCornerBot }

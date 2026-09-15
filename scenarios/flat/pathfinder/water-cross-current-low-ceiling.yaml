@@ -1,0 +1,32 @@
+name: water-cross-current-low-ceiling
+description: Cross a diagonal current below a two-block ceiling without stalling on sideways alignment.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+reset:
+  - "fill -4 -60 -4 7 -40 4 air"
+geometry:
+  - fill: { block: stone, from: [-8, -61, -8], to: [12, -59, 8] }
+  - fill: { block: stone, from: [1, -56, -2], to: [4, -56, 2] }
+  - fill: { block: stone, from: [5, -59, -3], to: [5, -56, 3] }
+  - setblock: { block: water, at: [4, -58, 0] }
+players:
+  - name: Collector
+    pos: [2.35, -58, -0.55]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./water-cross-current-low-ceiling.ts"]
+params:
+  legs:
+    - { target: [2, -58, 0], range: 0.1, label: diagonal-current-beneath-ceiling }
+goal:
+  kind: all
+  # A one-cell swim takes seconds; 30 seconds captures repeated movement failure.
+  timeout: 30
+  goals:
+    - { kind: health, who: Collector, health: 20 }
+    - { kind: completion, who: Collector }

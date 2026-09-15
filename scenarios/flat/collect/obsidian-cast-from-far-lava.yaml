@@ -1,0 +1,69 @@
+name: obsidian-cast-from-far-lava
+description: One collect call for obsidian walks a hundred blocks to the only lava in range, pours the carried water on it, takes the water back, and mines three.
+
+# There is no obsidian anywhere in this world when the call starts. Obsidian is
+# the one block the bot makes rather than finds, so the mine process finds the
+# lava its own scan reaches - every loaded column, through its full height, the
+# way it finds ore - walks to it, pours, scoops back, and then mines what
+# formed under the same target rule as any other block.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -70 -59 -16 80 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-70, -61, -16], to: [80, -61, 16] }
+  - fill: { block: stone, from: [-70, -60, -16], to: [80, -60, 16] }
+  - fill: { block: lava, from: [58, -60, -3], to: [62, -60, 3] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: water_bucket, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+params:
+  block_name: obsidian
+  count: 3
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: obsidian
+      count: 3
+    # The bucket comes back: a cast that leaves its water behind has cost the
+    # bot the only tool that makes obsidian.
+    - kind: hasItem
+      who: Collector
+      item: water_bucket
+      count: 1
+    # Completion must not be earned by respawning with keepInventory.
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector

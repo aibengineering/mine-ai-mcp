@@ -1,0 +1,6 @@
+name: bucket-drop-displaced
+description: A horizontal/downward hit changes a planned bucket landing before its first pour; recover water at the new landing and finish the route.
+template: bucket-drop-route.yaml
+params:
+  impulseAt: 4
+  impulse: { x: 4858, y: -4168, z: 1473 }

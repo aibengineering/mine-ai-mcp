@@ -1,0 +1,40 @@
+name: no-dig-camp
+description: Explicitly forbid excavation while exiting a camp through its door, then refuse a sealed route without altering the building.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "fill -6 -61 -6 6 -55 6 air"
+geometry:
+  - fill: { block: stone, from: [-6, -61, -6], to: [6, -61, 6] }
+  - fill: { block: cobblestone, from: [-2, -60, -2], to: [2, -58, 2] }
+  - fill: { block: air, from: [-1, -60, -1], to: [1, -59, 1] }
+  - setblock: { block: "oak_door[facing=west,half=lower,hinge=left,open=false,powered=false]", at: [-2, -60, 0] }
+  - setblock: { block: "oak_door[facing=west,half=upper,hinge=left,open=false,powered=false]", at: [-2, -59, 0] }
+players:
+  - name: CampWalker
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./no-dig-camp.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: health, who: CampWalker, health: 20 }
+    - { kind: blockAt, who: CampWalker, pos: [0, -60, -2], block: cobblestone }
+    - { kind: blockAt, who: CampWalker, pos: [0, -59, -2], block: cobblestone }
+    - { kind: blockAt, who: CampWalker, pos: [0, -60, 2], block: cobblestone }
+    - { kind: blockAt, who: CampWalker, pos: [0, -59, 2], block: cobblestone }
+    - { kind: completion, who: CampWalker }

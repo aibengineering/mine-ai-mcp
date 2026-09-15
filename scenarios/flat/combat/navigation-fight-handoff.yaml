@@ -1,0 +1,72 @@
+name: navigation-fight-handoff
+description: "Reach the declared destinations alive through hostile terrain in the production runtime. Combat and avoidance choices are diagnostic evidence."
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+# The generated superflat plane is the arena, so there is no fixture geometry to
+# clear - only the scenario's own zombie, which a reset must declare for Mine
+# Labs to run the matching teardown on a reused world.
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  - type: zombie
+    pos: [24.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: FightBot
+    # Twenty-four blocks out: three times the eight-block contact boundary, so
+    # the encounter is reached under navigation rather than present at spawn.
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./combat-handoff.ts"]
+
+params:
+  firstTarget:
+    - 40
+    - -60
+    - 0
+  secondTarget:
+    - 38
+    - -60
+    - 0
+
+tick:
+  - "gamemode spectator @a[name=!FightBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: reach
+      who: FightBot
+      pos:
+        - 38.5
+        - -60
+        - 0.5
+      radius: 2
+    - kind: survive
+      who: FightBot
+      seconds: 1
+    - kind: completion
+      who: FightBot

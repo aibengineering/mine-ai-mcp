@@ -1,0 +1,53 @@
+name: fortress-rod-and-exit
+description: "Acquire one blaze rod and return to the declared fortress exit alive under native blaze pressure, using the available equipment."
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: "-5335131384818472281"
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: true, keepInventory: false }
+params:
+  exit: [-27.5, 82, 350.5]
+entities:
+  - { type: blaze, pos: [-30.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-25.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+players:
+  - name: CoverFighter
+    pos: [-27.5, 82, 356.5]
+    op: true
+    inventory:
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+      - { item: cooked_beef, count: 64 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fortress-rod-and-exit.ts"]
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - kind: hasItem
+      who: CoverFighter
+      item: blaze_rod
+      count: 1
+    - kind: completion
+      who: CoverFighter
+    - kind: survive
+      who: CoverFighter
+      seconds: 1
+    - kind: reach
+      who: CoverFighter
+      pos:
+        - -27.5
+        - 82
+        - 350.5
+      radius: 2

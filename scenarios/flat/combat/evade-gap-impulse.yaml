@@ -1,0 +1,24 @@
+name: evade-gap-impulse
+description: An emergency retreat must report no supported escape instead of gambling on a four-block gap under an observed velocity interruption.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  time: midnight
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, doDaylightCycle: false }
+geometry:
+  - fill: { block: air, from: [-10, -63, -10], to: [60, -52, 10] }
+  - fill: { block: nether_bricks, from: [-4, -57, 0], to: [1, -57, 0] }
+  - fill: { block: nether_bricks, from: [5, -57, 0], to: [55, -57, 0] }
+entities:
+  - type: zombie
+    pos: [-3.5, -56, 0.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+players:
+  - name: EvadeGapBot
+    op: true
+    pos: [0.5, -56, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./evade-gap-impulse.ts"]
+goal: { kind: completion, who: EvadeGapBot, timeout: 40 }

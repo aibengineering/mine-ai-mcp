@@ -1,0 +1,29 @@
+name: barter-takeover-output
+description: An incidental reward collected during takeover does not prematurely end the resumed barter request.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+entities:
+  - type: piglin
+    pos: [2, -60, 0.5]
+    nbt: "{IsImmuneToZombification:1b,PersistenceRequired:1b}"
+players:
+  - name: Barterer
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: gold_ingot, count: 3 }
+      - { item: golden_helmet, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "takeover-output.ts"]
+goal:
+  kind: completion
+  who: Barterer
+  timeout: 40

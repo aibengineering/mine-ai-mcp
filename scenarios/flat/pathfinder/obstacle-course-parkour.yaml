@@ -1,0 +1,102 @@
+name: obstacle-course-parkour
+description: Complete a linear obstacle course requiring gap jumps, sprint jumps, step-ups, controlled drops, hazard detours, and door activation.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -4 -62 -4 36 -46 8 air"
+
+geometry:
+  # Bound the obstacle course so path search measures its declared choices
+  # rather than exploring an open void around the fixtures.
+  - fill: { block: bedrock, from: [-3, -61, -1], to: [33, -52, -1] }
+  - fill: { block: bedrock, from: [-3, -61, 3], to: [33, -52, 3] }
+
+  # Section 1: Starting platform and 1-block gap jump
+  - fill: { block: blue_concrete, from: [-2, -60, 0], to: [1, -60, 0] }
+  # (Air gap at x: 2)
+  - fill: { block: blue_concrete, from: [3, -60, 0], to: [4, -60, 0] }
+
+  # Section 2: 2-block gap sprint jump
+  # (Air gap at x: 5 to x: 6)
+  - fill: { block: blue_concrete, from: [7, -60, 0], to: [8, -60, 0] }
+
+  # Section 2b: a genuine parkour span. Three blocks of air demand a four-block
+  # jump, which neither `jump` (two) nor `sprint_jump` (three) can reach, so
+  # this is the first part of the course that forces the capability the fixture
+  # is named for. Every earlier gap is cleared by the shorter kinds.
+  # (Air gap at x: 9 to x: 11)
+  - fill: { block: blue_concrete, from: [12, -60, 0], to: [13, -60, 0] }
+
+  # Section 2c: an ascending parkour span — clear two blocks of air and gain a
+  # block on landing. The takeoff lip is left open so the arc, not a step-up,
+  # has to carry it.
+  # (Air gap at x: 14 to x: 15)
+  - fill: { block: blue_concrete, from: [16, -59, 0], to: [17, -59, 0] }
+
+  # Section 3: Step-ups to an elevated bridge
+  - setblock: { block: blue_concrete, at: [18, -58, 0] }
+  - setblock: { block: blue_concrete, at: [19, -57, 0] }
+  - fill: { block: blue_concrete, from: [20, -57, 0], to: [21, -57, 0] }
+
+  # Section 4: Safe 2-block drop down to y: -60
+  - fill: { block: blue_concrete, from: [22, -59, 0], to: [23, -59, 2] }
+
+  # Section 5: Hazard avoidance - magma blocks on the direct line, safe path on the flank (z: 2)
+  - fill: { block: magma_block, from: [24, -59, 0], to: [26, -59, 0] }
+  - fill: { block: blue_concrete, from: [24, -59, 2], to: [26, -59, 2] }
+
+  # Section 6: Oak door barrier. Bedrock makes the door the only route; a
+  # breakable wall would let either implementation pass without activation.
+  - fill: { block: bedrock, from: [27, -61, -4], to: [27, -52, 6] }
+  - fill: { block: air, from: [27, -58, 2], to: [27, -57, 2] }
+  - setblock: { block: "oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]", at: [27, -58, 2] }
+  - setblock: { block: "oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]", at: [27, -57, 2] }
+
+  # Section 7: Finish platform
+  - fill: { block: emerald_block, from: [28, -59, 1], to: [32, -59, 3] }
+
+players:
+  - name: ParkourBot
+    pos: [0.5, -59, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pathfinder-runner.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!ParkourBot,gamemode=!spectator]"
+
+params:
+  target: [30, -58, 2]
+  range: 1.5
+  allowDoors: true
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: reach
+      who: ParkourBot
+      pos: [30.5, -58, 2.5]
+      radius: 1.5
+    - kind: health
+      who: ParkourBot
+      health: 20
+    - kind: blockAt
+      who: ParkourBot
+      pos: [27, -58, 2]
+      block: oak_door
+    - kind: completion
+      who: ParkourBot

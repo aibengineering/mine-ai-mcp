@@ -1,0 +1,28 @@
+name: respawn-observation
+description: Observe Mineflayer world spawn coordinates separately from native personal bed respawn behavior.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+reset:
+  - "fill -32 -59 -16 32 -45 16 air"
+geometry:
+  - fill: { block: stone_bricks, from: [-32, -60, -16], to: [32, -60, 16] }
+  - setblock: { block: "red_bed[part=foot,facing=east,occupied=false]", at: [20, -59, 0] }
+  - setblock: { block: "red_bed[part=head,facing=east,occupied=false]", at: [21, -59, 0] }
+players:
+  - name: RespawnObserver
+    pos: [18.5, -59, 0.5]
+    op: true
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./respawn-observation.ts"]
+goal:
+  kind: completion
+  who: RespawnObserver
+  timeout: 90

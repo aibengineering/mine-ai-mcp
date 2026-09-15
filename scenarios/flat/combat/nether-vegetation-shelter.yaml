@@ -1,0 +1,22 @@
+name: nether-vegetation-shelter
+description: Complete a protective wall through native Nether roots and sprouts using carried cobblestone.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+geometry:
+  - fill: { block: warped_nylium, from: [1, -61, -1], to: [1, -61, 1] }
+  - fill: { block: warped_roots, from: [1, -60, -1], to: [1, -60, -1] }
+  - fill: { block: crimson_roots, from: [1, -60, 0], to: [1, -60, 0] }
+  - fill: { block: nether_sprouts, from: [1, -60, 1], to: [1, -60, 1] }
+players:
+  - name: NetherBuilder
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: cobblestone, count: 6 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./nether-vegetation-shelter.ts"]
+goal: { kind: completion, who: NetherBuilder, timeout: 20 }

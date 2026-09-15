@@ -1,0 +1,21 @@
+name: wall-in-clearance
+description: Wall-in must clear the bot's fractional body from adjacent wall cells before placement.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+players:
+  - name: WallBot
+    pos: [0.5, -60, 0.146]
+    inventory:
+      - { item: cobblestone, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./wall-in-clearance.ts"]
+goal:
+  kind: completion
+  who: WallBot
+  timeout: 35

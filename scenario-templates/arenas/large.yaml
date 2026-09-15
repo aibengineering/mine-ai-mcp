@@ -1,0 +1,10 @@
+# 39 x 31 walkable blocks, giving mixed encounters more retreat space.
+# Feet at y=-60; six-block walls contain mobs.
+geometry:
+  - fill: { block: bedrock, from: [-20, -64, -16], to: [20, -64, 16] }
+  - fill: { block: dirt, from: [-20, -63, -16], to: [20, -62, 16] }
+  - fill: { block: sea_lantern, from: [-20, -61, -16], to: [20, -61, 16] }
+  - fill: { block: bedrock, from: [-20, -63, -16], to: [-20, -55, 16] }
+  - fill: { block: bedrock, from: [20, -63, -16], to: [20, -55, 16] }
+  - fill: { block: bedrock, from: [-19, -63, -16], to: [19, -55, -16] }
+  - fill: { block: bedrock, from: [-19, -63, 16], to: [19, -55, 16] }

@@ -1,0 +1,20 @@
+name: constructed-backstop
+description: Build a supported two-high backstop on a one-wide bridge and absorb a horizontal knockback replay above lava.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: air, from: [-5, -60, -5], to: [5, -47, 5] }
+  - fill: { block: lava, from: [-5, -60, -5], to: [5, -60, 5] }
+  - fill: { block: nether_bricks, from: [0, -51, -4], to: [0, -51, 4] }
+players:
+  - name: BackstopBuilder
+    pos: [0.5, -50, 0.5]
+    inventory: [{ item: cobblestone, count: 16 }, { item: iron_sword, count: 1 }, { item: shield, count: 1 }]
+entities:
+  - { type: blaze, pos: [7.5, -50, 0.5], nbt: "{NoAI:1b,NoGravity:1b,PersistenceRequired:1b}" }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./constructed-backstop.ts"]
+goal: { kind: completion, who: BackstopBuilder, timeout: 35 }

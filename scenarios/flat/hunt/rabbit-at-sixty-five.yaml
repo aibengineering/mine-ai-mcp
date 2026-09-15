@@ -1,0 +1,63 @@
+name: rabbit-at-sixty-five
+description: Defeat one native rabbit sixty-five blocks away on open ground and survive.
+
+# The hunt this plan was written for. A rabbit sixty-five blocks off is loaded,
+# so the model can ask for it, but the fight's approach is bounded to a
+# thirty-two block detour and could never reach it. The rabbit's distant spawn
+# makes reaching and defeating it the observable goal.
+#
+# A rabbit's hide falls about half the time, so the fixture asks for the kill
+# and takes the hide when it comes, the way the blaze and enderman fixtures do.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  - type: rabbit
+    pos: [65.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: RabbitHunter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/hunter.ts"]
+
+params:
+  mob_name: rabbit
+  drop_name: rabbit_hide
+  count: 1
+  defeat_count: 1
+
+tick:
+  - "gamemode spectator @a[name=!RabbitHunter,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - kind: kill
+      who: RabbitHunter
+      target: rabbit
+    - kind: completion
+      who: RabbitHunter

@@ -1,0 +1,51 @@
+name: generated-fortress-wounded-withdrawal
+description: With regeneration disabled to retain eleven health, reach the western exit alive under native wither-skeleton and blaze pressure on a surveyed fortress bridge.
+minecraft:
+  version: "1.21.4"
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: 20260906
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    # Isolate withdrawal while wounded; food remains carried for ordinary use.
+    naturalRegeneration: false
+players:
+  - name: FortressBot
+    pos: [-432.5, 60, 270.5]
+    # Isolate withdrawal while wounded; regeneration is off above.
+    health: 11
+    op: true
+    inventory:
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./fortress-withdrawal.ts"]
+params:
+  # The live evade reached X-489 on this continuous generated bridge. Returning
+  # east to X-452 after separation re-entered the pursuing blaze's range.
+  exit: [-490, 60, 270]
+entities:
+  - { type: wither_skeleton, pos: [-428.5, 60, 270.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-422.5, 63, 270.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: survive, who: FortressBot, seconds: 1 }
+    - { kind: health, who: FortressBot }
+    - { kind: reach, who: FortressBot, pos: [-489.5, 60, 270.5], radius: 2 }
+    - { kind: completion, who: FortressBot }

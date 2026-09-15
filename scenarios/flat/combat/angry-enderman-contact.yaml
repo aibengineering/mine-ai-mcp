@@ -1,0 +1,27 @@
+name: angry-enderman-contact
+description: Defend against an angry enderman in reach while the engagement's requested zombie remains farther away. Do not confuse a neutral-capable species with an unprovoked individual.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - setblock: { block: stone, at: [0, -58, 0] }
+players:
+  - name: ContactFighter
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+entities:
+  - { type: zombie, pos: [6.5, -60, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+  - { type: enderman, pos: [2.5, -60, 0.5], nbt: "{PersistenceRequired:1b}" }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./angry-enderman-contact.ts"]
+goal: { kind: completion, who: ContactFighter, timeout: 30 }

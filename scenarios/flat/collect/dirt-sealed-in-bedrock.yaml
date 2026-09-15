@@ -1,0 +1,79 @@
+name: dirt-sealed-in-bedrock
+description: Collect dirt when the nearest dirt is sealed inside bedrock three blocks away and the only honest dirt is a ten-block walk, proving a dig is planned only where the eye can see the block.
+
+# Taken from a live run on 2026-09-05: collecting dirt, the bot stood in its
+# hole and broke dirt out of the stone around it. Search had judged a dig by
+# distance alone, Mineflayer aims at the block centre without a visibility
+# ray, and a vanilla server breaks whichever block the client names. The
+# drops landed in sealed pockets and the bot tunnelled stone after them.
+#
+# Baritone never breaks a block it cannot see: `Movement.prepared` and
+# `MineProcess.onTick` both gate the click on `RotationUtils.reachable`, the
+# eye ray landing on the block. The unit tests hold that rule at the
+# excavation and goal layers; this is the world that catches its absence.
+#
+# The sealed dirt is well inside dig reach and far cheaper than the walk, so
+# a planner without the ray takes it through the bedrock and the block is
+# gone at the end. A planner with the ray has no stance that can see it,
+# leaves it standing, and walks to the dirt it can actually reach.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -20 -59 -20 20 -40 20 air"
+
+geometry:
+  # A stone floor down to the bottom of the world, so the flat preset's own
+  # dirt and grass under the surface are not a second hidden target.
+  - fill: { block: stone, from: [-20, -64, -20], to: [20, -60, 20] }
+  # The bedrock mass, with one dirt block sealed at its centre: every face is
+  # bedrock, which nothing can dig, and its centre is 3.0 blocks from the eye.
+  - fill: { block: bedrock, from: [2, -59, -1], to: [4, -56, 1] }
+  - setblock: { block: dirt, at: [3, -58, 0] }
+  # The dirt the bot can honestly reach, ten blocks the other way.
+  - setblock: { block: dirt, at: [-10, -59, 0] }
+
+players:
+  - name: Collector
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: iron_shovel, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+params:
+  block_name: dirt
+  count: 1
+  scaffold: true
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: dirt
+      count: 1
+    # The point of the fixture: the dirt no eye can see is still there.
+    - kind: blockAt
+      who: Collector
+      pos: [3, -58, 0]
+      block: dirt
+    - kind: completion
+      who: Collector

@@ -1,0 +1,71 @@
+name: vine-sprint-entry
+description: Carry sprint speed into a ten-block wall-backed vine column and climb onto its top without drifting out of the open side.
+
+# Retained incident 6e8aea78-9f91-44b5-a44e-a32f1d4dbf42, 2026-09-13:
+# an ordinary sprint step entered a vine at x=32.812 with -0.150 x velocity.
+# The upward climb held jump and no horizontal control; it rose two cells while
+# drifting through x=32.30, left the vine column, then fell three blocks while
+# the climb step remained running. This fixture preserves the fast handoff and
+# judges the independent outcome: top arrival, full health, and completion.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -61 -4 8 -45 4 air"
+
+geometry:
+  - fill: { block: andesite, from: [-8, -61, -4], to: [8, -61, 4] }
+  # The wall is north of the vines while the approach runs west. The inherited
+  # velocity therefore points through an open side instead of into the wall.
+  - fill: { block: stone, from: [1, -60, -1], to: [3, -50, -1] }
+  - setblock: { block: "vine[north=true]", at: [2, -60, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -59, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -58, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -57, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -56, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -55, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -54, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -53, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -52, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -51, 0] }
+  - setblock: { block: "vine[north=true]", at: [2, -50, 0] }
+
+players:
+  - name: ClimberBot
+    pos: [7.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./vine-climb-reliability.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!ClimberBot,gamemode=!spectator]"
+
+params:
+  legs:
+    - { target: [2, -49, -1], range: 1, label: "sprint across and climb the north-backed vines" }
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: reach
+      who: ClimberBot
+      pos: [2.5, -49, -0.5]
+      radius: 1.5
+    - kind: health
+      who: ClimberBot
+      health: 20
+    - kind: completion
+      who: ClimberBot

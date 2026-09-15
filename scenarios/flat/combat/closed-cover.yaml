@@ -1,0 +1,43 @@
+name: closed-cover
+description: Leave a nearby blaze behind intact shelter walls alone, then respond when the fixture opens the wall.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -4 -60 -4 8 -54 4 air"
+setup:
+  - "difficulty normal"
+geometry:
+  - fill: { block: nether_bricks, from: [-1, -60, -1], to: [1, -58, 1] }
+  - fill: { block: air, from: [0, -60, 0], to: [0, -59, 0] }
+entities:
+  - type: blaze
+    pos: [5.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b,NoAI:1b}"
+players:
+  - name: CoverBot
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./closed-cover.ts"]
+goal:
+  kind: all
+  timeout: 65
+  goals:
+    - { kind: kill, who: CoverBot, target: blaze }
+    - { kind: health, who: CoverBot, health: 20 }
+    - { kind: blockAt, who: CoverBot, pos: [0, -58, 0], block: nether_bricks }
+    - { kind: completion, who: CoverBot }

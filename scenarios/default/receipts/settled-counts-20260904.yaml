@@ -1,0 +1,78 @@
+name: settled-counts-20260904
+description: Eat, place, and craft on generated terrain from seed 20260904, failing unless each receipt's inventory count moved by exactly what the act was worth and the server confirmed it.
+
+# Every eat and every successful placement receipt used to report the same
+# count before and after: Mineflayer resolves on the server's first witness
+# and the slot that loses the item is broadcast a tick later. Each receipt now
+# waits for the count it expects, on a deadline of a few ticks.
+#
+# A superflat world cannot test that deadline. This one is generated terrain,
+# where a tick carries chunk streaming and world generation, so the gap
+# between the witness and the broadcast is as wide as it gets in practice. An
+# unconfirmed receipt here is the finding, and the fix would be the constant
+# in `settleInventoryCount`, not this fixture.
+#
+# The spawn is pinned, and it has to be: block generation is seed-
+# deterministic but Minecraft's choice of where to put the player is not, and
+# two runs of an unpinned default-world fixture started 271 blocks apart. This
+# column is the surface point `default/terrain/night-hostile-haul-20260904`
+# already records for this seed, reused rather than surveyed again.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: default
+  seed: 20260904
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+
+# Not peaceful: the food bar does not drain there, so the hunger effect never
+# brings it down and the bite under test is refused by a full bar. Nothing
+# hostile spawns anyway with mob spawning off.
+setup:
+  - "difficulty easy"
+
+players:
+  - name: ReceiptBot
+    pos: [-18.5, 82, 25.5]
+    # Opped so the driver can drain the bot's own hunger; a full bar refuses
+    # food, and the bite is the receipt under test.
+    op: true
+    inventory:
+      - { item: bread, count: 3 }
+      - { item: cobblestone, count: 16 }
+      - { item: oak_planks, count: 16 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./settled-counts.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!ReceiptBot,gamemode=!spectator]"
+
+params:
+  # Above nothing in particular: it only has to leave room for the five points
+  # a bread restores, so the bite is not refused.
+  hungerTo: 16
+  food: bread
+  block: cobblestone
+  # Two planks make four sticks, in the inventory's own grid with no table.
+  crafted: stick
+  craftedCount: 4
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    # The driver's own three checks are the test; the goal only has to carry
+    # its verdict out. A health floor here would fail the fixture for a block
+    # of fall damage on settling, which says nothing about a receipt.
+    - kind: completion
+      who: ReceiptBot

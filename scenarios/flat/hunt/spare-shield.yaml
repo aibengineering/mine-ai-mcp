@@ -1,0 +1,35 @@
+name: hunt-spare-shield
+description: Hunting skeleton arrows replaces a shield that breaks on its first blocked arrow, then completes collection.
+# Native item damage breaks the worn shield. No inventory clearing or fake
+# damage events are used: slot observations prove replacement during the hunt.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: false }
+entities:
+  - type: skeleton
+    pos: [9.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:arrow",count:1}],HandDropChances:[0.0f,2.0f]}'
+players:
+  - name: SpareHunter
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./spare-shield.ts"]
+params: { mob_name: skeleton, drop_name: arrow, count: 1, wear_armor: true }
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: completion, who: SpareHunter }
+    - { kind: hasItem, who: SpareHunter, item: arrow, count: 1 }

@@ -1,0 +1,30 @@
+# Baseline at 96e0a60: production's fixed scaffold allowlist excluded cobbled_deepslate,
+# so this inventory offered no scaffold. Post-change evidence is retained in the run artifact.
+name: scaffold-cobbled-deepslate
+description: Build a five-block pillar using only carried cobbled deepslate from the survival-policy default.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, keepInventory: true, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "fill -6 -61 -6 6 -50 6 air"
+geometry:
+  - fill: { block: stone, from: [-1, -60, -1], to: [1, -60, 1] }
+players:
+  - name: DeepslateBuilder
+    pos: [0.5, -59, 0.5]
+    inventory: [{ item: cobbled_deepslate, count: 16 }]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./scaffold-policy-pillar.ts"]
+params: { material: cobbled_deepslate }
+tick:
+  - "gamemode spectator @a[name=!DeepslateBuilder,gamemode=!spectator]"
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: reach, who: DeepslateBuilder, pos: [0.5, -54, 0.5], radius: 0.7 }
+    - { kind: blockAt, who: DeepslateBuilder, pos: [0, -55, 0], block: cobbled_deepslate }
+    - { kind: completion, who: DeepslateBuilder }

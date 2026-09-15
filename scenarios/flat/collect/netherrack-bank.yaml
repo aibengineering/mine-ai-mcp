@@ -1,0 +1,51 @@
+name: netherrack-bank
+description: Collect a stack of fast-breaking netherrack without mining the whole bank while reachable drops accumulate on lower ledges.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -6 -60 -6 6 -48 6 air"
+
+geometry:
+  - fill: { block: bedrock, from: [-6, -60, -6], to: [6, -60, 6] }
+  - fill: { block: netherrack, from: [-4, -59, -4], to: [4, -53, 4] }
+  - fill: { block: air, from: [0, -56, 0], to: [0, -55, 0] }
+
+players:
+  - name: Collector
+    pos: [0.5, -56, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+params:
+  block_name: netherrack
+  count: 32
+  scaffold: false
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: netherrack
+      count: 32
+    - kind: health
+      who: Collector
+      health: 20
+    - kind: completion
+      who: Collector

@@ -1,0 +1,200 @@
+name: mine-ai-mcp-evidence
+description: Invoke every published Minecraft action through MCP and retain its real response.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: 13000
+  gamerules:
+    doDaylightCycle: true
+    doMobSpawning: false
+    doWeatherCycle: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -20 -60 -20 48 -40 20 air"
+
+geometry:
+  - fill: { block: polished_andesite, from: [-20, -60, -20], to: [48, -60, 20] }
+  - setblock: { at: [2, -59, 0], block: "red_bed[facing=east,part=foot,occupied=false]" }
+  - setblock: { at: [3, -59, 0], block: "red_bed[facing=east,part=head,occupied=false]" }
+  - setblock: { at: [6, -59, 0], block: oak_log }
+  - setblock: { at: [8, -59, -4], block: chest }
+
+  - setblock: { at: [8, -59, 4], block: furnace }
+  - setblock: { at: [4, -60, 3], block: water }
+  - fill: { block: obsidian, from: [-9, -60, -5], to: [-6, -60, -5] }
+  - fill: { block: obsidian, from: [-9, -59, -5], to: [-9, -57, -5] }
+  - fill: { block: obsidian, from: [-6, -59, -5], to: [-6, -57, -5] }
+  - fill: { block: obsidian, from: [-9, -56, -5], to: [-6, -56, -5] }
+
+entities:
+  # The zero-budget barter example retrieves the gravel just dropped below.
+  # Native gold exchange has its own scenarios; this tour must not depend on loot RNG.
+  - type: piglin
+    pos: [32, -59, 6]
+    nbt: "{NoAI:1b,IsBaby:0b,IsImmuneToZombification:1b,PersistenceRequired:1b}"
+  - type: sheep
+    pos: [10, -59, 2]
+    nbt: "{Color:0b,PersistenceRequired:1b}"
+
+setup:
+  - "difficulty normal"
+  - "weather clear"
+
+players:
+  - name: EvidenceBot
+    pos: [0, -59, 0]
+    inventory:
+      - { item: golden_apple, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: bucket, count: 1 }
+      - { item: flint_and_steel, count: 1 }
+      - { item: raw_iron, count: 1 }
+      - { item: coal, count: 1 }
+      - { item: gravel, count: 1 }
+      - { item: cobblestone, count: 32 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/action-evidence.ts"]
+
+# The order is part of the example. Sleeping establishes daylight, collection
+# changes inventory, exploration gives the read-only frontier actions something
+# meaningful to inspect, and navigation finishes at one explicit position.
+params:
+  steps:
+    - action: view_status
+      arguments: {}
+    - action: raw_action
+      arguments: { operation: look, yaw: 0, pitch: 0 }
+    - action: set_survival_policy
+      # The driver reads the connected runtime's current revision.
+      arguments: { operation: reset, reason: "Start the evidence tour from defaults." }
+    - action: note_save
+      arguments: { note: "Combat evidence tour started.", context: "Fresh-server MCP response qualification." }
+    - action: note_read
+      arguments: { n: 1 }
+    # The flat tour has neither End targets nor Eyes of Ender. These three
+    # explicitly arranged failures exercise truthful response boundaries;
+    # successful physical jobs remain in the End and stronghold suites.
+    - action: destroy_end_crystal
+      arguments: { entity_id: 2147483647, weapon: auto }
+      expected_error: "Selected end crystal is not loaded"
+    - action: attack_dragon_perch
+      arguments: { entity_id: 2147483647 }
+      expected_error: "Selected dragon is not loaded"
+    - action: locate_stronghold
+      arguments: {}
+      expected_error: "No carried Eyes of Ender remain"
+    - action: view_blocks
+      arguments: { cells: [{ x: 8, y: -59, z: 4 }] }
+    - action: cancel_foreground_action
+      arguments: { reason: "Observe idempotent cancellation of a settled action." }
+    - action: equip
+      arguments: { items: [{ item_name: iron_helmet }] }
+    - action: eat_food
+      arguments:
+        food_name: golden_apple
+    - action: sleep
+      arguments: {}
+    - action: collect_block
+      arguments:
+        block_name: oak_log
+        x: 6
+        y: -59
+        z: 0
+        scaffold: false
+    - action: view_crafting_requirements
+      arguments:
+        items:
+          - item_name: stick
+            count: 4
+          - item_name: oak_button
+            count: 1
+    - action: craft_item
+      arguments:
+        items:
+          - item_name: stick
+            count: 4
+          - item_name: oak_button
+            count: 1
+    - action: place_block
+      arguments:
+        block_name: oak_planks
+        x: 12
+        y: -59
+        z: 0
+    - action: pick_up_items
+      arguments: { item: gravel, radius: 1 }
+      expected_error: "NO_MATCHING_ITEMS"
+    - action: collect_mob_drop
+      arguments:
+        mob_name: sheep
+        drop_name: white_wool
+        count: 1
+    - action: use_container
+      arguments:
+        operation: inspect
+        x: 8
+        y: -59
+        z: -4
+    - action: smelt_item
+      arguments: { item_name: raw_iron, count: 1, fuel_item_name: coal, x: 8, y: -59, z: 4 }
+    - action: use_bucket
+      arguments: { action: fill, liquid: water, x: 4, y: -60, z: 3 }
+    - action: activate_portal
+      arguments: { x: -8, y: -59, z: -5 }
+    - action: enter_nether_portal
+      arguments: { x: 40, y: -59, z: 0 }
+      expected_error: "Expected active nether_portal"
+    - action: enter_end_portal
+      arguments: { x: 40, y: -59, z: 1 }
+      expected_error: "Expected active end_portal"
+    - action: build_structure
+      arguments:
+        blocks:
+          - { x: 14, y: -59, z: 2, block_name: cobblestone }
+          - { x: 15, y: -59, z: 2, block_name: cobblestone }
+    - action: drop_item
+      arguments: { items: [{ item_name: gravel, count: 1 }] }
+    - action: barter
+      # The driver supplies the observed piglin ID. Zero spends no gold and
+      # tests the existing-drop branch with the gravel from the preceding call.
+      arguments: { item_name: gravel, count: 1, gold_budget: 0 }
+    - action: explore_frontier
+      arguments:
+        heading: 90
+        chunks: 1
+    - action: view_frontier
+      arguments:
+        perspective: all
+        width: 21
+        height: 15
+    - action: query_bot_data
+      arguments:
+        sql: SELECT database_name, table_name, column_name, description FROM data_dictionary ORDER BY database_name, table_name, column_name LIMIT 5;
+    - action: read_recent_events
+      arguments: {}
+    - action: send_message
+      arguments:
+        message: Hello from EvidenceBot.
+    - action: navigate
+      arguments:
+        x: 32
+        y: -59
+        z: 0
+        range: 20
+
+tick:
+  - "gamemode spectator @a[name=!EvidenceBot,gamemode=!spectator]"
+
+goal:
+  kind: completion
+  who: EvidenceBot
+  # This sequential tour includes the existing 120-second exploration budget,
+  # plus sleep, collection, inspection, and one short final route.
+  timeout: 180

@@ -1,0 +1,43 @@
+name: obsidian-under-lip
+description: A liquid-adjacent obsidian target hidden below the initial stance's stone lip must be approached from a usable mining position.
+
+# The generated 20260904 cave repeatedly reported arrival at 12,-56,0,
+# while its own floor occluded the obsidian at 12,-57,-1. Adjacency alone
+# must not keep the process at the same unusable stance forever.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - "fill -8 -59 -8 12 -40 8 air"
+geometry:
+  - fill: { block: stone, from: [-8, -61, -8], to: [12, -60, 8] }
+  - fill: { block: stone, from: [4, -59, -1], to: [5, -58, 1] }
+  - fill: { block: obsidian, from: [4, -60, 0], to: [4, -60, 0] }
+  - fill: { block: lava, from: [5, -60, 0], to: [5, -60, 0] }
+players:
+  - name: Collector
+    pos: [3.5, -59, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 16 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+params:
+  block_name: obsidian
+  count: 1
+  scaffold: false
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, who: Collector, item: obsidian, count: 1 }
+    - { kind: survive, who: Collector, seconds: 1 }
+    - { kind: completion, who: Collector }

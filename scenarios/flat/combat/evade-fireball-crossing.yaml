@@ -1,0 +1,21 @@
+name: evade-fireball-crossing
+description: A retreat stops before moving into a descending native fireball, leaving time for shield readiness.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  time: midnight
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, doDaylightCycle: false }
+entities:
+  - type: zombie
+    pos: [-3.5, -60, 4.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+players:
+  - name: CrossingBot
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory: [{ item: shield, count: 1 }]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./evade-fireball-crossing.ts"]
+goal: { kind: completion, who: CrossingBot, timeout: 40 }

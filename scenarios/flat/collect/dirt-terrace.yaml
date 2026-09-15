@@ -1,0 +1,51 @@
+name: dirt-terrace
+description: Collect a useful dirt stack from a broad two-level hillside terrace.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-12, -60, -12], to: [14, -60, 12] }
+  - fill: { block: dirt, from: [4, -59, -4], to: [10, -59, 4] }
+  - fill: { block: dirt, from: [7, -58, -3], to: [10, -58, 3] }
+  - fill: { block: grass_block, from: [7, -57, -3], to: [10, -57, 3] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+# The request this world exists to exercise.
+params:
+  block_name: dirt
+  count: 8
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: dirt
+      count: 8
+    - kind: completion
+      who: Collector

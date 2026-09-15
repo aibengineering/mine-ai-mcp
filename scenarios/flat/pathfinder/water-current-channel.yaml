@@ -1,0 +1,35 @@
+name: water-current-channel
+description: Traverse a shallow current downstream and upstream, then climb onto a dry ledge.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+reset:
+  - "fill -5 -59 -5 10 -40 5 air"
+geometry:
+  - fill: { block: stone, from: [-2, -60, -1], to: [7, -60, 1] }
+  - fill: { block: stone, from: [-2, -59, -1], to: [7, -58, -1] }
+  - fill: { block: stone, from: [-2, -59, 1], to: [7, -58, 1] }
+  - fill: { block: stone, from: [-2, -59, 0], to: [-1, -59, 0] }
+  - fill: { block: stone, from: [7, -59, 0], to: [7, -59, 0] }
+  - fill: { block: water, from: [0, -59, 0], to: [0, -59, 0] }
+players:
+  - name: Collector
+    pos: [1.5, -59, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./water-traversal.ts"]
+params:
+  legs:
+    - { target: [5, -59, 0], range: 0.1, label: downstream }
+    - { target: [1, -59, 0], range: 0.1, label: upstream }
+    - { target: [-1, -58, 0], range: 0.1, label: dry-ledge }
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: survive, who: Collector, seconds: 1 }
+    - { kind: health, who: Collector, health: 20 }
+    - { kind: completion, who: Collector }

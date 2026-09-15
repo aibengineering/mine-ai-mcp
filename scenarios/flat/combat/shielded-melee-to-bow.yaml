@@ -1,0 +1,25 @@
+name: shielded-melee-to-bow
+description: A shielded sword hit sends the target out of melee range; switching to the carried bow must fire real arrows rather than counting draws while the server keeps using the shield.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+entities:
+  - type: blaze
+    pos: [2.5, -60, 0.5]
+    nbt: '{NoAI:1b,NoGravity:1b,PersistenceRequired:1b,Tags:["transition_target"]}'
+players:
+  - name: SwitchFighter
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./shielded-melee-to-bow.ts"]
+goal: { kind: completion, who: SwitchFighter, timeout: 30 }

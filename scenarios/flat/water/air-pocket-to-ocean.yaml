@@ -1,0 +1,34 @@
+name: air-pocket-to-ocean
+description: Expected safe no-path refusal for a dry-chamber-to-sea route requiring a flooded dirt hatch; successful crossing is deferred.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, doDaylightCycle: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: bedrock, from: [-2, -63, -2], to: [6, -55, 2] }
+  - fill: { block: air, from: [-1, -55, -1], to: [5, -55, 1] }
+  - fill: { block: water, from: [-1, -56, -1], to: [5, -56, 1] }
+  - fill: { block: air, from: [0, -60, 0], to: [2, -58, 0] }
+  # The sole exit is diggable, but its upper face touches source water.
+  - setblock: { block: dirt, at: [2, -57, 0] }
+players:
+  - name: PocketDiver
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_shovel, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./ocean-air-transition.ts"]
+params:
+  # Keep the unreachable destination: completion means a verified safe refusal, not arrival.
+  destination: [2, -56, 0]
+  barriers: [[2, -57, 0]]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: completion, who: PocketDiver }
+    - { kind: health, who: PocketDiver, health: 20 }
+    - { kind: blockAt, who: PocketDiver, pos: [2, -57, 0], block: dirt }

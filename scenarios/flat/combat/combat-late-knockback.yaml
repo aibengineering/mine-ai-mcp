@@ -1,0 +1,19 @@
+name: combat-late-knockback
+description: Keep the physical handoff last when knockback takes effect during combat's item-release tick beside lava.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules: { doMobSpawning: false, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "kill @e[type=!minecraft:player]"
+geometry:
+  - fill: { block: lava, from: [-8, -61, -8], to: [0, -61, 8] }
+players:
+  - name: ReleaseBot
+    pos: [2.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./combat-late-knockback.ts"]
+goal: { kind: completion, who: ReleaseBot, timeout: 30 }

@@ -1,0 +1,29 @@
+name: parkour-takeover
+description: A body claim interrupts a four-cell jump in flight and must receive ownership only after the landing settles.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+    naturalRegeneration: false
+reset:
+  - "fill -3 -63 -3 7 -53 3 air"
+geometry:
+  - setblock: { block: netherrack, at: [0, -59, 0] }
+  - setblock: { block: netherrack, at: [4, -59, 0] }
+players:
+  - name: JumpBot
+    pos: [0.5, -58, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./parkour-takeover.ts"]
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: reach, who: JumpBot, pos: [4.5, -58, 0.5], radius: 0.8 }
+    - { kind: health, who: JumpBot, health: 20 }
+    - { kind: completion, who: JumpBot }

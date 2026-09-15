@@ -1,0 +1,27 @@
+name: creeper-crowd-retreat
+description: A melee mob behind the bot must not turn a physical creeper clearance sprint toward the creeper.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+entities:
+  - type: creeper
+    pos: [3.5, -60, 0.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+  - type: husk
+    pos: [-0.5, -60, 0.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+players:
+  - name: RetreatBot
+    pos: [0.5, -60, 0.5]
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "creeper-crowd-retreat.ts"]
+goal:
+  kind: completion
+  who: RetreatBot
+  timeout: 20

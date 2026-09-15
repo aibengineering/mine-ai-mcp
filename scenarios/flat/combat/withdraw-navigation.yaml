@@ -1,0 +1,32 @@
+name: withdraw-navigation
+description: Replace an active blaze fight with withdrawal, survive native fire on a nether-brick bridge and reach the original destination without pursuing again.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: true }
+setup:
+  - "difficulty normal"
+  - "fill -15 69 -8 68 69 8 lava"
+  - "fill -12 71 -2 65 71 2 nether_bricks"
+players:
+  - name: WithdrawBot
+    op: true
+    pos: [0.5, 72, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+      - { item: cooked_beef, count: 32 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./withdraw-navigation.ts"]
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: completion, who: WithdrawBot }
+    - { kind: health, who: WithdrawBot, health: 1 }

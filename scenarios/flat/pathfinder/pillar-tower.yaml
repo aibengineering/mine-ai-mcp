@@ -1,0 +1,54 @@
+name: pathfinder-pillar-tower
+description: Build and climb a five-block vertical pillar from an isolated pad.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -6 -61 -6 6 -50 6 air"
+
+geometry:
+  - fill: { block: stone, from: [-1, -60, -1], to: [1, -60, 1] }
+
+players:
+  - name: PillarBuilder
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - item: dirt
+        count: 16
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pillar-tower.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!PillarBuilder,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - kind: reach
+      who: PillarBuilder
+      pos: [0.5, -54, 0.5]
+      radius: 0.7
+    - kind: blockAt
+      who: PillarBuilder
+      pos: [0, -59, 0]
+      block: dirt
+    - kind: blockAt
+      who: PillarBuilder
+      pos: [0, -55, 0]
+      block: dirt
+    - kind: completion
+      who: PillarBuilder

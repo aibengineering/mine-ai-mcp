@@ -1,0 +1,24 @@
+name: shield-break-replacement
+description: A native blaze breaks the equipped shield mid-volley; combat must equip the carried spare and block again.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+players:
+  - name: SpareShieldBot
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+      - { item: shield, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./shield-break-replacement.ts"]
+goal: { kind: completion, who: SpareShieldBot, timeout: 65 }

@@ -1,0 +1,30 @@
+name: enderman-enclosed-shelter
+description: Defeat the native angry Enderman outside an enclosed two-high cobblestone shelter, using the carried tools and supplies, and survive.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: cobblestone, from: [-1, -60, -1], to: [1, -58, 1] }
+  - fill: { block: air, from: [0, -60, 0], to: [0, -59, 0] }
+players:
+  - name: RoofRecovery
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+entities:
+  - { type: enderman, pos: [7.5, -60, 0.5], nbt: "{PersistenceRequired:1b}" }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-shelter-recovery.ts"]
+goal: { kind: completion, who: RoofRecovery, timeout: 100 }

@@ -1,0 +1,68 @@
+name: navigation-creeper-blocked-retreat
+# Regression arrangement for EnderSeeker's 2026-09-11 blocked-retreat handoff.
+# The unmodified runtime reproduces unreachable -> answered fight -> stand_down.
+# Those receipts diagnose the bug; only reaching the destination alive passes.
+description: Reach the far end of a narrow passage alive when a creeper blocks the route and a second hostile is concealed nearby. A climbable rear step offers another exit; response choices are trace evidence, not goal requirements.
+
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+setup:
+  - "difficulty normal"
+  - "fill -8 -61 -6 14 -61 6 stone"
+  - "fill -8 -60 -6 14 -55 6 air"
+  # Side walls prevent a flat sidestep. The rear step is climbable, with
+  # open headroom and open ground beyond it, rather than a sealed death trap.
+  - "fill -1 -60 -1 8 -58 -1 stone"
+  - "fill -1 -60 1 8 -58 1 stone"
+  - "setblock -1 -60 0 stone"
+  - "setblock 1 -60 0 stone"
+  # This loaded hostile is not exposed to the bot. It exercises the difference
+  # between the nearby-hostile set and the policy's exposed-contact set.
+  - "fill 2 -60 3 4 -57 5 stone"
+  - "fill 3 -60 4 3 -59 4 air"
+
+entities:
+  - type: creeper
+    pos: [0.7, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+  - type: zombie
+    pos: [3.5, -60, 4.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: BlockedRetreat
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./navigation-creeper-blocked-retreat.ts"]
+params:
+  firstTarget: [11, -60, 0]
+
+goal:
+  kind: all
+  # Bounds a failed physical trial; this small passage should not need a
+  # minute of server time. Timeout remains a failed outcome, never success.
+  timeout: 60
+  goals:
+    - { kind: reach, who: BlockedRetreat, pos: [11.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: BlockedRetreat, seconds: 1 }
+    - { kind: completion, who: BlockedRetreat }

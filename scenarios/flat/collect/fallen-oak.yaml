@@ -1,0 +1,51 @@
+name: fallen-oak
+description: Collect logs along a fallen tree whose crown still blocks its far end.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+geometry:
+  - fill: { block: grass_block, from: [-12, -60, -12], to: [16, -60, 12] }
+  - fill: { block: oak_log, from: [4, -59, 0], to: [12, -59, 0] }
+  - fill: { block: oak_leaves, from: [11, -59, -2], to: [14, -57, 2] }
+  - fill: { block: oak_log, from: [4, -59, 0], to: [12, -59, 0] }
+
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "../../src/collector.ts"]
+
+# The request this world exists to exercise.
+params:
+  block_name: logs
+  count: 6
+  scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: oak_log
+      count: 6
+    - kind: completion
+      who: Collector

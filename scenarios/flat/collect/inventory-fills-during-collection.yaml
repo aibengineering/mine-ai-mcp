@@ -1,0 +1,21 @@
+name: inventory-fills-during-collection
+description: Collection stops with observed partial gains when the final compatible stack fills during the action.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: peaceful
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+setup:
+  - 'fill 2 -60 0 4 -60 0 stone'
+players:
+  - name: CapacityMiner
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: dirt, count: 2176 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 63 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./inventory-fills-during-collection.ts"]
+goal: { kind: completion, who: CapacityMiner, timeout: 30 }

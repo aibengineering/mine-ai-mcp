@@ -1,0 +1,37 @@
+name: enderman-bypass-near
+description: Prefer a nearby occluded Enderman over a distant visible one, with supported ground under both.
+minecraft: { version: "1.21.4" }
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules: { doMobSpawning: false, doDaylightCycle: false, naturalRegeneration: true }
+geometry:
+  - fill: { block: air, from: [94, 100, -6], to: [146, 110, 6] }
+  - fill: { block: warped_nylium, from: [94, 99, -6], to: [146, 99, 6] }
+  - fill: { block: bedrock, from: [105, 100, 0], to: [105, 103, 0] }
+entities:
+  - { type: enderman, pos: [108.5, 100, 0.5], nbt: '{PersistenceRequired:1b,attributes:[{id:"minecraft:movement_speed",base:0.0d}],Tags:["reconsider_primary"]}' }
+  - { type: enderman, pos: [140.5, 100, 6.5], nbt: '{PersistenceRequired:1b,attributes:[{id:"minecraft:movement_speed",base:0.0d}],Tags:["reconsider_alternative"]}' }
+players:
+  - name: EndermanRanking
+    pos: [100.5, 100, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-reconsideration.ts"]
+params:
+  mode: bypass_near
+  primary: [108.5, 100, 0.5]
+  alternative: [140.5, 100, 6.5]
+goal: { kind: completion, who: EndermanRanking, timeout: 120 }

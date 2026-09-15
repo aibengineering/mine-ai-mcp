@@ -1,0 +1,27 @@
+name: persistent-blaze-projectile
+description: A real incoming small fireball remains observed across a guarded melee approach cancellation; combat must return to physics before retrying.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  difficulty: normal
+  time: noon
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+geometry:
+  - fill: { from: [-16, -61, -16], to: [16, -61, 16], block: nether_bricks }
+entities:
+  - type: blaze
+    pos: [5.5, -60, 0.5]
+    nbt: "{NoAI:1b,PersistenceRequired:1b}"
+players:
+  - name: ProjectileHang
+    pos: [0.5, -60, 0.5]
+    op: true
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./persistent-blaze-projectile.ts"]
+goal: { kind: completion, who: ProjectileHang, timeout: 45 }

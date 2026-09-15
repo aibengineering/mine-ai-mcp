@@ -1,0 +1,62 @@
+name: pour-through-lava
+description: A bot on a stone shore pours a full bucket at the pool floor through a lava source; the water lands in the lava cell, the ring turns to obsidian, and the same cell is scooped back.
+
+# The whole cast rests on one vanilla rule, and this is where it is measured
+# rather than recalled: a full bucket's ray ignores fluid, stops at the first
+# solid face, and the water lands in the cell in front of that face. So the
+# pour a player makes at a pool level with its own floor is aimed *through* the
+# lava at the floor beneath it. `pourAim` is that rule; without this fixture it
+# would be a claim about a server nobody had asked.
+#
+# The pool sits level with the shore, which is the shape both flat cast
+# fixtures and every generated pool have, and the bot stands on the lip: from
+# further back the ray meets the shore block instead.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -20 -59 -20 20 -40 20 air"
+
+geometry:
+  - fill: { block: stone, from: [-20, -61, -20], to: [20, -61, 20] }
+  - fill: { block: stone, from: [-20, -60, -20], to: [20, -60, 20] }
+  - fill: { block: lava, from: [4, -60, -1], to: [6, -60, 1] }
+
+players:
+  - name: Pourer
+    pos: [3, -59, 0]
+    inventory:
+      - { item: water_bucket, count: 1 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./pour-through-lava.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!Pourer,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    # The three sources touching the poured cell became obsidian, and the
+    # bucket came back full from the cell the water landed in.
+    - kind: hasItem
+      who: Pourer
+      item: water_bucket
+      count: 1
+    - kind: blockAt
+      pos: [5, -60, 0]
+      block: obsidian
+    - kind: completion
+      who: Pourer

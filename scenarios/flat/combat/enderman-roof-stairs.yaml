@@ -1,0 +1,31 @@
+name: enderman-roof-stairs
+description: Provoke a visible raised enderman before building the roof whose eave would prevent later provocation, then defeat the native attacker without retargeting.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: false }
+geometry:
+  - fill: { block: stone, from: [1, -60, -4], to: [9, -60, 4] }
+  - fill: { block: stone, from: [2, -59, -4], to: [9, -59, 4] }
+  - fill: { block: stone, from: [3, -58, -4], to: [9, -58, 4] }
+  - fill: { block: stone, from: [4, -57, -4], to: [9, -57, 4] }
+players:
+  - name: RoofStairs
+    op: true
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: diamond_helmet, count: 1 }
+      - { item: diamond_chestplate, count: 1 }
+      - { item: diamond_leggings, count: 1 }
+      - { item: diamond_boots, count: 1 }
+entities:
+  - { type: enderman, pos: [6.5, -56, 0.5], nbt: '{PersistenceRequired:1b}' }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./enderman-roof-stairs.ts"]
+goal: { kind: completion, who: RoofStairs, timeout: 45 }

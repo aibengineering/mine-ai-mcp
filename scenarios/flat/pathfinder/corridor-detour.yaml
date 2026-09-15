@@ -1,0 +1,100 @@
+name: corridor-detour
+description: A short corridor with a zombie standing in it, and an open detour
+  outside the zombie's reach; the route takes the detour.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  # Midnight so nothing burns, and no daylight cycle so the fixture reads the
+  # same however long a trial takes.
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -34 -61 -26 34 -50 8 air"
+
+setup:
+  - "difficulty normal"
+
+geometry:
+  # Ground the whole working area.
+  - fill: { block: smooth_stone, from: [-34, -61, -26], to: [34, -61, 8] }
+
+  # One wall sixty-one blocks wide and three high. The width is load-bearing: at
+  # thirty-six the route walked round the west end rather than through either
+  # lane, because diagonals make lateral travel cheap. Thirty blocks of wall
+  # either side of the corridor puts going round well beyond both lanes.
+  - fill: { block: smooth_stone, from: [-30, -60, -14], to: [30, -58, -2] }
+
+  # The corridor: the short way, straight at the target, with the zombie in it.
+  # Two blocks high, so the wall's top layer roofs it and neither lane can be
+  # entered by climbing on to something and dropping in from above.
+  - fill: { block: air, from: [0, -60, -14], to: [0, -59, -2] }
+
+  # The detour: nine blocks east, which is one block beyond a zombie's reach,
+  # so every cell of it is free.
+  - fill: { block: air, from: [9, -60, -14], to: [9, -59, -2] }
+
+entities:
+  # Halfway along the corridor. NoAI so it never moves or swings: what is being
+  # measured is the route, and a mob that walks at the bot measures a fight.
+  - type: zombie
+    pos: [0.5, -60, -8.0]
+    nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b}"
+
+players:
+  - name: Navigator
+    pos: [0.5, -60, 0.5]
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./hostile-corridor.ts"]
+
+tick:
+  - "gamemode spectator @a[name=!Navigator,gamemode=!spectator]"
+
+params:
+  target: [0, -60, -20]
+  # Land on the destination cell itself, so the reach goal below has the whole
+  # of its radius as slack rather than sharing it with the arrival tolerance.
+  range: 0.5
+  corridorX: 0
+  detourX: 9
+  laneZ: [-14, -2]
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: reach
+      who: Navigator
+      pos: [0.5, -60, -19.5]
+      radius: 1.5
+
+    # Never touched: a route that goes round does not fight, and the zombie is
+    # still standing where the fixture put it.
+    - kind: health
+      who: Navigator
+      health: 20
+
+    - kind: entityCount
+      entity: zombie
+      min: 1
+
+    # The wall between the two lanes is intact. A field that made the bot dig
+    # rather than walk would be the failure this plan is most worried about.
+    - kind: blockAt
+      who: Navigator
+      pos: [5, -60, -8]
+      block: smooth_stone
+
+    - kind: completion
+      who: Navigator

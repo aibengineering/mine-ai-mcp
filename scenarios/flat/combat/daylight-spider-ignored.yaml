@@ -1,0 +1,76 @@
+name: daylight-spider-ignored
+description: "Meet the declared survival, health and native entity goals with
+  the available equipment. Weapon choices and survival response sequences are
+  diagnostic evidence."
+
+# On 2026-09-04 dawn came, the stray burned, and the spider stopped attacking -
+# but it is a hostile by Mineflayer's category whatever the sun is doing, so it
+# was still within sight, the hide trigger stayed armed, and the bot spent the
+# whole morning failing to hide from a mob that would not have touched it.
+#
+# Seven health is below the hide bar, where a hostile merely in sight is
+# contact. Nothing may happen here at all.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+setup:
+  - "difficulty normal"
+
+entities:
+  # Under open sky, so the cell it stands in is at full sky light. Held still
+  # so the fixture measures the policy rather than the spider's wandering.
+  - type: spider
+    pos: [15.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b,NoAI:1b}"
+
+players:
+  - name: SunlitBot
+    pos: [0.5, -60, 0.5]
+    # Opped so the driver can bring the bot under the hide bar itself.
+    op: true
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 16 }
+
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./idle-reflex.ts"]
+
+params:
+  hurtTo: 7
+  waitTicks: 400
+
+tick:
+  - "gamemode spectator @a[name=!SunlitBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - kind: entityCount
+      entity: spider
+      min: 1
+    - kind: hasItem
+      who: SunlitBot
+      item: cobblestone
+      count: 16
+    - kind: survive
+      who: SunlitBot
+      seconds: 1
+    - kind: completion
+      who: SunlitBot

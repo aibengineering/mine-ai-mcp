@@ -1,0 +1,34 @@
+name: temporary-workstations
+description: Craft a batch and smelt food using carried temporary workstations, recovering both while leaving existing stations intact.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  gamerules:
+    doMobSpawning: false
+geometry:
+  - fill: { block: stone, from: [-8, -60, -8], to: [8, -60, 8] }
+  - setblock: { at: [2, -59, 0], block: crafting_table }
+  - setblock: { at: [3, -59, 0], block: furnace }
+players:
+  - name: TempWorkshopBot
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: crafting_table, count: 1 }
+      - { item: furnace, count: 1 }
+      - { item: oak_log, count: 4 }
+      - { item: cobblestone, count: 6 }
+      - { item: coal, count: 1 }
+      - { item: beef, count: 2 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "./temporary-workstations.ts"]
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: hasItem, who: TempWorkshopBot, item: crafting_table, count: 2 }
+    - { kind: hasItem, who: TempWorkshopBot, item: furnace, count: 1 }
+    - { kind: hasItem, who: TempWorkshopBot, item: stone_pickaxe, count: 1 }
+    - { kind: hasItem, who: TempWorkshopBot, item: stone_axe, count: 1 }
+    - { kind: hasItem, who: TempWorkshopBot, item: cooked_beef, count: 2 }
+    - { kind: completion, who: TempWorkshopBot }

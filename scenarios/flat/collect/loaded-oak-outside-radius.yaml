@@ -1,0 +1,33 @@
+name: loaded-oak-outside-radius
+description: Collect an observed oak beyond the former 64-block scan radius before exploring.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+geometry:
+  - fill: { block: oak_log, from: [70, -59, 0], to: [70, -59, 0] }
+  - fill: { block: oak_log, from: [140, -59, 0], to: [140, -59, 0] }
+players:
+  - name: Collector
+    pos: [0, -59, 0]
+    inventory:
+      - { item: iron_axe, count: 1 }
+client:
+  command: bun
+  args: ["../../src/client-host.ts", "loaded-oak-outside-radius.ts"]
+goal:
+  kind: all
+  # Each observed 70-block collection takes about 14 seconds; allow both approaches and server variance.
+  timeout: 60
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: oak_log
+      count: 2
+    - kind: completion
+      who: Collector
