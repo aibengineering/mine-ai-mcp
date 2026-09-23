@@ -13,7 +13,7 @@ export interface PlayerPreparationObservation {
 /**
  * Arm before reporting ready, then prove that declared player setup reached
  * this Mineflayer client after Mine Labs provisioned the server-side player:
- * its inventory, its dimension and position, and its starting health.
+ * its inventory and equipment, its dimension and position, and its starting health.
  */
 export function observeScenarioPlayerPreparation(
   bot: Bot,
@@ -23,11 +23,21 @@ export function observeScenarioPlayerPreparation(
   const player = scenario.players.find(({ name }) => name === bot.username);
   if (!player) throw new Error(`scenario does not declare player '${bot.username}'`);
 
-  const expectedInventory = expectedInventoryCounts(bot, player.inventory);
+  // The main hand occupies a normal hotbar slot; armour and offhand do not.
+  const expectedInventory = expectedInventoryCounts(bot, [
+    ...player.inventory,
+    ...(player.equipment?.mainhand ? [{ item: player.equipment.mainhand, count: 1 }] : []),
+  ]);
+  const equipmentSlots = { head: 5, chest: 6, legs: 7, feet: 8, mainhand: 36 + bot.quickBarSlot, offhand: 45 };
+  const expectedEquipment = Object.entries(player.equipment ?? {}).map(([name, item]) => {
+    const slot = equipmentSlots[name as keyof typeof equipmentSlots];
+    const type = scenarioItemType(bot, item);
+    return { slot, type };
+  });
   const expectedPosition = Array.isArray(player.pos) ? player.pos : undefined;
   const expectedDimension = scenario.world.dimension;
   const expectedHealth = player.health;
-  let inventoryUpdateObserved = expectedInventory.size === 0;
+  let inventoryUpdateObserved = expectedInventory.size === 0 && expectedEquipment.length === 0;
   let positionUpdateObserved = expectedPosition === undefined;
   let healthUpdateObserved = expectedHealth === undefined;
   let settle: (() => void) | undefined;
@@ -37,6 +47,7 @@ export function observeScenarioPlayerPreparation(
     positionUpdateObserved &&
     healthUpdateObserved &&
     inventoryMatches(bot, expectedInventory) &&
+    expectedEquipment.every(({ slot, type }) => bot.inventory.slots[slot]?.type === type) &&
     bot.game.dimension === expectedDimension &&
     positionMatches(bot, expectedPosition) &&
     healthMatches(bot, expectedHealth);
@@ -101,12 +112,16 @@ function expectedInventoryCounts(
 ): ReadonlyMap<number, number> {
   const counts = new Map<number, number>();
   for (const stack of inventory) {
-    const itemName = stack.item.startsWith("minecraft:") ? stack.item.slice("minecraft:".length) : stack.item;
-    const item = bot.registry.itemsByName[itemName];
-    if (!item) throw new Error(`scenario inventory item '${stack.item}' is unknown to client ${bot.version}`);
-    counts.set(item.id, (counts.get(item.id) ?? 0) + stack.count);
+    const type = scenarioItemType(bot, stack.item);
+    counts.set(type, (counts.get(type) ?? 0) + stack.count);
   }
   return counts;
+}
+
+function scenarioItemType(bot: Bot, name: string): number {
+  const item = bot.registry.itemsByName[name.replace(/^minecraft:/u, "")];
+  if (!item) throw new Error(`scenario item '${name}' is unknown to client ${bot.version}`);
+  return item.id;
 }
 
 function inventoryMatches(bot: Bot, expected: ReadonlyMap<number, number>): boolean {

@@ -21,6 +21,30 @@ function fakeBot(overrides: Record<string, unknown> = {}): Bot & EventEmitter {
   }) as unknown as Bot & EventEmitter;
 }
 
+test("player readiness waits for the declared equipment to reach its actual slot", async () => {
+  const slots: Array<{ type: number } | null> = Array(46).fill(null);
+  const bot = fakeBot({
+    quickBarSlot: 0,
+    registry: { itemsByName: { golden_helmet: { id: 2 } } },
+    inventory: Object.assign(new EventEmitter(), { items: () => [], slots }),
+  });
+  const scenario = { world: { dimension: "overworld" },
+    players: [{ name: "CraftBot", inventory: [], equipment: { head: "golden_helmet" } }],
+  } as unknown as ScenarioDefinition;
+  const observation = observeScenarioPlayerPreparation(bot, scenario);
+  let ready = false;
+  const prepared = observation.wait().then(() => { ready = true; });
+  slots[6] = { type: 2 }; // The right item in the wrong slot is not ready.
+  bot.inventory.emit("updateSlot", 6, null, slots[6] as never);
+  await setImmediate();
+  assert.equal(ready, false);
+  slots[5] = { type: 2 };
+  bot.inventory.emit("updateSlot", 5, null, slots[5] as never);
+  await prepared;
+  observation.close();
+  assert.equal(bot.inventory.listenerCount("updateSlot"), 0);
+});
+
 test("requires a post-ready inventory update even when stale local counts already match", async () => {
   const bot = fakeBot();
   const inventory = bot.inventory as unknown as EventEmitter & { items: () => unknown[] };
