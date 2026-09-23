@@ -194,8 +194,8 @@ export interface MineRequest {
   readonly signal?: AbortSignal;
   /** A policy stop observed between completed digs/routes, preserving safe settlement. */
   readonly stopSignal?: AbortSignal;
-  /** Observers of the target set, called when it changes. */
-  readonly onTargets?: (targets: readonly MineTarget[]) => void | Promise<void>;
+  /** Synchronous observer of each changed target set, including refreshes during a route. */
+  readonly onTargets?: (targets: readonly MineTarget[]) => void;
   /** Preserve observed matching-block removals even when this attempt is cancelled. */
   readonly onBroken?: (position: BlockPosition) => void;
   /** Injectable physical effect for process regressions. */
@@ -483,7 +483,6 @@ async function breakTargetInPlace(
     return;
   }
   targeting.refresh();
-  await targeting.announce();
 }
 
 /**
@@ -591,7 +590,6 @@ async function castInReach(
   }
   if (!outcome.waterRecovered) targeting.recoverWater(outcome.landing);
   targeting.refresh();
-  await targeting.announce();
   return true;
 }
 
@@ -623,7 +621,6 @@ async function recoverWaterInReach(
   });
   if (outcome.kind === "failed") targeting.excludeWaterStance(target, feet, outcome.error);
   targeting.refresh();
-  await targeting.announce();
   return true;
 }
 
@@ -869,23 +866,17 @@ class MineTargeting {
     // itself takes longer than the interval, recording its start time makes it
     // immediately stale and every search slice performs the whole scan again.
     this.#refreshedAtMs = Date.now();
+    this.announce();
     return this.#targets;
   }
 
-  /**
-   * The loaded lava, grouped into one target per pool at its nearest source.
-   *
-   * Connectivity is not asked: what the grouping is for is that a pour reaches
-   * a whole neighbourhood of sources at once, and that giving up applies to
-   * all of them rather than costing one route search per cell of a lake.
-   */
-  /** Publish the target set when it is not the one already published. */
-  async announce(): Promise<void> {
-    const targets = this.targets();
-    const identity = targets.map(targetIdentity).join("|");
+  /** Notify from the refresh itself, so route-time changes cannot leave observers stale. */
+  private announce(): void {
+    if (!this.request.onTargets) return;
+    const identity = this.#targets.map(targetIdentity).join("|");
     if (identity === this.#announced) return;
     this.#announced = identity;
-    await this.request.onTargets?.(targets);
+    this.request.onTargets(this.#targets);
   }
 
   /** The target nearest `position` among those the last search was asked for; see `blacklistClosest`. */
@@ -957,7 +948,6 @@ export async function mine(bot: Bot, request: MineRequest): Promise<MineResult> 
       if (targeting.explorationFailure !== null) return settle("stopped");
       if (!targeting.exploring) return settle(targeting.blacklisted > 0 ? "unreachable" : "no_targets");
     }
-    await targeting.announce();
 
     if (await recoverWaterInReach(bot, request, targeting, request.signal)) continue;
     // Submerged work must occur inside navigation's scoped dive, including work already in reach.
@@ -1038,7 +1028,6 @@ async function runRoute(
         if (targeting.isSatisfied() || targeting.broken.length >= request.maximumBreaks) return { kind: "completed" };
 
         const targets = targeting.refresh();
-        await targeting.announce();
         if (targeting.isSatisfied() || targets.length === 0 || targeting.broken.length >= request.maximumBreaks)
           return { kind: "completed" };
 
@@ -1087,7 +1076,6 @@ async function runRoute(
             await waitForProcessTick(bot, signal);
           } while (targeting.dropInFlight(failedTarget.entityId) && !targeting.isSatisfied());
           targeting.refresh();
-          await targeting.announce();
           return targeting.isSatisfied() ? { kind: "completed" } : { kind: "continue" };
         }
         // Only an in-flight packet transition has something left to wait for.
@@ -1098,7 +1086,6 @@ async function runRoute(
           for (;;) {
             await waitForProcessTick(bot, signal);
             const waitingTargets = targeting.refresh();
-            await targeting.announce();
             if (targeting.isSatisfied() || waitingTargets.length === 0) return { kind: "completed" };
             const failedDropStillExists = waitingTargets.some((target) => targetIdentity(target) === failedDrop);
             if (!failedDropStillExists) return { kind: "continue" };
@@ -1108,7 +1095,6 @@ async function runRoute(
         if (!blacklisted) return { kind: "completed" };
 
         const targets = targeting.refresh();
-        await targeting.announce();
         return targets.length === 0 ? { kind: "completed" } : { kind: "continue" };
       },
       signal: request.signal,

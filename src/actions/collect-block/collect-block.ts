@@ -10,8 +10,7 @@ import { hasInventorySpaceFor } from "../../world/inventory-capacity.js";
  * was requested, whether the bot may fill its inventory doing it, and what the
  * run is worth reporting afterwards.
  */
-import "@aibengineering/minecraft-block-highlighter";
-import type { BlockCollection } from "@aibengineering/minecraft-block-highlighter";
+import { getAmbientHighlighterContext, type HighlightFrame } from "@aibengineering/minecraft-block-highlighter";
 import type { Bot } from "mineflayer";
 import type { Vec3 } from "vec3";
 import type { NavigationRuntime } from "../../navigation/index.js";
@@ -38,7 +37,6 @@ import {
   cellLabel,
   decimal,
   HIGHLIGHT_COLOURS,
-  HIGHLIGHT_HOLD_MS,
   MAX_EXTRA_BREAKS,
   outcomes,
   parseCollectBlockRequest,
@@ -232,6 +230,19 @@ function beginCollectBlock(
       if (capacityReason !== null) capacity.abort(new Error(capacityReason));
     };
     bot.on("physicsTick", checkCapacity);
+    // Target highlights are live state, retained until replaced or this attempt ends.
+    const highlights = new AbortController();
+    // The viewer reads this lazily: no polling viewer means no display work.
+    const highlighter = getAmbientHighlighterContext()?.highlighter;
+    let shown: readonly MineTarget[] | undefined;
+    let frame: HighlightFrame = { label: "", blocks: [], entities: [] };
+    highlighter?.followHighlights(() => {
+      if (shown !== pursued) {
+        shown = pursued;
+        frame = targetHighlights(pursued);
+      }
+      return frame;
+    }, highlights.signal);
     try {
       const result = await mine(bot, {
         ignoredDropIds: discarded.ignored(),
@@ -258,7 +269,6 @@ function beginCollectBlock(
         ...(request.onToolLoss === "stop" && { stopSignal: toolLoss.signal }),
         onTargets: (targets) => {
           pursued = targets;
-          return showTargets(bot, targets);
         },
         onBroken: (position) => broken.push(position),
       });
@@ -272,22 +282,25 @@ function beginCollectBlock(
       if (capacityReason === null || error !== capacity.signal.reason) throw error;
       return settle(bot, request, inventoryBefore, collectable, start, { status: "stopped", broken, reason: capacityReason });
     } finally {
+      highlights.abort();
       bot.off("physicsTick", checkCapacity);
     }
   };
 }
 
-/** Publish this pass's target set for anyone watching the world. */
-async function showTargets(bot: Bot, targets: readonly MineTarget[]): Promise<void> {
-  const blocks = targets
-    .map((target) => bot.blockAt(asVec3(target.position)))
-    .filter((block): block is MinecraftBlock => block !== null);
-  if (blocks.length === 0) return;
-  const collection: BlockCollection<MinecraftBlock> = blocks.toHighlightableBlocks();
-  await collection.highlight(HIGHLIGHT_COLOURS.candidate, {
-    label: `Mining: ${targets.length} target${targets.length === 1 ? "" : "s"} offered to the pathfinder`,
-    holdMs: HIGHLIGHT_HOLD_MS,
-  });
+/** Blocks are work sites; live drops are entities whose bounds the viewer follows. */
+function targetHighlights(targets: readonly MineTarget[]): HighlightFrame {
+  const frame: HighlightFrame = { label: "", blocks: [], entities: [] };
+  for (const target of targets) {
+    if (target.kind === "drop") {
+      frame.entities.push({ entityId: target.entityId, colour: HIGHLIGHT_COLOURS.accepted });
+    } else if (target.kind !== "anticipated_drop" && target.kind !== "settling_drop") {
+      frame.blocks.push({ ...target.position, colour: HIGHLIGHT_COLOURS.candidate });
+    }
+  }
+  if (frame.entities.length > 0) frame.label = `Collecting: ${frame.entities.length} dropped item targets`;
+  else if (frame.blocks.length > 0) frame.label = `Mining: ${frame.blocks.length} work targets`;
+  return frame;
 }
 
 // ── Result settlement ─────────────────────────────────────────────────────────────────────

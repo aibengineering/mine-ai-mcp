@@ -1,3 +1,4 @@
+import { getAmbientHighlighterContext } from "@aibengineering/minecraft-block-highlighter";
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
@@ -1059,4 +1060,18 @@ test("higher priority reflexes request cancellation but cannot drive until the p
   if (breath.kind === "claimed") await breath.outcome;
   if (higher.kind === "claimed") await higher.outcome;
   assert.equal(higherStarted, true);
+});
+
+
+test("an action without a highlighter skips collection display work", async () => {
+  let visited = 0;
+  const action = stubAction(async () => {
+    assert.equal(getAmbientHighlighterContext()?.enabled, false);
+    const position = { get x() { visited++; return 0; }, y: 0, z: 0 };
+    await [position].toHighlightableBlocks().highlight("#ffffff");
+    return { status: "succeeded" };
+  });
+  const output = await new ActionRunner().run(action, { block_name: "stone" });
+  assert.equal(output.result.status, "succeeded");
+  assert.equal(visited, 0);
 });

@@ -1247,7 +1247,7 @@ test("an exact target remains available beyond the general scan's nearest-match 
     bot,
     request(bot, {
       exactTarget: target,
-      onTargets: async (targets) => {
+      onTargets: (targets) => {
         offered.push(...targets.map(({ position }) => `${position.x},${position.y},${position.z}`));
       },
       route: async () => ({ status: "stopped", reason: "test stop", elapsedMs: 0 }),
@@ -1705,4 +1705,38 @@ test("mining stops once the requested quantity arrives mid-route", async () => {
   );
 
   assert.equal(result.status, "satisfied");
+});
+
+
+test("target observers see block removal and pickup during a route without an arrival callback", async () => {
+  const first = new Vec3(5, 64, 0);
+  const second = new Vec3(7, 64, 0);
+  const bot = fakeBot({ blocks: [first, second] }) as FakeWorld;
+  const announcements: string[][] = [];
+  let satisfied = false;
+  let gained = 0;
+  await mine(bot, request(bot, {
+    isSatisfied: () => satisfied,
+    observedInventoryGain: () => gained,
+    onTargets: (targets) => { announcements.push(targets.map(target => target.kind === "drop" ? `drop:${target.entityId}` : `${target.kind}:${target.position.x}`)); },
+    route: async ({ goal }) => {
+      const observation = { position: bot.entity.position, entities: new Map() } as never;
+      assert.deepEqual(announcements.at(-1), ["block:5", "block:7"]);
+      bot.removeBlock(first);
+      bot.entities[17] = fakeItemEntity(17, first);
+      await new Promise(resolve => setTimeout(resolve, 260));
+      goal.resolve(observation);
+      assert.deepEqual(announcements.at(-1), ["drop:17"]);
+      const count = announcements.length;
+      goal.resolve(observation);
+      assert.equal(announcements.length, count);
+      delete bot.entities[17];
+      gained = 1;
+      await new Promise(resolve => setTimeout(resolve, 260));
+      goal.resolve(observation);
+      assert.deepEqual(announcements.at(-1), ["block:7"]);
+      satisfied = true;
+      return { status: "completed", elapsedMs: 0 };
+    },
+  }));
 });

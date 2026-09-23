@@ -32,14 +32,6 @@ export const NON_MINEABLE_FLUIDS = new Set(["water", "lava", "bubble_column"]);
  */
 export const MAX_EXTRA_BREAKS = 4;
 
-/**
- * How long a step's highlight stays up. Each publish replaces the last, so this
- * is really "until the next step, or this long if the step is the final one".
- * It costs no run time — nothing waits on it — so it is set for a person
- * watching rather than for the bot.
- */
-export const HIGHLIGHT_HOLD_MS = 5_000;
-
 export const HIGHLIGHT_COLOURS = {
   candidate: "#ffaa0d",
   accepted: "#33ff61",
