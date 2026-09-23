@@ -1226,6 +1226,108 @@ test("a lava face that will not close blacklists the target instead of breaking 
   assert.match(result.reason ?? "", /the lava at 2,64,0 could not be closed: no carried item is a full block/);
 });
 
+/** Obsidian beside an unconverted lava source, with the bot on the working cell west of it. */
+function obsidianBesideSource(carrying: { name: string }[]): FakeWorld {
+  const world = fakeBot({
+    lava: [new Vec3(2, 64, 0)],
+    solids: [new Vec3(0, 63, 0), new Vec3(1, 63, 0), new Vec3(2, 63, 0)],
+    carrying,
+    feet: new Vec3(0.5, 64, 0.5),
+  }) as FakeWorld;
+  world.addObsidian(new Vec3(1, 64, 0));
+  return world;
+}
+
+test("a lava source touching an obsidian target is cast rather than sealed", async () => {
+  const carrying = [{ name: "water_bucket" }];
+  const world = obsidianBesideSource(carrying);
+  const sealed: string[] = [];
+  const uses: string[] = [];
+  let landing: Vec3 | null = null;
+  let broken = 0;
+
+  const result = await mine(
+    world,
+    request(world, {
+      ...obsidianRequest,
+      canMine: () => ({ kind: "mineable", routeMayBreak: false }),
+      isSatisfied: () => broken > 0,
+      cast: async (_bot, use) => {
+        uses.push(use.item.name);
+        if (use.item.name === "water_bucket") {
+          carrying[0] = { name: "bucket" };
+          const cell = use.expectedCells?.[0]?.position;
+          assert.ok(cell);
+          landing = new Vec3(cell.x, cell.y, cell.z);
+          world.addWater(landing);
+          world.removeLava(new Vec3(2, 64, 0));
+          world.addObsidian(new Vec3(2, 64, 0));
+        } else {
+          carrying[0] = { name: "water_bucket" };
+          world.removeWater(landing!);
+        }
+        return { kind: "used" };
+      },
+      placeInto: async (_bot, cell) => {
+        sealed.push(`${cell.x},${cell.y},${cell.z}`);
+        return { kind: "placed", block: {} as never };
+      },
+      breakInPlace: async ({ position }) => {
+        world.removeObsidian(new Vec3(position.x, position.y, position.z));
+        broken += 1;
+        return { status: "broken" };
+      },
+      route: async () => {
+        throw new Error("a target already in reach must not be routed to");
+      },
+    }),
+  );
+
+  assert.equal(result.status, "satisfied");
+  assert.deepEqual(uses, ["water_bucket", "bucket"]);
+  assert.deepEqual(sealed, [], "the source became obsidian instead of being closed with rock");
+  assert.equal(world.blockAt(new Vec3(2, 64, 0))?.name, "obsidian");
+});
+
+test("a touching source that cannot be cast is still sealed before the break", async () => {
+  const world = obsidianBesideSource([{ name: "water_bucket" }]);
+  const sealed: string[] = [];
+  let casts = 0;
+  let broken = 0;
+
+  const result = await mine(
+    world,
+    request(world, {
+      ...obsidianRequest,
+      canMine: () => ({ kind: "mineable", routeMayBreak: false }),
+      isSatisfied: () => broken > 0,
+      cast: async () => {
+        casts += 1;
+        return { kind: "failed", error: "the server refused the use" };
+      },
+      placeInto: async (_bot, cell) => {
+        sealed.push(`${cell.x},${cell.y},${cell.z}`);
+        world.removeLava(new Vec3(cell.x, cell.y, cell.z));
+        world.addBlock(new Vec3(cell.x, cell.y, cell.z));
+        return { kind: "placed", block: {} as never };
+      },
+      breakInPlace: async ({ position }) => {
+        world.removeObsidian(new Vec3(position.x, position.y, position.z));
+        broken += 1;
+        return { status: "broken" };
+      },
+      route: async () => {
+        throw new Error("a target already in reach must not be routed to");
+      },
+    }),
+  );
+
+  assert.equal(result.status, "satisfied");
+  assert.equal(casts, 1, "one refused pour is enough to fall back to the seal");
+  assert.deepEqual(sealed, ["2,64,0"]);
+  assert.equal(broken, 1);
+});
+
 test("a quantity already in hand is not mined for", async () => {
   const bot = fakeBot({ blocks: [new Vec3(5, 64, 0)] });
   let routes = 0;

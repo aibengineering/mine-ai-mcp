@@ -456,6 +456,41 @@ async function sealLavaFaces(
   return null;
 }
 
+/**
+ * A lava source touching an obsidian target is more obsidian, and a seal
+ * would turn it into rock: pour on it from here first. One attempt per
+ * source; a pour that cannot land or forms nothing leaves it to the seal.
+ * No sight line is opened, since the nearest block in the way may be the
+ * target itself with lava behind it.
+ */
+async function castTouchingSources(
+  bot: Bot,
+  request: MineRequest,
+  targeting: MineTargeting,
+  position: BlockPosition,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  const useItem = request.cast;
+  if (useItem === null || !carriesWaterBucket(bot)) return false;
+  const sources = lavaFacesOf(bot, position).filter(
+    (face) => isLiquidSource(bot, bot.blockAt(asVec3(face)), "lava") && targeting.mayCastTouching(face),
+  );
+  if (sources.length === 0) return false;
+  targeting.castTouching(sources);
+  const physics = { useItem, breakInPlace: request.breakInPlace, movements: request.movements, ...(signal && { signal }) };
+  targeting.beginCast();
+  let outcome;
+  try {
+    outcome = await castOntoPool(bot, physics, sources, { openSightLine: false });
+  } finally {
+    targeting.endCast();
+  }
+  if (outcome.kind !== "cast") return false;
+  if (!outcome.waterRecovered) targeting.recoverWater(outcome.landing);
+  targeting.refresh();
+  return outcome.obsidianFormed > 0 || !outcome.waterRecovered;
+}
+
 async function breakTargetInPlace(
   bot: Bot,
   request: MineRequest,
@@ -464,6 +499,7 @@ async function breakTargetInPlace(
   signal?: AbortSignal,
 ): Promise<void> {
   const workingFeet = bot.entity.position.floored();
+  if (await castTouchingSources(bot, request, targeting, target.position, signal)) return;
   const water = await clearMiningWater(bot, target.position, request.placeInto, request.cast, signal);
   if (water !== null) {
     // Preparation can move the bot in a current. Reject the stance we tried,
@@ -639,6 +675,8 @@ class MineTargeting {
   readonly #blockBlacklist = new Set<string>();
   readonly #blockStances = new Map<string, ReadonlySet<string>>();
   readonly #casts: CastTargets;
+  /** Sources beside a target already poured on once; a second look seals them. */
+  readonly #touchingCasts = new Set<string>();
   readonly #dropBlacklist = new Set<number>();
   readonly #anticipatedDropBlacklist = new Set<string>();
   readonly #drops: MineDropTracker;
@@ -680,6 +718,13 @@ class MineTargeting {
 
   get waterFailure(): string | null {
     return this.#water.kind === "failed" ? this.#water.reason : null;
+  }
+
+  mayCastTouching(source: BlockPosition): boolean {
+    return !this.#touchingCasts.has(cellKey(source));
+  }
+  castTouching(sources: readonly BlockPosition[]): void {
+    for (const source of sources) this.#touchingCasts.add(cellKey(source));
   }
 
   beginCast(): void {
@@ -845,6 +890,8 @@ class MineTargeting {
     // Obsidian is the one block a bot manufactures, so a cast request with
     // nothing to mine makes its targets out of the lava it can see. Asked only
     // then, which keeps a second full scan off every ordinary refresh.
+    // Known limitation: any loaded obsidian, even far away, is preferred over
+    // casting nearby lava; travel and casting cost are not compared.
     if (this.#targets.length === 0) this.#targets = this.#casts.scan();
     // Recover observed drops before offering more blocks to mine. Cheap breaks
     // in a netherrack bank otherwise keep winning at the current stance until

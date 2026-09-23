@@ -160,6 +160,7 @@ export async function castOntoPool(
   bot: Bot,
   physics: CastPhysics,
   sources: readonly BlockPosition[],
+  options: { readonly openSightLine?: boolean } = {},
 ): Promise<CastOutcome> {
   const item = carried(bot, "water_bucket");
   if (!item) return { kind: "failed", reason: "the bucket holds no water" };
@@ -167,7 +168,8 @@ export async function castOntoPool(
   const accepts = (landing: Vec3) => castScore(bot, keys, landing);
 
   let aim = pourAim(bot, accepts);
-  for (let opened = 0; aim === null && opened < EXPOSING_BREAKS; opened += 1) {
+  const exposingBreaks = options.openSightLine === false ? 0 : EXPOSING_BREAKS;
+  for (let opened = 0; aim === null && opened < exposingBreaks; opened += 1) {
     const source = nearestSource(bot, sources);
     const blocking = source === null ? null : firstSolidTowards(bot, source);
     if (blocking === null) break;
