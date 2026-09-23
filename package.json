@@ -24,6 +24,7 @@
     "src",
     "docs",
     "scenarios",
+    "tests",
     "README.md"
   ],
   "scripts": {
@@ -31,7 +32,8 @@
     "build": "bun run clean && bunx --bun tsc -p tsconfig.build.json && bun -e \"require('node:fs').copyFileSync('src/bot-data/bot-data.sql', 'dist/bot-data/bot-data.sql')\"",
     "typecheck": "bunx --bun tsc -p tsconfig.check.json --noEmit",
     "typecheck:scenarios": "bunx --bun tsc -p scenarios/tsconfig.json --noEmit",
-    "test": "bun run typecheck && bun run typecheck:scenarios && bun test src scenarios/src",
+    "typecheck:tests": "bunx --bun tsc -p tests/tsconfig.json --noEmit",
+    "test": "bun run typecheck && bun run typecheck:scenarios && bun run typecheck:tests && bun test src scenarios/src tests",
     "evidence:render": "bun scenarios/src/action-evidence-page.ts",
     "scenarios": "bunx --bun mine-labs run --jobs 2 --repeat forever",
     "scenarios:client": "bunx --bun mine-labs run --client"

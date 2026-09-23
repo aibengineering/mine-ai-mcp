@@ -1,0 +1,26 @@
+# Shared setup for one grounded actor. Client paths resolve from the fixture
+# directory: tests/minecraft/scenarios/<category>/.
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+
+client:
+  command: bun
+  cwd: ../..
+  args:
+    - client-host.ts
+    - drivers/single-action.ts
+
+tick:
+  - "gamemode spectator @a[name=!Actor,gamemode=!spectator]"

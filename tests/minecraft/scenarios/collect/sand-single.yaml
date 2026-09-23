@@ -1,0 +1,25 @@
+template: ../../templates/flat-single-action.yaml
+name: sand-single
+description: Collect one adjacent sand block from ordinary flat ground.
+
+geometry:
+  - fill: { block: stone, from: [-6, -60, -6], to: [8, -60, 6] }
+  - setblock: { block: sand, at: [2, -59, 0] }
+
+players:
+  - name: Actor
+    pos: [0, -59, 0]
+
+params:
+  action: collect_block
+  input:
+    block_name: sand
+    count: 1
+    scaffold: false
+
+goal:
+  kind: all
+  timeout: 15
+  goals:
+    - { kind: hasItem, item: sand, count: 1 }
+    - { kind: completion }

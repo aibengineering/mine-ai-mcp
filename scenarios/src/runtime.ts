@@ -47,7 +47,7 @@ const STILL_TICKS = 10;
  * arrives, which reads as a starving bot with no health at all.
  */
 // @function-metrics size=8 branches=3 fan-out=5 depth=2 interface=1 fan-in=2
-export async function standStill(context: MineAiScenarioContext): Promise<boolean> {
+export async function standStill(context: Pick<MineAiScenarioContext, "bot" | "signal">): Promise<boolean> {
   const { bot } = context;
   let lastY = bot.entity.position.y;
   let still = 0;

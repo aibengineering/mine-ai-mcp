@@ -1,8 +1,7 @@
 import type { Bot } from "mineflayer";
-import type { NavigationEvent } from "../../src/navigation/index.ts";
+import type { NavigationEvent, NavigationRuntime } from "../../src/navigation/index.ts";
 import type { MovementKind } from "../../src/navigation/movements/movement.ts";
 import type { MovementPhase } from "../../src/navigation/orchestration/outcome.ts";
-import type { MineAiScenarioContext } from "./scenario-client.ts";
 import { startMemoryProbe } from "./memory-probe.ts";
 
 /** Everything one scenario observed of navigation, summarised for its report. */
@@ -129,8 +128,14 @@ function observeHeading(bot: Bot, log: (line: string) => void) {
   };
 }
 
+/** What the trace needs from its host: the navigation to observe and somewhere to write. */
+export interface PathfinderTraceHost {
+  readonly navigation: Pick<NavigationRuntime, "onEvent">;
+  log(message: string): void;
+}
+
 /** Observe the production navigation runtime; scenarios never install one of their own. */
-export function installScenarioPathfinder(bot: Bot, context: MineAiScenarioContext): PathfinderTrace {
+export function installScenarioPathfinder(bot: Bot, context: PathfinderTraceHost): PathfinderTrace {
   const heading = observeHeading(bot, context.log);
   const listeners = new Set<(event: NavigationEvent) => void>();
   const attempted: Partial<Record<MovementKind, number>> = {};
