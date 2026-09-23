@@ -20,7 +20,8 @@ export const COLLECT_BLOCK_DESCRIPTION =
   "Water beside or above a target is harmless; lava is closed with a carried block before the break, so collecting obsidian means carrying cobblestone, and a target that cannot be taken says why in numbers. " +
   "Obsidian is the one block the bot makes rather than finds: ask for it while carrying a water bucket and, with no obsidian loaded, the process walks to lava, pours, scoops the water back, and mines what formed. " +
   "Name the block to break, not the item wanted: cobblestone and cobbled_deepslate are the no-silk-touch drops of stone and deepslate, which are almost everywhere underground, while naturally placed cobblestone is structure-bound and most often the walls of a dungeon around a spawner. " +
-  "For general collection tasks, prefer count greater than 1 without an exact x/y/z target; use exact coordinates only when that specific block matters.";
+  "For general collection tasks, prefer count greater than 1 without an exact x/y/z target; use exact coordinates only when that specific block matters. " +
+  "With exact coordinates, omit count or set it to 1; larger counts are rejected.";
 export const MAX_COLLECT_BLOCKS = 32;
 export const NON_MINEABLE_FLUIDS = new Set(["water", "lava", "bubble_column"]);
 /**
@@ -60,6 +61,7 @@ function describeItems(itemNames: readonly string[]): string {
 
 export const outcomes = {
   coordinatesTogether: "x, y, and z must be provided together.",
+  exactTargetCount: "Exact coordinates select one block. Omit count or set it to 1. To collect multiple blocks, omit x, y, and z.",
   notMineable: (blockName: string) => `${blockName} is not a mineable block.`,
   invalidTarget: "block_name must identify a block after the optional minecraft: prefix.",
   targetMismatch: (position: Position3, observedName: string, selector: string) =>
@@ -102,7 +104,8 @@ const collectBlockSelectorSchema = z
 export const collectBlockInputSchema = z
   .strictObject({
     block_name: collectBlockSelectorSchema,
-    count: z.number().int().min(1).max(MAX_COLLECT_BLOCKS).default(1).describe("Number of item drops to collect."),
+    count: z.number().int().min(1).max(MAX_COLLECT_BLOCKS).default(1)
+      .describe("Number of item drops to collect. With exact x/y/z coordinates, omit count or set it to 1."),
     x: z.number().int().optional().describe("Exact target block x; provide x, y, and z together."),
     y: z.number().int().optional().describe("Exact target block y; provide x, y, and z together."),
     z: z.number().int().optional().describe("Exact target block z; provide x, y, and z together."),
@@ -124,6 +127,9 @@ export const collectBlockInputSchema = z
     if (coordinates !== 0 && coordinates !== 3) {
       context.addIssue({ code: "custom", message: outcomes.coordinatesTogether });
     }
+    if (coordinates === 3 && value.count !== 1) {
+      context.addIssue({ code: "custom", path: ["count"], message: outcomes.exactTargetCount });
+    }
   });
 
 export interface CollectBlockRequest {
@@ -143,7 +149,7 @@ export function parseCollectBlockRequest(input: unknown): CollectBlockRequest {
       : asVec3({ x: value.x, y: value.y, z: value.z });
   return {
     selector: value.block_name,
-    requested: exactTarget ? 1 : value.count,
+    requested: value.count,
     exactTarget,
     scaffolding: value.scaffold,
     allowFullInventory: value.allow_full_inventory,

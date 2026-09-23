@@ -370,6 +370,8 @@ Recovery refuses after five minutes of wall time as a conservative boundary. Min
 Use `collect_block` to mine blocks and pick up their dropped items.
 Important arguments are `block_name`, the requested `count` of drops to gather,
 optional specific coordinates `x`, `y`, and `z`, and `scaffold` permission.
+With exact coordinates, omit `count` or set it to `1`. Larger counts are rejected
+before the action starts; omit all three coordinates to collect multiple blocks.
 `on_tool_loss` defaults to `stop`, preserving the observed partial vein when the
 best required harvest tier drops. `continue` lets the same request use its
 remaining tool; losing the last usable tool still reports the physical stop.

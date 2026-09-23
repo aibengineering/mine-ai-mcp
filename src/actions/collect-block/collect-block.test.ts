@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
-import { formatCollectBlockResult, parseCollectBlockRequest } from "./index.js";
+import { collectBlockInputSchema, formatCollectBlockResult, parseCollectBlockRequest } from "./index.js";
 import type { Bot } from "mineflayer";
 import { inventoryStop, pursuedInventoryStop, settle } from "./collect-block.js";
 
@@ -112,8 +112,7 @@ test("collect_block parses MCP arguments into its normalized action model", () =
       onToolLoss: "stop",
     },
   );
-  // Naming a cell means that one block, whatever count was asked for.
-  assert.deepEqual(parseCollectBlockRequest({ block_name: "oak_log", count: 4, x: 8, y: 64, z: -3 }), {
+  assert.deepEqual(parseCollectBlockRequest({ block_name: "oak_log", x: 8, y: 64, z: -3 }), {
     selector: "oak_log",
     requested: 1,
     exactTarget: new Vec3(8, 64, -3),
@@ -126,4 +125,20 @@ test("collect_block parses MCP arguments into its normalized action model", () =
     () => parseCollectBlockRequest({ block_name: "minecraft:water" }),
     /minecraft:water is not a mineable block/,
   );
+});
+
+test("exact collection accepts one or omitted count and rejects larger counts at the input boundary", () => {
+  const target = { block_name: "coal_ore", x: 6, y: -59, z: 0 };
+  assert.equal(collectBlockInputSchema.parse(target).count, 1);
+  assert.equal(collectBlockInputSchema.parse({ ...target, count: 1 }).count, 1);
+  assert.equal(collectBlockInputSchema.parse({ block_name: "coal_ore", count: 3 }).count, 3);
+
+  for (const count of [2, 3, 32]) {
+    const result = collectBlockInputSchema.safeParse({ ...target, count });
+    assert.ok(!result.success, "Contradictory exact-target count was accepted");
+    assert.deepEqual(result.error.issues.map(({ path, message }) => ({ path, message })), [{
+      path: ["count"],
+      message: "Exact coordinates select one block. Omit count or set it to 1. To collect multiple blocks, omit x, y, and z.",
+    }]);
+  }
 });
