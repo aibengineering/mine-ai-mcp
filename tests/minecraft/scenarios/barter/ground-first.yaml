@@ -1,0 +1,45 @@
+template: ../../templates/spectator.yaml
+
+name: barter-ground-first
+tags: [regression]
+description: >-
+  Guard against spending gold on piglin trades when the requested pearls are
+  already on the ground nearby. With a live adult piglin in front, gold armour
+  and three spendable ingots, collect the pearl beyond the low wall without
+  offering or spending any gold.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+geometry:
+  - fill: { block: stone, from: [3, -60, -1], to: [3, -60, 1] }
+entities:
+  - type: piglin
+    pos: [2, -60, 0.5]
+    nbt: '{IsBaby:0b,IsImmuneToZombification:1b,PersistenceRequired:1b}'
+  - type: item
+    pos: [5, -60, 0.5]
+    nbt: '{Item:{id:"minecraft:ender_pearl",count:1},PickupDelay:0s}'
+players:
+  - name: Barterer
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: gold_ingot, count: 3 }
+    equipment:
+      head: golden_helmet
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/ground-first-barter.ts]
+params: { item_name: ender_pearl, count: 1, gold_budget: 3 }
+goal:
+  kind: all
+  timeout: 40
+  goals:
+    - { kind: hasItem, who: Barterer, item: ender_pearl, count: 1 }
+    - { kind: completion, who: Barterer }

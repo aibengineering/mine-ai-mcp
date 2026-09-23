@@ -1,5 +1,10 @@
 # Shared setup for one grounded actor. Client paths resolve from the fixture
 # directory: tests/minecraft/scenarios/<category>/.
+spectator:
+  mods:
+    - { id: blockhighlighter, path: ../../../.mine-labs/mods/blockhighlighter.jar }
+  systemProperties:
+    blockhighlighter.serverPortOffset: "10000"
 minecraft:
   version: "1.21.4"
 

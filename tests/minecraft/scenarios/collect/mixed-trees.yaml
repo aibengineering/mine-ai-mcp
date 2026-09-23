@@ -1,0 +1,46 @@
+template: ../../templates/flat-single-action.yaml
+name: mixed-trees
+tags: [acceptance]
+description: >-
+  Collect all 23 logs from a standing oak, a standing birch, and a fallen spruce.
+  Use the axe and carried dirt to reach the tall trunks and work through leaves
+  where needed, including the fallen tree's leafy far end. All seven oak, seven
+  birch, and nine spruce logs must reach inventory; stopping at easy exposed logs
+  cannot pass.
+
+geometry:
+  - fill: { block: grass_block, from: [-12, -60, -12], to: [14, -60, 12] }
+  # Seven logs per standing tree; upper trunk cells sit inside the canopy.
+  - fill: { block: oak_leaves, from: [4, -54, -2], to: [8, -52, 2] }
+  - fill: { block: oak_leaves, from: [5, -51, -1], to: [7, -51, 1] }
+  - fill: { block: oak_log, from: [6, -59, 0], to: [6, -53, 0] }
+  - fill: { block: birch_leaves, from: [4, -54, 6], to: [8, -52, 10] }
+  - fill: { block: birch_leaves, from: [5, -51, 7], to: [7, -51, 9] }
+  - fill: { block: birch_log, from: [6, -59, 8], to: [6, -53, 8] }
+  # Nine horizontal logs. Place the crown first so the last two logs remain
+  # embedded in it, and require all nine rather than only the exposed section.
+  - fill: { block: spruce_leaves, from: [-10, -59, 5], to: [-6, -57, 8] }
+  - fill: { block: "spruce_log[axis=z]", from: [-8, -59, -2], to: [-8, -59, 6] }
+
+players:
+  - name: Actor
+    pos: [0, -59, 0]
+    inventory:
+      - { item: iron_axe, count: 1 }
+      - { item: dirt, count: 16 }
+
+params:
+  action: collect_block
+  input:
+    block_name: logs
+    count: 23
+    scaffold: true
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, item: oak_log, count: 7 }
+    - { kind: hasItem, item: birch_log, count: 7 }
+    - { kind: hasItem, item: spruce_log, count: 9 }
+    - { kind: completion }

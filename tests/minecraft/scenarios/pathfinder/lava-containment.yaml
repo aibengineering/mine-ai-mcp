@@ -1,0 +1,77 @@
+template: ../../templates/flat-single-action.yaml
+name: lava-containment
+tags: [regression]
+description: >-
+  Excavate through two sealed chambers while preserving overhead and lateral lava
+  containment. The lateral case guards a bug where excavation checked above a
+  block but missed lava beside it. Both chambers require the longer safe route;
+  finish with full health and the dangerous shortcut walls intact.
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, keepInventory: true, naturalRegeneration: false, randomTickSpeed: 0 }
+reset:
+  - "fill -8 -62 -12 46 -48 12 air"
+geometry:
+  # Bedrock walls, roof and floor make the two stone routes the only choices.
+  - fill: { block: bedrock, from: [-6, -61, -10], to: [20, -54, 10] }
+
+  # Starting room and approach
+  - fill: { block: stone, from: [-4, -59, -3], to: [2, -56, 3] }
+  - fill: { block: air, from: [-3, -59, -2], to: [1, -58, 2] }
+
+  # The short route's head-height blocks hold up lava; the safe route goes south.
+  - fill: { block: stone, from: [2, -59, -2], to: [11, -58, 2] }
+  - fill: { block: stone, from: [3, -57, -2], to: [10, -55, 2] }
+  - fill: { block: lava, from: [4, -57, -2], to: [9, -56, 2] }
+
+  # Safe bypass corridor through solid stone to the south (z: -7 to -3), clear of lava
+  - fill: { block: stone, from: [2, -59, -7], to: [11, -57, -3] }
+
+  # Destination chamber with gold marker
+  - fill: { block: stone, from: [12, -59, -7], to: [18, -56, 3] }
+  - fill: { block: air, from: [13, -59, -6], to: [17, -58, 2] }
+  - setblock: { block: gold_block, at: [14, -60, 0] }
+
+  # Chamber two tests lava beside the tunnel. Bedrock prevents going over it.
+  - fill: { block: bedrock, from: [21, -61, -7], to: [45, -51, 7] }
+
+  # Halls stop at z=0 to keep the lava sealed until a containment block is broken.
+  - fill: { block: air, from: [22, -59, -4], to: [25, -58, 0] }
+  - fill: { block: air, from: [33, -59, -4], to: [36, -58, 0] }
+
+  # Short route: every foot- and head-height stone block retains lava beside it.
+  - fill: { block: stone, from: [26, -59, 0], to: [32, -58, 0] }
+  - fill: { block: lava, from: [26, -59, 1], to: [32, -58, 1] }
+
+  # Safe route: the same excavation plus eight lateral moves, so cost favors the hazard.
+  - fill: { block: stone, from: [26, -59, -4], to: [32, -58, -4] }
+
+  - setblock: { block: emerald_block, at: [35, -60, 0] }
+  # Join the first destination room to the second entrance, after both hazardous routes.
+  - fill: { block: bedrock, from: [19, -61, -7], to: [21, -54, 7] }
+  - fill: { block: air, from: [17, -59, -4], to: [25, -58, 0] }
+
+players:
+  - name: Actor
+    pos: [0.5, -59, 0.5]
+    inventory: [{ item: diamond_pickaxe, count: 1 }]
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  actions:
+    - { action: navigate, input: { x: 14, y: -59, z: 0, range: 1.5 } }
+    - { action: navigate, input: { x: 35, y: -59, z: 0, range: 1.5 } }
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, pos: [35.5, -59, 0.5], radius: 2.25 }
+    - { kind: blocksAt, block: stone, positions: [[5, -58, 0], [7, -58, 0]] }
+    - kind: blocksAt
+      block: stone
+      positions: [[26, -59, 0], [26, -58, 0], [27, -59, 0], [27, -58, 0], [28, -59, 0], [28, -58, 0], [29, -59, 0], [29, -58, 0], [30, -59, 0], [30, -58, 0], [31, -59, 0], [31, -58, 0], [32, -59, 0], [32, -58, 0]]
+    - { kind: health, health: 20 }
+    - { kind: completion }

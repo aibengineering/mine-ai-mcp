@@ -1,5 +1,7 @@
 /** Run one Mine Labs driver with a prepared bot and the Minecraft runtime. */
 import path from "node:path";
+import { mkdtempDisposable } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import type { Bot } from "mineflayer";
 import { runNodeClient, type ClientCompletion, type NodeClientSession } from "mine-labs/client";
@@ -12,6 +14,7 @@ import {
   type MinecraftRuntimeOptions,
 } from "@aibengineering/mine-ai-mcp";
 import { createScenarioBot, prepareScenarioBot, closeScenarioBot } from "./scenario-bot.ts";
+import { openScenarioHighlighter } from "./scenario-highlighter.ts";
 import type { ScenarioContext, ScenarioRun, ScenarioCall } from "./scenario.ts";
 
 const [driverFile, ...extraArgs] = process.argv.slice(2);
@@ -39,9 +42,23 @@ async function runScenario(file: string, session: NodeClientSession): Promise<vo
 
 /** The runtime is disposed before this promise resolves and completion is reported. */
 async function runWithRuntime(driver: ScenarioRun, bot: Bot, session: NodeClientSession): Promise<ClientCompletion> {
-  await using runtime = await createMinecraftRuntime(bot, runtimeOptions(session));
+  const retainEvidence = process.env.MINE_AI_SCENARIO_EVIDENCE === "1";
+  const artifacts = retainEvidence ? process.env.MINE_LABS_ARTIFACTS_DIR : undefined;
+  if (retainEvidence && !artifacts) throw new Error("Retaining scenario evidence requires MINE_LABS_ARTIFACTS_DIR.");
+
+  // Dispose in reverse order: let the runtime flush its incidents, then remove
+  // their temporary directory, including on failure or cancellation.
+  await using scratch = artifacts ? undefined : await mkdtempDisposable(path.join(tmpdir(), "mine-ai-scenario-"));
+  const incidents = artifacts ? path.join(artifacts, session.username, "incidents") : scratch!.path;
+  await using overlay = await openScenarioHighlighter(bot, session);
+  await using runtime = await createMinecraftRuntime(bot, { ...runtimeOptions(session, artifacts, incidents), highlighter: overlay?.highlighter });
+  overlay?.follow(runtime.navigation);
   const context: ScenarioContext = {
     scenario: session.scenario,
+    waitForTicks: async (ticks) => {
+      await bot.waitForTicks(ticks);
+      session.signal.throwIfAborted();
+    },
     call: (action, input) => callScenarioAction(runtime, session, action, input),
   };
 
@@ -111,17 +128,14 @@ function foldMarkdown(markdown: string): string {
     .join("; ");
 }
 
-/** Keep each trial's runtime evidence in its Mine Labs artifact directory. */
-function runtimeOptions(session: NodeClientSession): MinecraftRuntimeOptions {
-  const artifacts = process.env.MINE_LABS_ARTIFACTS_DIR;
+/** Runtime behavior stays the same; only explicitly requested evidence survives the trial. */
+function runtimeOptions(session: NodeClientSession, artifacts: string | undefined, incidents: string): MinecraftRuntimeOptions {
   const worldId = session.scenario.name ?? "scenario";
   return {
-    ...(artifacts
-      ? { incidents: { directory: path.join(artifacts, session.username, "incidents") } }
-      : {}),
+    incidents: { directory: incidents },
     botData: {
-      // A failed run needs the whole semantic chronology after the client
-      // closes; incident files only keep bounded physical windows.
+      // Repeated trials use in-memory SQLite. Persist the chronology only
+      // when the host's evidence switch is enabled for an investigation.
       storage: artifacts ? { kind: "persistent", root: path.join(artifacts, "bot-data") } : { kind: "temporary" },
       identity: { worldId, scope: { kind: "bot", botId: session.username } },
     },

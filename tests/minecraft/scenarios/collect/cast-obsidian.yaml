@@ -1,0 +1,62 @@
+template: ../../templates/spectator.yaml
+
+# One full portal-sized collection in unmodified natural terrain.
+# Starting position surveyed on vanilla 1.21.4; no terrain is placed or reset.
+# Checks the final quantity only. The mine process considers lava only when no
+# existing obsidian remains, so choosing the cheaper option is not covered here.
+name: cast-obsidian
+tags: [acceptance]
+description: Collect ten obsidian for a portal in natural terrain on seed 8675309,
+  recover the water bucket, and complete without a recorded death.
+minecraft:
+  version: 1.21.4
+world:
+  type: default
+  seed: 8675309
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+  difficulty: peaceful
+players:
+  - name: Collector
+    pos: [1608.5, 75, 1600.5]
+    inventory:
+      - item: diamond_pickaxe
+        count: 1
+      - item: iron_pickaxe
+        count: 1
+      - item: water_bucket
+        count: 1
+      - item: cobblestone
+        count: 32
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/single-action.ts]
+params:
+  action: collect_block
+  input:
+    block_name: obsidian
+    count: 10
+goal:
+  kind: all
+  timeout: 900
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: obsidian
+      count: 10
+    - kind: hasItem
+      who: Collector
+      item: water_bucket
+      count: 1
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector

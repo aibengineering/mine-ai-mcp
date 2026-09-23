@@ -1,0 +1,135 @@
+template: ../../templates/spectator.yaml
+
+name: portals-through-leaves
+tags: [regression]
+description: >-
+  Guard against portal construction getting stuck on leaves or cells hidden by
+  the growing frame. Complete three builds: the original obscured upper corner,
+  a fresh frame through leaves, and a partly built frame with several obstructed
+  cells. Every build must succeed, and Mine Labs independently checks all three
+  obsidian frames and their clear openings. Corners use ordinary cobblestone supports.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    randomTickSpeed: 0
+geometry:
+  # Original sightline regression: only the upper-right support remains wrong.
+  - fill: { block: obsidian, from: [1, -60, 0], to: [2, -60, 0] }
+  - fill: { block: obsidian, from: [0, -59, 0], to: [0, -57, 0] }
+  - fill: { block: obsidian, from: [3, -59, 0], to: [3, -57, 0] }
+  - fill: { block: obsidian, from: [1, -56, 0], to: [2, -56, 0] }
+  - setblock: { block: cobblestone, at: [0, -60, 0] }
+  - setblock: { block: cobblestone, at: [3, -60, 0] }
+  - setblock: { block: cobblestone, at: [0, -56, 0] }
+  - fill: { block: oak_leaves, from: [3, -56, -2], to: [4, -56, 0] }
+  - setblock: { block: oak_leaves, at: [4, -56, 1] }
+  - setblock: { block: oak_leaves, at: [4, -57, -1] }
+
+  # Fresh build: leaves occupy both frame edges and the whole opening.
+  - fill: { block: oak_leaves, from: [10, -59, -1], to: [13, -56, 1] }
+
+  # Partial build: six obsidian already placed, with leaves across the missing
+  # upper/right edges and opening. Existing correct blocks must survive the work.
+  - fill: { block: oak_leaves, from: [20, -59, -1], to: [23, -56, 1] }
+  - fill: { block: obsidian, from: [21, -60, 0], to: [22, -60, 0] }
+  - fill: { block: obsidian, from: [20, -59, 0], to: [20, -57, 0] }
+  - setblock: { block: obsidian, at: [23, -59, 0] }
+players:
+  - name: PortalBuilder
+    # Preserve the original awkward stance for the first build.
+    pos: [2.49, -59, 0.46]
+    inventory:
+      - { item: obsidian, count: 14 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+      # The builder reserves structure materials, so scaffold uses a separate block.
+      - { item: dirt, count: 64 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/build-portals.ts]
+params:
+  frames:
+    - { label: Hidden corner, x: 1, y: -59, z: 0, axis: x }
+    - { label: Fresh build, x: 11, y: -59, z: 0, axis: x }
+    - { label: Partial build, x: 21, y: -59, z: 0, axis: x }
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: completion, who: PortalBuilder }
+    # Hidden corner: ten obsidian edges and six clear interior cells.
+    # Corner supports are intentionally excluded from frame validity.
+    - kind: blocksAt
+      block: obsidian
+      positions:
+        - [1, -60, 0]
+        - [2, -60, 0]
+        - [0, -59, 0]
+        - [0, -58, 0]
+        - [0, -57, 0]
+        - [3, -59, 0]
+        - [3, -58, 0]
+        - [3, -57, 0]
+        - [1, -56, 0]
+        - [2, -56, 0]
+    - kind: blocksAt
+      block: air
+      positions:
+        - [1, -59, 0]
+        - [2, -59, 0]
+        - [1, -58, 0]
+        - [2, -58, 0]
+        - [1, -57, 0]
+        - [2, -57, 0]
+    # Fresh build.
+    - kind: blocksAt
+      block: obsidian
+      positions:
+        - [11, -60, 0]
+        - [12, -60, 0]
+        - [10, -59, 0]
+        - [10, -58, 0]
+        - [10, -57, 0]
+        - [13, -59, 0]
+        - [13, -58, 0]
+        - [13, -57, 0]
+        - [11, -56, 0]
+        - [12, -56, 0]
+    - kind: blocksAt
+      block: air
+      positions:
+        - [11, -59, 0]
+        - [12, -59, 0]
+        - [11, -58, 0]
+        - [12, -58, 0]
+        - [11, -57, 0]
+        - [12, -57, 0]
+    # Partial build.
+    - kind: blocksAt
+      block: obsidian
+      positions:
+        - [21, -60, 0]
+        - [22, -60, 0]
+        - [20, -59, 0]
+        - [20, -58, 0]
+        - [20, -57, 0]
+        - [23, -59, 0]
+        - [23, -58, 0]
+        - [23, -57, 0]
+        - [21, -56, 0]
+        - [22, -56, 0]
+    - kind: blocksAt
+      block: air
+      positions:
+        - [21, -59, 0]
+        - [22, -59, 0]
+        - [21, -58, 0]
+        - [22, -58, 0]
+        - [21, -57, 0]
+        - [22, -57, 0]

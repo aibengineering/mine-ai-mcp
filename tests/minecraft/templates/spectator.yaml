@@ -1,0 +1,7 @@
+# Shared viewer only; the scenario still owns its bot command and world setup.
+spectator:
+  mods:
+    - { id: blockhighlighter, path: ../../../.mine-labs/mods/blockhighlighter.jar }
+  systemProperties:
+    # The viewer follows the feed belonging to its currently connected game server.
+    blockhighlighter.serverPortOffset: "10000"

@@ -1,0 +1,113 @@
+template: ../../templates/flat-single-action.yaml
+
+name: arrow-hunt-spends-no-arrows
+tags: [acceptance]
+description: >-
+  Collect two arrows from two skeletons across open ground while carrying a
+  loaded bow. An arrow hunt reserves its ammunition for the whole request,
+  defensive interruptions included, so the bot must answer the skeletons behind
+  its shield and finish holding more arrows than it started with, rather than
+  spending the very item it was sent for.
+  The original unenchanted bow must retain its full durability, so bonus loot
+  cannot hide arrows fired during the hunt or its defensive interruptions.
+
+# Nothing but flat ground between the bot and the skeletons: clear line of
+# sight at thirteen and nineteen blocks, both far beyond the six-block cutoff
+# where a loadout would otherwise draw the bow. Skeletons that far out open
+# fire before the hunt's own pursuit closes, so the fight is handed to the
+# automatic defensive response — which is the half of the reservation worth
+# proving in a world, since the hunt's engagement ledger never gets to fight.
+# Every arrow spent is an arrow to win back, so the bow reservation is the only
+# reason this fixture ends with a fuller quiver than it began with.
+world:
+  type: flat
+  # Midnight with a frozen clock keeps the skeletons from burning; a daylight
+  # arena would kill the quarry without the bot lifting a finger.
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    # Regeneration and carried food keep two engagements above the twelve
+    # health the combat policy needs to start a fight, so an ordinary exchange
+    # of blows cannot end the hunt as a recovery stall.
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+reset:
+  # Arrows the skeletons fired and drops from an earlier repeat would otherwise
+  # be lying here, and a stale arrow item is indistinguishable from a won one.
+  - "kill @e[type=!minecraft:player]"
+  # Skeletons back away from an approaching fight, so this one ranges far past
+  # the collect arenas: an observed run ended its handoff near x 50, z 33.
+  # The region has to cover the whole chase, or blocks placed for cover during
+  # it outlive the trial that placed them.
+  - "fill -16 -59 -16 72 -40 56 air"
+
+entities:
+  # A skeleton's loot table drops nothing at all often enough to ruin a trial,
+  # so each one carries an arrow in its off hand with a drop chance above one.
+  # That guarantees exactly one arrow per kill; anything the loot table adds is
+  # a bonus. The bow durability check prevents those extras from hiding shots.
+  - type: skeleton
+    pos: [13.5, -60, 2.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:arrow",count:1}],HandDropChances:[0.0f,2.0f]}'
+  - type: skeleton
+    pos: [19.5, -60, -2.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:arrow",count:1}],HandDropChances:[0.0f,2.0f]}'
+
+players:
+  - name: Fletcher
+    pos: [0.5, -60, 0.5]
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: iron_boots
+      # Carrying a shield is what admits a hostile hunt; wearing it here means
+      # the fixture tests the hunt, not the loadout's move into the off hand.
+      offhand: shield
+    inventory:
+      - { item: iron_sword, count: 1 }
+      # A usable bow: the temptation the reservation has to hold back. Eight
+      # arrows is the number this trial must still be holding at the end.
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 8 }
+      - { item: cooked_beef, count: 8 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/arrow-reservation.ts]
+params:
+  action: collect_mob_drop
+  # The expected interruption is the point: finishing without one would mean
+  # the skeletons never reached the bot, and the reservation would never have
+  # been asked to cover a defensive fight.
+  expect: { status: succeeded, interruptionContains: "[HOSTILE_CONTACT]" }
+  # No allow_without_shield: the carried shield is what admits this hostile
+  # quarry. The hunt's own gain accounting ignores the eight arrows already
+  # carried, so the two it reports are two it picked up off the ground.
+  input:
+    mob_name: skeleton
+    drop_name: arrow
+    count: 2
+
+tick:
+  - "gamemode spectator @a[name=!Fletcher,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    # Eight carried plus two won; the driver independently checks no bow wear.
+    - kind: hasItem
+      who: Fletcher
+      item: arrow
+      count: 10
+    - kind: survive
+      who: Fletcher
+      seconds: 1
+    - kind: completion
+      who: Fletcher

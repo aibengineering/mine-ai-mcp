@@ -1,0 +1,73 @@
+template: ../../templates/flat-single-action.yaml
+
+name: busy-dig-interrupted
+tags: [acceptance]
+description: >-
+  Collect 28 stone while a zombie approaches from behind. Require the collection
+  action to record a hostile-response interruption, then resume and finish without dying.
+
+world:
+  type: flat
+  time: midnight
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill 6 -60 -6 14 -55 6 air"
+
+setup:
+  - "difficulty normal"
+
+# The delayed approach gives the bot time to begin collection. The expected
+# interruption proves combat took over during that action, rather than afterwards.
+geometry:
+  - fill: { block: stone, from: [8, -60, -3], to: [11, -57, 3] }
+
+entities:
+  - type: zombie
+    # Behind the bot, so the dig is what the reflex interrupts, not an approach.
+    # Fourteen blocks: at twenty-four the bot had finished twelve stone before
+    # the zombie closed the distance it had walked away from it.
+    pos: [-14.5, -60, 0.5]
+    nbt: "{PersistenceRequired:1b}"
+
+players:
+  - name: DigBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: stone_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+params:
+  action: collect_block
+  expect: { status: succeeded, interruptionContains: "[HOSTILE_CONTACT]" }
+  input:
+    block_name: stone
+    # Twenty-eight stone is roughly twenty-five seconds of walking and digging;
+    # twelve was over in ten, before the zombie arrived.
+    count: 28
+    scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!DigBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: hasItem
+      who: DigBot
+      item: cobblestone
+      count: 28
+    # Mine Labs checks the server death count, including deaths during collection.
+    - kind: survive
+      who: DigBot
+      seconds: 1
+    - kind: completion
+      who: DigBot

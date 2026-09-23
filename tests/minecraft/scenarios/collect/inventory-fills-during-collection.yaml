@@ -1,0 +1,39 @@
+template: ../../templates/spectator.yaml
+
+name: inventory-fills-during-collection
+tags: [acceptance]
+description: >-
+  Request four stone with room for only one more cobblestone. Collect that one,
+  then return partial progress with INVENTORY_FULL, retaining the original items.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  difficulty: peaceful
+  gamerules: { doMobSpawning: false, doDaylightCycle: false }
+setup:
+  - 'fill 2 -60 0 5 -60 0 stone'
+players:
+  - name: CapacityMiner
+    pos: [0.5, -60, 0.5]
+    inventory:
+      # 34 full stacks + one pickaxe + 63 cobblestone occupy all 36 slots.
+      - { item: dirt, count: 2176 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 63 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/single-action.ts]
+params:
+  action: collect_block
+  input: { block_name: stone, count: 4, scaffold: false }
+  expect: { status: partial, errorContains: "[INVENTORY_FULL]" }
+goal:
+  kind: all
+  timeout: 30
+  goals:
+    - { kind: hasItem, who: CapacityMiner, item: cobblestone, count: 64 }
+    - { kind: hasItem, who: CapacityMiner, item: dirt, count: 2176 }
+    - { kind: hasItem, who: CapacityMiner, item: diamond_pickaxe, count: 1 }
+    - { kind: completion, who: CapacityMiner }

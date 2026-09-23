@@ -1,0 +1,58 @@
+template: ../../templates/collect/single-action.yaml
+
+name: obsidian-hazards
+tags: [regression]
+description: >-
+  Collect all three existing obsidian blocks with no bucket: seal the lava beside one,
+  isolate flowing water above another, and approach the third beneath a stone lip.
+  Guards the Run 10 lava/water refusals and the cave regression that repeatedly arrived
+  at an occluded mining stance. All three blocks must be recovered without injury or death.
+
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset: ["fill -8 -59 -10 30 -40 10 air"]
+
+geometry:
+  # A thick floor keeps water preparation within stone rather than opening a dirt basement.
+  - fill: { block: stone, from: [-8, -63, -10], to: [30, -60, 10] }
+  # Lava beside the target must be sealed before the break.
+  - setblock: { block: obsidian, at: [2, -60, 0] }
+  - setblock: { block: lava, at: [3, -60, 0] }
+  # This target has flowing water above it; the source is two cells away.
+  - setblock: { block: obsidian, at: [12, -60, 0] }
+  - setblock: { block: water, at: [14, -59, 0] }
+  # Preserve the original lip geometry and initial approach, translated twenty blocks east.
+  - fill: { block: stone, from: [24, -59, -1], to: [25, -58, 1] }
+  - setblock: { block: obsidian, at: [24, -60, 0] }
+  - setblock: { block: lava, at: [25, -60, 0] }
+
+players:
+  - name: Collector
+    pos: [23.5, -59, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+
+params:
+  action: collect_block
+  input: { block_name: obsidian, count: 3, scaffold: false }
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    # There are exactly three obsidian blocks and no water bucket for casting alternatives.
+    - { kind: hasItem, who: Collector, item: obsidian, count: 3 }
+    - kind: blocksAt
+      block: air
+      positions: [[2, -60, 0], [12, -60, 0], [24, -60, 0]]
+    - { kind: health, who: Collector, health: 20 }
+    - { kind: survive, who: Collector, seconds: 1 }
+    - { kind: completion, who: Collector }

@@ -141,36 +141,26 @@ and physics, the run is measured against.
 
 ## Commands
 
-Two scripts forward paths and options directly to Mine Labs. Both default to
-five parallel workers; an appended `--jobs` overrides that default.
-
-`scenarios` repeats supplied files or folders until stopped. Use `--repeat 1`
-for one pass. `scenarios:client` opens the managed client and scenario picker;
-its controls select scenarios and repetition. With no paths, Mine Labs opens
-the picker rooted at `scenarios`, including when invoked through `scenarios`.
-
-Run these commands from the package root:
+Run these fixtures with Mine Labs from the package root. `--repeat` sets the
+number of passes (or `forever`), `--jobs` the parallel workers, and
+`--spectator` opens the managed client and scenario picker.
 
 ```sh
 # Soak the regular suites with five workers.
-npm run scenarios -- scenarios/flat scenarios/default
+bunx --bun mine-labs run scenarios/flat scenarios/default --jobs 5 --repeat forever
 
 # Run one fixture once.
-npm run scenarios -- scenarios/flat/collect/oak-tree.yaml --repeat 1
+bunx --bun mine-labs run scenarios/flat/collect/oak-tree.yaml --repeat 1
 
 # Run a folder once with two workers.
-npm run scenarios -- scenarios/flat/combat --repeat 1 --jobs 2
+bunx --bun mine-labs run scenarios/flat/combat --repeat 1 --jobs 2
 
-# Open the client picker, optionally restricted to a folder.
-npm run scenarios:client
-npm run scenarios:client -- scenarios/flat/collect
+# Open the client picker restricted to a folder.
+bunx --bun mine-labs run scenarios/flat/collect --spectator
 ```
 
-npm forwards arguments after `--` to the script. Bun forwards them directly:
-`bun run scenarios scenarios/flat/collect --repeat 1`.
-
-The scripts use Mine Labs' local output defaults: `.mine-labs` for headless
-runs and `.mine-labs/open` for the client. Pass `--out <directory>` to change
+Mine Labs' local output defaults are `.mine-labs` for headless runs and
+`.mine-labs/open` for the client. Pass `--out <directory>` to change
 the location. Stop a soak with Ctrl+C.
 
 The separate shared-world verification mode remains available directly:

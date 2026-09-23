@@ -1,0 +1,57 @@
+template: ../../templates/spectator.yaml
+
+name: obsidian-lava-approach
+tags: [regression]
+description: >-
+  Reproduce the approach where obsidian collection burned before pouring water in seed
+  8674349. Momentum from the drop into (50, -21, 71) carried the body into lava during the
+  eastward step-up, despite a safe feet cell. Navigate to the shore and finish with full
+  health, no recorded deaths, and successful action completion.
+
+# Seed 8674349's obsidian collection burned here before it ever poured water.
+# The drop to 50,-21,71 handed forward momentum into the eastward step-up.
+# Its feet cell was safe, but its body crossed into the lava at z=72.
+minecraft:
+  version: "1.21.4"
+world:
+  type: default
+  seed: 8674349
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+setup:
+  - "difficulty peaceful"
+players:
+  - name: Collector
+    pos: [ 48.5, -19, 68.5 ]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+client:
+  command: bun
+  cwd: ../..
+  args:
+    - client-host.ts
+    - drivers/single-action.ts
+params:
+  action: navigate
+  input:
+    x: 51
+    y: -20
+    z: 71
+    range: 0.1
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - kind: health
+      who: Collector
+      health: 20
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector

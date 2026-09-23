@@ -1,0 +1,60 @@
+template: ../../templates/collect/single-action.yaml
+
+name: netherrack-bank
+tags: [acceptance]
+description: >-
+  Collect 32 fast-breaking netherrack while reachable drops accumulate on lower
+  ledges. Verify full health and at most 64 of the bank's 565 blocks removed;
+  mining most of the bank cannot pass on the final inventory count alone.
+
+minecraft:
+  version: "1.21.4"
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -6 -60 -6 6 -48 6 air"
+
+geometry:
+  - fill: { block: bedrock, from: [-6, -60, -6], to: [6, -60, 6] }
+  - fill: { block: netherrack, from: [-4, -59, -4], to: [4, -53, 4] }
+  - fill: { block: air, from: [0, -56, 0], to: [0, -55, 0] }
+
+players:
+  - name: Collector
+    pos: [0.5, -56, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/netherrack-bank.ts]
+params:
+  action: collect_block
+  input:
+    block_name: netherrack
+    count: 32
+    scaffold: false
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: netherrack
+      count: 32
+    - kind: health
+      who: Collector
+      health: 20
+    - kind: completion
+      who: Collector

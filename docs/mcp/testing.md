@@ -48,9 +48,11 @@ from the tests that described the old code.
 
 ## How is the unit layer arranged?
 
-Unit tests are colocated `*.test.ts` files run by `bun run test` using Bun and the `node:test` API
-under tsx; the same command typechecks the package and the scenario drivers
-first. Three rules keep the suite small:
+Unit tests are colocated `*.test.ts` files run by `bun run test` using Bun and the `node:test` API;
+the same command typechecks the package and the scenario drivers first. The test
+command names `./src`, `./scenarios/src`, and `./tests` as explicit directories:
+bare names are Bun path filters and can also select ignored private experiments.
+Three rules keep the suite small:
 
 - **Tests purchase confidence, not line coverage.** Keep public contract tests,
   meaningful boundaries, and regressions backed by an observed failure. A test
@@ -148,34 +150,32 @@ Scenarios are organised by world shape in [scenarios/](../../scenarios/):
 
 ## What package scripts run scenarios?
 
-Two scripts forward paths and options directly to Mine Labs. `scenarios` defaults
-to two parallel workers; an appended `--jobs` overrides it. `scenarios:client`
-uses the managed client's own concurrency setting.
-
-`scenarios` repeats supplied files or folders until stopped. Use `--repeat 1`
-for one pass. `scenarios:client` opens the managed client and scenario picker;
-its controls select scenarios and repetition. With no paths, Mine Labs opens
-the picker rooted at `scenarios`, including when invoked through `scenarios`.
+`scenarios` runs `tests/minecraft/scenarios` repeatedly with two workers; appended
+options such as `--jobs` and `--repeat` override those defaults.
+`scenarios:spectator` builds the highlighter and opens that same suite in the
+managed Java viewer. Its controls select scenarios and repetition. The YAML
+`client` command still runs the bot participant in either mode.
 
 Run these commands from the package root:
 
 ```sh
-# Soak the regular suites with two workers.
-npm run scenarios -- scenarios/flat scenarios/default
+# Soak the current suite with two workers.
+bun run scenarios
 
 # Run one fixture once.
-npm run scenarios -- scenarios/flat/collect/oak-tree.yaml --repeat 1
+bunx --bun mine-labs run tests/minecraft/scenarios/collect/mixed-trees.yaml --repeat 1
 
 # Run a folder once with two workers.
-npm run scenarios -- scenarios/flat/combat --repeat 1 --jobs 2
+bunx --bun mine-labs run tests/minecraft/scenarios/combat --repeat 1 --jobs 2
 
-# Open the client picker, optionally restricted to a folder.
-npm run scenarios:client
-npm run scenarios:client -- scenarios/flat/collect
+# Build the viewer mod and open the whole suite.
+bun run scenarios:spectator
+
+# After building, open only the collection folder.
+bunx --bun mine-labs run tests/minecraft/scenarios/collect --spectator
 ```
 
-npm forwards arguments after `--` to the script. Bun forwards them directly:
-`bun run scenarios scenarios/flat/collect --repeat 1`.
+Use the Mine Labs command directly to replace the script's scenario directory.
 
 The scripts use Mine Labs' local output defaults: `.mine-labs` for headless
 runs and `.mine-labs/open` for the client. Pass `--out <directory>` to change

@@ -1,5 +1,6 @@
 template: ../../templates/flat-single-action.yaml
 name: sand-single
+tags: [acceptance]
 description: Collect one adjacent sand block from ordinary flat ground.
 
 geometry:

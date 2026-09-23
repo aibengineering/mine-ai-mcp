@@ -1,0 +1,66 @@
+template: ../../templates/flat-single-action.yaml
+
+name: obsidian-in-rock
+tags: [regression]
+description: >-
+  Guard against the old bucket rule that required an exposed shore and rejected lava sealed
+  inside rock. Open access to one lava source buried in rock, then recover it and five exposed
+  sources as six obsidian. Recover the water bucket; losing any source makes completion
+  impossible, and the exposed pool alone cannot satisfy the request.
+
+# The bucket action's old rule demanded a solid shore block beside the lava
+# with air above it, which a pool sealed in rock never has - and rock is what
+# surrounds lava everywhere below y 0, which is where the bot actually mines.
+# The process must open access through that rock before it can pour.
+
+reset:
+  - "fill -20 -56 -20 20 -40 20 air"
+
+geometry:
+  # Solid rock from y -61 to y -57 with a source buried inside it: stone on
+  # every side of the lava and a stone lid over it. The bot walks on the lid.
+  - fill: { block: stone, from: [-20, -61, -20], to: [20, -57, 20] }
+  # A single buried source isolates access through rock from sealing adjacent lava.
+  - setblock: { block: lava, at: [5, -59, 0] }
+  # Five exposed sources on the lid: together the two sites contain exactly six.
+  # The larger pool cannot hide a source lost during either pour.
+  - fill: { block: lava, from: [10, -57, 0], to: [12, -57, 1] }
+  - setblock: { block: stone, at: [12, -57, 1] }
+
+players:
+  - name: Collector
+    pos: [0, -56, 0]
+    inventory:
+      - { item: water_bucket, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+
+params:
+  action: collect_block
+  input:
+    block_name: obsidian
+    count: 6
+    scaffold: false
+
+tick:
+  - "gamemode spectator @a[name=!Collector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    - kind: hasItem
+      who: Collector
+      item: obsidian
+      count: 6
+    # Recover the casting tool, ready for another collection request.
+    - kind: hasItem
+      who: Collector
+      item: water_bucket
+      count: 1
+    # Completion must not be earned by respawning with keepInventory.
+    - kind: survive
+      who: Collector
+      seconds: 1
+    - kind: completion
+      who: Collector

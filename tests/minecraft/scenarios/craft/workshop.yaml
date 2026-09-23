@@ -1,0 +1,54 @@
+template: ../../templates/spectator.yaml
+
+name: workshop
+tags: [regression]
+description: >-
+  Turn nine logs into a crafting table and 32 planks, confirming the inventory
+  before continuing. Place the table and request one door, which must produce
+  three. Smelt two iron in a furnace placed on the table, collect the table first,
+  then recover the floating furnace. Use that furnace for a temporary nine-item
+  batch at sixteen TPS, crossing a coal capacity boundary and the old premature
+  smelting deadline. Verify exact outputs, zero leftover raw iron, and furnace
+  recovery. Guards crafting synchronization, unsupported furnace reclamation,
+  and slow-server smelting in one workshop lifecycle.
+# Origins: mine_ai e1242f42 (nine-log crafting) and the 2026-09-04
+# progression failures previously covered by floating-furnace.
+# Also preserves smelt-batch-lag and smelt-temporary-furnace; the nine-item
+# slow batch clearly exceeds the old count * 10s + 5s recovery deadline.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false }
+reset: ["fill -4 -59 -4 8 -52 4 air"]
+setup: ["tick rate 16"]
+geometry:
+  - fill: { block: andesite, from: [-4, -60, -4], to: [8, -60, 4] }
+players:
+  - name: Crafter
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: oak_log, count: 9 }
+      - { item: furnace, count: 1 }
+      - { item: stone_pickaxe, count: 1 }
+      - { item: iron_axe, count: 1 }
+      - { item: raw_iron, count: 11 }
+      - { item: coal, count: 3 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/workshop.ts]
+params:
+  table: { x: 2, y: -59, z: 0 }
+  furnace: { x: 2, y: -58, z: 0 }
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: hasItem, who: Crafter, item: oak_planks, count: 26 }
+    - { kind: hasItem, who: Crafter, item: oak_door, count: 3 }
+    - { kind: hasItem, who: Crafter, item: crafting_table, count: 1 }
+    - { kind: hasItem, who: Crafter, item: furnace, count: 1 }
+    - { kind: hasItem, who: Crafter, item: iron_ingot, count: 11 }
+    - { kind: blocksAt, block: air, positions: [[2, -59, 0], [2, -58, 0]] }
+    - { kind: completion, who: Crafter }

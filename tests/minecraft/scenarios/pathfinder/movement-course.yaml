@@ -1,0 +1,122 @@
+template: ../../templates/spectator.yaml
+
+name: movement-course
+tags:
+  - acceptance
+  - regression
+description: >-
+  Start at the original death17 constrained-descent stance and descend its narrow staircase. Continue through
+  stair ramps, soul sand, vines and ladders in both directions, and unsupported diagonal treads. Verify each
+  named arrival and full health without digging or scaffolding. Preserves constrained-stair-descent and the
+  original movement-course, translated sixteen blocks east.
+minecraft: { version: "1.21.4" }
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+reset:
+  - fill -4 -63 -12 88 -46 12 air
+geometry:
+  # Keep the original constrained descent at its native coordinates and stance.
+  - fill: { block: nether_bricks, from: [ 0, -61, -10 ], to: [ 1, -61, 6 ] }
+  - fill: { block: nether_bricks, from: [ 0, -60, 0 ], to: [ 1, -58, 6 ] }
+  - fill: { block: nether_bricks, from: [ 0, -60, -1 ], to: [ 1, -59, -1 ] }
+  - fill: { block: nether_bricks, from: [ 0, -60, -2 ], to: [ 1, -60, -2 ] }
+  - fill: { block: bedrock, from: [ -1, -60, -10 ], to: [ -1, -53, 6 ] }
+  - fill: { block: bedrock, from: [ 2, -60, -10 ], to: [ 2, -53, 6 ] }
+  # The original movement course follows, translated sixteen blocks east.
+  - fill: { block: "andesite", from: [ 13, -61, -4 ], to: [ 71, -61, 4 ] }
+  - fill: { block: "bedrock", from: [ 13, -60, -4 ], to: [ 71, -47, -4 ] }
+  - fill: { block: "bedrock", from: [ 13, -60, 4 ], to: [ 71, -47, 4 ] }
+  - fill: { block: "bedrock", from: [ 13, -60, -4 ], to: [ 13, -47, 4 ] }
+  # 1. Full-width stair ramps: no flat side lane can bypass the treads.
+  - fill: { block: "oak_stairs[facing=east,half=bottom]", from: [ 17, -60, -3 ], to: [ 17, -60, 3 ] }
+  - fill: { block: "stone", from: [ 18, -60, -3 ], to: [ 18, -60, 3 ] }
+  - fill: { block: "oak_stairs[facing=east,half=bottom]", from: [ 18, -59, -3 ], to: [ 18, -59, 3 ] }
+  - fill: { block: "stone", from: [ 19, -60, -3 ], to: [ 19, -59, 3 ] }
+  - fill: { block: "oak_stairs[facing=east,half=bottom]", from: [ 19, -58, -3 ], to: [ 19, -58, 3 ] }
+  - fill: { block: "stone", from: [ 20, -60, -3 ], to: [ 20, -58, 3 ] }
+  - fill: { block: "oak_stairs[facing=east,half=bottom]", from: [ 20, -57, -3 ], to: [ 20, -57, 3 ] }
+  - fill: { block: "stone", from: [ 21, -60, -3 ], to: [ 23, -57, 3 ] }
+  - fill: { block: "stone", from: [ 24, -60, -3 ], to: [ 24, -58, 3 ] }
+  - fill: { block: "oak_stairs[facing=west,half=bottom]", from: [ 24, -57, -3 ], to: [ 24, -57, 3 ] }
+  - fill: { block: "stone", from: [ 25, -60, -3 ], to: [ 25, -59, 3 ] }
+  - fill: { block: "oak_stairs[facing=west,half=bottom]", from: [ 25, -58, -3 ], to: [ 25, -58, 3 ] }
+  - fill: { block: "stone", from: [ 26, -60, -3 ], to: [ 26, -60, 3 ] }
+  - fill: { block: "oak_stairs[facing=west,half=bottom]", from: [ 26, -59, -3 ], to: [ 26, -59, 3 ] }
+  - fill: { block: "oak_stairs[facing=west,half=bottom]", from: [ 27, -60, -3 ], to: [ 27, -60, 3 ] }
+  # 2. Soul sand: stop on its fractional surface before starting another route.
+  - fill: { block: "soul_sand", from: [ 34, -61, -3 ], to: [ 47, -61, 3 ] }
+  - setblock: { block: "stone", at: [ 36, -61, 0 ] }
+  - setblock: { block: "stone", at: [ 45, -60, 0 ] }
+  # 3. The five-block climb spans the corridor; vines and ladders are the only crossings.
+  - fill: { block: "bedrock", from: [ 57, -60, -3 ], to: [ 59, -56, 3 ] }
+  - setblock: { block: "vine[east=true]", at: [ 56, -60, 0 ] }
+  - setblock: { block: "vine[east=true]", at: [ 56, -59, 0 ] }
+  - setblock: { block: "vine[east=true]", at: [ 56, -58, 0 ] }
+  - setblock: { block: "vine[east=true]", at: [ 56, -57, 0 ] }
+  - setblock: { block: "vine[east=true]", at: [ 56, -56, 0 ] }
+  - setblock: { block: "ladder[facing=east]", at: [ 60, -60, 0 ] }
+  - setblock: { block: "ladder[facing=east]", at: [ 60, -59, 0 ] }
+  - setblock: { block: "ladder[facing=east]", at: [ 60, -58, 0 ] }
+  - setblock: { block: "ladder[facing=east]", at: [ 60, -57, 0 ] }
+  - setblock: { block: "ladder[facing=east]", at: [ 60, -56, 0 ] }
+  # 4. Preserve the original unsupported diagonal treads and enclosing shaft.
+  - fill: { block: "bedrock", from: [ 72, -63, -2 ], to: [ 84, -63, 10 ] }
+  - fill: { block: "bedrock", from: [ 72, -62, -2 ], to: [ 72, -47, 10 ] }
+  - fill: { block: "bedrock", from: [ 84, -62, -2 ], to: [ 84, -47, 10 ] }
+  - fill: { block: "bedrock", from: [ 72, -62, -2 ], to: [ 84, -47, -2 ] }
+  - fill: { block: "bedrock", from: [ 72, -62, 10 ], to: [ 84, -47, 10 ] }
+  - setblock: { block: "bedrock", at: [ 74, -61, 0 ] }
+  - setblock: { block: "bedrock", at: [ 75, -60, 1 ] }
+  - setblock: { block: "bedrock", at: [ 76, -59, 2 ] }
+  - setblock: { block: "bedrock", at: [ 77, -58, 3 ] }
+  - setblock: { block: "bedrock", at: [ 78, -57, 4 ] }
+  - setblock: { block: "bedrock", at: [ 79, -56, 5 ] }
+  - fill: { block: "emerald_block", from: [ 80, -56, 4 ], to: [ 82, -56, 6 ] }
+  # Enter only at the bottom tread; the higher treads have no cardinal supports.
+  - fill: { block: "air", from: [ 72, -60, 0 ], to: [ 73, -59, 0 ] }
+  - fill: { block: "bedrock", from: [ 72, -61, 0 ], to: [ 74, -61, 0 ] }
+  # Exit only at the descent's bottom checkpoint, then enter before the ramps.
+  - fill: { block: andesite, from: [ 2, -61, -8 ], to: [ 16, -61, -8 ] }
+  - fill: { block: andesite, from: [ 16, -61, -8 ], to: [ 16, -61, 0 ] }
+  - fill: { block: air, from: [ 2, -60, -8 ], to: [ 2, -59, -8 ] }
+  - fill: { block: air, from: [ 16, -60, -4 ], to: [ 16, -59, -4 ] }
+players:
+  - name: Walker
+    pos: [1.068, -57, 4.508]
+client:
+  command: bun
+  cwd: ../..
+  args: [ client-host.ts, drivers/navigate-route.ts ]
+params:
+  legs:
+    - { target: [ 0, -60, -8 ], range: 0, label: "Constrained descent: original death17 staircase" }
+    - { target: [ 16, -60, 0 ], range: 0, label: "Stairs: enter the ramp course" }
+    - { target: [ 22, -56, 0 ], range: 1, label: "Stairs: up the ramp" }
+    - { target: [ 29, -60, 0 ], range: 1, label: "Stairs: down the ramp" }
+    - { target: [ 36, -60, 0 ], range: 0, label: "Soul sand: start on the full block" }
+    - { target: [ 44, -60, 0 ], range: 0, label: "Soul sand: walk onto soul sand" }
+    - { target: [ 45, -59, 0 ], range: 0, label: "Soul sand: step up from soul sand" }
+    - { target: [ 38, -60, 0 ], range: 0, label: "Soul sand: return to soul sand" }
+    - { target: [ 36, -60, 0 ], range: 0, label: "Soul sand: walk off soul sand" }
+    - { target: [ 54, -60, 0 ], range: 0, label: "Climbing: approach the vines" }
+    - { target: [ 58, -55, 0 ], range: 0, label: "Climbing: up the vines" }
+    - { target: [ 63, -60, 0 ], range: 0, label: "Climbing: down the ladder" }
+    - { target: [ 58, -55, 0 ], range: 0, label: "Climbing: up the ladder" }
+    - { target: [ 53, -60, 0 ], range: 0, label: "Climbing: down the vines" }
+    - { target: [ 74, -60, 0 ], range: 0, label: "Diagonal ascent: enter at the bottom tread" }
+    - { target: [ 81, -55, 5 ], range: 0, label: "Diagonal ascent: reach the finish shelf" }
+goal:
+  kind: all
+  timeout: 300
+  goals:
+    - { kind: reach, who: Walker, pos: [ 81.5, -55, 5.5 ], radius: 0.7 }
+    - { kind: health, who: Walker, health: 20 }
+    - { kind: blocksAt, block: soul_sand, positions: [ [ 44, -61, 0 ], [ 38, -61, 0 ] ] }
+    - { kind: completion, who: Walker }
+    - { kind: survive, who: Walker, seconds: 1 }

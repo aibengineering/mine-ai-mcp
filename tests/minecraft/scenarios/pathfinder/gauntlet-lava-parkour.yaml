@@ -1,0 +1,131 @@
+template: ../../templates/flat-single-action.yaml
+
+name: gauntlet-lava-parkour
+tags: [acceptance, reliability]
+description: >-
+  Chain gap crossings and ascents at their maximum reach over an open lava bed. Repeated
+  runs expose marginal takeoffs: a missed landing causes measurable damage. Continue
+  through full-block step-ups, a controlled drop, a magma detour and a closed door.
+  Verify each named arrival at full health without digging or scaffolding. Preserves
+  obstacle-course-parkour and the original maximum-reach lava gauntlet.
+
+# Every opening gap is spanned at the maximum reach of the movement that
+# has to cross it, and everything under the course is lava, so a short jump is
+# recorded as damage and a badly short one as a death.
+#
+# That makes it a reliability fixture rather than a capability fixture. Passing
+# once says the chain can be flown; the value is in running it repeatedly and
+# watching the health goal, which turns a marginal takeoff into a visible
+# failure instead of a silent replan.
+#
+# Reach used per section, all at the documented maximum:
+#   jump          2 blocks   (one block of air)
+#   sprint_jump   3 blocks   (two blocks of air)
+#   parkour       4 blocks   (three blocks of air)
+#   parkour rise  3 blocks + 1 up
+#   diagonal ascent, three isolated treads with no cardinal alternative
+#   drop          2 blocks onto the finish shelf
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -9 -64 -6 43 -46 10 air"
+
+geometry:
+  # Sealed basin. The lava is a single layer in a bedrock tray so it cannot
+  # spread and generate block updates that would replan the route from under
+  # the bot mid-jump.
+  - fill: { block: bedrock, from: [-6, -63, -3], to: [41, -63, 7] }
+  - fill: { block: bedrock, from: [-6, -62, -3], to: [-6, -50, 7] }
+  - fill: { block: bedrock, from: [41, -62, -3], to: [41, -50, 7] }
+  - fill: { block: bedrock, from: [-6, -62, -3], to: [41, -50, -3] }
+  - fill: { block: bedrock, from: [-6, -62, 7], to: [41, -50, 7] }
+  - fill: { block: lava, from: [-5, -62, -2], to: [40, -62, 6] }
+
+  # Landing pads are one block deep on purpose. A wider pad lets a four-block
+  # parkour jump swallow the shorter gaps whole, and the course stops testing
+  # the kind each section is named for. Spacing is chosen so that from every
+  # takeoff exactly one reach finds ground.
+
+  # Start apron, long enough to reach sprint speed.
+  - fill: { block: blue_concrete, from: [-5, -60, -1], to: [0, -60, 1] }
+
+  # jump, two blocks: one block of air at x = 1.
+  - fill: { block: blue_concrete, from: [2, -60, -1], to: [2, -60, 1] }
+
+  # sprint_jump, three blocks: air at x = 3..4.
+  - fill: { block: blue_concrete, from: [5, -60, -1], to: [5, -60, 1] }
+
+  # parkour, four blocks: air at x = 6..8. Nothing shorter reaches.
+  - fill: { block: blue_concrete, from: [9, -60, -1], to: [9, -60, 1] }
+
+  # ascending parkour, three blocks and a block up: air at x = 10..11. The
+  # shelf stops at z = 0 so the treads that follow have no cardinal approach.
+  - fill: { block: blue_concrete, from: [12, -59, -1], to: [12, -59, 0] }
+
+  # Diagonal ascent: three isolated treads, each reachable only diagonally.
+  # The orthogonal corners are open air over lava, so a step that balances on
+  # the takeoff corner falls in.
+  - setblock: { block: cut_copper, at: [13, -58, 1] }
+  - setblock: { block: cut_copper, at: [14, -57, 2] }
+  - setblock: { block: cut_copper, at: [15, -56, 3] }
+
+  # Original finish shelf, two blocks below the last tread: checkpoint one.
+  - fill: { block: emerald_block, from: [16, -58, 2], to: [20, -58, 4] }
+  # Enclose the extension so the door remains the only way to its finish.
+  - fill: { block: bedrock, from: [20, -62, 1], to: [36, -50, 1] }
+  - fill: { block: bedrock, from: [20, -62, 5], to: [36, -50, 5] }
+  - setblock: { block: blue_concrete, at: [21, -57, 3] }
+  - setblock: { block: blue_concrete, at: [22, -56, 3] }
+  - fill: { block: blue_concrete, from: [23, -56, 3], to: [24, -56, 3] }
+  - fill: { block: blue_concrete, from: [25, -58, 2], to: [26, -58, 4] }
+  # A dangerous direct line and a safe flank, then a door in a bedrock wall.
+  - fill: { block: magma_block, from: [27, -58, 2], to: [29, -58, 2] }
+  - fill: { block: blue_concrete, from: [27, -58, 4], to: [29, -58, 4] }
+  - fill: { block: bedrock, from: [30, -62, 1], to: [30, -50, 5] }
+  - fill: { block: air, from: [30, -57, 4], to: [30, -56, 4] }
+  - setblock: { block: "oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]", at: [30, -57, 4] }
+  - setblock: { block: "oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]", at: [30, -56, 4] }
+  - fill: { block: emerald_block, from: [31, -58, 2], to: [35, -58, 4] }
+players:
+  - name: GauntletBot
+    pos: [-4.5, -59, 0.5]
+
+tick:
+  - "gamemode spectator @a[name=!GauntletBot,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/navigate-route.ts]
+params:
+  legs:
+    - { target: [19, -57, 3], range: 1.5, label: "Maximum gaps and diagonal ascent" }
+    - { target: [26, -57, 3], range: 0, label: "Full-block step-ups and controlled drop" }
+    - { target: [34, -57, 4], range: 0, label: "Magma detour and door activation" }
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - kind: reach
+      who: GauntletBot
+      pos: [34.5, -57, 4.5]
+      radius: 0.75
+    # Full health is the whole point. Anything less means it touched the lava,
+    # which on this course means a landing was missed.
+    - kind: health
+      who: GauntletBot
+      health: 20
+    - kind: completion
+      who: GauntletBot
+    - { kind: blocksAt, block: oak_door, positions: [[30, -57, 4], [30, -56, 4]] }
+    - { kind: survive, who: GauntletBot, seconds: 1 }

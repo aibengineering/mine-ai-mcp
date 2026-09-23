@@ -1,0 +1,100 @@
+template: ../../templates/spectator.yaml
+
+name: exact-collection-preservation
+tags: [regression]
+description: >-
+  Collect an addressed open birch door, coal ore, empty chest and spare crafting
+  table. Remove both target door halves while leaving the nearer matching door,
+  oak door and unrequested coal intact. Return past the stocked chest and table
+  without destroying them; inspect the chest to confirm its original 12 pearls
+  and 79 gold. Guards exact targeting and the Run 12 door refusal and storage
+  destruction regressions.
+# Origins: mine_ai db5384ea (protected storage) and e148dee5 (requested door).
+# Preserves coal-exact-target and birch-door-exact-target. The door arrangement
+# is translated twenty blocks west and one down; the storage barrier is unchanged.
+minecraft:
+  version: "1.21.4"
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+reset:
+  - "fill -25 -60 -9 9 -54 9 air"
+geometry:
+  - fill: { block: andesite, from: [-25, -61, -9], to: [-4, -61, 9] }
+  - setblock: { block: "birch_door[facing=east,half=lower,hinge=left,open=true,powered=false]", at: [-21, -60, 0] }
+  - setblock: { block: "birch_door[facing=east,half=upper,hinge=left,open=true,powered=false]", at: [-21, -59, 0] }
+  - setblock: { block: "birch_door[facing=east,half=lower,hinge=left,open=true,powered=false]", at: [-18, -60, 0] }
+  - setblock: { block: "birch_door[facing=east,half=upper,hinge=left,open=true,powered=false]", at: [-18, -59, 0] }
+  - setblock: { block: "oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]", at: [-15, -60, 0] }
+  - setblock: { block: "oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]", at: [-15, -59, 0] }
+  # Request the farther coal block so a nearest-match substitution cannot pass.
+  - setblock: { block: coal_ore, at: [-14, -60, 4] }
+  - setblock: { block: coal_ore, at: [-12, -60, 4] }
+  # A low ceiling prevents jumping over the shortcut's protected blocks.
+  # The longer route around either end of the barrier remains open.
+  - fill: { block: bedrock, from: [-3, -61, -9], to: [9, -61, 9] }
+  - fill: { block: bedrock, from: [-3, -58, -9], to: [9, -58, 9] }
+  - fill: { block: bedrock, from: [1, -60, -6], to: [5, -59, 6] }
+  - fill: { block: air, from: [1, -60, 0], to: [5, -59, 0] }
+  # The stocked chest has the same block state as the requested empty chest.
+  # Permission to collect one must never permit breaking the other on approach.
+  - setblock:
+      block: 'chest{Items:[{Slot:0b,id:"minecraft:ender_pearl",count:12},{Slot:1b,id:"minecraft:gold_ingot",count:64},{Slot:2b,id:"minecraft:gold_ingot",count:15}]}'
+      at: [2, -60, 0]
+  - setblock: { block: crafting_table, at: [3, -60, 0] }
+  - setblock: { block: chest, at: [6, -60, 0] }
+  - setblock: { block: crafting_table, at: [6, -60, 2] }
+players:
+  - name: Collector
+    pos: [-19.5, -60, 0.5]
+    inventory:
+      - { item: diamond_axe, count: 1 }
+      - { item: stone_pickaxe, count: 1 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/preserve-storage.ts]
+params:
+  steps:
+    - label: Addressed door and both halves
+      action: collect_block
+      input: { block_name: birch_door, count: 1, x: -18, y: -60, z: 0, scaffold: false }
+    - label: Addressed ore instead of nearer match
+      action: collect_block
+      input: { block_name: coal_ore, count: 1, x: -12, y: -60, z: 4, scaffold: false }
+    - label: Approach original storage entrance
+      action: navigate
+      input: { x: 0, y: -60, z: 0, range: 0, scaffold: false }
+    - label: Empty chest without harming stocked chest
+      action: collect_block
+      input: { block_name: chest, count: 1, x: 6, y: -60, z: 0, scaffold: false }
+    - label: Spare table without harming staging table
+      action: collect_block
+      input: { block_name: crafting_table, count: 1, x: 6, y: -60, z: 2, scaffold: false }
+    - label: Return past protected storage
+      action: navigate
+      input: { x: 0, y: -60, z: 0, range: 0, scaffold: false }
+  protected_container: { x: 2, y: -60, z: 0 }
+  expected_contents:
+    - { slot: 0, item: ender_pearl, count: 12 }
+    - { slot: 1, item: gold_ingot, count: 64 }
+    - { slot: 2, item: gold_ingot, count: 15 }
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: hasItem, who: Collector, item: birch_door, count: 1 }
+    - { kind: hasItem, who: Collector, item: coal, count: 1 }
+    - { kind: blocksAt, block: air, positions: [[-18, -60, 0], [-18, -59, 0], [-12, -60, 4]] }
+    - { kind: blocksAt, block: birch_door, positions: [[-21, -60, 0], [-21, -59, 0]] }
+    - { kind: blocksAt, block: oak_door, positions: [[-15, -60, 0], [-15, -59, 0]] }
+    - { kind: blockAt, block: coal_ore, pos: [-14, -60, 4] }
+    - { kind: hasItem, who: Collector, item: chest, count: 1 }
+    - { kind: hasItem, who: Collector, item: crafting_table, count: 1 }
+    - { kind: blocksAt, block: air, positions: [[6, -60, 0], [6, -60, 2]] }
+    - { kind: blockAt, block: chest, pos: [2, -60, 0] }
+    - { kind: blockAt, block: crafting_table, pos: [3, -60, 0] }
+    - { kind: completion, who: Collector }

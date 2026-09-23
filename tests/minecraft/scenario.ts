@@ -13,6 +13,8 @@ export interface ScenarioCall extends ActionOutput<string, ActionResult> {
 
 export interface ScenarioContext {
   readonly scenario: ScenarioDefinition;
+  /** Let a fixture settle after the trial starts, before taking action. */
+  waitForTicks(ticks: number): Promise<void>;
   /** Run a registered action; the host owns cancellation, recording and cleanup. */
   call(action: string, input: Record<string, unknown>): Promise<ScenarioCall>;
 }

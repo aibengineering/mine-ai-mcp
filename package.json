@@ -33,10 +33,10 @@
     "typecheck": "bunx --bun tsc -p tsconfig.check.json --noEmit",
     "typecheck:scenarios": "bunx --bun tsc -p scenarios/tsconfig.json --noEmit",
     "typecheck:tests": "bunx --bun tsc -p tests/tsconfig.json --noEmit",
-    "test": "bun run typecheck && bun run typecheck:scenarios && bun run typecheck:tests && bun test src scenarios/src tests",
+    "test": "bun run typecheck && bun run typecheck:scenarios && bun run typecheck:tests && bun test ./src ./scenarios/src ./tests",
     "evidence:render": "bun scenarios/src/action-evidence-page.ts",
-    "scenarios": "bunx --bun mine-labs run --jobs 2 --repeat forever",
-    "scenarios:client": "bunx --bun mine-labs run --client"
+    "scenarios": "bunx --bun mine-labs run tests/minecraft/scenarios --jobs 2 --repeat forever",
+    "scenarios:spectator": "bun tests/minecraft/build-spectator-mods.ts && bunx --bun mine-labs run tests/minecraft/scenarios --spectator"
   },
   "engines": {
     "node": ">=24.15.0",
