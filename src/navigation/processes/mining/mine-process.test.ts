@@ -1015,6 +1015,50 @@ test("a pool is poured on where the route left the bot, and what forms is mined"
   assert.deepEqual(carrying, [{ name: "water_bucket" }]);
 });
 
+test("a scoop is confirmed by the poured source leaving the world, not by the bucket alone", async () => {
+  const carrying = [{ name: "water_bucket" }];
+  const bot = castShore(carrying);
+  const world = bot as FakeWorld;
+  let landing: Vec3 | null = null;
+  let broken = 0;
+  let checked = false;
+
+  await mine(
+    bot,
+    request(bot, {
+      ...obsidianRequest,
+      isSatisfied: () => broken > 0,
+      cast: async (_bot, use) => {
+        if (use.item.name === "water_bucket") {
+          carrying[0] = { name: "bucket" };
+          const cell = use.expectedCells![0]!.position;
+          landing = new Vec3(cell.x, cell.y, cell.z);
+          world.addWater(landing);
+          world.removeLava(new Vec3(2, 64, 0));
+          world.addObsidian(new Vec3(2, 64, 0));
+          return { kind: "used" };
+        }
+        // The inventory packet can arrive before the block update: the hand
+        // already holds water while the source still stands in the world.
+        carrying[0] = { name: "water_bucket" };
+        const expected = use.expectedCells?.find((cell) => landing!.equals(new Vec3(cell.position.x, cell.position.y, cell.position.z)));
+        assert.ok(expected, "the scoop names the poured cell");
+        assert.equal(expected.matches(bot.blockAt(landing!)!), false, "a standing source is not a completed scoop");
+        world.removeWater(landing!);
+        assert.equal(expected.matches(bot.blockAt(landing!)!), true);
+        checked = true;
+        return { kind: "used" };
+      },
+      route: async () => {
+        world.removeObsidian(new Vec3(2, 64, 0));
+        broken += 1;
+        return { status: "completed", elapsedMs: 0 };
+      },
+    }),
+  );
+  assert.equal(checked, true);
+});
+
 test("a failed scoop is recovered before mining the cast obsidian", async () => {
   const carrying = [{ name: "water_bucket" }];
   const bot = castShore(carrying);

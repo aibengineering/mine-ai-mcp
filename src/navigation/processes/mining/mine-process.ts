@@ -617,6 +617,8 @@ async function recoverWaterInReach(
     item: bucket,
     lookAt: asVec3(target.position).offset(0.5, 0.9, 0.5),
     expectedHeldItem: "water_bucket",
+    // The hand can change before the block update; a standing source would be plugged next.
+    expectedCells: [{ position: target.position, matches: (block) => !isLiquidSource(bot, block, "water") }],
     ...(signal && { signal }),
   });
   if (outcome.kind === "failed") targeting.excludeWaterStance(target, feet, outcome.error);

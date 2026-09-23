@@ -19,6 +19,7 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { asVec3, cellKey } from "../../../utils/index.js";
 import { STANDING_EYE_HEIGHT } from "../../../world/block-visibility.js";
+import { isLiquidSource } from "../../../world/liquid.js";
 import {
   countFormations,
   HORIZONTAL,
@@ -137,6 +138,10 @@ async function scoopBack(bot: Bot, physics: CastPhysics, aim: PourAim): Promise<
       // The empty bucket stops at the source on the same ray.
       lookAt: aim.lookAt,
       expectedInventoryGain: { item: "water_bucket", count: 1 },
+      // The inventory packet can beat the block update. Until the source is
+      // observed gone, the next step would see a source above the new
+      // obsidian and plug it with a block.
+      expectedCells: [{ position: aim.landing, matches: (block) => !isLiquidSource(bot, block, "water") }],
       ...(physics.signal && { signal: physics.signal }),
     });
     if (use.kind === "used") return true;
