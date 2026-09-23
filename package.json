@@ -43,7 +43,7 @@
     "bun": ">=1.4.0"
   },
   "dependencies": {
-    "@aibengineering/minecraft-block-highlighter": "github:aibengineering/minecraft-block-highlighter#8fe2983f3be5fc562437d25cc8afbb715d5103c5",
+    "@aibengineering/minecraft-block-highlighter": "github:aibengineering/minecraft-block-highlighter#243b1ace62f8c0d0c35f6c1e29899bf65b654957",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "mineflayer-tool": "1.2.0",
     "prismarine-block": "^1.23.0",
@@ -59,7 +59,7 @@
     "@types/node": "^26.0.1",
     "highlight.js": "^11.12.0",
     "markdown-it": "^15.0.0",
-    "mine-labs": "github:aibengineering/mine-labs#08e7c0d4c8ea12d103f25e89af287731e3546e48",
+    "mine-labs": "github:aibengineering/mine-labs#6c9c2f214d3068ffb2f8915ac879327dd7d7913c",
     "tsx": "^4.23.1",
     "typescript": "^6.0.3"
   },

@@ -1,6 +1,6 @@
 # Ocean sand shaft
 
-Run `bunx --bun mine-labs run scenarios/default/terrain/ocean-sand-shaft.yaml --client`.
+Run `bunx --bun mine-labs run scenarios/default/terrain/ocean-sand-shaft.yaml --spectator`.
 
 This uses the live world's verified seed `-06163879`, starting at
 `(1414.536, 62.3, -90.464)`, and submits one production `collect_block` request:

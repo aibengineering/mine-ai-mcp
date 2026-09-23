@@ -45,7 +45,7 @@ summons.
 
 ## Two execution classes
 
-Controlled fixtures use `mine-labs run <file-or-folder>`. Add `--jobs N` for parallel workers, `--repeat N` (or `forever`) for repetition, and `--client` for the Mine Labs NeoForge experience. Compatible declared resets reuse a worker's server; `--isolated` forces fresh worlds.
+Controlled fixtures use `mine-labs run <file-or-folder>`. Add `--jobs N` for parallel workers, `--repeat N` (or `forever`) for repetition, and `--spectator` for the Mine Labs NeoForge experience. Compatible declared resets reuse a worker's server; `--isolated` forces fresh worlds.
 
 Goal verification in `verification/` uses `mine-labs verify`: one seed and a
 list of surveyed absolute spawn locations, with one independent client and result
@@ -54,7 +54,7 @@ per location. Compatible separated attempts share a server. Run
 Add `--isolated` to replay the identical attempts on fresh individual servers.
 Add `--repeat 2` to run another fresh-world batch.
 
-Use `mine-labs run <manifest.yaml> --client` to inspect any verification location. The bundled client connects automatically. Select a scenario or folder, turn Keep running on for a soak, and choose Parallel while idle. Return to Labs cancels the active batch. No CurseForge launch, manual connection, or terminal Enter prompt is required.
+Use `mine-labs run <manifest.yaml> --spectator` to inspect any verification location. The bundled client connects automatically. Select a scenario or folder, turn Keep running on for a soak, and choose Parallel while idle. Return to Labs cancels the active batch. No CurseForge launch, manual connection, or terminal Enter prompt is required.
 
 The new obsidian and diamond manifests replace the old single-location verification
 YAMLs. Their action scripts and independent inventory/completion goals are retained.
@@ -356,7 +356,7 @@ into a surface chest, then independently compare the physical chest with contain
 
 ## Spectating
 
-Run `bun run scenarios:client`, or `mine-labs run <path> --client`. The bundled
+Run `mine-labs run <path> --spectator`. The bundled
 NeoForge client opens the catalog, connects to the prepared server, and places
 the spectator above and behind the bot before execution. F10 opens the dashboard;
 Keep running, Repeat, and Parallel control subsequent runs. Return to Labs cancels

@@ -143,7 +143,7 @@ ordinary combat resumed on safe ground.
 Run from this package:
 
 ```sh
-bunx --bun mine-labs run scenarios/flat/combat-terrain/enderman-idle-ledge.yaml scenarios/flat/combat-terrain/enderman-shield-ledge.yaml --client --repeat forever --jobs 1 --out .mine-labs/enderman-west-watch
+bunx --bun mine-labs run scenarios/flat/combat-terrain/enderman-idle-ledge.yaml scenarios/flat/combat-terrain/enderman-shield-ledge.yaml --spectator --repeat forever --jobs 1 --out .mine-labs/enderman-west-watch
 ```
 
 The [no-shield fixture](enderman-idle-ledge.yaml) and

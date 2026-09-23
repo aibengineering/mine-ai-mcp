@@ -29,7 +29,7 @@ bunx --bun mine-labs run scenarios/flat/flowing-lava --out .mine-labs/flowing-la
 Watch in Minecraft using the existing spectator workflow:
 
 ```sh
-bunx --bun mine-labs run scenarios/flat/flowing-lava --client --repeat forever
+bunx --bun mine-labs run scenarios/flat/flowing-lava --spectator --repeat forever
 ```
 
 The client dashboard lists the courses in this folder. The static courses use colored
