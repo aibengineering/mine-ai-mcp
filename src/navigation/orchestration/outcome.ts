@@ -49,6 +49,8 @@ export interface MovementFailure {
   readonly stepId: string;
   readonly phase: MovementPhase;
   readonly observation: string;
+  /** The world operation that failed, so a caller can blame the block it named. */
+  readonly operation?: { readonly kind: "break" | "place" | "activate"; readonly position: BlockPosition };
 }
 
 export interface NavigationEvidence {
@@ -110,6 +112,8 @@ export type NavigationFailure =
         /** The body is held under a ceiling it does not fit beneath and this route may not break it. */
         | "pinned_body";
       readonly observation: string;
+      /** The movement whose repeated failure ended the run. */
+      readonly movement?: MovementFailure;
     }
   | { readonly kind: "movement_failed"; readonly movement: MovementFailure }
   | { readonly kind: "resource_changed"; readonly observation: string }

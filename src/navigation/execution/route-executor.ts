@@ -375,10 +375,11 @@ export class RouteExecutor {
     });
     if (issued) this.request.passages.remember(opened);
     if (result.kind === "cancelled" || result.kind === "invalidated") return result;
+    const failed = { kind: operation.kind, position };
     if (result.kind === "effect_failed") {
       return {
         kind: "failed",
-        failure: { kind: "operation_failed", stepId: step.id, phase, observation: result.observation },
+        failure: { kind: "operation_failed", stepId: step.id, phase, observation: result.observation, operation: failed },
       };
     }
     if (result.kind === "conflicting" || result.kind === "expired") {
@@ -389,6 +390,7 @@ export class RouteExecutor {
           stepId: step.id,
           phase: "confirming",
           observation: this.#mutationFailure(result, before.description, after.description, position),
+          operation: failed,
         },
       };
     }

@@ -865,6 +865,7 @@ export class NavigationRun {
                 kind: "no_progress",
                 reason: "repeated_movement_failure",
                 observation: result.failure.observation,
+                movement: result.failure,
               }),
             }
           : { kind: "retry", reason: "movement_failed" };

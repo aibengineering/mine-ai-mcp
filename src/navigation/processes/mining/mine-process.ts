@@ -817,6 +817,16 @@ class MineTargeting {
     this.#refreshedAtMs = Number.NEGATIVE_INFINITY;
   }
 
+  /** Give up on the block target at `position`, when there is one, and say whether there was. */
+  blacklistAt(position: BlockPosition, reason: string): boolean {
+    const target = this.#targets.find(
+      (candidate) => candidate.kind === "block" && cellKey(candidate.position) === cellKey(position),
+    );
+    if (!target) return false;
+    this.blacklist(target, reason);
+    return true;
+  }
+
   /** Blacklist the known target nearest the bot's position when calculation failed. */
   /**
    * Give up on the target nearest `position` among those the failed route
@@ -1031,9 +1041,12 @@ export async function mine(bot: Bot, request: MineRequest): Promise<MineResult> 
         targeting.lastReason = `${MAX_FRUITLESS_STOPS} routes in a row stopped without breaking or gaining anything; the last: ${route.reason}`;
         return settle("stopped");
       }
-      // Baritone's `blacklistClosestOnFailure`: a goal the search could not
-      // reach is not a reason to abandon mining, only that target.
-      if (!targeting.blacklistClosest(bot.entity.position, route.reason)) return settle("stopped");
+      // A goal the route could not reach is not a reason to abandon mining,
+      // only that target. When a planned break is what failed, that block is
+      // the one to give up; Baritone's `blacklistClosestOnFailure` guess of
+      // the target nearest the bot dropped an untouched column instead.
+      const blamed = route.failedBreak !== undefined && targeting.blacklistAt(route.failedBreak, route.reason);
+      if (!blamed && !targeting.blacklistClosest(bot.entity.position, route.reason)) return settle("stopped");
     } else {
       // A route can settle on the same tick that a new item entity arrives.
       // Re-open the scan at this physical boundary instead of treating the
@@ -1048,8 +1061,14 @@ export async function mine(bot: Bot, request: MineRequest): Promise<MineResult> 
         `${targeting.broken.length}:${request.observedInventoryGain()}` === workBefore &&
         current.map(targetIdentity).join("|") === routedTargets &&
         current.length > 0;
-      if (idle && !targeting.blacklistClosest(bot.entity.position, "arrived, and nothing there could be broken")) {
-        return settle("stopped");
+      if (idle) {
+        // Blame the target this stance serves, not merely the nearest one.
+        const reason = "arrived, and nothing there could be broken";
+        const feet = cellKey(bot.entity.position.floored());
+        const served = current.find((target) =>
+          target.kind === "block" && workingCells(bot, target, request.movements).some((cell) => cellKey(cell) === feet));
+        const blamed = served !== undefined && targeting.blacklistAt(served.position, reason);
+        if (!blamed && !targeting.blacklistClosest(bot.entity.position, reason)) return settle("stopped");
       }
     }
   }

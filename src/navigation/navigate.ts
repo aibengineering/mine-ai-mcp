@@ -13,7 +13,8 @@
 import type { Goal } from "./goals/goal.js";
 import type { MovementPolicy } from "./movements/policy.js";
 import type { Navigator } from "./orchestration/navigator.js";
-import type { NavigationOutcome } from "./orchestration/outcome.js";
+import type { MovementFailure, NavigationOutcome } from "./orchestration/outcome.js";
+import type { BlockPosition } from "./world/world.js";
 import {
   describeCalculationFailure,
   type NavigationArrival,
@@ -37,7 +38,13 @@ export const DEFAULT_CONTINUATION_SEARCH_LIMITS = Object.freeze({
 
 export type NavigationResult =
   | { readonly status: "completed"; readonly elapsedMs: number }
-  | { readonly status: "stopped"; readonly reason: string; readonly elapsedMs: number };
+  | {
+      readonly status: "stopped";
+      readonly reason: string;
+      readonly elapsedMs: number;
+      /** The block whose planned break failed and ended the route, when one did. */
+      readonly failedBreak?: BlockPosition;
+    };
 
 export interface NavigateOptions {
   readonly movements: MovementPolicy;
@@ -87,6 +94,17 @@ function outcomeReason(outcome: Exclude<NavigationOutcome, { kind: "completed" }
   return failure.movement.observation;
 }
 
+/** The block a route could not break, when a failed break is what ended it. */
+export function failedBreakOf(outcome: NavigationOutcome): BlockPosition | undefined {
+  if (outcome.kind !== "failed") return undefined;
+  const failure = outcome.failure;
+  const movement: MovementFailure | undefined =
+    failure.kind === "movement_failed" ? failure.movement
+      : failure.kind === "no_progress" ? failure.movement
+        : undefined;
+  return movement?.operation?.kind === "break" ? movement.operation.position : undefined;
+}
+
 /** Plan, execute, and settle one route through the package-local navigator. */
 export async function runNavigation(navigator: Navigator, options: NavigateOptions): Promise<NavigationResult> {
   options.signal?.throwIfAborted();
@@ -129,7 +147,12 @@ export async function runNavigation(navigator: Navigator, options: NavigateOptio
   }
   options.signal?.throwIfAborted();
   const elapsedMs = Date.now() - startedAt;
-  return outcome.kind === "completed"
-    ? { status: "completed", elapsedMs }
-    : { status: "stopped", reason: [outcomeReason(outcome), pending].filter(Boolean).join(" "), elapsedMs };
+  if (outcome.kind === "completed") return { status: "completed", elapsedMs };
+  const failedBreak = failedBreakOf(outcome);
+  return {
+    status: "stopped",
+    reason: [outcomeReason(outcome), pending].filter(Boolean).join(" "),
+    elapsedMs,
+    ...(failedBreak && { failedBreak }),
+  };
 }

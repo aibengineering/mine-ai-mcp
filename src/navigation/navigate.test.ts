@@ -145,3 +145,39 @@ test("a settled outcome becomes one result: failures in their own words, doorway
 
   await assert.rejects(runNavigation(fakeNavigator(whenStopped, "run-7").navigator, request), /busy with run run-7/);
 });
+
+test("a route ended by a failed break names the block, and only a break is named", async () => {
+  const movement = (kind: "break" | "place") => ({
+    kind: "operation_failed" as const,
+    stepId: "dig",
+    phase: "breaking" as const,
+    observation: "No face of the block at 8,-57,0 is in view",
+    operation: { kind, position: { x: 8, y: -57, z: 0 } },
+  });
+  const repeated = await runNavigation(
+    fakeNavigator(() => ({
+      kind: "failed",
+      failure: {
+        kind: "no_progress",
+        reason: "repeated_movement_failure",
+        observation: "No face of the block at 8,-57,0 is in view",
+        movement: movement("break"),
+      },
+      evidence: evidence(),
+    })).navigator,
+    request,
+  );
+  assert.deepEqual(repeated.status === "stopped" && repeated.failedBreak, { x: 8, y: -57, z: 0 });
+
+  const once = await runNavigation(
+    fakeNavigator(() => ({ kind: "failed", failure: { kind: "movement_failed", movement: movement("break") }, evidence: evidence() })).navigator,
+    request,
+  );
+  assert.deepEqual(once.status === "stopped" && once.failedBreak, { x: 8, y: -57, z: 0 });
+
+  const placement = await runNavigation(
+    fakeNavigator(() => ({ kind: "failed", failure: { kind: "movement_failed", movement: movement("place") }, evidence: evidence() })).navigator,
+    request,
+  );
+  assert.equal(placement.status === "stopped" && placement.failedBreak, undefined);
+});

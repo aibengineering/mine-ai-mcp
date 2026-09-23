@@ -1364,6 +1364,43 @@ test("a drop that would fall down an open column into lava gets a floor before t
   assert.deepEqual(sealed, ["1,65,0"]);
 });
 
+test("a route stopped by a failed break gives up that block, not the target nearest the bot", async () => {
+  const near = new Vec3(1, 64, 0);
+  const far = new Vec3(5, 64, 0);
+  const bot = fakeBot({ blocks: [near, far], feet: new Vec3(0.5, 64, 0.5) }) as FakeWorld;
+  let routes = 0;
+  let broken = 0;
+  let offered: string[] = [];
+
+  const result = await mine(
+    bot,
+    request(bot, {
+      isSatisfied: () => broken > 0,
+      onTargets: (targets) => {
+        offered = targets.map((target) => `${target.position.x},${target.position.y},${target.position.z}`);
+      },
+      route: async () => {
+        routes += 1;
+        if (routes === 1) {
+          return {
+            status: "stopped",
+            reason: "repeated_movement_failure: No face of the block at 5,64,0 is in view",
+            elapsedMs: 0,
+            failedBreak: { x: 5, y: 64, z: 0 },
+          };
+        }
+        assert.deepEqual(offered, ["1,64,0"], "the near block stays a target; the failed one is dropped");
+        bot.removeBlock(near);
+        broken += 1;
+        return { status: "completed", elapsedMs: 0 };
+      },
+    }),
+  );
+
+  assert.equal(result.status, "satisfied");
+  assert.equal(routes, 2);
+});
+
 test("a quantity already in hand is not mined for", async () => {
   const bot = fakeBot({ blocks: [new Vec3(5, 64, 0)] });
   let routes = 0;
