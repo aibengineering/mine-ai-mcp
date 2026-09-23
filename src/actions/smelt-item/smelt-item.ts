@@ -143,6 +143,9 @@ async function takeOutputOnce(bot: Bot, window: FurnaceWindow) {
   if (!item) return null;
   if (!hasInventoryRoom(bot, item)) throw new Error(`No inventory room for furnace output ${item.name} x${item.count}.`);
   const inventoryBefore = carriedCount(bot, item.name);
+  // Shift-clicking into an existing stack mutates this same Item's count.
+  // Retain the pre-click quantity or a successful transfer looks like 0 removed.
+  const outputBefore = item.count;
   // Furnace slot 2 is marked as a crafting result by prismarine-windows, so
   // Furnace.takeOutput uses a cursor pickup followed by another click. A
   // single shift-click is safe here: cooking itself cannot repeat on click.
@@ -151,7 +154,7 @@ async function takeOutputOnce(bot: Bot, window: FurnaceWindow) {
   // the window packet even after the server accepted this click. The furnace
   // output slot is the direct witness for this one-slot transaction.
   const removed = await waitForSignal(
-    () => Math.max(0, item.count - (window.outputItem()?.count ?? 0)),
+    () => Math.max(0, outputBefore - (window.outputItem()?.count ?? 0)),
     window,
     "updateSlot",
     { timeoutMs: SLOT_RECOVERY_MS },

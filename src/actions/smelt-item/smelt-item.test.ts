@@ -3,6 +3,7 @@ import type { Bot } from "mineflayer";
 const navigation = {} as NavigationRuntime;
 import assert from "node:assert/strict";
 import test from "node:test";
+import { EventEmitter } from "node:events";
 import { botFixture, registry, type FakeStack } from "../../test-support/bot.js";
 import { createSmeltItemAction, parseSmeltItemRequest, smeltItem, type SmeltItemDependencies } from "./index.js";
 
@@ -101,6 +102,31 @@ test("smelts the requested input and reports output actually taken into inventor
   assert.equal(result.smelt.produced, 3);
   assert.equal(result.smelt.inputInventoryAfter, 0);
   assert.equal(result.smelt.fuelInventoryAfter, 0);
+});
+
+test("snapshots the output stack before a shift-click merges it into carried ingots", async () => {
+  // The combined workshop cooked both batches, but reported 0/9 on the second:
+  // prismarine-windows.fillSlotWithItem mutates the source count to zero.
+  const { bot, dependencies } = smeltingBot();
+  bot.inventory.items().push({ name: "iron_ingot", type: registry.itemsByName.iron_ingot!.id, count: 2, stackSize: 64 } as never);
+  const openFurnace = dependencies.openFurnace;
+  const click = bot.clickWindow;
+  const result = await smeltItem(bot, navigation,
+    { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 }, {}, {
+      ...dependencies,
+      openFurnace: async (actor, block) => {
+        const furnace = await openFurnace(actor, block);
+        bot.clickWindow = async (...args) => {
+          const source = furnace.outputItem()!;
+          await click(...args);
+          source.count = 0;
+        };
+        return Object.assign(new EventEmitter(), furnace);
+      },
+    });
+  assert.equal(result.status, "succeeded", result.status === "succeeded" ? "" : result.error);
+  assert.equal(result.smelt.produced, 3);
+  assert.equal(bot.inventory.items().find((item) => item.name === "iron_ingot")?.count, 5);
 });
 
 test("does not insert anything into a furnace that already owns contents", async () => {
