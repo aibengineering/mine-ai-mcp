@@ -5,7 +5,7 @@ import { botFixture } from "../../../test-support/bot.js";
 import { flatWorld } from "../../../test-support/navigation.js";
 import { blockClass } from "../../mineflayer/world.js";
 import { createMovementPolicy } from "../../movements/policy.js";
-import { evaluateMineTarget } from "./target-safety.js";
+import { evaluateMineTarget, lavaClosuresOf } from "./target-safety.js";
 import { createMineflayerMovementPolicy } from "../../mineflayer/movement-policy.js";
 import { observeMineflayerBlock } from "../../mineflayer/world.js";
 
@@ -59,4 +59,48 @@ test("missing isolation material rejects a dry water barrier but retains a swimm
   submergedTarget = true;
   assert.deepEqual(evaluateMineTarget(bot, policy, target, world, 0), { kind: "mineable", routeMayBreak: false },
     "a shore approach to an already submerged target remains available");
+});
+
+test("lava below an open drop column needs a floor under the target", () => {
+  const bot = botFixture({ items: [{ type: 1, name: "cobblestone", count: 1 }] });
+  const blocks = blockClass(bot);
+  let lavaDepth = 3;
+  bot.blockAt = (position) => {
+    const name = position.equals(new Vec3(0, 64, 0)) ? "stone"
+      : position.equals(new Vec3(0, 64 - lavaDepth, 0)) ? "lava" : "air";
+    const block = blocks.fromStateId(bot.registry.blocksByName[name]!.minStateId, 0);
+    block.position = position;
+    return block;
+  };
+  const target = bot.blockAt(new Vec3(0, 64, 0))!;
+  const policy = createMovementPolicy();
+  const world = flatWorld();
+  assert.deepEqual(lavaClosuresOf(bot, target.position), [{ x: 0, y: 63, z: 0 }]);
+  assert.deepEqual(evaluateMineTarget(bot, policy, target, world, 0), {
+    kind: "prohibited",
+    reason: "a floor over lava, 0 blocks available for placement",
+  });
+  assert.deepEqual(evaluateMineTarget(bot, policy, target, world, 1), { kind: "mineable", routeMayBreak: false });
+
+  lavaDepth = 1;
+  assert.deepEqual(lavaClosuresOf(bot, target.position), [{ x: 0, y: 63, z: 0 }],
+    "lava directly below is a face, counted once");
+});
+
+test("a drop column that ends on a solid block or in water needs no floor", () => {
+  const bot = botFixture();
+  const blocks = blockClass(bot);
+  let stop = "stone";
+  bot.blockAt = (position) => {
+    const name = position.equals(new Vec3(0, 64, 0)) ? "stone"
+      : position.equals(new Vec3(0, 61, 0)) ? stop
+      : position.equals(new Vec3(0, 60, 0)) ? "lava" : "air";
+    const block = blocks.fromStateId(bot.registry.blocksByName[name]!.minStateId, 0);
+    block.position = position;
+    return block;
+  };
+  assert.deepEqual(lavaClosuresOf(bot, { x: 0, y: 64, z: 0 }), []);
+  // Items float in water, so a pool between the target and the lava catches the drop.
+  stop = "water";
+  assert.deepEqual(lavaClosuresOf(bot, { x: 0, y: 64, z: 0 }), []);
 });

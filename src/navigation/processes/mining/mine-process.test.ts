@@ -1328,6 +1328,42 @@ test("a touching source that cannot be cast is still sealed before the break", a
   assert.equal(broken, 1);
 });
 
+test("a drop that would fall down an open column into lava gets a floor before the break", async () => {
+  const target = new Vec3(1, 66, 0);
+  const world = fakeBot({
+    blocks: [target],
+    solids: [new Vec3(0, 65, 0)],
+    lava: [new Vec3(1, 64, 0)],
+    feet: new Vec3(0.5, 66, 0.5),
+  }) as FakeWorld;
+  const sealed: string[] = [];
+  let broken = 0;
+
+  const result = await mine(
+    world,
+    request(world, {
+      canMine: () => ({ kind: "mineable", routeMayBreak: false }),
+      isSatisfied: () => broken > 0,
+      placeInto: async (_bot, cell) => {
+        sealed.push(`${cell.x},${cell.y},${cell.z}`);
+        return { kind: "placed", block: {} as never };
+      },
+      breakInPlace: async ({ position }) => {
+        assert.deepEqual(sealed, ["1,65,0"], "the floor is placed before the target comes out");
+        world.removeBlock(new Vec3(position.x, position.y, position.z));
+        broken += 1;
+        return { status: "broken" };
+      },
+      route: async () => {
+        throw new Error("a target already in reach must not be routed to");
+      },
+    }),
+  );
+
+  assert.equal(result.status, "satisfied");
+  assert.deepEqual(sealed, ["1,65,0"]);
+});
+
 test("a quantity already in hand is not mined for", async () => {
   const bot = fakeBot({ blocks: [new Vec3(5, 64, 0)] });
   let routes = 0;

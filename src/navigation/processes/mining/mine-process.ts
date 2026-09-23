@@ -42,7 +42,7 @@ import { CastTargets } from "./cast-targets.js";
 import { DROP_PICKUP_TIMEOUT_MS, MineDropTracker } from "./mine-drops.js";
 import { clearMiningWater } from "./mining-water.js";
 import { waterMiningStance } from "../../world/water.js";
-import { lavaFacesOf, type MineTargetDecision } from "./target-safety.js";
+import { lavaClosuresOf, lavaFacesOf, type MineTargetDecision } from "./target-safety.js";
 
 /** A loaded Mineflayer block, which is what `matches` is asked about. */
 export type MinecraftBlock = NonNullable<ReturnType<Bot["blockAt"]>>;
@@ -434,7 +434,8 @@ function coalesce(bot: Bot, target: MineTarget, movements: MovementPolicy): Goal
 
 /**
  * Close every lava cell touching the target with a carried block, from where
- * the bot stands, and say why if one of them would not close.
+ * the bot stands, and say why if one of them would not close. A drop that
+ * would fall down an open column into lava gets a floor under the target too.
  *
  * The count is taken here, over the six neighbours, from the live world after
  * the route has ended — not from the scan that chose the target, which may be
@@ -447,10 +448,11 @@ async function sealLavaFaces(
   position: BlockPosition,
   signal?: AbortSignal,
 ): Promise<string | null> {
-  for (const face of lavaFacesOf(bot, position)) {
-    const placed = await request.placeInto(bot, face, { ...(signal && { signal }) });
+  for (const cell of lavaClosuresOf(bot, position)) {
+    const placed = await request.placeInto(bot, cell, { ...(signal && { signal }) });
     if (placed.kind === "failed") {
-      return `the lava at ${cellKey(face)} could not be closed: ${placed.error}`;
+      const what = bot.blockAt(asVec3(cell))?.name === "lava" ? "the lava" : "the floor over lava";
+      return `${what} at ${cellKey(cell)} could not be closed: ${placed.error}`;
     }
   }
   return null;

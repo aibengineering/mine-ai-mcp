@@ -17,8 +17,9 @@
  *   break. A route's lava avoidance cannot protect a stationary dig from drift.
  * - Lava is closed before the break. Each lava neighbour takes one carried
  *   block, which vanilla lets a placement put into a fluid cell, source
- *   included.
- * - A target with more lava faces than available building blocks is not
+ *   included. A drop that would fall down an open column into lava gets a
+ *   floor placed under the target first.
+ * - A target with more closures than available building blocks is not
  *   mineable. The caller supplies that budget after reserving collection items.
  *
  * Collect-block's own lateral-lava refusal and its falling-column check are
@@ -63,6 +64,37 @@ export type MineTargetDecision =
 export function lavaFacesOf(bot: Bot, position: BlockPosition): BlockPosition[] {
   const centre = new Vec3(position.x, position.y, position.z);
   return NEIGHBOURS.map((offset) => centre.plus(offset)).filter((cell) => bot.blockAt(cell, false)?.name === "lava");
+}
+
+/** How far down an open column the target's drop is followed. */
+const DROP_FALL_DEPTH = 24;
+
+/**
+ * The cell under the target that needs a block so its drop cannot fall into
+ * lava further down an open column. Lava directly below is already a face.
+ * Water ends the fall because items float in it, and anything with collision
+ * catches the drop.
+ */
+function dropFloorOf(bot: Bot, position: BlockPosition): BlockPosition | null {
+  for (let depth = 2; depth <= DROP_FALL_DEPTH + 1; depth++) {
+    const above = bot.blockAt(new Vec3(position.x, position.y - depth + 1, position.z), false);
+    if (!above || above.boundingBox !== "empty" || above.name === "lava" || above.name === "water" ||
+      above.name === "bubble_column") return null;
+    const block = bot.blockAt(new Vec3(position.x, position.y - depth, position.z), false);
+    if (block?.name === "lava") return { x: position.x, y: position.y - 1, z: position.z };
+  }
+  return null;
+}
+
+/**
+ * Every cell that must hold a block before the target comes out: its lava
+ * faces, which would flood the mined cell, and a floor when its drop would
+ * otherwise fall down an open column into lava.
+ */
+export function lavaClosuresOf(bot: Bot, position: BlockPosition): BlockPosition[] {
+  const closures = lavaFacesOf(bot, position).map(({ x, y, z }) => ({ x, y, z }));
+  const floor = dropFloorOf(bot, position);
+  return floor === null ? closures : [...closures, floor];
 }
 
 function plural(count: number, noun: string): string {
@@ -115,11 +147,15 @@ export function evaluateMineTarget(
   const below = world.blockAt(position.x, position.y - 1, position.z);
   const needsIsolation = floodRule || (below.kind === "loaded" && below.traits.liquid === "water");
 
-  const lavaFaces = lavaFacesOf(bot, position);
-  if (lavaFaces.length > availableBlocks) {
+  const lavaFaces = lavaFacesOf(bot, position).length;
+  const closures = lavaClosuresOf(bot, position).length;
+  if (closures > availableBlocks) {
+    const floor = closures > lavaFaces ? "a floor over lava" : null;
+    const needed = lavaFaces === 0 ? floor : floor === null ? plural(lavaFaces, "lava face")
+      : `${plural(lavaFaces, "lava face")} and ${floor}`;
     return {
       kind: "prohibited",
-      reason: `${plural(lavaFaces.length, "lava face")}, ${plural(availableBlocks, "block")} available for placement`,
+      reason: `${needed}, ${plural(availableBlocks, "block")} available for placement`,
     };
   }
   // A swimmer may still need to settle, and a shore miner can approach a
@@ -132,5 +168,5 @@ export function evaluateMineTarget(
   }
   const falling = fallingColumnStop(bot, movements, position, world);
   if (falling !== null) return { kind: "prohibited", reason: falling };
-  return { kind: "mineable", routeMayBreak: !needsIsolation && lavaFaces.length === 0 };
+  return { kind: "mineable", routeMayBreak: !needsIsolation && closures === 0 };
 }
