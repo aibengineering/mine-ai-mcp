@@ -188,6 +188,33 @@ test("digging straight down keeps the current yaw and owns its own aim", async (
   assert.equal(lookedAtCalls, 0);
 });
 
+test("a dig at the edge of reach centres on the stance search judged it from before giving up", async () => {
+  // Search prices reach and sight from the centre of the stance cell; the body
+  // can stop at its corner, which puts the same face out of reach.
+  const entity = { position: { x: 0.1, y: 63, z: 0.9 }, onGround: true, isInWater: false, yaw: 0 };
+  const centred = () => Math.hypot(entity.position.x - 0.5, entity.position.z - 0.5) <= 0.17;
+  let dug = 0;
+  const bot = surface({
+    entity,
+    blockAt: () => ({ name: "sand" }),
+    waitForTicks: async () => {
+      entity.position = { x: 0.5, y: 63, z: 0.5 };
+    },
+    visibleDigAim: (position) => (centred() ? { x: position.x + 0.5, y: position.y, z: position.z + 0.5 } : null),
+    dig: async () => {
+      dug += 1;
+    },
+  });
+  const actuator = new MineflayerBot(bot, { revision: 1 });
+  const effect = actuator.startEffect(
+    { kind: "break", position: { x: 4, y: 65, z: 3 }, expectedStateId: 1, toolType: null, brings: [] },
+    { runId: "run", planId: "plan", stepId: "edge-of-reach", attempt: 1 },
+    new AbortController().signal,
+  );
+  assert.deepEqual(await effect.completion, { kind: "accepted" });
+  assert.equal(dug, 1);
+});
+
 test("stationary water controls release after a failed dig and when the search releases its hold", async () => {
   const entity = { position: { x: 0.5, y: 63, z: 0.5 }, onGround: true, isInWater: true, yaw: 0 };
   const controls = new Map<string, boolean>();

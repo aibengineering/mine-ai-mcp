@@ -727,7 +727,13 @@ export class MineflayerBot implements NavigationBot {
                 await this.bot.dig(target, "ignore");
                 return null;
               }
-              const aim = this.bot.visibleDigAim(operation.position);
+              let aim = this.bot.visibleDigAim(operation.position);
+              // Search judges reach and sight from the centre of the stance
+              // cell, and the body can stop at its corner: a dig planned at the
+              // edge of reach is then out of view from where the bot stands.
+              // Stand where the plan assumed before reporting the face hidden.
+              if (aim === null && !directlyAboveHead && (await this.centerOnCell(feet, signal)))
+                aim = this.bot.visibleDigAim(operation.position);
               if (aim === null) {
                 const { x, y, z } = this.bot.entity.position;
                 return {
