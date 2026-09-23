@@ -320,11 +320,11 @@ wrong blocks loses a required tool tier. Set it to `continue` to keep the same
 build running with the remaining tool.
 The structure is given as `blocks`, a list of `{x, y, z, block_name}`
 up to 256 cells, or as `portal_frame`, the interior's lowest corner and an
-axis, which expands to 10 obsidian, four corner support blocks, and six interior
-cells that must be air. The supports default to cobblestone; set
-`portal_frame.corner_block` to another carried solid block, such as dirt. They
-remain in place and do not prevent activation. A cell whose block is `air` is
-dug clear rather than placed, whatever `remove_wrong_blocks` says. The action is
+axis, which expands to 10 obsidian, four cobblestone corner supports, and six interior
+cells that must be air. The supports remain in place and do not prevent activation.
+Use explicit `blocks` for custom designs, including different corner materials.
+A cell whose block is `air` is dug clear rather than placed, whatever
+`remove_wrong_blocks` says. The action is
 a thin contract over the navigation library's build process, which is
 Baritone's builder loop: it places and digs what is in reach from where the
 bot stands, lowest first, and otherwise routes under one goal of every

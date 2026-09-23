@@ -5,7 +5,7 @@ import { registryNameSchema } from "../registry-name.js";
 
 export const BUILD_STRUCTURE = "build_structure" as const;
 export const BUILD_STRUCTURE_DESCRIPTION =
-  "Build a structure given as cells, each an absolute x, y, z and a carried block name, or air for a cell to dig clear, or as a nether portal frame using 10 obsidian and 4 corner support blocks (cobblestone by default) at an interior corner with its interior kept clear. Places every cell it can reach from where the bot stands, walks within reach of the rest lowest first, never builds itself in, and reports what was placed, dug, and short, and why each cell still wrong was left: holding another block, nothing to place against, its block not carried, would seal the bot in, or refused. Required tool-tier loss stops with partial progress by default; on_tool_loss=continue keeps the same build running. Sending the same structure again resumes or audits it.";
+  "Build a structure given as cells, each an absolute x, y, z and a carried block name, or air for a cell to dig clear, or as a nether portal frame using 10 obsidian and 4 cobblestone corner supports at an interior corner with its interior kept clear. Places every cell it can reach from where the bot stands, walks within reach of the rest lowest first, never builds itself in, and reports what was placed, dug, and short, and why each cell still wrong was left: holding another block, nothing to place against, its block not carried, would seal the bot in, or refused. Required tool-tier loss stops with partial progress by default; on_tool_loss=continue keeps the same build running. Sending the same structure again resumes or audits it.";
 
 /** How many cells one build may describe; a portal preset is twenty and a small shelter under a hundred. */
 export const MAX_STRUCTURE_CELLS = 256;
@@ -26,11 +26,6 @@ export const portalFrameRequestSchema = z.strictObject({
   y: coordinate("Y").describe("Y of the interior's lowest row, one above the ground the frame stands on."),
   z: coordinate("Z").describe("Z of the interior's lowest corner."),
   axis: z.enum(["x", "z"]).default("x").describe("The horizontal axis the frame's width runs along."),
-  corner_block: registryNameSchema
-    .default("cobblestone")
-    .describe(
-      "Carried solid block for the four corner supports, such as cobblestone or dirt. Supports remain in place.",
-    ),
 });
 
 export const buildStructureInputSchema = z.strictObject({
@@ -42,7 +37,7 @@ export const buildStructureInputSchema = z.strictObject({
   portal_frame: portalFrameRequestSchema
     .optional()
     .describe(
-      "A nether portal frame using 10 obsidian and 4 corner support blocks (cobblestone by default), with its six interior cells kept clear, expanded to cells before building.",
+      "A nether portal frame using 10 obsidian and 4 cobblestone corner supports, with its six interior cells kept clear. Supports remain in place. Use explicit blocks for a custom design.",
     ),
   remove_wrong_blocks: z
     .boolean()
@@ -77,7 +72,7 @@ export function portalFrameCells(frame: z.output<typeof portalFrameRequestSchema
     frame.axis === "x"
       ? { x: frame.x + offset, y, z: frame.z, blockName }
       : { x: frame.x, y, z: frame.z + offset, blockName };
-  const rowBlock = (offset: number) => (offset === -1 || offset === 2 ? frame.corner_block : "obsidian");
+  const rowBlock = (offset: number) => (offset === -1 || offset === 2 ? "cobblestone" : "obsidian");
   for (let offset = -1; offset <= 2; offset += 1) cells.push(along(offset, frame.y - 1, rowBlock(offset)));
   for (let up = 0; up < 3; up += 1) {
     cells.push(along(-1, frame.y + up));

@@ -10,7 +10,7 @@ function cells(list: [number, number, number][], blockName = "cobblestone"): Str
 }
 
 test("the portal preset uses ten obsidian, four corner supports and six interior air cells, and conflicting cells are refused", () => {
-  const frame = portalFrameCells({ x: 5, y: 64, z: 0, axis: "x", corner_block: "cobblestone" });
+  const frame = portalFrameCells({ x: 5, y: 64, z: 0, axis: "x" });
   assert.equal(frame.length, 20);
   assert.equal(frame.filter((cell) => cell.blockName === "obsidian").length, 10);
   assert.equal(frame.filter((cell) => cell.blockName === "cobblestone").length, 4);
@@ -34,7 +34,7 @@ test("the portal preset uses ten obsidian, four corner supports and six interior
   assert.equal(parsed.cells.length, 20);
   assert.deepEqual(parsed.cells, frame);
   const rotated = parseBuildStructureRequest({
-    portal_frame: { x: 0, y: 64, z: 5, axis: "z", corner_block: "dirt" },
+    portal_frame: { x: 0, y: 64, z: 5, axis: "z" },
   });
   assert.deepEqual(
     rotated.cells,
@@ -42,7 +42,6 @@ test("the portal preset uses ten obsidian, four corner supports and six interior
       ...cell,
       x: cell.z,
       z: cell.x,
-      blockName: cell.blockName === "cobblestone" ? "dirt" : cell.blockName,
     })),
   );
   assert.throws(
@@ -56,6 +55,13 @@ test("the portal preset uses ten obsidian, four corner supports and six interior
     /both stone and dirt/,
   );
   assert.throws(() => parseBuildStructureRequest({}), /needs blocks/);
+  assert.throws(() => parseBuildStructureRequest({
+    portal_frame: { x: 5, y: 64, z: 0, corner_block: "obsidian" },
+  }), /corner_block/);
+  const custom = frame.map(({ x, y, z, blockName }) => ({
+    x, y, z, block_name: blockName === "cobblestone" ? "obsidian" : blockName,
+  }));
+  assert.equal(parseBuildStructureRequest({ blocks: custom }).cells.filter(cell => cell.blockName === "obsidian").length, 14);
 });
 
 test("a finished structure is reported complete with what was placed", async () => {
