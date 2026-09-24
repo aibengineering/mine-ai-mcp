@@ -10,7 +10,8 @@ export async function openScenarioHighlighter(bot: Bot, session: NodeClientSessi
   if (offset === undefined || session.username !== session.scenario.players[0]?.name) return undefined;
   const port = session.port + Number(offset);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid scenario highlighter port offset.");
-  const highlighter = new BlockHighlighter({ port }, () => bot.game.dimension);
+  // Serve the feed where the game server is, so a viewer in Tailscale remote mode can reach it too.
+  const highlighter = new BlockHighlighter({ port, host: session.host }, () => bot.game.dimension);
   try {
     await highlighter.startServer();
   } catch (error) {
@@ -19,7 +20,7 @@ export async function openScenarioHighlighter(bot: Bot, session: NodeClientSessi
     await highlighter.stopServer();
     return undefined;
   }
-  session.log(`highlighter feed: http://127.0.0.1:${port}/debug/api/highlights`);
+  session.log(`highlighter feed: http://${session.host}:${port}/debug/api/highlights`);
   let unfollow: (() => void) | undefined;
   return {
     highlighter,

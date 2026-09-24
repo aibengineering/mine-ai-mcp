@@ -5,7 +5,7 @@
     "": {
       "name": "@aibengineering/mine-ai-mcp",
       "dependencies": {
-        "@aibengineering/minecraft-block-highlighter": "github:aibengineering/minecraft-block-highlighter#243b1ace62f8c0d0c35f6c1e29899bf65b654957",
+        "@aibengineering/minecraft-block-highlighter": "github:aibengineering/minecraft-block-highlighter#a15592231471d351550971d12d8edb1e9a647066",
         "@modelcontextprotocol/sdk": "^1.30.0",
         "minecraft-data": "https://github.com/aibengineering/node-minecraft-data/releases/download/mine-ai-c932f743/minecraft-data-3.116.0.tgz",
         "mineflayer": "github:aibengineering/mineflayer#9fa1140b90877a084efd988905df0c0eceaa78d0",
@@ -21,7 +21,7 @@
         "@types/node": "^26.0.1",
         "highlight.js": "^11.12.0",
         "markdown-it": "^15.0.0",
-        "mine-labs": "github:aibengineering/mine-labs#6c9c2f214d3068ffb2f8915ac879327dd7d7913c",
+        "mine-labs": "github:aibengineering/mine-labs#aba1cdf0add0e7239194e23b5c657c97378aef53",
         "tsx": "^4.23.1",
         "typescript": "^6.0.3",
       },
@@ -34,7 +34,7 @@
     "prismarine-recipe": "github:aibengineering/prismarine-recipe#542f0600f5ddf07bb16df67fa1ac06e603bd28e0",
   },
   "packages": {
-    "@aibengineering/minecraft-block-highlighter": ["@aibengineering/minecraft-block-highlighter@github:aibengineering/minecraft-block-highlighter#243b1ac", {}, "aibengineering-minecraft-block-highlighter-243b1ac", "sha512-ZEk+AWgcLVlx/rgcHGkGZBNL7wygRujzdbNueK2d+rMrhJdvPqWord1YJmFroJ/hnRv2zshk/IFfTRpnm89GNw=="],
+    "@aibengineering/minecraft-block-highlighter": ["@aibengineering/minecraft-block-highlighter@github:aibengineering/minecraft-block-highlighter#a155922", {}, "aibengineering-minecraft-block-highlighter-a155922", "sha512-CT+ayycJtWtM6Q52sKeFkuEqxdvQHE3Z+nutEOHsee/FWUBxHvzPD0TtZOGFPPk2+Rle9RMNhIDtOEc9YoTKNg=="],
 
     "@azure/msal-common": ["@azure/msal-common@14.16.1", "", {}, "sha512-nyxsA6NA4SVKh5YyRpbSXiMr7oQbwark7JU9LMeg6tJYTSPyAGkdx61wPT4gyxZfxlSxMMEyAsWaubBlNyIa1w=="],
 
@@ -290,7 +290,7 @@
 
     "mime-types": ["mime-types@3.0.2", "", { "dependencies": { "mime-db": "^1.54.0" } }, "sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A=="],
 
-    "mine-labs": ["mine-labs@github:aibengineering/mine-labs#6c9c2f2", { "dependencies": { "commander": "^13.1.0", "picocolors": "^1.1.1", "rcon-srcds": "^2.1.1", "yaml": "^2.9.0", "zod": "^4.0.0" }, "bin": { "mine-labs": "./bin/mine-labs.mjs" } }, "aibengineering-mine-labs-6c9c2f2", "sha512-yl7tZxp9Pu3scdIaDT7InLuNAHGclM2bY/TEo5wIrel6buGYgc9xAUuQsJYg3bQD8vmdwaK2hjxS4ty/8MuwhA=="],
+    "mine-labs": ["mine-labs@github:aibengineering/mine-labs#aba1cdf", { "dependencies": { "commander": "^13.1.0", "picocolors": "^1.1.1", "rcon-srcds": "^2.1.1", "yaml": "^2.9.0", "zod": "^4.0.0" }, "bin": { "mine-labs": "./bin/mine-labs.mjs" } }, "aibengineering-mine-labs-aba1cdf", "sha512-FPWwirRgGmxXboGnuBBu/B7tMoxnCzDV6aT21DWi1xyO15dTYmnZQNkdXZj+u6K+V5H2jbWoji/Znj52biff2w=="],
 
     "minecraft-data": ["minecraft-data@https://github.com/aibengineering/node-minecraft-data/releases/download/mine-ai-c932f743/minecraft-data-3.116.0.tgz", {}, "sha512-MNQ3stmo691WgdUA2K4JJFCz5Aa6lBNxsE7pp2CiOBMY3eJpeFXweFB4LPHT5RcnGtKvZKqaIEDxAiFtlgLYTg=="],
 

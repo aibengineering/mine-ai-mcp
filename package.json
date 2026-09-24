@@ -36,14 +36,15 @@
     "test": "bun run typecheck && bun run typecheck:scenarios && bun run typecheck:tests && bun test ./src ./scenarios/src ./tests",
     "evidence:render": "bun scenarios/src/action-evidence-page.ts",
     "scenarios": "bunx --bun mine-labs run tests/minecraft/scenarios --jobs 2 --repeat forever",
-    "scenarios:spectator": "bun tests/minecraft/build-spectator-mods.ts && bunx --bun mine-labs run tests/minecraft/scenarios --spectator"
+    "scenarios:spectator": "bun tests/minecraft/build-spectator-mods.ts && bunx --bun mine-labs run tests/minecraft/scenarios --spectator",
+    "scenarios:tailscale": "bun tests/minecraft/build-spectator-mods.ts && bunx --bun mine-labs run tests/minecraft/scenarios --tailscale"
   },
   "engines": {
     "node": ">=24.15.0",
     "bun": ">=1.4.0"
   },
   "dependencies": {
-    "@aibengineering/minecraft-block-highlighter": "github:aibengineering/minecraft-block-highlighter#243b1ace62f8c0d0c35f6c1e29899bf65b654957",
+    "@aibengineering/minecraft-block-highlighter": "github:aibengineering/minecraft-block-highlighter#a15592231471d351550971d12d8edb1e9a647066",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "mineflayer-tool": "1.2.0",
     "prismarine-block": "^1.23.0",
@@ -59,7 +60,7 @@
     "@types/node": "^26.0.1",
     "highlight.js": "^11.12.0",
     "markdown-it": "^15.0.0",
-    "mine-labs": "github:aibengineering/mine-labs#6c9c2f214d3068ffb2f8915ac879327dd7d7913c",
+    "mine-labs": "github:aibengineering/mine-labs#aba1cdf0add0e7239194e23b5c657c97378aef53",
     "tsx": "^4.23.1",
     "typescript": "^6.0.3"
   },

@@ -173,7 +173,17 @@ bun run scenarios:spectator
 
 # After building, open only the collection folder.
 bunx --bun mine-labs run tests/minecraft/scenarios/collect --spectator
+
+# Drive and watch the suite from your own Minecraft, such as a phone, over Tailscale.
+bun run scenarios:tailscale
 ```
+
+`scenarios:tailscale` uses Mine Labs' Tailscale remote mode. It opens no client
+on this machine. It serves the dashboard, the scenario worlds and the highlighter
+feeds on this machine's tailnet address only, with no login, so your tailnet
+controls access. Open the printed address in the device's browser to download
+the Mine Labs and highlighter mods for a NeoForge 1.21.4 instance, then enter the
+same address on the in-game **Mine Labs** screen. Play on your normal account.
 
 Use the Mine Labs command directly to replace the script's scenario directory.
 
