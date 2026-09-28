@@ -24,7 +24,10 @@ export class CombatTactics {
       .filter(threat => threat.observed && canMeleeTarget(bot, bot.entities[threat.id]!))
       .sort((a, b) => Number(b.swelling) - Number(a.swelling) || a.distance - b.distance)[0] : null;
     const escapeAvailable = creepers.length > 0 && creeperRetreatHeading(bot, creepers, null, perception.resolvedIds) !== null;
-    const canBuild = !escapeAvailable && scene.policy.combat.terrain?.place &&
+    // A barrier is only ever cut against a creeper, so check that first: the
+    // material check rebuilds Prismarine's Block class (~1.5 ms) on every
+    // call, and this runs more than once per tick for every fight.
+    const canBuild = creepers.length > 0 && !escapeAvailable && scene.policy.combat.terrain?.place &&
       permitsHide(scene.policy.combat, bot.food >= 18 || selectPolicyFood(bot, scene.policy.food).food !== null) && blastBarrierMaterial(bot);
     const barrier = canBuild ? blastBarrierCells(bot, creepers).find(cell => {
       const scope = blastBarrierScope(bot, cell, () => scene.policy.combat);
