@@ -1,12 +1,11 @@
-import minecraftData from "minecraft-data";
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import test from "node:test";
-import prismarineBlock from "prismarine-block";
 import { Vec3 } from "vec3";
 import { worldViewRaycaster } from "../../../navigation/world/line-of-sight.js";
 import { MemoryWorld } from "../../../navigation/world/memory-world.js";
 import { observation, planningStart } from "../../../test-support/navigation.js";
+import { blockNamed } from "../../../test-support/world.js";
 import {
   crystalBlastCoverCell,
   crystalBlastCovered,
@@ -16,18 +15,13 @@ import {
   crystalReturnGoal,
 } from "./crystal-melee.js";
 
-const registry = minecraftData("1.21.4"),
-  Block = prismarineBlock("1.21.4");
 const crystal = new Vec3(0.5, 83, 0.5);
 function fixture(pedestal: string | null = "bedrock") {
   const blocks = new Map<string, string>();
   if (pedestal) blocks.set("(0, 82, 0)", pedestal);
   const blockAt = (position: Vec3) => {
-    const p = position.floored(),
-      name = blocks.get(p.toString()) ?? "air";
-    const block = Block.fromStateId(registry.blocksByName[name]!.defaultState, 0);
-    block.position = p;
-    return block;
+    const p = position.floored();
+    return blockNamed(blocks.get(p.toString()) ?? "air", p);
   };
   const rays = worldViewRaycaster((x, y, z) =>
     blockAt(new Vec3(x, y, z)).shapes.map(([minX, minY, minZ, maxX, maxY, maxZ]) => ({
