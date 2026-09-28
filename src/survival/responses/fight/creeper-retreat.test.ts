@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../../test-support/bot.js";
+import { physicsEveryMillisecond } from "../../../test-support/physics.js";
 import { retreatFromCreepers } from "./creeper-retreat.js";
 import { CreeperClearance } from "../../perception/combat/creepers.js";
 
@@ -15,14 +16,15 @@ test("an escape with no physical progress expires without claiming clearance", a
   bot.lookAt = async () => {};
   let ticks = 0;
   const clearance = new CreeperClearance(bot);
-  const timer = setInterval(() => { ticks++; bot.emit("physicsTick"); }, 1);
-  try {
+  {
+    // Physics stops here: the cancellation below must settle without another tick.
+    using _physics = physicsEveryMillisecond(bot, () => ticks++);
     assert.equal(await retreatFromCreepers(bot, new AbortController().signal, () => false,
       { clearance, tick: () => ticks, dead: new Set() }), "expired");
     assert.equal(clearance.pending, true);
     assert.equal(controls.get("forward"), false);
     assert.equal(controls.get("sprint"), false);
-  } finally { clearInterval(timer); }
+  }
   const abort = new AbortController();
   const retreat = retreatFromCreepers(bot, abort.signal, () => false);
   await Promise.resolve();

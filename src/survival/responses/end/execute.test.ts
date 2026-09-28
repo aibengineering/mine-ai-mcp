@@ -9,19 +9,11 @@ import { TestEndCombat as EndCombat } from "../../../test-support/combat.js";
 import type { FootingRecovery } from "../footing.js";
 
 import { botFixture } from "../../../test-support/bot.js";
+import { physicsEveryMillisecond } from "../../../test-support/physics.js";
 import { PerchObservation } from "../../perception/combat/perch.js";
 
 /** No footing recovery is pending in these fixtures. */
 const steady = { needed: false } as FootingRecovery;
-
-/** Server physics on a real clock, independent of the code under test; `beforeTick` runs before each tick is emitted. */
-function physicsEveryMillisecond(bot: Bot, beforeTick = () => {}): Disposable {
-  const timer = setInterval(() => {
-    beforeTick();
-    bot.emit("physicsTick");
-  }, 1);
-  return { [Symbol.dispose]: () => clearInterval(timer) };
-}
 
 /** The dragon (id 42) at the origin; metadata 9 is its health and 16 its phase (6 is perched). */
 function dragon(phase: number, { health = 200, y = 68, yaw = 0 } = {}) {

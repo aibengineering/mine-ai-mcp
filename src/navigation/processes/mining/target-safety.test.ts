@@ -3,22 +3,12 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../../test-support/bot.js";
 import { flatWorld } from "../../../test-support/navigation.js";
+import { answerBlocks } from "../../../test-support/world.js";
 import { blockClass } from "../../mineflayer/world.js";
 import { createMovementPolicy } from "../../movements/policy.js";
 import { evaluateMineTarget, lavaClosuresOf } from "./target-safety.js";
 import { createMineflayerMovementPolicy } from "../../mineflayer/movement-policy.js";
 import { observeMineflayerBlock } from "../../mineflayer/world.js";
-import type { Bot } from "mineflayer";
-
-/** Answers `bot.blockAt` with the first state of whichever block `nameAt` names for each cell. */
-function answerBlocks(bot: Bot, nameAt: (position: Vec3) => string): void {
-  const blocks = blockClass(bot);
-  bot.blockAt = (position) => {
-    const block = blocks.fromStateId(bot.registry.blocksByName[nameAt(position)]!.minStateId, 0);
-    block.position = position;
-    return block;
-  };
-}
 
 test("lava preparation counts permitted building material, not reserved inventory", () => {
   const bot = botFixture({ items: [{ type: 1, name: "oak_log", count: 64 }] });

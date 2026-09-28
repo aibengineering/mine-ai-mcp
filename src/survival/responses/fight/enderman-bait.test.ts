@@ -3,6 +3,7 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import { MemoryWorld } from "../../../navigation/world/memory-world.js";
 import { botFixture } from "../../../test-support/bot.js";
+import { physicsEveryMillisecond } from "../../../test-support/physics.js";
 import { EndermanFight } from "./enderman.js";
 import type { FightScene } from "./scene.js";
 import type { FightMovement } from "./movement.js";
@@ -39,40 +40,37 @@ for (const terrain of ["level", "late", "stationary", "gap", "blocked", "hold", 
     const budget = { remaining: 290, [Symbol.dispose]() {} };
     fight.state = { kind: "committed", cell: new Vec3(0, 0, 0), hits: 0,
       budget: budget as never };
-    const timer = setInterval(() => {
+    using _physics = physicsEveryMillisecond(bot, () => {
       bot.entity.position.x += (Number(controls.right) - Number(controls.left)) * 0.1;
       scene.elapsedTicks++;
       if (terrain !== "stationary" && bot.entity.position.x > (terrain === "late" ? 3 : 2))
         scene.target.position.z = 1;
       maximumX = Math.max(maximumX, bot.entity.position.x);
       if (++ticks === 3 && (terrain === "cancel" || terrain === "knockback")) controller.abort(new Error("takeover"));
-      bot.emit("physicsTick");
-    }, 1);
-    try {
-      if ((terrain === "cancel" || terrain === "knockback")) await assert.rejects(fight.baitRoof(), /takeover/);
-      else await fight.baitRoof();
-      assert.equal(stopped, ["level", "late", "stationary", "unshielded", "cancel", "knockback"].includes(terrain) ? 1 : 0);
-      assert.equal(resumed, stopped);
-      assert.deepEqual(controls, { forward: false, back: false, left: false, right: false });
-      if (["level", "late", "stationary", "unshielded"].includes(terrain)) {
-        assert.ok(maximumX > 2, "leave the old 0.8-block jitter and reach beyond the eave");
-        if (terrain === "late") assert.ok(maximumX > 3 && maximumX < 3.3, "observed motion reverses the walk");
-        if (terrain === "stationary") assert.ok(maximumX <= 4.6, "an unresponsive quarry cannot cause an unbounded chase");
-        if (terrain === "level" || terrain === "unshielded") assert.ok(maximumX < 2.3, "return as soon as the quarry moves");
-        assert.ok(bot.entity.position.distanceTo(new Vec3(0.5, 0, 0.5)) < 0.2);
-      }
-      if ((terrain === "cancel" || terrain === "knockback")) {
-        controller = new AbortController();
-        if (terrain === "knockback") bot.entity.position.x = 5.5;
-        await fight.maintain();
-        if (terrain === "knockback") {
-          assert.equal(bot.entity.position.x, 5.5, "do not steer across terrain outside the saved return corridor");
-          assert.equal(fight.state.kind, "unprepared");
-        } else assert.ok(bot.entity.position.distanceTo(new Vec3(0.5, 0, 0.5)) < 0.2, "resume the saved return after a tactical interruption");
-        assert.equal(resumed, 2);
-      }
-      assert.equal(budget.remaining, 290, "bait does not renew confirmed-hit progress");
-    } finally { clearInterval(timer); }
+    });
+    if ((terrain === "cancel" || terrain === "knockback")) await assert.rejects(fight.baitRoof(), /takeover/);
+    else await fight.baitRoof();
+    assert.equal(stopped, ["level", "late", "stationary", "unshielded", "cancel", "knockback"].includes(terrain) ? 1 : 0);
+    assert.equal(resumed, stopped);
+    assert.deepEqual(controls, { forward: false, back: false, left: false, right: false });
+    if (["level", "late", "stationary", "unshielded"].includes(terrain)) {
+      assert.ok(maximumX > 2, "leave the old 0.8-block jitter and reach beyond the eave");
+      if (terrain === "late") assert.ok(maximumX > 3 && maximumX < 3.3, "observed motion reverses the walk");
+      if (terrain === "stationary") assert.ok(maximumX <= 4.6, "an unresponsive quarry cannot cause an unbounded chase");
+      if (terrain === "level" || terrain === "unshielded") assert.ok(maximumX < 2.3, "return as soon as the quarry moves");
+      assert.ok(bot.entity.position.distanceTo(new Vec3(0.5, 0, 0.5)) < 0.2);
+    }
+    if ((terrain === "cancel" || terrain === "knockback")) {
+      controller = new AbortController();
+      if (terrain === "knockback") bot.entity.position.x = 5.5;
+      await fight.maintain();
+      if (terrain === "knockback") {
+        assert.equal(bot.entity.position.x, 5.5, "do not steer across terrain outside the saved return corridor");
+        assert.equal(fight.state.kind, "unprepared");
+      } else assert.ok(bot.entity.position.distanceTo(new Vec3(0.5, 0, 0.5)) < 0.2, "resume the saved return after a tactical interruption");
+      assert.equal(resumed, 2);
+    }
+    assert.equal(budget.remaining, 290, "bait does not renew confirmed-hit progress");
   });
 
 test("a shielded lure lands ready shared strikes before returning home without waiting out cooldowns", async () => {
@@ -107,25 +105,22 @@ test("a shielded lure lands ready shared strikes before returning home without w
   } as unknown as FightMovement;
   const fight = new EndermanFight(scene, weapons, movement);
   fight.state = { kind: "committed", cell: new Vec3(0, 0, 0), hits: 0, budget: { remaining: 290 } as never };
-  const timer = setInterval(() => {
+  using _physics = physicsEveryMillisecond(bot, () => {
     bot.entity.position.x += (Number(controls.right) - Number(controls.left)) * 0.1;
     if (bot.entity.position.x > 2) target.position.x = 3.5;
     scene.elapsedTicks++;
-    bot.emit("physicsTick");
-  }, 1);
-  try {
-    await fight.baitRoof();
-    assert.ok(hits.length > 0);
-    assert.ok(hits[0]!.x > 1.5, "take the opening outside the centre, before retreat completes");
-    assert.ok(hits.every((hit) => hit.guarded), "a moving sword hit must not lower the shield");
-    for (let i = 1; i < hits.length; i++) assert.ok(hits[i]!.tick - hits[i - 1]!.tick >= loadout.cooldownTicks);
-    assert.ok(bot.entity.position.distanceTo(new Vec3(0.5, 0, 0.5)) < 0.2);
-    assert.equal(scene.attacks, hits.length);
-    scene.elapsedTicks += loadout.cooldownTicks;
-    bot.heldItem = null;
-    assert.equal(weapons.strike(target, loadout), false, "a newly selected loadout is not proof that it is equipped");
-    assert.equal(scene.attacks, hits.length);
-  } finally { clearInterval(timer); }
+  });
+  await fight.baitRoof();
+  assert.ok(hits.length > 0);
+  assert.ok(hits[0]!.x > 1.5, "take the opening outside the centre, before retreat completes");
+  assert.ok(hits.every((hit) => hit.guarded), "a moving sword hit must not lower the shield");
+  for (let i = 1; i < hits.length; i++) assert.ok(hits[i]!.tick - hits[i - 1]!.tick >= loadout.cooldownTicks);
+  assert.ok(bot.entity.position.distanceTo(new Vec3(0.5, 0, 0.5)) < 0.2);
+  assert.equal(scene.attacks, hits.length);
+  scene.elapsedTicks += loadout.cooldownTicks;
+  bot.heldItem = null;
+  assert.equal(weapons.strike(target, loadout), false, "a newly selected loadout is not proof that it is equipped");
+  assert.equal(scene.attacks, hits.length);
 });
 
 type BotTarget = FightScene["target"];

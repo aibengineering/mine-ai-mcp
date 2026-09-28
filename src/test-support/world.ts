@@ -1,8 +1,11 @@
 import minecraftData from "minecraft-data";
+import type { Bot } from "mineflayer";
+import blockLoader, { type Block } from "prismarine-block";
 import { Vec3 } from "vec3";
 import { cellKey } from "../utils/index.js";
 
 const registry = minecraftData("1.21.4");
+const PrismarineBlock = blockLoader("1.21.4");
 
 /**
  * Fake worlds for tests, built from a map of named cells.
@@ -71,6 +74,29 @@ function blockOf(name: string, cell: Vec3): FakeBlock {
     boundingBox: shapes.length > 0 ? "block" : "empty",
     getProperties: () => ({}),
   };
+}
+
+/**
+ * A real Prismarine block of `name`, in its default state, at `position`.
+ *
+ * For code that reads more of a block than a {@link FakeBlock} carries — its
+ * material, its fluid level, how it is observed for navigation — so the test
+ * sees exactly what Mineflayer would hand it. The position is used as given:
+ * floor it first where the caller may be asked about a point inside a cell.
+ */
+export function blockNamed(name: string, position: Vec3): Block {
+  const block = PrismarineBlock.fromStateId(registry.blocksByName[name]!.defaultState, 0);
+  block.position = position;
+  return block;
+}
+
+/**
+ * Answers `bot.blockAt` with {@link blockNamed} for whichever block `nameAt`
+ * names at each cell. `nameAt` is consulted on every read, so a test can change
+ * the world mid-way (a face sealed, a target submerged) through its own state.
+ */
+export function answerBlocks(bot: Pick<Bot, "blockAt">, nameAt: (position: Vec3) => string): void {
+  bot.blockAt = (position) => blockNamed(nameAt(position), position);
 }
 
 /**

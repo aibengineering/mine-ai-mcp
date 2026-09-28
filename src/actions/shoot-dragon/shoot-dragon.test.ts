@@ -3,6 +3,7 @@ import test from "node:test";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../test-support/bot.js";
+import { physicsEveryMillisecond } from "../../test-support/physics.js";
 import { TestEndCombat } from "../../test-support/combat.js";
 import { DragonShotObservation } from "../../survival/perception/combat/dragon-shot.js";
 import type { FootingRecovery } from "../../survival/responses/footing.js";
@@ -26,61 +27,56 @@ function fixture() {
 }
 
 test("shoot_dragon refuses absent arrows and arrow-immune perches without releasing", async () => {
-  const f = fixture(), timer = setInterval(() => f.bot.emit("physicsTick"), 1);
-  try {
-    f.bot.inventory.items().pop();
-    using missing = new DragonShotObservation(f.bot, 42);
-    assert.equal((await f.end.shootDragon(new AbortController().signal, missing)).outcome, "weapon_unavailable");
-    f.bot.inventory.items().push({ name: "arrow", count: 1 } as never);
-    Reflect.set(f.dragon.metadata, 16, 5);
-    using perched = new DragonShotObservation(f.bot, 42);
-    assert.match((await f.end.shootDragon(new AbortController().signal, perched)).reason!, /DRAGON_PERCHED/);
-    assert.equal(f.releases(), 0);
-  } finally { clearInterval(timer); }
+  const f = fixture();
+  using _physics = physicsEveryMillisecond(f.bot);
+  f.bot.inventory.items().pop();
+  using missing = new DragonShotObservation(f.bot, 42);
+  assert.equal((await f.end.shootDragon(new AbortController().signal, missing)).outcome, "weapon_unavailable");
+  f.bot.inventory.items().push({ name: "arrow", count: 1 } as never);
+  Reflect.set(f.dragon.metadata, 16, 5);
+  using perched = new DragonShotObservation(f.bot, 42);
+  assert.match((await f.end.shootDragon(new AbortController().signal, perched)).reason!, /DRAGON_PERCHED/);
+  assert.equal(f.releases(), 0);
 });
 
 test("caller cancellation during the draw does not release an arrow", async () => {
   const f = fixture(), stop = new AbortController();
   f.bot.activateItem = () => { stop.abort("cancelled while drawing"); };
-  const timer = setInterval(() => f.bot.emit("physicsTick"), 1);
-  try {
-    using observation = new DragonShotObservation(f.bot, 42);
-    await assert.rejects(f.end.shootDragon(stop.signal, observation));
-    assert.equal(observation.attacks, 0);
-    assert.equal(f.releases(), 0);
-  } finally { clearInterval(timer); }
+  using _physics = physicsEveryMillisecond(f.bot);
+  using observation = new DragonShotObservation(f.bot, 42);
+  await assert.rejects(f.end.shootDragon(stop.signal, observation));
+  assert.equal(observation.attacks, 0);
+  assert.equal(f.releases(), 0);
 });
 
 test("a released shot survives takeover, reports health loss, and is never fired twice", async () => {
   const f = fixture(), runner = new ActionRunner();
   let first: DragonShotObservation | undefined, attempts = 0;
-  const timer = setInterval(() => f.bot.emit("physicsTick"), 1);
-  try {
-    const combat = { async runEnd(request, signal) {
-      if (request.kind !== "dragon_bow") throw Error("wrong request");
-      attempts++;
-      if (attempts === 1) {
-        first = request.observation;
-        first.released(10);
-        const cancelled = new Promise<void>(resolve => signal.addEventListener("abort", () => resolve(), { once: true }));
-        assert.equal(runner.claim("hostile", "Incoming hostile", async () => {
-          Reflect.set(f.dragon.metadata, 9, 187);
-          f.bot.emit("entityUpdate", f.dragon);
-          return { value: null, continuation: { kind: "resume" as const } };
-        }).kind, "claimed");
-        await cancelled;
-        signal.throwIfAborted();
-      }
-      assert.equal(request.observation, first);
-      return f.end.shootDragon(signal, request.observation);
-    } } as CombatController;
-    const result = await runner.run(createShootDragonAction(f.bot, combat), { entity_id: 42 });
-    assert.equal(result.result.status, "succeeded");
-    assert.equal(first!.attacks, 1);
-    assert.equal(first!.damageObserved, 3);
-    assert.equal(f.releases(), 0);
-    assert.equal(f.bot.listenerCount("entityDead"), 0);
-  } finally { clearInterval(timer); }
+  using _physics = physicsEveryMillisecond(f.bot);
+  const combat = { async runEnd(request, signal) {
+    if (request.kind !== "dragon_bow") throw Error("wrong request");
+    attempts++;
+    if (attempts === 1) {
+      first = request.observation;
+      first.released(10);
+      const cancelled = new Promise<void>(resolve => signal.addEventListener("abort", () => resolve(), { once: true }));
+      assert.equal(runner.claim("hostile", "Incoming hostile", async () => {
+        Reflect.set(f.dragon.metadata, 9, 187);
+        f.bot.emit("entityUpdate", f.dragon);
+        return { value: null, continuation: { kind: "resume" as const } };
+      }).kind, "claimed");
+      await cancelled;
+      signal.throwIfAborted();
+    }
+    assert.equal(request.observation, first);
+    return f.end.shootDragon(signal, request.observation);
+  } } as CombatController;
+  const result = await runner.run(createShootDragonAction(f.bot, combat), { entity_id: 42 });
+  assert.equal(result.result.status, "succeeded");
+  assert.equal(first!.attacks, 1);
+  assert.equal(first!.damageObserved, 3);
+  assert.equal(f.releases(), 0);
+  assert.equal(f.bot.listenerCount("entityDead"), 0);
 });
 
 test("disappearance and numeric entity-id reuse do not manufacture a bow hit", () => {
@@ -112,33 +108,31 @@ test("native death remains terminal when its health metadata packet is still sta
 });
 
 test("a released arrow without health loss is a miss and is not retried", async () => {
-  const f = fixture(), timer = setInterval(() => f.bot.emit("physicsTick"), 1);
-  try {
-    using observation = new DragonShotObservation(f.bot, 42);
-    const result = await f.end.shootDragon(new AbortController().signal, observation);
-    assert.equal(result.outcome, "shot_missed");
-    assert.equal(result.attacks, 1);
-    assert.equal(f.releases(), 1);
-    assert.equal(observation.damageObserved, 0);
-  } finally { clearInterval(timer); }
+  const f = fixture();
+  using _physics = physicsEveryMillisecond(f.bot);
+  using observation = new DragonShotObservation(f.bot, 42);
+  const result = await f.end.shootDragon(new AbortController().signal, observation);
+  assert.equal(result.outcome, "shot_missed");
+  assert.equal(result.attacks, 1);
+  assert.equal(f.releases(), 1);
+  assert.equal(observation.damageObserved, 0);
 });
 
 test("a perch update during the final aim cancels the charged arrow", async () => {
-  const f = fixture(), timer = setInterval(() => f.bot.emit("physicsTick"), 1);
+  const f = fixture();
+  using _physics = physicsEveryMillisecond(f.bot);
   let looks = 0;
   f.bot.look = async () => { if (++looks === 22) Reflect.set(f.dragon.metadata, 16, 5); };
-  try {
-    using observation = new DragonShotObservation(f.bot, 42);
-    const result = await f.end.shootDragon(new AbortController().signal, observation);
-    assert.match(result.reason!, /DRAGON_PERCHED/);
-    assert.equal(looks, 22);
-    assert.equal(f.releases(), 0);
-  } finally { clearInterval(timer); }
+  using observation = new DragonShotObservation(f.bot, 42);
+  const result = await f.end.shootDragon(new AbortController().signal, observation);
+  assert.match(result.reason!, /DRAGON_PERCHED/);
+  assert.equal(looks, 22);
+  assert.equal(f.releases(), 0);
 });
 
 test("even the strictest shot margin yields the charged bow to dragon evasion", async () => {
   const f = fixture(), stop = new AbortController();
-  const timer = setInterval(() => f.bot.emit("physicsTick"), 1);
+  using _physics = physicsEveryMillisecond(f.bot);
   let danger = false, looks = 0, evasions = 0;
   Object.defineProperty(f.end, "danger", { get: () => danger });
   f.bot.look = async () => { if (++looks === 22) danger = true; };
@@ -148,10 +142,8 @@ test("even the strictest shot margin yields the charged bow to dragon evasion", 
     stop.abort("evasion owns the body");
     return { outcome: "evaded", attacks: 0, healthBefore: null, healthAfter: null, reason: null };
   };
-  try {
-    using observation = new DragonShotObservation(f.bot, 42, 1.25);
-    await assert.rejects(f.end.shootDragon(stop.signal, observation));
-    assert.equal(evasions, 1);
-    assert.equal(f.releases(), 0);
-  } finally { clearInterval(timer); }
+  using observation = new DragonShotObservation(f.bot, 42, 1.25);
+  await assert.rejects(f.end.shootDragon(stop.signal, observation));
+  assert.equal(evasions, 1);
+  assert.equal(f.releases(), 0);
 });

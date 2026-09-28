@@ -1,13 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import minecraftData from "minecraft-data";
-import blockLoader from "prismarine-block";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
+import { blockNamed } from "../../test-support/world.js";
 import { compareCollectionTargets } from "./target-selection.js";
 
-const registry = minecraftData("1.21.4");
-const Block = blockLoader("1.21.4");
 const blaze = (id: number, x: number, y: number) =>
   ({
     id,
@@ -22,9 +19,7 @@ function terrain(ground: (x: number) => string | null): Bot {
     blockAt: (position: Vec3) => {
       const name = ground(position.x);
       if (name === null) return null;
-      const block = Block.fromStateId(registry.blocksByName[position.y < 64 ? name : "air"].defaultState, 0);
-      block.position = position.floored();
-      return block;
+      return blockNamed(position.y < 64 ? name : "air", position.floored());
     },
     entity: { position: new Vec3(0, 64, 0), height: 1.8 },
     world: { raycast: () => null },
