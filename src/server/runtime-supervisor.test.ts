@@ -8,8 +8,29 @@ import { fileURLToPath } from "node:url";
 import { captureOutput } from "../test-support/output.js";
 import { startMcpSupervisor } from "./runtime-supervisor.js";
 
+/**
+ * The supervisor's liveness windows, shortened from five and twenty seconds.
+ * A child's first heartbeat arrives about 0.4 s after spawn even with every
+ * case starting at once, so a 1.5 s window still separates a live runtime from
+ * a wedged one by more than a second.
+ */
+const LIVENESS = { unresponsiveMs: 1_500, incidentHistoryMs: 1_000 };
+/** How long the scheduling-pause case blocks this process: well past the window. */
+const SUPERVISOR_PAUSE_MS = LIVENESS.unresponsiveMs + 1_500;
+/** The fixture's waits, each outlasting the window it must outlast, as the originals did. */
+const FIXTURE_TIMING = {
+  wedgeAfterMs: LIVENESS.incidentHistoryMs + 250,
+  slowMs: LIVENESS.unresponsiveMs + 1_000,
+  // The child resumes half a second after this process does.
+  pauseMs: SUPERVISOR_PAUSE_MS + 500,
+};
+
 const executable = process.execPath;
-const args = [...process.execArgv, fileURLToPath(new URL("../test-support/wedged-runtime.ts", import.meta.url))];
+const args = [
+  ...process.execArgv,
+  fileURLToPath(new URL("../test-support/wedged-runtime.ts", import.meta.url)),
+  JSON.stringify(FIXTURE_TIMING),
+];
 
 // Every failure below is reported to the operator on stderr. The cases run
 // concurrently, so the capture spans the file rather than one test.
@@ -31,6 +52,7 @@ async function supervised(instanceId: string, launch?: (directory: string) => { 
     instanceId,
     source: { kind: "unavailable", reason: "test fixture" },
     incidents: { directory, retention: { days: 1, maxBytes: 1024 * 1024 } },
+    liveness: LIVENESS,
   });
   const address = supervisor.server.address();
   assert.ok(address && typeof address !== "string");
@@ -50,13 +72,12 @@ async function whenHealthy(url: string): Promise<void> {
 }
 
 /**
- * Tests that each wait out a real liveness window: five seconds, or the
- * twenty-second incident history for attribution. The supervisor offers no
- * clock to shorten them, and Bun runs node:test cases one at a time. Their
- * runtimes are independent processes, so every case starts when the first of
- * them is reached and each test awaits its own; the file costs the longest
- * window instead of the sum. A case must not block this process, which hosts
- * every supervisor's watchdog.
+ * Tests that each wait out a real, if shortened, liveness window or incident
+ * history, and Bun runs node:test cases one at a time. Their runtimes are
+ * independent processes, so every case starts when the first of them is
+ * reached and each test awaits its own; the file costs the longest window
+ * instead of the sum. A case must not block this process, which hosts every
+ * supervisor's watchdog.
  */
 function concurrentTests(cases: Record<string, () => Promise<void>>): void {
   let started: Map<string, Promise<void>> | undefined;
@@ -90,7 +111,7 @@ test(
     // supervisor cannot diagnose a child-only hang during its own blind gap.
     await new Promise<void>((resolve) =>
       setTimeout(() => {
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 6500);
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, SUPERVISOR_PAUSE_MS);
         resolve();
       }, 100),
     );
@@ -158,8 +179,10 @@ concurrentTests({
     assert.equal(diagnostics.activity.active[0].owner.requestId, 812);
     assert.ok(diagnostics.heartbeat.memory.rss > 0);
 
-    // Outlast the liveness window so the supervisor declares the failure itself.
-    await delay(21_500);
+    // Outlast the fixture's wedge, whose history has by then aged out; the
+    // health probe below waits on the wedged runtime until the supervisor
+    // declares the failure itself.
+    await delay(FIXTURE_TIMING.wedgeAfterMs + 500);
 
     assert.equal((await fetch(`${url}/health`)).status, 503);
     const status = await (await fetch(`${url}/health`)).json();

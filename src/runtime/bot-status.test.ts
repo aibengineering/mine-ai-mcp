@@ -4,7 +4,7 @@ import test, { type TestContext } from "node:test";
 import type { Bot } from "mineflayer";
 import { temporaryBotData } from "../test-support/bot-data.js";
 import { captureOutput } from "../test-support/output.js";
-import { observeBotStatus } from "./bot-status.js";
+import { BOT_STATUS_COALESCE_MS, BOT_STATUS_HEARTBEAT_MS, observeBotStatus } from "./bot-status.js";
 
 function fixture() {
   const inventory = Object.assign(new EventEmitter(), {
@@ -22,19 +22,20 @@ function fixture() {
 }
 
 /**
- * The observer coalesces changes for 250 ms and refreshes idle status every
- * second. Mocked timers step past either without sleeping through it, and the
- * mocked clock gives each refresh a distinct `updated_at`.
+ * The observer coalesces changes briefly and refreshes idle status on a
+ * heartbeat, both at their production values here. Mocked timers step past
+ * either without sleeping through it, and the mocked clock gives each refresh
+ * a distinct `updated_at`.
  */
 function mockClock(t: TestContext) {
   t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
-  const pastCoalescing = () => t.mock.timers.tick(300);
+  const pastCoalescing = () => t.mock.timers.tick(BOT_STATUS_COALESCE_MS + 50);
   return {
     pastCoalescing,
     // A timer armed inside a tick is not run by that same tick, so the
     // heartbeat's own coalesced refresh needs the second step.
     pastHeartbeat: () => {
-      t.mock.timers.tick(1_000);
+      t.mock.timers.tick(BOT_STATUS_HEARTBEAT_MS);
       pastCoalescing();
     },
   };

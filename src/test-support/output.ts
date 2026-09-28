@@ -1,6 +1,7 @@
 /**
- * Operator diagnostics a test provokes on purpose: SQLite lifecycle and lock
- * records, supervisor failure reports, host readiness and connection notices.
+ * Operator diagnostics a test provokes on purpose: supervisor failure reports,
+ * host readiness and connection notices. (A persistent store's lifecycle and
+ * lock records go to a sink instead; see `persistentBotData`.)
  *
  * Production writes these to stdout and stderr for whoever runs the process.
  * In a test run they are expected, so printed they only bury the report;
@@ -20,8 +21,8 @@ export interface CapturedOutput {
  * Tests run one at a time, so the capture belongs to this test alone.
  *
  * `after` hooks run in the order they were registered, so call this after
- * creating any fixture whose teardown also reports (a persistent store reports
- * its closing); otherwise that report escapes the capture.
+ * creating any fixture whose teardown also reports (a host closing its
+ * bot data reports that); otherwise that report escapes the capture.
  */
 export function captureOutput(t: { after(fn: () => void): void }): CapturedOutput {
   const lines: string[] = [];

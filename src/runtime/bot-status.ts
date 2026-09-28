@@ -2,8 +2,28 @@ import type { Bot } from "mineflayer";
 import type { EventEmitter } from "node:events";
 import { snapshotBotStatus, updateBotStatus, type SqlBotData } from "../bot-data/index.js";
 
-/** Keep SQL current without requiring a status tool call. Owned by the runtime. */
-export function observeBotStatus(bot: Bot, data: SqlBotData): () => void {
+/** Long enough to take a window's packet burst or a local slot move as one snapshot. */
+export const BOT_STATUS_COALESCE_MS = 250;
+/** How stale position, time and the freshness timestamp may get while nothing else changes. */
+export const BOT_STATUS_HEARTBEAT_MS = 1_000;
+
+export interface BotStatusTiming {
+  readonly coalesceMs: number;
+  readonly heartbeatMs: number;
+}
+
+/**
+ * Keep SQL current without requiring a status tool call. Owned by the runtime.
+ * `timing` exists so a caller that cannot wait on the production cadence (a
+ * test) can shorten it; the runtime omits it.
+ */
+export function observeBotStatus(
+  bot: Bot,
+  data: SqlBotData,
+  timing: Partial<BotStatusTiming> = {},
+): () => void {
+  const coalesceMs = timing.coalesceMs ?? BOT_STATUS_COALESCE_MS;
+  const heartbeatMs = timing.heartbeatMs ?? BOT_STATUS_HEARTBEAT_MS;
   let pending: ReturnType<typeof setTimeout> | undefined;
   // currentWindow's generic typings omit the updateSlot event emitted by every window.
   let window: EventEmitter | null = null;
@@ -23,7 +43,7 @@ export function observeBotStatus(bot: Bot, data: SqlBotData): () => void {
   };
   const changed = () => {
     // Coalesce window packet bursts and local slot moves into a complete snapshot.
-    pending ??= setTimeout(refresh, 250);
+    pending ??= setTimeout(refresh, coalesceMs);
     pending.unref();
   };
   const watchWindow = () => {
@@ -50,7 +70,7 @@ export function observeBotStatus(bot: Bot, data: SqlBotData): () => void {
   });
   watchWindow();
   // Also refresh position/time and provide a freshness timestamp while idle.
-  const heartbeat = setInterval(changed, 1_000);
+  const heartbeat = setInterval(changed, heartbeatMs);
   heartbeat.unref();
   subscriptions.defer(() => clearInterval(heartbeat));
   const ended = () => owned.dispose();

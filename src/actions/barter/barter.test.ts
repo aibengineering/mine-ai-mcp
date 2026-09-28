@@ -6,7 +6,6 @@ import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { ActionRunner } from "../../session/action-runner.js";
-import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { beginBarter, createBarterAction } from "./barter.js";
 import { barterInputSchema, barterResultSchema } from "./contract.js";
 
@@ -77,6 +76,8 @@ function fixture(t: TestContext) {
 const request = (gold_budget = 1) =>
   barterInputSchema.parse({ piglin_id: 7, item_name: "ender_pearl", count: 2, gold_budget });
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
+/** An acknowledgement window short enough that a test can let it lapse for real. */
+const acknowledgementMs = 50;
 
 test("existing desired drops satisfy a zero-gold request without activating a recipient", async (t) => {
   const f = fixture(t);
@@ -137,7 +138,10 @@ test("invalid and baby recipients cannot consume a gold offer", async (t) => {
   }
 });
 function runnerAction(f: ReturnType<typeof fixture>) {
-  return { ...createBarterAction(f.bot, f.navigation), execution: { kind: "resumable_task" as const } };
+  return {
+    ...createBarterAction(f.bot, f.navigation, { acknowledgementMs }),
+    execution: { kind: "resumable_task" as const },
+  };
 }
 
 test("runner takeover preserves a pending offer and accepts desired gains during the reflex", async (t) => {
@@ -235,13 +239,11 @@ test("a recipient moving out of reach while equipping receives no reserved offer
 test("gold hand release without a new output does not make another offer or report success", async (t) => {
   const f = fixture(t);
   // With no output to see, the offer's acknowledgement window lapses.
-  const { value: result } = await onVirtualClock(t, async () => {
-    const pending = beginBarter(f.bot, f.navigation, request(2), f.lifetime.signal)({});
-    await turn();
-    f.target.equipment[1] = null;
-    f.events.emit("entityEquip", f.target);
-    return pending;
-  });
+  const pending = beginBarter(f.bot, f.navigation, request(2), f.lifetime.signal, { acknowledgementMs })({});
+  await turn();
+  f.target.equipment[1] = null;
+  f.events.emit("entityEquip", f.target);
+  const result = await pending;
   assert.equal(result.status, "partial");
   assert.equal(result.barter.goldOffers, 1);
   assert.equal(result.barter.gained, 0);
@@ -392,26 +394,24 @@ test("an incidental reward observed entirely during takeover allows the next res
       f.complete();
     }
   };
-  const { value: result } = await onVirtualClock(t, async () => {
-    const pending = runner.run(runnerAction(f), request(2));
-    await turn();
-    const claim = runner.claim("fixture_reflex", "Wait through incidental output", async () => {
-      f.entities[9] = {
-        id: 9,
-        name: "item",
-        isValid: true,
-        position: new Vec3(2, 64, 0),
-        getDroppedItem: () => ({ name: "blackstone", count: 9 }),
-      };
-      f.events.emit("itemDrop", f.entities[9]);
-      f.target.equipment[1] = null;
-      f.events.emit("entityEquip", f.target);
-      delete f.entities[9];
-      return { value: null, continuation: { kind: "resume" as const } };
-    });
-    assert.equal(claim.kind, "claimed");
-    return pending;
+  const pending = runner.run(runnerAction(f), request(2));
+  await turn();
+  const claim = runner.claim("fixture_reflex", "Wait through incidental output", async () => {
+    f.entities[9] = {
+      id: 9,
+      name: "item",
+      isValid: true,
+      position: new Vec3(2, 64, 0),
+      getDroppedItem: () => ({ name: "blackstone", count: 9 }),
+    };
+    f.events.emit("itemDrop", f.entities[9]);
+    f.target.equipment[1] = null;
+    f.events.emit("entityEquip", f.target);
+    delete f.entities[9];
+    return { value: null, continuation: { kind: "resume" as const } };
   });
+  assert.equal(claim.kind, "claimed");
+  const result = await pending;
   assert.equal(offered, 2);
   assert.equal(result.result.status, "succeeded");
   assert.equal(f.bot.listenerCount("itemDrop"), 0);

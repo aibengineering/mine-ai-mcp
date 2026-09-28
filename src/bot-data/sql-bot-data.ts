@@ -8,6 +8,7 @@ import {
   BotDataLockError,
   sqliteLock,
   storageConnection,
+  type StorageConnection,
   type StorageLockFailure,
   type StorageOperation,
   type StoragePhase,
@@ -48,9 +49,29 @@ export type BotDataStorage =
 export type SqlBotDataLocation =
   { readonly kind: "persistent"; readonly file: string } | { readonly kind: "temporary" };
 
+/**
+ * An operator record about the storage itself, which the database cannot hold:
+ * a persistent connection opening or closing, or a lock failure on any connection.
+ */
+export type BotDataLogRecord =
+  | ({ readonly event: "opened" | "closed" } & StorageConnection & { readonly observedAt: string })
+  | StorageLockFailure;
+
+/** The line an operator reads for one record: a tag, then the record as JSON. */
+export function botDataLogLine(record: BotDataLogRecord): string {
+  return `[minecraft-bot-data] ${JSON.stringify(record)}`;
+}
+
+/** Production's sink: one line per record on stderr, alongside the host's own notices. */
+export function writeBotDataLog(record: BotDataLogRecord): void {
+  process.stderr.write(`${botDataLogLine(record)}\n`);
+}
+
 export interface SqlBotDataOptions {
   readonly storage: BotDataStorage;
   readonly identity: BotDataIdentity;
+  /** Where lifecycle and lock records go. Defaults to {@link writeBotDataLog}. */
+  readonly log?: (record: BotDataLogRecord) => void;
 }
 
 /** Owns the SQLite representation and connection for one bot-data identity. */
@@ -62,9 +83,15 @@ export class SqlBotData {
   private readonly connection;
   private lockFailures = 0;
   private lastLockFailure: StorageLockFailure | null = null;
+  private readonly log: (record: BotDataLogRecord) => void;
 
-  private constructor(location: SqlBotDataLocation, metadata: ReadonlyMap<string, string>) {
+  private constructor(
+    location: SqlBotDataLocation,
+    metadata: ReadonlyMap<string, string>,
+    log: (record: BotDataLogRecord) => void,
+  ) {
     this.location = location;
+    this.log = log;
     this.connection = storageConnection(location.kind === "persistent" ? location.file : ":memory:");
 
     const database = new DatabaseSync(location.kind === "persistent" ? location.file : ":memory:", {
@@ -96,9 +123,7 @@ export class SqlBotData {
     // Cross-process contention cannot be attributed from the victim's SQLite error alone.
     // Lifecycle records let operators correlate other runtime connections to this exact file.
     if (location.kind === "persistent")
-      process.stderr.write(
-        `[minecraft-bot-data] ${JSON.stringify({ event: "opened", ...this.connection, observedAt: new Date().toISOString() })}\n`,
-      );
+      this.log({ event: "opened", ...this.connection, observedAt: new Date().toISOString() });
   }
 
   /** Creates the selected durable or session-only representation of one bot-data identity. */
@@ -106,7 +131,7 @@ export class SqlBotData {
     const identity = resolveBotDataIdentity(options.identity);
     const metadata = metadataFor(identity.worldId, identity.scope);
     const location = resolveSqlBotDataLocation(options.storage, identity);
-    return new SqlBotData(location, metadata);
+    return new SqlBotData(location, metadata, options.log ?? writeBotDataLog);
   }
 
   /** Runs a trusted, synchronous read on the host thread. */
@@ -169,9 +194,7 @@ export class SqlBotData {
     this.closed = true;
     closeSqlDatabase(this.database);
     if (this.location.kind === "persistent")
-      process.stderr.write(
-        `[minecraft-bot-data] ${JSON.stringify({ event: "closed", ...this.connection, observedAt: new Date().toISOString() })}\n`,
-      );
+      this.log({ event: "closed", ...this.connection, observedAt: new Date().toISOString() });
   }
 
   [Symbol.dispose](): void {
@@ -208,7 +231,7 @@ export class SqlBotData {
       this.lockFailures += 1;
       this.lastLockFailure = details;
       // The database itself is unavailable. Do not try to persist this through events or receipts.
-      process.stderr.write(`[minecraft-bot-data] ${JSON.stringify(details)}\n`);
+      this.log(details);
       throw new BotDataLockError(details, cause);
     }
   }

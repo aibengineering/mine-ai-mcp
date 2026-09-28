@@ -2,6 +2,18 @@ import { createServer } from "node:http";
 import { reportRuntimeLiveness } from "../server/runtime-liveness.js";
 import { ExecutionScope } from "../execution/execution-scope.js";
 
+/**
+ * The fixture's own waits, scaled by the test to the supervisor's shortened
+ * liveness windows: how long a background action lives before wedging (longer
+ * than the incident history), how long a slow request takes (longer than the
+ * liveness window), and how long a pause blocks this loop.
+ */
+const timing = JSON.parse(process.argv[2] ?? "") as {
+  readonly wedgeAfterMs: number;
+  readonly slowMs: number;
+  readonly pauseMs: number;
+};
+
 reportRuntimeLiveness();
 process.once("disconnect", () => process.exit(0));
 const server = createServer(async (request, response) => {
@@ -18,7 +30,7 @@ const server = createServer(async (request, response) => {
     void execution.run("route", async () => {
       await execution.run("brief_nested_phase", async () => {});
       response.end("accepted");
-      await new Promise<void>((resolve) => setTimeout(resolve, 21_000));
+      await new Promise<void>((resolve) => setTimeout(resolve, timing.wedgeAfterMs));
       while (true) {}
     });
     return;
@@ -28,12 +40,12 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (request.url === "/slow") {
-    setTimeout(() => response.end("finished"), 6000);
+    setTimeout(() => response.end("finished"), timing.slowMs);
     return;
   }
   if (request.url === "/pause") {
     response.end("accepted");
-    setTimeout(() => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 7000), 100);
+    setTimeout(() => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, timing.pauseMs), 100);
     return;
   }
   if (request.url === "/crash") {

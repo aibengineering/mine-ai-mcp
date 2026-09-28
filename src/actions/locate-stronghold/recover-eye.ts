@@ -2,7 +2,22 @@ import type { Bot } from "mineflayer";
 import { createMovements, type NavigationRuntime } from "../../navigation/index.js";
 import { armSignal, asVec3, type Position3 } from "../../utils/index.js";
 import { carriedCount } from "../../world/inventory-count.js";
-import { DROPPED_ITEM_OBSERVATION_EVENTS, droppedItemName, pickupObservedItem } from "../../world/item-pickup.js";
+import {
+  DROPPED_ITEM_OBSERVATION_EVENTS,
+  droppedItemName,
+  pickupObservedItem,
+  type ObservedItemPickupOptions,
+} from "../../world/item-pickup.js";
+
+/** How long a vanished eye's drop gets to become identifiable before recovery gives up on it. */
+const EYE_DROP_SETTLE_MS = 1_500;
+
+/**
+ * Recovery's settle windows: `drop` for the eye's item to appear, the rest for
+ * the pickup that follows. Production omits them; a test shortens them so a
+ * missing drop or an unreachable one lapses for real without a long wait.
+ */
+export type EyeRecoverySettleMs = { readonly drop?: number } & NonNullable<ObservedItemPickupOptions["settleMs"]>;
 
 /** Recover a nearby surviving eye without turning a saved bearing into a long detour. */
 export async function recoverEyeDrop(
@@ -10,6 +25,7 @@ export async function recoverEyeDrop(
   navigation: NavigationRuntime,
   endpoint: Position3,
   signal?: AbortSignal,
+  { drop: dropSettleMs = EYE_DROP_SETTLE_MS, ...pickupSettleMs }: EyeRecoverySettleMs = {},
 ) {
   signal?.throwIfAborted();
   if (bot.entity.position.distanceTo(asVec3(endpoint)) > 32) return;
@@ -22,7 +38,7 @@ export async function recoverEyeDrop(
       entity.position.y <= endpoint.y + 2 && entity.position.y >= endpoint.y - 16,
     ), { context: { signal } });
   try {
-    const observed = await drop.settle(1_500);
+    const observed = await drop.settle(dropSettleMs);
     signal?.throwIfAborted();
     if (observed.kind !== "signalled") return;
     const before = carriedCount(bot, "ender_eye");
@@ -33,6 +49,7 @@ export async function recoverEyeDrop(
       hasArrived: () => carriedCount(bot, "ender_eye") > before,
       signal,
       timeoutMs: 15_000,
+      settleMs: pickupSettleMs,
     });
   } finally {
     drop.cancel();

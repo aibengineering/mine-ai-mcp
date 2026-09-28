@@ -1,6 +1,8 @@
 import type { NavigationRuntime } from "../../navigation/index.js";
 import type { Bot } from "mineflayer";
 const navigation = {} as NavigationRuntime;
+/** A furnace slot window short enough that a test can let it lapse for real. */
+const SHORT_SLOT_RECOVERY_MS = 50;
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
@@ -347,7 +349,7 @@ test("the production action clock is monotonic when the wall clock jumps", async
   await assert.rejects(pending, /clock test cancelled/);
 });
 
-test("a nonsettling slot take closes the window without starting later recovery mutations", async (t) => {
+test("a nonsettling slot take closes the window without starting later recovery mutations", async () => {
   const { bot, dependencies } = smeltingBot();
   let closed = false;
   let inputTakes = 0;
@@ -363,6 +365,7 @@ test("a nonsettling slot take closes the window without starting later recovery 
   };
   const stuckDependencies: SmeltItemDependencies = {
     ...dependencies,
+    slotRecoveryMs: SHORT_SLOT_RECOVERY_MS,
     openFurnace: async () => ({
       progress: 0,
       fuel: 0,
@@ -377,17 +380,23 @@ test("a nonsettling slot take closes the window without starting later recovery 
       close: () => { closed = true; },
     }) as never,
   };
-  const { value: result, elapsedMs } = await onVirtualClock(t, () => smeltItem(
+  const started = performance.now();
+  const result = await smeltItem(
     bot,
     navigation,
     { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 },
     {},
     stuckDependencies,
-  ));
+  );
+  const elapsedMs = performance.now() - started;
 
   assert.equal(result.status, "failed");
-  assert.match(result.error, /takeOutput did not settle within 2000 ms/);
-  assert(elapsedMs >= 2_000 && elapsedMs < 3_000, `bounded settlement took ${elapsedMs} ms`);
+  assert.match(result.error, new RegExp(`takeOutput did not settle within ${SHORT_SLOT_RECOVERY_MS} ms`));
+  // Timers may fire a millisecond early by performance.now's reckoning.
+  assert(
+    elapsedMs >= SHORT_SLOT_RECOVERY_MS - 1 && elapsedMs < SHORT_SLOT_RECOVERY_MS + 1_000,
+    `bounded settlement took ${elapsedMs} ms`,
+  );
   assert.equal(closed, true);
   assert.equal(inputTakes, 0);
   assert.equal(fuelTakes, 0);

@@ -7,7 +7,6 @@ import { Vec3 } from "vec3";
 import { SqlBotData, botEventSchema } from "../../bot-data/index.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { persistentBotData } from "../../test-support/bot-data.js";
-import { captureOutput } from "../../test-support/output.js";
 import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { createLocateStrongholdAction, loadedStrongholdFrame } from "./locate-stronghold.js";
 import { locateStrongholdInputSchema, locateStrongholdResultSchema } from "./contract.js";
@@ -68,7 +67,6 @@ test("refuses parallel, backwards, sub-block and poorly conditioned bearings", (
 });
 test("SQLite survives reopen and isolates search, bot, dimension and world", (t) => {
   const storage = persistentBotData(t);
-  captureOutput(t);
   const data = storage.open("one");
   const store = new StrongholdThrows(data, "Locator", "overworld", "trip");
   const id = store.begin({ x: 1, y: 70, z: 1 });

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { persistentBotData, temporaryBotData } from "../test-support/bot-data.js";
-import { captureOutput } from "../test-support/output.js";
 
 const DICTIONARY =
   "SELECT database_name, table_name, column_name, description FROM data_dictionary ORDER BY table_name, column_name";
@@ -105,7 +104,6 @@ test("publishes compact map rows with a deterministic dominant biome", (t) => {
 
 test("rebuilds rather than duplicates the data dictionary when a persistent database reopens", (t) => {
   const storage = persistentBotData(t);
-  captureOutput(t);
   const first = storage.open("dictionary-reopen-test");
   const expected = first.read(DICTIONARY);
   first.close();

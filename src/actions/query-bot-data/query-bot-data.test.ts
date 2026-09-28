@@ -7,7 +7,6 @@ import { SqlBotData } from "../../bot-data/sql-bot-data.js";
 import { queryBotDataCellSchema } from "./contract.js";
 import { createQueryBotDataAction, formatQueryBotDataResult, queryBotData } from "./query-bot-data.js";
 import { persistentBotData, temporaryBotData } from "../../test-support/bot-data.js";
-import { captureOutput } from "../../test-support/output.js";
 
 const REGISTRY = {
   itemsArray: [{ id: 17, name: "oak_log", displayName: "Oak Log", stackSize: 64 }],
@@ -62,7 +61,6 @@ test("queries bot data and Minecraft knowledge on one connection", async (t) => 
 
 test("persistent queries use the same SqlBotData connection", async (t) => {
   const data = persistentBotData(t).open("world");
-  captureOutput(t);
   installMinecraftKnowledge(data, REGISTRY);
   recordChunk(data, "oak_log");
 
