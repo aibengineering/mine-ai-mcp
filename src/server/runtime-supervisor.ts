@@ -15,6 +15,7 @@ import {
   runtimeMessageSchema,
   type RuntimeActivity,
 } from "./runtime-liveness.js";
+import type { OperatorNotices } from "./operator-notices.js";
 
 const envelopeSchema = z.object({
   id: z.union([z.string(), z.number()]).optional(),
@@ -60,6 +61,12 @@ export interface McpSupervisorOptions {
    * the operator's real allowance; the watchdog logic itself is unchanged.
    */
   readonly liveness?: { readonly unresponsiveMs?: number; readonly incidentHistoryMs?: number };
+  /**
+   * Where a runtime failure is reported to the operator. Production omits it
+   * and the report goes to stderr; a test passes its own to assert the report
+   * names the incident health does, without printing it.
+   */
+  readonly notices?: Pick<OperatorNotices, "stderr">;
 }
 
 /** Public HTTP stays outside the bot's event loop, including pending MCP SSE replies. */
@@ -68,6 +75,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
   if (!["127.0.0.1", "localhost", "::1", "0.0.0.0"].includes(options.host)) throw new Error("MCP must bind to loopback or 0.0.0.0 for container port forwarding.");
   const unresponsiveMs = options.liveness?.unresponsiveMs ?? RUNTIME_UNRESPONSIVE_MS;
   const incidentHistoryMs = options.liveness?.incidentHistoryMs ?? INCIDENT_HISTORY_MS;
+  const notices = options.notices ?? { stderr: (line: string) => console.error(line) };
   let state: RuntimeState = { kind: "starting" };
   let lastHeartbeat = performance.now();
   let observationResumedAt = lastHeartbeat;
@@ -158,7 +166,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
       entry.upstream.destroy();
       answerFailure(entry.response, entry.id, failure);
     }
-    console.error(`[minecraft-supervisor] ${JSON.stringify(failure)}`);
+    notices.stderr(`[minecraft-supervisor] ${JSON.stringify(failure)}`);
   };
 
   const app = createMcpExpressApp({ host: options.host, allowedHosts: ["127.0.0.1", "localhost", "[::1]"] });

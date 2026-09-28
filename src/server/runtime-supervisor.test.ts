@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
-import test, { after } from "node:test";
+import test from "node:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { captureOutput } from "../test-support/output.js";
 import { startMcpSupervisor } from "./runtime-supervisor.js";
 
 /**
@@ -32,19 +31,18 @@ const args = [
   JSON.stringify(FIXTURE_TIMING),
 ];
 
-// Every failure below is reported to the operator on stderr. The cases run
-// concurrently, so the capture spans the file rather than one test.
-const output = captureOutput({ after });
-
 /**
  * A supervisor over the wedged-runtime fixture, with its own incident
  * directory; disposing it closes the supervisor and removes the directory.
+ * `failures` records the reports the supervisor would have written to stderr,
+ * per supervisor, since the cases run concurrently.
  * `launch` replaces the child command, for the case where the runtime cannot
  * start at all.
  */
 async function supervised(instanceId: string, launch?: (directory: string) => { executable: string; args: string[] }) {
   const directory = await mkdtemp(path.join(os.tmpdir(), `mcp-watchdog-${instanceId}-`));
   const child = launch?.(directory) ?? { executable, args };
+  const failures: string[] = [];
   const supervisor = await startMcpSupervisor({
     ...child,
     host: "127.0.0.1",
@@ -53,11 +51,13 @@ async function supervised(instanceId: string, launch?: (directory: string) => { 
     source: { kind: "unavailable", reason: "test fixture" },
     incidents: { directory, retention: { days: 1, maxBytes: 1024 * 1024 } },
     liveness: LIVENESS,
+    notices: { stderr: (line) => failures.push(line) },
   });
   const address = supervisor.server.address();
   assert.ok(address && typeof address !== "string");
   return {
     supervisor,
+    failures: failures as readonly string[],
     url: `http://127.0.0.1:${address.port}`,
     async [Symbol.asyncDispose]() {
       await supervisor.close();
@@ -150,7 +150,7 @@ async function supervisorSavesFailure(fault: "hang" | "microtask" | "sse-hang" |
   assert.match(status.runtime.failure.message, /runtime has been stopped and requires a restart/);
   assert.equal(status.runtime.failure.incident.artifact.kind, "written");
   assert.equal(
-    output.including(status.runtime.failure.incident.incidentId).length,
+    run.failures.filter((line) => line.includes(status.runtime.failure.incident.incidentId)).length,
     1,
     "The operator's log names the same incident health reports.",
   );

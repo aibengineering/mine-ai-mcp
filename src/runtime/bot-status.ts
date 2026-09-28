@@ -12,15 +12,22 @@ export interface BotStatusTiming {
   readonly heartbeatMs: number;
 }
 
+/** Where a refresh failure is reported to the operator: one line on stderr. */
+function reportToStderr(message: string): void {
+  process.stderr.write(`[bot-status] ${message}\n`);
+}
+
 /**
  * Keep SQL current without requiring a status tool call. Owned by the runtime.
  * `timing` exists so a caller that cannot wait on the production cadence (a
- * test) can shorten it; the runtime omits it.
+ * test) can shorten it, and `report` so it can record failures instead of
+ * printing them; the runtime omits both.
  */
 export function observeBotStatus(
   bot: Bot,
   data: SqlBotData,
   timing: Partial<BotStatusTiming> = {},
+  report: (message: string) => void = reportToStderr,
 ): () => void {
   const coalesceMs = timing.coalesceMs ?? BOT_STATUS_COALESCE_MS;
   const heartbeatMs = timing.heartbeatMs ?? BOT_STATUS_HEARTBEAT_MS;
@@ -37,7 +44,7 @@ export function observeBotStatus(
       // A contended database must not throw out of a Mineflayer event handler.
       // The next heartbeat retries; the persisted timestamp remains stale.
       const message = error instanceof Error ? error.message : String(error);
-      if (message !== lastError) process.stderr.write(`[bot-status] ${message}\n`);
+      if (message !== lastError) report(message);
       lastError = message;
     }
   };

@@ -3,7 +3,6 @@ import { EventEmitter } from "node:events";
 import test, { type TestContext } from "node:test";
 import type { Bot } from "mineflayer";
 import { temporaryBotData } from "../test-support/bot-data.js";
-import { captureOutput } from "../test-support/output.js";
 import { BOT_STATUS_COALESCE_MS, BOT_STATUS_HEARTBEAT_MS, observeBotStatus } from "./bot-status.js";
 
 function fixture() {
@@ -82,10 +81,10 @@ test("SQL follows pickups, held equipment, open-container transfers and empty in
 
 test("heartbeat refreshes idle status, and disconnect cancels queued work before SQL closes", t => {
   const clock = mockClock(t);
-  const output = captureOutput(t);
+  const failures: string[] = [];
   const data = temporaryBotData({ closeAfter: t });
   const { bot, inventory } = fixture();
-  const stop = observeBotStatus(bot as unknown as Bot, data);
+  const stop = observeBotStatus(bot as unknown as Bot, data, {}, message => failures.push(message));
   clock.pastCoalescing();
   const first = data.read("SELECT updated_at FROM bot_status")[0]?.updated_at;
   clock.pastHeartbeat();
@@ -98,5 +97,5 @@ test("heartbeat refreshes idle status, and disconnect cancels queued work before
   assert.deepEqual(bot.eventNames(), []);
   data.close();
   clock.pastHeartbeat();
-  assert.deepEqual(output.including("[bot-status]"), [], "no refresh queued before disconnect may reach the closed store");
+  assert.deepEqual(failures, [], "no refresh queued before disconnect may reach the closed store");
 });
