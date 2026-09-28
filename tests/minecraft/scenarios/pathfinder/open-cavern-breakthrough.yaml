@@ -1,18 +1,7 @@
-template: ../../templates/flat-single-action.yaml
+template: ../../templates/flat-single-action-no-regen.yaml
 
-name: open-cavern-breakthrough
 tags: [acceptance]
 description: Excavate through a solid rock partition into an open cavern space, then navigate down cascading ledges to reach the cavern floor.
-
-world:
-  type: flat
-  time: noon
-  gamerules:
-    doDaylightCycle: false
-    doMobSpawning: false
-    keepInventory: true
-    naturalRegeneration: false
-    randomTickSpeed: 0
 
 reset:
   - "fill -6 -62 -10 24 -40 12 air"

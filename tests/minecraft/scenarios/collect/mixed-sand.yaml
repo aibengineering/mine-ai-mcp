@@ -1,5 +1,4 @@
 template: ../../templates/single-action.yaml
-name: mixed-sand
 tags: [acceptance]
 description: >-
   Collect all 15 sand blocks from a low bank and three tall columns using a

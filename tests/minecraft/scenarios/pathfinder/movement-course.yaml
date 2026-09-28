@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: movement-course
 tags:
   - acceptance
   - regression

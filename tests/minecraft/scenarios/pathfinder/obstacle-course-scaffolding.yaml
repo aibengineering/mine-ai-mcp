@@ -1,18 +1,7 @@
-template: ../../templates/flat-single-action.yaml
+template: ../../templates/flat-single-action-no-regen.yaml
 
-name: obstacle-course-scaffolding
 tags: [acceptance]
 description: Complete an enclosed 3D obstacle course requiring a scaffolded cliff ascent, a bridge placement over a 4-block void gap, and barrier excavation.
-
-world:
-  type: flat
-  time: noon
-  gamerules:
-    doDaylightCycle: false
-    doMobSpawning: false
-    keepInventory: true
-    naturalRegeneration: false
-    randomTickSpeed: 0
 
 reset:
   - "fill -4 -62 -4 20 -40 4 air"

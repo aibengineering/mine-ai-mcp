@@ -1,6 +1,5 @@
 template: ../../templates/flat-single-action.yaml
 
-name: arrow-hunt-spends-no-arrows
 tags: [acceptance]
 description: >-
   Collect two arrows from two skeletons across open ground while carrying a

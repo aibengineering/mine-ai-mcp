@@ -1,6 +1,5 @@
 template: ../../templates/flat-single-action.yaml
 
-name: obsidian-in-rock
 tags: [regression]
 description: >-
   Guard against the old bucket rule that required an exposed shore and rejected lava sealed

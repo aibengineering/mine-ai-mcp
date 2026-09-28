@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: lava-shore-preference
 tags: [acceptance]
 description: Prefer the existing shore around a ten-block lava gap over spending netherrack on a direct bridge.
 world:

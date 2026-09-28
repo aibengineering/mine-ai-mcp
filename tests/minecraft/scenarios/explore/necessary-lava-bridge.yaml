@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: necessary-lava-bridge
 tags: [acceptance]
 description: >-
   Extend the eastern frontier across an unavoidable lava trench. A higher placement

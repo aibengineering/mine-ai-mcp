@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: netherrack-bank
 tags: [acceptance]
 description: >-
   Collect 32 fast-breaking netherrack while reachable drops accumulate on lower

@@ -1,6 +1,5 @@
-template: ../../templates/flat-single-action.yaml
+template: ../../templates/flat-single-action-no-regen.yaml
 
-name: cave-excavation-course
 tags:
   - acceptance
   - regression
@@ -34,16 +33,6 @@ description: >-
 # clear lane beside them is never preferred. It must go round.
 #
 # Check three has no way round, so the carpets have to come down.
-
-world:
-  type: flat
-  time: noon
-  gamerules:
-    doDaylightCycle: false
-    doMobSpawning: false
-    keepInventory: true
-    naturalRegeneration: false
-    randomTickSpeed: 0
 
 reset:
   - fill -10 -64 -4 50 -46 4 air

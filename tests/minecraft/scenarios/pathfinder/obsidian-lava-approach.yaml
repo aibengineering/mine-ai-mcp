@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: obsidian-lava-approach
 tags: [regression]
 description: >-
   Reproduce the approach where obsidian collection burned before pouring water in seed

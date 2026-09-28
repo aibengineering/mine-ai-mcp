@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: obsidian-hazards
 tags: [regression]
 description: >-
   Collect all three existing obsidian blocks with no bucket: seal the lava beside one,

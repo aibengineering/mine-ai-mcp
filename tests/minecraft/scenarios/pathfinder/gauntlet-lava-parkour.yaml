@@ -1,6 +1,5 @@
-template: ../../templates/flat-single-action.yaml
+template: ../../templates/flat-single-action-no-regen.yaml
 
-name: gauntlet-lava-parkour
 tags: [acceptance, reliability]
 description: >-
   Chain gap crossings and ascents at their maximum reach over an open lava bed. Repeated
@@ -25,16 +24,6 @@ description: >-
 #   parkour rise  3 blocks + 1 up
 #   diagonal ascent, three isolated treads with no cardinal alternative
 #   drop          2 blocks onto the finish shelf
-
-world:
-  type: flat
-  time: noon
-  gamerules:
-    doDaylightCycle: false
-    doMobSpawning: false
-    keepInventory: true
-    naturalRegeneration: false
-    randomTickSpeed: 0
 
 reset:
   - "fill -9 -64 -6 43 -46 10 air"

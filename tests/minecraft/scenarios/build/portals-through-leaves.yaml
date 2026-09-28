@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: portals-through-leaves
 tags: [regression]
 description: >-
   Guard against portal construction getting stuck on leaves or cells hidden by

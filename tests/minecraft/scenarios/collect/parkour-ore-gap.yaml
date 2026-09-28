@@ -1,18 +1,7 @@
-template: ../../templates/single-action.yaml
+template: ../../templates/flat-single-action-no-regen.yaml
 
-name: parkour-ore-gap
 tags: [acceptance]
 description: Collect coal from an island that is reachable only by a four-block parkour jump, with scaffolding disabled and lava making a missed landing observable.
-
-world:
-  type: flat
-  time: noon
-  gamerules:
-    doDaylightCycle: false
-    doMobSpawning: false
-    keepInventory: true
-    naturalRegeneration: false
-    randomTickSpeed: 0
 
 reset:
   - "fill -10 -64 -6 14 -40 6 air"

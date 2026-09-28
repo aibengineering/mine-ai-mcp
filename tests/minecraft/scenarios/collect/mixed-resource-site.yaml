@@ -1,5 +1,4 @@
 template: ../../templates/flat-single-action.yaml
-name: mixed-resource-site
 tags: [acceptance]
 description: >-
   Collect coal, iron, copper, diamonds, cobblestone, dirt and clay from one small

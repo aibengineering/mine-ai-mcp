@@ -1,6 +1,5 @@
 template: ../../templates/flat-single-action.yaml
 
-name: obsidian-by-exploring
 tags: [acceptance]
 description: With no obsidian and all lava pools outside the initial casting search radius, one collect call searches outward, casts and collects two obsidian, and recovers the water bucket.
 

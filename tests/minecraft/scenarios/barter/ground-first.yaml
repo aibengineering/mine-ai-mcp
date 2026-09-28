@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: ground-first
 tags: [regression]
 description: >-
   Guard against spending gold on piglin trades when the requested pearls are

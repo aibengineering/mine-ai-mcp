@@ -1,6 +1,5 @@
 template: ../../templates/flat-single-action.yaml
 
-name: dirt-sealed-in-bedrock
 tags: [regression]
 description: >-
   Reproduce the live 2026-09-05 failure where the bot mined unseen dirt through surrounding

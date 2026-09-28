@@ -4,7 +4,6 @@ template: ../../templates/single-action.yaml
 # Starting position surveyed on vanilla 1.21.4; no terrain is placed or reset.
 # Checks the final quantity only. The mine process considers lava only when no
 # existing obsidian remains, so choosing the cheaper option is not covered here.
-name: cast-obsidian
 tags: [acceptance]
 description: Collect ten obsidian for a portal in natural terrain on seed 8675309,
   recover the water bucket, and complete without a recorded death.

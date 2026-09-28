@@ -153,8 +153,8 @@ The timeout is the trial's budget, not an action timeout.
 
 ## Shared setup
 
-Every fixture names one of two templates. They live beside `scenarios/` so Mine
-Labs will not discover them as runnable tests, and both supply the Minecraft
+Every fixture names one of three templates. They live beside `scenarios/` so
+Mine Labs will not discover them as runnable tests, and all supply the Minecraft
 version, the viewer mod and the single-action client:
 
 - `templates/single-action.yaml` supplies only those. The fixture arranges its
@@ -164,13 +164,24 @@ version, the viewer mod and the single-action client:
   player named `Actor`; fixtures with other player names override `tick` to
   preserve those participants. The reset region covers the small collect
   arenas; a larger arena must override it.
+- `templates/flat-single-action-no-regen.yaml` names `flat-single-action.yaml`
+  as its own template and replaces only `world`: the same flat world with
+  `naturalRegeneration: false`, so a health goal measures damage the action
+  avoided rather than damage healed back. A fixture whose world differs in any
+  other way (time, seed, type, difficulty or another gamerule) still declares
+  its own whole `world`.
 
 Each fixture declares its own position, equipment and geometry.
 The client working directory resolves from each fixture to this suite's root;
 the host and driver arguments are relative to that root.
 Mine Labs replaces whole top-level fields when merging templates, so a fixture
-overriding `world` or `client` must supply that entire field. Templates are one
-level deep: a template cannot name another template.
+overriding `world` or `client` must supply that entire field. A template may
+name another template (up to four deep); each level replaces whole fields in the
+same way.
+
+No template sets `name`, so a fixture's name defaults to its file stem, which
+labels its run directory and logs. Fixtures omit `name`; declare one only when
+it must differ from the file name.
 
 The host connects the bot, observes the arranged player state, and waits for
 landing and vitals before creating the runtime and reporting prepared.

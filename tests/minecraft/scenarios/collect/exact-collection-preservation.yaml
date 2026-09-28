@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: exact-collection-preservation
 tags: [regression]
 description: >-
   Collect an addressed open birch door, coal ore, empty chest and spare crafting

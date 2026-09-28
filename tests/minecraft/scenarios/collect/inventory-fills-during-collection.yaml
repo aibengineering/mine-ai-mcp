@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: inventory-fills-during-collection
 tags: [acceptance]
 description: >-
   Request four stone with room for only one more cobblestone. Collect that one,

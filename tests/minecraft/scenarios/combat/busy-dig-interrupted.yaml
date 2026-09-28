@@ -1,6 +1,5 @@
 template: ../../templates/flat-single-action.yaml
 
-name: busy-dig-interrupted
 tags: [acceptance]
 description: >-
   Collect 28 stone while a zombie approaches from behind. Require the collection

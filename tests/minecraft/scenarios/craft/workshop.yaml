@@ -1,6 +1,5 @@
 template: ../../templates/single-action.yaml
 
-name: workshop
 tags: [regression]
 description: >-
   Turn nine logs into a crafting table and 32 planks, confirming the inventory

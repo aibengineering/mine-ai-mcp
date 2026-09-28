@@ -1,5 +1,4 @@
 template: ../../templates/flat-single-action.yaml
-name: mixed-trees
 tags: [acceptance]
 description: >-
   Collect all 23 logs from a standing oak, a standing birch, and a fallen spruce.
