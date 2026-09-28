@@ -1,7 +1,7 @@
 import { MemoryWorld as GoalTestWorld } from "../../world/memory-world.js";
 import { EventEmitter } from "node:events";
 import assert from "node:assert/strict";
-import test, { type TestContext } from "node:test";
+import test from "node:test";
 import { Vec3 } from "vec3";
 import type { Bot } from "mineflayer";
 import { occupyGoal, type Goal } from "../../index.js";
@@ -234,18 +234,14 @@ function noPath(bot: Bot, closest: BlockPosition = { x: 0, y: 64, z: 0 }): Navig
 }
 
 /**
- * The process reads `Date.now()` for its target refresh interval and every
- * drop deadline, so a test skips those waits by moving the wall clock instead
- * of sleeping through them. The clock still runs underneath the offset.
+ * A clock for the request's `now`, which times the target refresh interval and
+ * every drop deadline, so a test skips those waits by advancing it instead of
+ * sleeping through them. Real time still runs underneath the offset.
  */
-function wallClock(t: TestContext): { advance(ms: number): void } {
-  const realNow = Date.now;
+function testClock(): { now(): number; advance(ms: number): void } {
   let offset = 0;
-  Date.now = () => realNow() + offset;
-  t.after(() => {
-    Date.now = realNow;
-  });
   return {
+    now: () => Date.now() + offset,
     advance: (ms) => {
       offset += ms;
     },
@@ -340,8 +336,8 @@ test("a calculation failure while exploring stops instead of reopening the same 
   );
 });
 
-test("a newly observed ore target replaces the branch goal in the same route", async (t) => {
-  const clock = wallClock(t);
+test("a newly observed ore target replaces the branch goal in the same route", async () => {
+  const clock = testClock();
   const bot = fakeBot({});
   const target = new Vec3(5, 64, 0);
   let satisfied = false;
@@ -349,6 +345,7 @@ test("a newly observed ore target replaces the branch goal in the same route", a
   const result = await mine(
     bot,
     request(bot, {
+      now: clock.now,
       explore: true,
       isSatisfied: () => satisfied,
       route: async (options) => {
@@ -1664,8 +1661,8 @@ test("a failed block cell does not hide an item that later lands there", async (
   assert.equal(routes, 2);
 });
 
-test("an old item does not hide a later item entering the same cell", async (t) => {
-  const clock = wallClock(t);
+test("an old item does not hide a later item entering the same cell", async () => {
+  const clock = testClock();
   const cell = new Vec3(0, 64, 0);
   let bot: Bot;
   let ticks = 0;
@@ -1685,6 +1682,7 @@ test("an old item does not hide a later item entering the same cell", async (t) 
   const result = await mine(
     bot,
     request(bot, {
+      now: clock.now,
       isSatisfied: () => satisfied,
       route: async (options) => {
         const arrival = arrivalAt(bot);
@@ -1727,8 +1725,8 @@ test("the 64-target goal width is not a lifetime calculation-failure limit", asy
   assert.equal(failures, 65);
 });
 
-test("a live drop remains a target after the vanished-item settlement window", async (t) => {
-  const clock = wallClock(t);
+test("a live drop remains a target after the vanished-item settlement window", async () => {
+  const clock = testClock();
   let ticks = 0;
   let satisfied = false;
   const bot = fakeBot({
@@ -1742,6 +1740,7 @@ test("a live drop remains a target after the vanished-item settlement window", a
   const result = await mine(
     bot,
     request(bot, {
+      now: clock.now,
       isSatisfied: () => satisfied,
       route: async (options) => {
         const arrival = arrivalAt(bot);
@@ -1764,8 +1763,8 @@ test("a live drop remains a target after the vanished-item settlement window", a
  * evidence: past vanilla's pickup delay, an item still under the bot is not
  * coming in.
  */
-test("a drop the bot stands in without gaining anything is given up before the server despawns it", async (t) => {
-  const clock = wallClock(t);
+test("a drop the bot stands in without gaining anything is given up before the server despawns it", async () => {
+  const clock = testClock();
   const cell = new Vec3(0, 64, 0);
   let ticks = 0;
   const bot = fakeBot({
@@ -1782,6 +1781,7 @@ test("a drop the bot stands in without gaining anything is given up before the s
   const result = await mine(
     bot,
     request(bot, {
+      now: clock.now,
       route: async (options) => {
         const arrival = arrivalAt(bot);
         assert.equal((await options.onArrival?.(arrival))?.kind, "continue");
@@ -1814,8 +1814,8 @@ test("mining stops once the requested quantity arrives mid-route", async () => {
 });
 
 
-test("target observers see block removal and pickup during a route without an arrival callback", async (t) => {
-  const clock = wallClock(t);
+test("target observers see block removal and pickup during a route without an arrival callback", async () => {
+  const clock = testClock();
   const first = new Vec3(5, 64, 0);
   const second = new Vec3(7, 64, 0);
   const bot = fakeBot({ blocks: [first, second] });
@@ -1823,6 +1823,7 @@ test("target observers see block removal and pickup during a route without an ar
   let satisfied = false;
   let gained = 0;
   await mine(bot, request(bot, {
+    now: clock.now,
     isSatisfied: () => satisfied,
     observedInventoryGain: () => gained,
     onTargets: (targets) => { announcements.push(targets.map(target => target.kind === "drop" ? `drop:${target.entityId}` : `${target.kind}:${target.position.x}`)); },

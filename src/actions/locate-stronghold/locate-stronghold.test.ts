@@ -7,7 +7,6 @@ import { Vec3 } from "vec3";
 import { SqlBotData, botEventSchema } from "../../bot-data/index.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { persistentBotData } from "../../test-support/bot-data.js";
-import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { createLocateStrongholdAction, loadedStrongholdFrame } from "./locate-stronghold.js";
 import { locateStrongholdInputSchema, locateStrongholdResultSchema } from "./contract.js";
 import { StrongholdEyeFlights, awaitFlight } from "./throw-eye.js";
@@ -16,6 +15,11 @@ import { triangulate, type Bearing } from "./triangulation.js";
 import { strongholdSupplies } from "./supplies.js";
 
 const registry = minecraftData("1.21.4");
+/**
+ * Eye recovery short enough to lapse for real: these fixtures never drop the
+ * observed eye, so recovery waits out its whole drop window.
+ */
+const shortRecovery = { eyeRecoverySettleMs: { drop: 20 } };
 const bearing = (x: number, z: number, tx: number, tz: number): Bearing => {
   const length = Math.hypot(tx - x, tz - z);
   return { start: { x, y: 70, z }, end: { x: x + (12 * (tx - x)) / length, y: 78, z: z + (12 * (tz - z)) / length } };
@@ -144,7 +148,7 @@ test("published input rejects unknown arguments and defaults the durable search"
   for (const input of [{ search_id: " " }, { search_radius: 0 }, { x: 10 }])
     assert.equal(locateStrongholdInputSchema.safeParse(input).success, false);
 });
-test("masonry alone is not confirmation; a loaded frame produces a typed durable final event", async (t) => {
+test("masonry alone is not confirmation; a loaded frame produces a typed durable final event", async () => {
   using data = makeData();
   const f = fixture();
   using flights = new StrongholdEyeFlights(f.bot);
@@ -169,7 +173,7 @@ test("masonry alone is not confirmation; a loaded frame produces a typed durable
     ] as never;
   assert.equal(loadedStrongholdFrame(f.bot, f.bot.entity.position, 128), null);
   const navigation = { navigate: async () => ({ status: "completed", elapsedMs: 1 }) } as unknown as NavigationRuntime;
-  const action = createLocateStrongholdAction(f.bot, navigation, data, flights);
+  const action = createLocateStrongholdAction(f.bot, navigation, data, flights, shortRecovery);
   const missing = await action.begin(action.parse({}), new AbortController().signal, () => {})({});
   assert.equal(missing.status, "failed");
   assert.match("error" in missing ? missing.error : "", /No carried Eyes/);
@@ -178,10 +182,10 @@ test("masonry alone is not confirmation; a loaded frame produces a typed durable
   store.observe(id, id, { x: 0, y: 71, z: 0 }, { x: 0, y: 65, z: 0 });
   store.finish(id, "observed");
   material = registry.blocksByName.end_portal_frame!.minStateId;
-  const { value: result } = await onVirtualClock(t, () => action.begin(
+  const result = await action.begin(
     action.parse({ phase: "locate", continue_without_recommended_items: true }),
     new AbortController().signal, () => {},
-  )({}));
+  )({});
   assert.equal(result.status, "succeeded");
   assert.deepEqual(result.confirmation?.position, { x: 1, y: 5, z: 1 });
   locateStrongholdResultSchema.parse(result);
@@ -301,7 +305,7 @@ test("locate cannot skip the estimate phase even with a supply override", async 
   assert.deepEqual(result.throwIds, []);
 });
 
-test("a descending vertical eye leads to local survey, without another throw", async (t) => {
+test("a descending vertical eye leads to local survey, without another throw", async () => {
   using data = makeData();
   const f = fixture();
   using flights = new StrongholdEyeFlights(f.bot);
@@ -318,11 +322,11 @@ test("a descending vertical eye leads to local survey, without another throw", a
         : { status: "stopped", reason: "survey boundary", elapsedMs: 1 };
     },
   } as unknown as NavigationRuntime;
-  const action = createLocateStrongholdAction(f.bot, navigation, data, flights);
-  const { value: result } = await onVirtualClock(t, () => action.begin(
+  const action = createLocateStrongholdAction(f.bot, navigation, data, flights, shortRecovery);
+  const result = await action.begin(
     action.parse({ search_id: "trip", phase: "locate", continue_without_recommended_items: true }),
     new AbortController().signal, () => {},
-  )({}));
+  )({});
   assert.equal(routes, 2, JSON.stringify(result));
   assert.deepEqual(result.estimate, { x: 0, z: 0 });
   assert.equal(result.confirmation, null);

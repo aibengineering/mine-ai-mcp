@@ -55,6 +55,12 @@ export interface PlaceBlockDependencies {
   readonly navigate: Navigate;
   readonly placeBlock: (bot: Bot, placement: Parameters<typeof placeBlock>[1]) => Promise<BlockPlacementResult>;
   readonly placeNearby: typeof placeCarriedBlockNearby;
+  /**
+   * How long the placed block's slot gets to show the item gone. Production
+   * omits it for the shared receipt window; a test shortens it so an
+   * unconfirmed count lapses for real.
+   */
+  readonly inventorySettleMs?: number;
 }
 
 function productionDependencies(navigate: Navigate): PlaceBlockDependencies {
@@ -171,7 +177,10 @@ async function placeNearby(
           true,
           // The block update resolved the placement; the slot that loses the
           // block is broadcast after it.
-          await settleInventoryCount(bot, request.blockName, inventoryBefore - 1, { signal: context.signal }),
+          await settleInventoryCount(bot, request.blockName, inventoryBefore - 1, {
+            signal: context.signal,
+            timeoutMs: dependencies.inventorySettleMs,
+          }),
         ),
       };
     case "failed":
@@ -326,7 +335,10 @@ export async function executePlaceBlock(
       targetBlock.name,
       support,
       true,
-      await settleInventoryCount(bot, request.blockName, inventoryBefore - 1, { signal: context.signal }),
+      await settleInventoryCount(bot, request.blockName, inventoryBefore - 1, {
+        signal: context.signal,
+        timeoutMs: dependencies.inventorySettleMs,
+      }),
     ),
   };
 }

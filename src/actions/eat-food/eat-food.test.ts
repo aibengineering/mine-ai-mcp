@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture, type FakeStack } from "../../test-support/bot.js";
-import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { parseEatFoodRequest } from "./contract.js";
 import { formatEatFoodResult, eatFood, type EatFoodDependencies } from "./eat-food.js";
+import { INVENTORY_SETTLE_MS } from "../../world/inventory-count.js";
 
 /** A hungry bot carrying one stack of the named item. */
 function hungryBot(name = "cooked_beef", count = 2) {
@@ -74,21 +74,24 @@ test("equips and consumes one named food while reporting observed changes", asyn
   assert.match(formatEatFoodResult(result), /Consumed one \*\*cooked_beef\*\*/);
 });
 
-test("waits for consumption when Mineflayer resolves before the eating animation finishes", async (t) => {
+test("waits for consumption when Mineflayer resolves before the eating animation finishes", async () => {
   const { bot, items } = hungryBot();
   const dependencies: EatFoodDependencies = {
     equip: async () => {},
     consume: async () => {
       // A held-item update resolved consume, but the server is still eating.
+      // The finish lands after the shared inventory window would have given
+      // up, so this proves eat-food waits on its own longer consumption window
+      // rather than that one. Real time, on purpose: about a third of a second.
       setTimeout(() => {
         items[0]!.count -= 1;
         bot.food = 18;
         bot.inventory.emit("updateSlot");
-      }, 350);
+      }, INVENTORY_SETTLE_MS + 50);
     },
   };
 
-  const { value: result } = await onVirtualClock(t, () => eatFood(bot, { foodName: "cooked_beef" }, {}, dependencies));
+  const result = await eatFood(bot, { foodName: "cooked_beef" }, {}, dependencies);
 
   assert.equal(result.status, "succeeded");
   assert.equal(result.eating.inventoryBefore, 2);

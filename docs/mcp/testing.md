@@ -65,14 +65,18 @@ Four rules keep the suite small and quick:
   bot-data stores are in [src/test-support/bot-data.ts](../../src/test-support/bot-data.ts).
   A test adds only the methods its subject calls as overrides. It never
   rebuilds the skeleton.
-- **Waiting and output go through helpers, not sleeps and prints.**
-  `onVirtualClock` in [src/test-support/virtual-clock.ts](../../src/test-support/virtual-clock.ts)
-  settles an action on mocked timers instead of sleeping through its deadlines;
+- **Waiting and output go through options and helpers, not sleeps and prints.**
+  A production wait or clock is an option whose default is the production
+  value, such as eat-food's `settleMs`, the actions' `inventorySettleMs`, or
+  the mining request's `now`, so a test passes a window of a few milliseconds
+  and lets it lapse for real, or a clock it advances, instead of sleeping
+  through the deadline or mocking the global timers;
   `deferred` and `nextTurn` in [src/test-support/async.ts](../../src/test-support/async.ts)
-  replace hand-rolled promises; `captureOutput` in
-  [src/test-support/output.ts](../../src/test-support/output.ts) collects the
-  operator notices a test provokes so it can assert on them rather than print
-  them. A test that must wait on a real timer says why in a comment.
+  replace hand-rolled promises. Operator notices likewise go to a sink the
+  caller supplies (`OperatorNotices` for the host and supervisor, `log` on
+  `SqlBotData`, `report` on `observeBotStatus`), defaulting to the process
+  streams, so a test records them and asserts on them rather than patching
+  stdout. A test that must wait on a real timer says why in a comment.
 - **A test lives with the unit whose contract it exercises**, not with the file
   that was open when the bug was found. A test that builds a `MineflayerBot`
   belongs in the actuator's file, one that builds a `RouteExecutor` in the

@@ -22,7 +22,6 @@ import {
   outcome,
   type Entity,
 } from "../../test-support/hunt-mob.js";
-import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { parseHuntMobRequest } from "./contract.js";
 import {
   createCollectMobDropAction,
@@ -139,7 +138,7 @@ test("a completed quantity is checked again after handoff consumes it", async ()
 });
 
 for (const gainedDuringReflex of [false, true])
-  test(`quarry observation retains its deadline and baseline through a reflex (gain: ${gainedDuringReflex})`, async (t) => {
+  test(`quarry observation retains its deadline and baseline through a reflex (gain: ${gainedDuringReflex})`, async () => {
     const inventory = { count: 4 };
     const bot = huntBot([], inventory);
     const budgets = new Budgets();
@@ -152,23 +151,22 @@ for (const gainedDuringReflex of [false, true])
       budgets,
     );
     const runner = new ActionRunner();
-    const { value: { original, output } } = await onVirtualClock(t, async () => {
-      const pending = runner.run(
-        { ...action, execution: { kind: "resumable_task" } },
-        { mob_name: "sheep", drop_name: "white_wool", count: 1, observe_for_ms: 300 },
-      );
-      await new Promise((resolve) => setImmediate(resolve));
-      const original = runner.request();
-      assert.equal(budgets.snapshot()[0]?.name, "quarry_observation");
-      // The reflex outlasts the whole 300 ms observation window.
-      const claim = runner.claim("hunger_reflex", "Eating while awaiting quarry", async () => {
-        await new Promise((resolve) => setTimeout(resolve, 350));
-        if (gainedDuringReflex) inventory.count++;
-        return { value: null, continuation: { kind: "resume" as const } };
-      });
-      assert.equal(claim.kind, "claimed");
-      return { original, output: await pending };
+    // The window is the request's own, so a short one lapses for real.
+    const pending = runner.run(
+      { ...action, execution: { kind: "resumable_task" } },
+      { mob_name: "sheep", drop_name: "white_wool", count: 1, observe_for_ms: 30 },
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    const original = runner.request();
+    assert.equal(budgets.snapshot()[0]?.name, "quarry_observation");
+    // The reflex outlasts the whole 30 ms observation window.
+    const claim = runner.claim("hunger_reflex", "Eating while awaiting quarry", async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      if (gainedDuringReflex) inventory.count++;
+      return { value: null, continuation: { kind: "resume" as const } };
     });
+    assert.equal(claim.kind, "claimed");
+    const output = await pending;
     assert.equal(output.request?.id, original?.id);
     assert.ok("hunt" in output.result);
     if (!("hunt" in output.result)) return;

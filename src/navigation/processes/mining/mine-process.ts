@@ -198,6 +198,13 @@ export interface MineRequest {
   readonly onTargets?: (targets: readonly MineTarget[]) => void;
   /** Preserve observed matching-block removals even when this attempt is cancelled. */
   readonly onBroken?: (position: BlockPosition) => void;
+  /**
+   * The clock for the target refresh interval and every drop deadline, in
+   * milliseconds. Production omits it for `Date.now`; a test passes one it
+   * advances, so it can step past those intervals without sleeping through
+   * them or moving the global clock underneath everything else.
+   */
+  readonly now?: () => number;
   /** Injectable physical effect for process regressions. */
   readonly breakInPlace: BreakBlockInPlace;
   /** Injectable physical placement: how a lava face is closed before a target break. */
@@ -688,6 +695,7 @@ class MineTargeting {
   #branchFailure: string | null = null;
   #knownBlocks: readonly BlockPosition[] = [];
   #refreshedAtMs = Number.NEGATIVE_INFINITY;
+  readonly #now: () => number;
   #announced = "";
   /** Why each loaded matching block the last scan saw could not be a target, and how many were rejected for it. */
   rejections: ReadonlyMap<string, number> = new Map();
@@ -706,6 +714,7 @@ class MineTargeting {
     private readonly bot: Bot,
     private readonly request: MineRequest,
   ) {
+    this.#now = request.now ?? Date.now;
     this.#casts = new CastTargets(bot, request, MAX_MINE_TARGETS);
     this.#drops = new MineDropTracker(bot, request, this.#dropBlacklist, this.#anticipatedDropBlacklist);
   }
@@ -859,7 +868,7 @@ class MineTargeting {
   }
 
   /** The current target set, rescanning the world at most every `GOAL_UPDATE_MS`. */
-  targets(now = Date.now()): readonly MineTarget[] {
+  targets(now = this.#now()): readonly MineTarget[] {
     if (now - this.#refreshedAtMs < GOAL_UPDATE_MS) return this.#targets;
 
     // A block this run knew about that is loaded and no longer matches came
@@ -926,7 +935,7 @@ class MineTargeting {
     // Measure the cache window from completed work. If a rich block refresh
     // itself takes longer than the interval, recording its start time makes it
     // immediately stale and every search slice performs the whole scan again.
-    this.#refreshedAtMs = Date.now();
+    this.#refreshedAtMs = this.#now();
     this.announce();
     return this.#targets;
   }

@@ -39,6 +39,12 @@ export interface SmeltItemDependencies {
   readonly pause: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
   /** How long each furnace slot take, and the inventory receiving its output, gets to settle. */
   readonly slotRecoveryMs?: number;
+  /**
+   * How long the raw input left in the inventory gets to show exactly what was
+   * smelted. Production omits it for the shared receipt window; a test
+   * shortens it so input that never returns lapses for real.
+   */
+  readonly inventorySettleMs?: number;
 }
 
 function abortablePause(milliseconds: number, signal?: AbortSignal): Promise<void> {
@@ -479,6 +485,7 @@ async function smeltInFurnace(
   // read once it has landed.
   const inputAfter = await settleInventoryCount(bot, request.itemName, before.input - produced, {
     signal: context.signal,
+    timeoutMs: dependencies.inventorySettleMs,
   });
   const observed = evidence(bot, request, before, {
     fuelInserted,

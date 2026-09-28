@@ -26,6 +26,15 @@ import { prepareCraftingStation } from "./crafting-station.js";
 
 type FailedCraftPreparation = Exclude<CraftPreparation, { readonly kind: "ready" }>;
 
+export interface CraftItemOptions {
+  /**
+   * How long each requested gain, and the table made or placed for the batch,
+   * gets to show in the inventory. Production omits it for the shared receipt
+   * window; a test shortens it so a gain that never arrives lapses for real.
+   */
+  readonly inventorySettleMs?: number;
+}
+
 interface ResolvedCraftItem extends CraftTarget {
   readonly inventoryBefore: number;
 }
@@ -107,16 +116,17 @@ export async function craftItem(
   navigation: NavigationRuntime,
   request: CraftItemRequest,
   context: ActionContext,
+  options: CraftItemOptions = {},
 ): Promise<CraftItemResult> {
   observeInventoryProgress(context, bot, request.items, () => "crafting", "All requested net item gains are still carried after crafting and workstation cleanup.");
-  if (!request.temporaryWorkstation) return craftBatch(bot, request, context);
+  if (!request.temporaryWorkstation) return craftBatch(bot, request, context, options);
   const tablesBefore = carriedCount(bot, "crafting_table");
   const result = await useTemporaryWorkstation(
     bot,
     "crafting_table",
     context,
     workstationOperations(bot, navigation),
-    (table) => craftBatch(bot, request, context, table),
+    (table) => craftBatch(bot, request, context, options, table),
     (error) => ({
       status: "failed",
       error,
@@ -147,6 +157,7 @@ async function craftBatch(
   bot: Bot,
   request: CraftItemRequest,
   context: ActionContext,
+  options: CraftItemOptions,
   providedTable?: WorldBlock,
 ): Promise<CraftItemResult> {
   context.signal?.throwIfAborted();
@@ -183,7 +194,10 @@ async function craftBatch(
   if (initialPlan.kind !== "ready") return preparationFailureResult(initialPlan, { items: requestedItems });
   const station = providedTable
     ? { kind: "ready" as const, craftingTable: providedTable, usedCarriedTable: 0, craftingTablePlaced: undefined }
-    : await prepareCraftingStation(bot, items, initialPlan.plan.requiresCraftingTable, context.signal);
+    : await prepareCraftingStation(bot, items, initialPlan.plan.requiresCraftingTable, {
+      signal: context.signal,
+      timeoutMs: options.inventorySettleMs,
+    });
   if (station.kind === "plan_failed") {
     const failure = preparationFailureResult(station.preparation, { items: requestedItems });
     return {
@@ -233,7 +247,7 @@ async function craftBatch(
         bot,
         name,
         inventoryBefore + count - (name === "crafting_table" ? usedCarriedTable : 0),
-        { signal: context.signal },
+        { signal: context.signal, timeoutMs: options.inventorySettleMs },
       ),
     })),
   );
@@ -299,7 +313,7 @@ export function formatCraftItemResult(result: CraftItemResult): string {
   return lines.join("\n");
 }
 
-export function createCraftItemAction(bot: Bot, navigation: NavigationRuntime) {
+export function createCraftItemAction(bot: Bot, navigation: NavigationRuntime, options: CraftItemOptions = {}) {
   return defineAction({
     checkpointSchema: craftCheckpointSchema,
     name: CRAFT_ITEM,
@@ -310,6 +324,6 @@ export function createCraftItemAction(bot: Bot, navigation: NavigationRuntime) {
     execution: { kind: "task" },
     annotations: craftItemAnnotations,
     parse: parseCraftItemRequest,
-    execute: (request, context) => craftItem(bot, navigation, request, context),
+    execute: (request, context) => craftItem(bot, navigation, request, context, options),
   });
 }

@@ -52,7 +52,7 @@ export class MineDropTracker {
 
   constructor(
     private readonly bot: Bot,
-    private readonly request: Pick<MineRequest, "observedInventoryGain" | "ignoredDropIds">,
+    private readonly request: Pick<MineRequest, "observedInventoryGain" | "ignoredDropIds" | "now">,
     private readonly droppedBlacklist: ReadonlySet<number>,
     private readonly anticipatedBlacklist: ReadonlySet<string>,
   ) {}
@@ -84,7 +84,7 @@ export class MineDropTracker {
 
   update(targets: readonly MineTarget[]): MineTarget[] {
     const found = [...targets];
-    const observedAt = Date.now();
+    const observedAt = (this.request.now ?? Date.now)();
     // Baritone keeps a just-broken location in `anticipatedDrops` while the
     // server is between its block-change and item-spawn packets. Without that
     // bridge, removing the final requested block briefly invalidates the goal

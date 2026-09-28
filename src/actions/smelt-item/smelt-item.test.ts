@@ -3,11 +3,12 @@ import type { Bot } from "mineflayer";
 const navigation = {} as NavigationRuntime;
 /** A furnace slot window short enough that a test can let it lapse for real. */
 const SHORT_SLOT_RECOVERY_MS = 50;
+/** A receipt window short enough that a test can let an unconfirmed count lapse for real. */
+const SHORT_INVENTORY_SETTLE_MS = 20;
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
 import { botFixture, registry, type FakeStack } from "../../test-support/bot.js";
-import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { createSmeltItemAction, parseSmeltItemRequest, smeltItem, type SmeltItemDependencies } from "./index.js";
 
 test("a named furnace and a temporary one are exclusive, and a temporary one must be carried", async () => {
@@ -289,16 +290,16 @@ test("distinguishes exhausted fuel from a cook stall", async () => {
   assert.equal(fixture.now, 1_000);
 });
 
-test("reports only the raw count removed from a partially recovered furnace slot", async (t) => {
+test("reports only the raw count removed from a partially recovered furnace slot", async () => {
   const fixture = observedFurnace({ cookMs: 2_000, stopAfter: 1, recoverInputCount: 1 });
   // The raw input left in the furnace never returns, so the inventory settle lapses.
-  const { value: result } = await onVirtualClock(t, () => smeltItem(
+  const result = await smeltItem(
     fixture.bot,
     navigation,
     { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 },
     {},
-    fixture.dependencies,
-  ));
+    { ...fixture.dependencies, inventorySettleMs: SHORT_INVENTORY_SETTLE_MS },
+  );
 
   assert.equal(result.status, "partial");
   assert.equal(result.smelt.produced, 1);
@@ -440,7 +441,7 @@ test("refuses furnace output recovery before clicking when inventory has no room
   assert.equal(clicks, 0);
 });
 
-test("does not start a multi-click raw recovery after output consumes the last inventory slot", async (t) => {
+test("does not start a multi-click raw recovery after output consumes the last inventory slot", async () => {
   const { bot, dependencies } = smeltingBot();
   let loaded = false;
   let outputRemoved = false;
@@ -454,13 +455,15 @@ test("does not start a multi-click raw recovery after output consumes the last i
     const items = bot.inventory.items() as unknown as FakeStack[];
     items.push({ name: "iron_ingot", count: 1, type: registry.itemsByName.iron_ingot!.id });
   };
-  const { value: result } = await onVirtualClock(t, () => smeltItem(
+  // The raw input is never taken back, so the inventory settle lapses.
+  const result = await smeltItem(
     bot,
     navigation,
     { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 },
     {},
     {
       ...dependencies,
+      inventorySettleMs: SHORT_INVENTORY_SETTLE_MS,
       openFurnace: async () => ({
         progress: 0.5,
         fuel: 0.5,
@@ -475,7 +478,7 @@ test("does not start a multi-click raw recovery after output consumes the last i
         close: () => undefined,
       }) as never,
     },
-  ));
+  );
 
   assert.equal(result.status, "partial");
   assert.equal(result.smelt.produced, 1);

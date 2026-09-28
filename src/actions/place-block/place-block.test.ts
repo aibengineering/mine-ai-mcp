@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture, type FakeStack } from "../../test-support/bot.js";
-import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { parsePlaceBlockRequest } from "./contract.js";
 import { formatPlaceBlockResult, executePlaceBlock, type PlaceBlockDependencies } from "./place-block.js";
 
@@ -168,20 +167,25 @@ function placeWithoutSlotUpdate(target: Vec3, blocks: Map<string, any>): PlaceBl
   };
 }
 
-test("waits for the slot update the server sends after the block update", async (t) => {
+test("waits for the slot update the server sends after the block update", async () => {
   const { bot, blocks, dependencies, target, takeOneFromInventory } = testWorld();
 
-  const { value: result } = await onVirtualClock(t, () => {
-    // The block update resolved `placeBlock`; the slot that loses the block is
-    // broadcast two ticks later.
-    setTimeout(takeOneFromInventory, 100);
-    return executePlaceBlock(
-      bot,
-      { blockName: "cobblestone", target: { x: 2, y: 64, z: 0 } },
-      {},
-      { ...dependencies, placeBlock: placeWithoutSlotUpdate(target, blocks) },
-    );
-  });
+  const place = placeWithoutSlotUpdate(target, blocks);
+  const result = await executePlaceBlock(
+    bot,
+    { blockName: "cobblestone", target: { x: 2, y: 64, z: 0 } },
+    {},
+    {
+      ...dependencies,
+      placeBlock: async (...placement) => {
+        const placed = await place(...placement);
+        // The block update resolved `placeBlock`; the slot that loses the block
+        // is broadcast a little later, inside the default receipt window.
+        setTimeout(takeOneFromInventory, 20);
+        return placed;
+      },
+    },
+  );
 
   assert.equal(result.status, "succeeded");
   assert.deepEqual(
@@ -190,15 +194,15 @@ test("waits for the slot update the server sends after the block update", async 
   );
 });
 
-test("says so rather than presenting a placement count the server never confirmed", async (t) => {
+test("says so rather than presenting a placement count the server never confirmed", async () => {
   const { bot, blocks, dependencies, target } = testWorld();
 
-  const { value: result } = await onVirtualClock(t, () => executePlaceBlock(
+  const result = await executePlaceBlock(
     bot,
     { blockName: "cobblestone", target: { x: 2, y: 64, z: 0 } },
     {},
-    { ...dependencies, placeBlock: placeWithoutSlotUpdate(target, blocks) },
-  ));
+    { ...dependencies, placeBlock: placeWithoutSlotUpdate(target, blocks), inventorySettleMs: 20 },
+  );
 
   assert.equal(result.status, "succeeded");
   assert.deepEqual(
