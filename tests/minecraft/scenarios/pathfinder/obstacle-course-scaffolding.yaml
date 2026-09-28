@@ -24,10 +24,16 @@ geometry:
 
   # An unbreakable perimeter makes this a course rather than an invitation to
   # scaffold around an arbitrarily wide hazard strip.
-  - fill: { block: bedrock, from: [-3, -62, -3], to: [17, -40, -3] }
-  - fill: { block: bedrock, from: [-3, -62, 3], to: [17, -40, 3] }
-  - fill: { block: bedrock, from: [-3, -62, -3], to: [-3, -40, 3] }
-  - fill: { block: bedrock, from: [17, -62, -3], to: [17, -40, 3] }
+  # Bedrock to knee height at the start pad, then barrier: as unbreakable and as
+  # tall, but invisible, so a spectator outside the course can watch.
+  - fill: { block: bedrock, from: [-3, -62, -3], to: [17, -60, -3] }
+  - fill: { block: bedrock, from: [-3, -62, 3], to: [17, -60, 3] }
+  - fill: { block: bedrock, from: [-3, -62, -3], to: [-3, -60, 3] }
+  - fill: { block: bedrock, from: [17, -62, -3], to: [17, -60, 3] }
+  - fill: { block: barrier, from: [-3, -59, -3], to: [17, -40, -3] }
+  - fill: { block: barrier, from: [-3, -59, 3], to: [17, -40, 3] }
+  - fill: { block: barrier, from: [-3, -59, -3], to: [-3, -40, 3] }
+  - fill: { block: barrier, from: [17, -59, -3], to: [17, -40, 3] }
 
   # Section 1: Starting pad below a sheer 5-block cliff
   - fill: { block: stone, from: [-2, -60, 0], to: [0, -60, 0] }

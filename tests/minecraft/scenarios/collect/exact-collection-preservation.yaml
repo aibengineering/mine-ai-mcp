@@ -34,9 +34,10 @@ geometry:
   - setblock: { block: coal_ore, at: [-14, -60, 4] }
   - setblock: { block: coal_ore, at: [-12, -60, 4] }
   # A low ceiling prevents jumping over the shortcut's protected blocks.
-  # The longer route around either end of the barrier remains open.
+  # The longer route around either end of the barrier remains open. The
+  # ceiling is barrier: as solid as bedrock, but a spectator can see through it.
   - fill: { block: bedrock, from: [-3, -61, -9], to: [9, -61, 9] }
-  - fill: { block: bedrock, from: [-3, -58, -9], to: [9, -58, 9] }
+  - fill: { block: barrier, from: [-3, -58, -9], to: [9, -58, 9] }
   - fill: { block: bedrock, from: [1, -60, -6], to: [5, -59, 6] }
   - fill: { block: air, from: [1, -60, 0], to: [5, -59, 0] }
   # The stocked chest has the same block state as the requested empty chest.
