@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { readRecentEvents } from "../actions/read-recent-events/read-recent-events.js";
-import { botEventInputSchema, readLastDeath, readNotificationSummary, SqlBotData } from "../bot-data/index.js";
+import { botEventInputSchema, readLastDeath, readNotificationSummary } from "../bot-data/index.js";
+import { temporaryBotData } from "../test-support/bot-data.js";
 import { observePlayerEvents } from "./player-events.js";
 
 function playerBot(username = "MineAI"): Bot {
@@ -17,15 +18,9 @@ function playerBot(username = "MineAI"): Bot {
 
 test("records incoming and outgoing player messages while notifying only for incoming ones", (t) => {
   const bot = playerBot();
-  const data = SqlBotData.create({
-    storage: { kind: "temporary" },
-    identity: { worldId: "player-events-message-test", scope: { kind: "bot", botId: bot.username } },
-  });
+  const data = temporaryBotData({ botId: bot.username, closeAfter: t });
   const stopObserving = observePlayerEvents(bot, data, () => undefined);
-  t.after(() => {
-    stopObserving();
-    data.close();
-  });
+  t.after(stopObserving);
 
   bot.emit("chat", "Alex", "MineAI, can you bring wood?", null, {} as never, null);
   bot.emit("chat", "MineAI", "Yes, I can.", null, {} as never, null);
@@ -105,10 +100,7 @@ test("the player death event requires a finite exact position", () => {
 
 test("death requests cancellation once, records one event, and detaches without touching other listeners", (t) => {
   const bot = playerBot("RuntimeBot");
-  const data = SqlBotData.create({
-    storage: { kind: "temporary" },
-    identity: { worldId: "player-events-death-test", scope: { kind: "bot", botId: bot.username } },
-  });
+  const data = temporaryBotData({ botId: bot.username, closeAfter: t });
   const cancellations: string[] = [];
   let unrelatedDeaths = 0;
   const unrelatedListener = () => {
@@ -120,10 +112,7 @@ test("death requests cancellation once, records one event, and detaches without 
     bot.entity.position.x = 99;
     return { kind: "idle", reason };
   });
-  t.after(() => {
-    stopObserving();
-    data.close();
-  });
+  t.after(stopObserving);
 
   bot.emit("death");
 
@@ -156,12 +145,9 @@ test("death requests cancellation once, records one event, and detaches without 
   assert.equal(readRecentEvents(data, bot.username, 50).events.length, 0);
 });
 
-test("a respawn into another dimension records one event; a respawn in the same dimension records none", () => {
+test("a respawn into another dimension records one event; a respawn in the same dimension records none", (t) => {
   const bot = playerBot("RuntimeBot");
-  const data = SqlBotData.create({
-    storage: { kind: "temporary" },
-    identity: { worldId: "player-events-dimension-test", scope: { kind: "bot", botId: bot.username } },
-  });
+  const data = temporaryBotData({ botId: bot.username, closeAfter: t });
   const stopObserving = observePlayerEvents(bot, data, () => undefined);
 
   bot.emit("respawn");
@@ -187,5 +173,4 @@ test("a respawn into another dimension records one event; a respawn in the same 
   stopObserving();
   assert.equal(bot.listenerCount("respawn"), 0);
   assert.equal(bot.listenerCount("forcedMove"), 0);
-  data.close();
 });

@@ -7,6 +7,7 @@ import { clearMiningWater } from "./mining-water.js";
 
 test("dry mining seals source water, including below the target, while an existing surface swim needs no plug", async () => {
   for (const wetMiner of [false, true]) for (const offset of [new Vec3(1, 0, 0), new Vec3(0, -1, 0)]) {
+    const row = `${wetMiner ? "wet" : "dry"} miner, water at offset ${offset}`;
     const bot = botFixture();
     bot.entity.position = new Vec3(0.5, 64, 0.5);
     bot.entity.onGround = true;
@@ -24,12 +25,12 @@ test("dry mining seals source water, including below the target, while an existi
     // No source is visible, so preparation must seal the local face directly.
     bot.world.raycast = () => null;
     const result = await clearMiningWater(bot, target, async (_bot, position) => {
-      assert.deepEqual(position, face);
+      assert.deepEqual(position, face, row);
       sealed = true;
       return { kind: "placed", block: bot.blockAt(face)! };
     }, null);
-    assert.equal(result, null);
-    assert.equal(sealed, !wetMiner);
+    assert.equal(result, null, row);
+    assert.equal(sealed, !wetMiner, row);
   }
 });
 

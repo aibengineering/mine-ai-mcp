@@ -205,7 +205,7 @@ test("enderman ranking keeps terrain priority inside a nearest-relative band for
         },
       }),
     );
-    assert.deepEqual(engaged, [8]);
+    assert.deepEqual(engaged, [8], `candidates listed as ${order.map(({ id }) => id).join(",")}`);
   }
 });
 

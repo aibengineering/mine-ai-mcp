@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture, type FakeStack } from "../../test-support/bot.js";
+import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { parseEatFoodRequest } from "./contract.js";
 import { formatEatFoodResult, eatFood, type EatFoodDependencies } from "./eat-food.js";
 
@@ -73,7 +74,7 @@ test("equips and consumes one named food while reporting observed changes", asyn
   assert.match(formatEatFoodResult(result), /Consumed one \*\*cooked_beef\*\*/);
 });
 
-test("waits for consumption when Mineflayer resolves before the eating animation finishes", async () => {
+test("waits for consumption when Mineflayer resolves before the eating animation finishes", async (t) => {
   const { bot, items } = hungryBot();
   const dependencies: EatFoodDependencies = {
     equip: async () => {},
@@ -87,7 +88,7 @@ test("waits for consumption when Mineflayer resolves before the eating animation
     },
   };
 
-  const result = await eatFood(bot, { foodName: "cooked_beef" }, {}, dependencies);
+  const { value: result } = await onVirtualClock(t, () => eatFood(bot, { foodName: "cooked_beef" }, {}, dependencies));
 
   assert.equal(result.status, "succeeded");
   assert.equal(result.eating.inventoryBefore, 2);

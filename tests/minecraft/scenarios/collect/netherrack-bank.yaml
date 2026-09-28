@@ -1,4 +1,4 @@
-template: ../../templates/collect/single-action.yaml
+template: ../../templates/single-action.yaml
 
 name: netherrack-bank
 tags: [acceptance]
@@ -6,9 +6,6 @@ description: >-
   Collect 32 fast-breaking netherrack while reachable drops accumulate on lower
   ledges. Verify full health and at most 64 of the bank's 565 blocks removed;
   mining most of the bank cannot pass on the final inventory count alone.
-
-minecraft:
-  version: "1.21.4"
 
 world:
   type: flat

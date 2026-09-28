@@ -1,4 +1,4 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
 name: portals-through-leaves
 tags: [regression]
@@ -8,8 +8,6 @@ description: >-
   a fresh frame through leaves, and a partly built frame with several obstructed
   cells. Every build must succeed, and Mine Labs independently checks all three
   obsidian frames and their clear openings. Corners use ordinary cobblestone supports.
-minecraft:
-  version: "1.21.4"
 world:
   type: flat
   time: noon

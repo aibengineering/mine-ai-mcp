@@ -1,4 +1,4 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
 name: movement-course
 tags:
@@ -9,7 +9,6 @@ description: >-
   stair ramps, soul sand, vines and ladders in both directions, and unsupported diagonal treads. Verify each
   named arrival and full health without digging or scaffolding. Preserves constrained-stair-descent and the
   original movement-course, translated sixteen blocks east.
-minecraft: { version: "1.21.4" }
 world:
   type: flat
   time: noon

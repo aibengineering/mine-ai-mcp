@@ -48,44 +48,6 @@ const breaksAt = (movement: GeneratedMovement, x: number, y: number) =>
 const SOLID = { stateId: 1 } as const;
 const AIR = { stateId: 0 } as const;
 
-test("transition hazards can refuse a jump without excluding level walking or changing other routes", () => {
-  const world = flat([{ x: 1, y: 63, z: 0 }, SOLID]);
-  const baseline = generateFrom(world, ORIGIN);
-  assert.ok(baseline.some(m => m.step.kind === "step_up"));
-  const movements = generateFrom(world, ORIGIN, { policy: {
-    allowSprinting: false,
-    decideMovement: (kind, from, destination) => {
-      assert.deepEqual(from, ORIGIN);
-      return kind === "step_up" && destination.y > from.y
-        ? { kind: "prohibited", reason: "overhead hazard" }
-        : { kind: "allowed" };
-    },
-  } });
-  assert.ok(movements.some(m => m.step.kind === "walk"));
-  assert.equal(movements.some(m => m.step.kind === "step_up"), false);
-});
-
-test("walking and downward excavation reject suspended gravel but retain supported gravel", () => {
-  const world = flatWorld();
-  const gravel = { stateId: 124, traits: { falling: true } };
-  world.load({ x: 1, y: 62, z: 0 }, gravel);
-  world.load({ x: 1, y: 61, z: 0 }, AIR);
-  assert.equal(generateFrom(world, ORIGIN).some(to(1, 63, 0)), false);
-  world.load({ x: 1, y: 61, z: 0 }, SOLID);
-  assert.equal(generateFrom(world, ORIGIN).some(to(1, 63, 0)), true);
-
-  world.load({ x: 0, y: 61, z: 0 }, gravel);
-  world.load({ x: 0, y: 60, z: 0 }, AIR);
-  assert.equal(
-    generateFrom(world, ORIGIN).some((m) => m.step.kind === "downward"),
-    false,
-  );
-  world.load({ x: 0, y: 60, z: 0 }, SOLID);
-  assert.equal(
-    generateFrom(world, ORIGIN).some((m) => m.step.kind === "downward"),
-    true,
-  );
-});
 const water = (liquidSource: boolean) => ({
   stateId: 10,
   collisionShapes: [],
@@ -416,6 +378,45 @@ test("the catalogue offers and withholds movements by the shape of the ground", 
   }
 });
 
+test("transition hazards can refuse a jump without excluding level walking or changing other routes", () => {
+  const world = flat([{ x: 1, y: 63, z: 0 }, SOLID]);
+  const baseline = generateFrom(world, ORIGIN);
+  assert.ok(baseline.some(m => m.step.kind === "step_up"));
+  const movements = generateFrom(world, ORIGIN, { policy: {
+    allowSprinting: false,
+    decideMovement: (kind, from, destination) => {
+      assert.deepEqual(from, ORIGIN);
+      return kind === "step_up" && destination.y > from.y
+        ? { kind: "prohibited", reason: "overhead hazard" }
+        : { kind: "allowed" };
+    },
+  } });
+  assert.ok(movements.some(m => m.step.kind === "walk"));
+  assert.equal(movements.some(m => m.step.kind === "step_up"), false);
+});
+
+test("walking and downward excavation reject suspended gravel but retain supported gravel", () => {
+  const world = flatWorld();
+  const gravel = { stateId: 124, traits: { falling: true } };
+  world.load({ x: 1, y: 62, z: 0 }, gravel);
+  world.load({ x: 1, y: 61, z: 0 }, AIR);
+  assert.equal(generateFrom(world, ORIGIN).some(to(1, 63, 0)), false);
+  world.load({ x: 1, y: 61, z: 0 }, SOLID);
+  assert.equal(generateFrom(world, ORIGIN).some(to(1, 63, 0)), true);
+
+  world.load({ x: 0, y: 61, z: 0 }, gravel);
+  world.load({ x: 0, y: 60, z: 0 }, AIR);
+  assert.equal(
+    generateFrom(world, ORIGIN).some((m) => m.step.kind === "downward"),
+    false,
+  );
+  world.load({ x: 0, y: 60, z: 0 }, SOLID);
+  assert.equal(
+    generateFrom(world, ORIGIN).some((m) => m.step.kind === "downward"),
+    true,
+  );
+});
+
 // ── The shape of one movement ────────────────────────────────────────────────
 
 test("a descent retains its landing floor as an execution precondition", () => {
@@ -444,8 +445,9 @@ test("a short stalagmite cannot be a step-up tread or a level landing", () => {
     assert.equal(
       movements.some(({ step }) => step.kind === "step_up" && step.to.x === 1 && step.to.z === 0),
       false,
+      `a ${height}-tall tip was used as a step-up tread`,
     );
-    assert.equal(movements.some(to(1, 63, 1)), false);
+    assert.equal(movements.some(to(1, 63, 1)), false, `a ${height}-tall tip was used as a level landing`);
   }
 });
 

@@ -13,6 +13,7 @@ import { Vec3 } from "vec3";
 import { readRecentEventsResultSchema } from "../actions/read-recent-events/contract.js";
 import { ExecutionScope } from "../execution/execution-scope.js";
 import { CombatExecution, combatExecutionSnapshotSchema } from "../survival/control/combat/execution.js";
+import { deferred } from "../test-support/async.js";
 import { createMinecraftRuntime } from "./minecraft-runtime.js";
 
 const combatController = {
@@ -45,6 +46,11 @@ const combatController = {
   canRecover: () => false,
   activeEngagement: () => null,
 };
+
+/** Runtime options for a store that lives only as long as the test. */
+function temporaryStorage(worldId: string, botId = "runtime-bot") {
+  return { storage: { kind: "temporary" as const }, identity: { worldId, scope: { kind: "bot" as const, botId } } };
+}
 
 function runtimeBot(controlStates: boolean[] = [], rejectedListener?: string): Bot {
   const inventory = Object.assign(new EventEmitter(), { items: () => [], slots: new Array(46).fill(null) });
@@ -93,10 +99,7 @@ test("completed combat decisions are retained without a physics sample and unsub
   const listeners = new Set<(event: CombatDecision) => void>();
   const runtime = await createMinecraftRuntime(runtimeBot(), {
     incidents: { directory },
-    botData: {
-      storage: { kind: "temporary" },
-      identity: { worldId: "decision-test", scope: { kind: "bot", botId: "runtime-bot" } },
-    },
+    botData: temporaryStorage("decision-test"),
     createCombatController: () => ({
       ...combatController,
       onDecision: (listener) => {
@@ -181,10 +184,7 @@ test("Mineflayer end captures the foreground request and still fails a nonsettli
   t.after(() => rm(directory, { recursive: true, force: true }));
   const runtime = await createMinecraftRuntime(bot, {
     incidents: { directory },
-    botData: {
-      storage: { kind: "temporary" },
-      identity: { worldId: "disconnect-test", scope: { kind: "bot", botId: "runtime-bot" } },
-    },
+    botData: temporaryStorage("disconnect-test"),
     createCombatController: () => combatController,
   });
   try {
@@ -197,16 +197,13 @@ test("Mineflayer end captures the foreground request and still fails a nonsettli
       requestedAt: new Date().toISOString(),
       request: {},
     });
-    let enter!: () => void;
-    const entered = new Promise<void>((resolve) => {
-      enter = resolve;
-    });
+    const entered = deferred();
     const pending = runtime.run(
       {
         ...query,
         execution: { kind: "task" },
         execute: async () => {
-          enter();
+          entered.resolve();
           return new Promise<never>(() => {});
         },
       },
@@ -214,7 +211,7 @@ test("Mineflayer end captures the foreground request and still fails a nonsettli
       undefined,
       requestId,
     );
-    await entered;
+    await entered.promise;
     // An information call can overlap the foreground request without owning its incident.
     const informationId = runtime.recordActionRequest({
       actionName: query.name,
@@ -253,10 +250,7 @@ test("an artifact write failure remains evidence and does not turn successful ga
   const runtime = await createMinecraftRuntime(bot, {
     incidents: { directory: occupied },
     createCombatController: () => combatController,
-    botData: {
-      storage: { kind: "temporary" },
-      identity: { worldId: "write-failure", scope: { kind: "bot", botId: "RuntimeBot" } },
-    },
+    botData: temporaryStorage("write-failure", "RuntimeBot"),
   });
   t.after(async () => {
     await runtime.close();
@@ -308,13 +302,7 @@ test("the Minecraft runtime owns frontier attachment and its action catalog", as
   const controlStates: boolean[] = [];
   const bot = runtimeBot(controlStates);
   const runtime = await createMinecraftRuntime(bot, {
-    botData: {
-      storage: { kind: "temporary" },
-      identity: {
-        worldId: "runtime-test",
-        scope: { kind: "bot", botId: "runtime-bot" },
-      },
-    },
+    botData: temporaryStorage("runtime-test"),
     createCombatController: () => combatController,
   });
 
@@ -466,13 +454,7 @@ test("runtime creation settles every acquired attachment before rejecting", asyn
 
   await assert.rejects(
     createMinecraftRuntime(bot, {
-      botData: {
-        storage: { kind: "temporary" },
-        identity: {
-          worldId: "runtime-startup-failure-test",
-          scope: { kind: "bot", botId: "runtime-bot" },
-        },
-      },
+      botData: temporaryStorage("runtime-startup-failure-test"),
     }),
     /Listener registration failed for physicsTick/,
   );
@@ -496,13 +478,7 @@ test("death cancels the foreground action, records one event, and permits work a
   const bot = runtimeBot();
   bot.chat = () => undefined;
   const runtime = await createMinecraftRuntime(bot, {
-    botData: {
-      storage: { kind: "temporary" },
-      identity: {
-        worldId: "death-runtime-test",
-        scope: { kind: "bot", botId: "RuntimeBot" },
-      },
-    },
+    botData: temporaryStorage("death-runtime-test", "RuntimeBot"),
     createCombatController: () => combatController,
   });
   t.after(() => runtime.close());
@@ -543,13 +519,7 @@ test("death cancels the foreground action, records one event, and permits work a
 
 test("adds unrestricted JavaScript execution only to an explicitly debug-enabled runtime", async () => {
   const runtime = await createMinecraftRuntime(runtimeBot(), {
-    botData: {
-      storage: { kind: "temporary" },
-      identity: {
-        worldId: "debug-runtime-test",
-        scope: { kind: "bot", botId: "debug-runtime-bot" },
-      },
-    },
+    botData: temporaryStorage("debug-runtime-test", "debug-runtime-bot"),
     debugExecuteJavaScript: true,
     createCombatController: () => combatController,
   });
@@ -564,10 +534,7 @@ test("adds unrestricted JavaScript execution only to an explicitly debug-enabled
 test("recent calls are published with their own arguments and rationale, then their outcome", async (t) => {
   const runtime = await createMinecraftRuntime(runtimeBot(), {
     createCombatController: () => combatController,
-    botData: {
-      storage: { kind: "temporary" },
-      identity: { worldId: "latest-call", scope: { kind: "bot", botId: "RuntimeBot" } },
-    },
+    botData: temporaryStorage("latest-call", "RuntimeBot"),
   });
   t.after(() => runtime.close());
   assert.deepEqual(runtime.recentCalls(), []);
@@ -601,10 +568,7 @@ test("recent calls are published with their own arguments and rationale, then th
 test("recent calls keep the newest first and stay bounded", async (t) => {
   const runtime = await createMinecraftRuntime(runtimeBot(), {
     createCombatController: () => combatController,
-    botData: {
-      storage: { kind: "temporary" },
-      identity: { worldId: "recent-calls", scope: { kind: "bot", botId: "RuntimeBot" } },
-    },
+    botData: temporaryStorage("recent-calls", "RuntimeBot"),
   });
   t.after(() => runtime.close());
   for (let call = 0; call < 12; call++) {

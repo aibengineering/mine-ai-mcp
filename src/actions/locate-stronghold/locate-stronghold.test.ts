@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import test from "node:test";
 import type { Bot } from "mineflayer";
 import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import { SqlBotData, botEventSchema } from "../../bot-data/index.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
+import { persistentBotData } from "../../test-support/bot-data.js";
+import { captureOutput } from "../../test-support/output.js";
+import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { createLocateStrongholdAction, loadedStrongholdFrame } from "./locate-stronghold.js";
 import { locateStrongholdInputSchema, locateStrongholdResultSchema } from "./contract.js";
 import { StrongholdEyeFlights, awaitFlight } from "./throw-eye.js";
@@ -66,35 +66,26 @@ test("refuses parallel, backwards, sub-block and poorly conditioned bearings", (
   );
   assert.equal(triangulate(bearing(0, 0, 1e6, 0), bearing(0, 32, 1e6, 0)), null);
 });
-test("SQLite survives reopen and isolates search, bot, dimension and world", () => {
-  const root = mkdtempSync(path.join(tmpdir(), "stronghold-"));
-  const options = {
-    storage: { kind: "persistent" as const, root },
-    identity: { worldId: "one", scope: { kind: "shared" as const } },
-  };
-  let data = SqlBotData.create(options);
-  try {
-    const store = new StrongholdThrows(data, "Locator", "overworld", "trip");
-    const id = store.begin({ x: 1, y: 70, z: 1 });
-    const b = bearing(0, 0, 0, -500);
-    store.observe(id, "uuid", b.start, b.end);
-    store.finish(id, "observed");
-    data.close();
-    data = SqlBotData.create(options);
-    assert.equal(new StrongholdThrows(data, "Locator", "overworld", "trip").read()[0]?.throw_id, id);
-    assert.equal(data.read("SELECT bearing_degrees FROM stronghold_throws")[0]?.bearing_degrees, 0);
-    for (const args of [
-      ["Other", "overworld", "trip"],
-      ["Locator", "the_nether", "trip"],
-      ["Locator", "overworld", "another"],
-    ])
-      assert.equal(new StrongholdThrows(data, args[0]!, args[1]!, args[2]!).read().length, 0);
-    using other = SqlBotData.create({ ...options, identity: { ...options.identity, worldId: "two" } });
-    assert.equal(other.read("SELECT * FROM stronghold_throws").length, 0);
-  } finally {
-    data.close();
-    rmSync(root, { recursive: true, force: true });
-  }
+test("SQLite survives reopen and isolates search, bot, dimension and world", (t) => {
+  const storage = persistentBotData(t);
+  captureOutput(t);
+  const data = storage.open("one");
+  const store = new StrongholdThrows(data, "Locator", "overworld", "trip");
+  const id = store.begin({ x: 1, y: 70, z: 1 });
+  const b = bearing(0, 0, 0, -500);
+  store.observe(id, "uuid", b.start, b.end);
+  store.finish(id, "observed");
+  data.close();
+  const reopened = storage.open("one");
+  assert.equal(new StrongholdThrows(reopened, "Locator", "overworld", "trip").read()[0]?.throw_id, id);
+  assert.equal(reopened.read("SELECT bearing_degrees FROM stronghold_throws")[0]?.bearing_degrees, 0);
+  for (const args of [
+    ["Other", "overworld", "trip"],
+    ["Locator", "the_nether", "trip"],
+    ["Locator", "overworld", "another"],
+  ])
+    assert.equal(new StrongholdThrows(reopened, args[0]!, args[1]!, args[2]!).read().length, 0, `${args.join("/")} sees no throws`);
+  assert.equal(storage.open("two").read("SELECT * FROM stronghold_throws").length, 0);
 });
 test("cancelling the wait preserves later airborne measurements and removes flight listeners at disappearance", async () => {
   using data = makeData();
@@ -155,7 +146,7 @@ test("published input rejects unknown arguments and defaults the durable search"
   for (const input of [{ search_id: " " }, { search_radius: 0 }, { x: 10 }])
     assert.equal(locateStrongholdInputSchema.safeParse(input).success, false);
 });
-test("masonry alone is not confirmation; a loaded frame produces a typed durable final event", async () => {
+test("masonry alone is not confirmation; a loaded frame produces a typed durable final event", async (t) => {
   using data = makeData();
   const f = fixture();
   using flights = new StrongholdEyeFlights(f.bot);
@@ -189,10 +180,10 @@ test("masonry alone is not confirmation; a loaded frame produces a typed durable
   store.observe(id, id, { x: 0, y: 71, z: 0 }, { x: 0, y: 65, z: 0 });
   store.finish(id, "observed");
   material = registry.blocksByName.end_portal_frame!.minStateId;
-  const result = await action.begin(
+  const { value: result } = await onVirtualClock(t, () => action.begin(
     action.parse({ phase: "locate", continue_without_recommended_items: true }),
     new AbortController().signal, () => {},
-  )({});
+  )({}));
   assert.equal(result.status, "succeeded");
   assert.deepEqual(result.confirmation?.position, { x: 1, y: 5, z: 1 });
   locateStrongholdResultSchema.parse(result);
@@ -312,7 +303,7 @@ test("locate cannot skip the estimate phase even with a supply override", async 
   assert.deepEqual(result.throwIds, []);
 });
 
-test("a descending vertical eye leads to local survey, without another throw", async () => {
+test("a descending vertical eye leads to local survey, without another throw", async (t) => {
   using data = makeData();
   const f = fixture();
   using flights = new StrongholdEyeFlights(f.bot);
@@ -330,10 +321,10 @@ test("a descending vertical eye leads to local survey, without another throw", a
     },
   } as unknown as NavigationRuntime;
   const action = createLocateStrongholdAction(f.bot, navigation, data, flights);
-  const result = await action.begin(
+  const { value: result } = await onVirtualClock(t, () => action.begin(
     action.parse({ search_id: "trip", phase: "locate", continue_without_recommended_items: true }),
     new AbortController().signal, () => {},
-  )({});
+  )({}));
   assert.equal(routes, 2, JSON.stringify(result));
   assert.deepEqual(result.estimate, { x: 0, z: 0 });
   assert.equal(result.confirmation, null);

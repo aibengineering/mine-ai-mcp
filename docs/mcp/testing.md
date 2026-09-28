@@ -52,7 +52,7 @@ Unit tests are colocated `*.test.ts` files run by `bun run test` using Bun and t
 the same command typechecks the package and the scenario drivers first. The test
 command names `./src`, `./scenarios/src`, and `./tests` as explicit directories:
 bare names are Bun path filters and can also select ignored private experiments.
-Three rules keep the suite small:
+Four rules keep the suite small and quick:
 
 - **Tests purchase confidence, not line coverage.** Keep public contract tests,
   meaningful boundaries, and regressions backed by an observed failure. A test
@@ -65,6 +65,14 @@ Three rules keep the suite small:
   bot-data stores are in [src/test-support/bot-data.ts](../../src/test-support/bot-data.ts).
   A test adds only the methods its subject calls as overrides. It never
   rebuilds the skeleton.
+- **Waiting and output go through helpers, not sleeps and prints.**
+  `onVirtualClock` in [src/test-support/virtual-clock.ts](../../src/test-support/virtual-clock.ts)
+  settles an action on mocked timers instead of sleeping through its deadlines;
+  `deferred` and `nextTurn` in [src/test-support/async.ts](../../src/test-support/async.ts)
+  replace hand-rolled promises; `captureOutput` in
+  [src/test-support/output.ts](../../src/test-support/output.ts) collects the
+  operator notices a test provokes so it can assert on them rather than print
+  them. A test that must wait on a real timer says why in a comment.
 - **A test lives with the unit whose contract it exercises**, not with the file
   that was open when the bug was found. A test that builds a `MineflayerBot`
   belongs in the actuator's file, one that builds a `RouteExecutor` in the
@@ -76,8 +84,8 @@ Three rules keep the suite small:
 
 Scenarios run against Minecraft 1.21.4 servers managed by Mine Labs. Compatible resettable fixtures reuse their server; other fixtures receive a fresh world.
 Mine Labs controls server lifecycle, world generation, game ticks, and external
-verdicts. The scenario definitions and bot drivers are owned by this package under
-[scenarios/](../../scenarios/).
+verdicts. The scenario definitions and bot drivers are owned by this package, in
+the two catalogues described below.
 
 A scenario asserts on physical facts observed by Mine Labs independently of the
 bot: blocks remaining in the world, items present in inventory, or changes in
@@ -117,41 +125,32 @@ is also a distinct goal from acquiring its random loot.
 
 ## What scenario groups exist in the repository?
 
-Scenarios are organised by world shape in [scenarios/](../../scenarios/):
+There are two catalogues:
 
-### Flat worlds (`scenarios/flat/`)
-
-- `collect/`: Verifies mining target blocks, item drop recovery, falling sand or
-  gravel columns, and inventory fullness limits.
-- `combat/`: Tests the combat reflex across hostile mob types (zombies,
-  skeletons, creepers, spiders, phantoms, and endermen), varied equipment, and
-  preemption of foreground tasks.
-- `evidence/`: Executes every published standard action against a test world and
-  dumps real request schemas and responses.
-- `explore/`: Verifies directional frontier expansion and chunk discovery.
-- `hunt/`: Tests native defeat goals, drop collection, and inventory
-  gains.
-- `pathfinder/`: Validates pathfinding across terrain obstacles, scaffolding,
-  descents, and underwater hazards.
-- `sleep/`: Tests bed placement, navigating to beds, skipping the night, and
-  detecting nearby hostiles.
-- `storage/`: Verifies container inspections, deposits, withdrawals, stack
-  recompaction, and container sorting.
-- `water/`: Tests background buoyancy reflexes in deep water while idle or
-  between pathfinder routes.
-
-### Default terrain worlds (`scenarios/default/`)
-
-- `progression/`: Runs the `primitive-progression-to-diamond` qualification
-  scenario, executing a complete dependency sequence from bare hands to diamond
-  tools on an authored survival map.
-- `terrain/`: Validates long-distance traversal across natural generated terrain
-  and unloaded chunk boundaries.
+- [tests/minecraft/scenarios/](../../tests/minecraft/scenarios/) is the suite the
+  package scripts run. Its fixtures are grouped by behavior (`barter`, `bucket`,
+  `build`, `collect`, `combat`, `craft`, `drop`, `explore`, `hunt` and
+  `pathfinder`), each declares its purpose and tags, and every one runs through
+  the runtime host in `tests/minecraft/`. Its
+  [README](../../tests/minecraft/README.md) describes the templates, drivers and
+  evidence options.
+- [scenarios/](../../scenarios/) is the wider catalogue, organised by world shape
+  (`flat/`, `default/`) and run directly with Mine Labs. Its
+  [README](../../scenarios/README.md) lists every folder, the question it asks
+  and the bot module that drives it. The `verification/` manifests there run with
+  `mine-labs verify`.
 
 ## What package scripts run scenarios?
 
+Scenarios need Bun and **Java 21**. Mine Labs starts each Minecraft server, and
+the spectator build runs Gradle, with `$JAVA_HOME/bin/java` when `JAVA_HOME` is
+set and `java` on `PATH` otherwise. If the default Java is older, prefix the
+command, for example `JAVA_HOME=/path/to/jdk-21 bun run scenarios:once`.
+
 `scenarios` runs `tests/minecraft/scenarios` repeatedly with two workers; appended
 options such as `--jobs` and `--repeat` override those defaults.
+`scenarios:once` runs the same suite once with two workers, which is the check
+to make after changing a fixture, template, driver or the host.
 `scenarios:spectator` builds the highlighter and opens that same suite in the
 managed Java viewer. Its controls select scenarios and repetition. The YAML
 `client` command still runs the bot participant in either mode.
@@ -159,6 +158,9 @@ managed Java viewer. Its controls select scenarios and repetition. The YAML
 Run these commands from the package root:
 
 ```sh
+# Run the whole suite once with two workers.
+bun run scenarios:once
+
 # Soak the current suite with two workers.
 bun run scenarios
 

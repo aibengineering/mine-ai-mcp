@@ -88,12 +88,12 @@ test("Nether frame detection accepts frame blocks and interior cells on both axe
     const at = (along: number, y: number) => (axis === "x" ? new Vec3(along, y, 0) : new Vec3(0, y, along));
     for (const cell of [at(10, 63), at(9, 65), at(11, 67), at(11, 66)]) {
       const found = findNetherFrame(bot, cell);
-      assert.ok("frame" in found);
+      assert.ok("frame" in found, `${axis}-axis frame found from ${cell}`);
       assert.equal(found.frame.axis, axis);
-      assert.equal(found.frame.width * found.frame.height, 6);
+      assert.equal(found.frame.width * found.frame.height, 6, `${axis}-axis frame interior from ${cell}`);
     }
     put(at(12, 65), "air");
-    assert.ok("reason" in findNetherFrame(bot, at(10, 64)));
+    assert.ok("reason" in findNetherFrame(bot, at(10, 64)), `a broken ${axis}-axis frame is refused`);
   }
 });
 

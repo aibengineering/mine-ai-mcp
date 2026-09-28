@@ -21,32 +21,6 @@ const walking = () => createMovementPolicy({ allowSprinting: false });
 /** Commit as soon as there is a segment worth walking, so a run is made of continuations rather than one route. */
 const EARLY_COMMIT = { primaryTimeoutMs: 0, failureTimeoutMs: 1_000 } as const;
 
-test("repeated start invalidation settles as planning_stalled and releases the navigation owner", async (t) => {
-  let now = 0;
-  t.mock.method(performance, "now", () => now);
-  const bot = new FakeNavigationBot();
-  bot.current = { ...bot.current, position: { ...bot.current.position, x: 0.99 } };
-  const world = flatWorld();
-  let retries = 0;
-  const navigator = createNavigator({ world, bot, telemetry: onEvent((event) => {
-    if (event.kind === "search_started") {
-      now += 4_000;
-      if (event.reason === "start_changed") retries++;
-    }
-    if (event.kind === "search_slice")
-      bot.current = { ...bot.current, position: { ...bot.current.position, x: bot.current.position.x < 1 ? 1.01 : 0.99 } };
-  }) });
-  const outcome = await settle(navigator, { goal: exactBlockGoal({ x: 6, y: 63, z: 0 }), policy: walking() });
-  assert.equal(outcome.kind, "failed");
-  if (outcome.kind !== "failed" || outcome.failure.kind !== "no_progress") assert.fail(JSON.stringify(outcome));
-  assert.equal(outcome.failure.reason, "planning_stalled");
-  assert.ok(retries >= 3);
-  assert.equal(outcome.evidence.plans, 0);
-  assert.equal(navigator.active, null);
-  assert.equal(world.listenerCount, 0);
-  assert.deepEqual(outcome.evidence.cleanup, { listeners: 0, controls: 0, expectations: 0 });
-});
-
 // ── Admission, stopping, and cleanup ─────────────────────────────────────────
 
 test("the service admits one run and settles from observed final state", async () => {
@@ -81,7 +55,7 @@ test("a run stops in the words of whoever asked, before it moves, and a timeout 
   assert.equal(bot.current.position.x, 0.5);
 
   const timeout = AbortSignal.timeout(0);
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  await new Promise((resolve) => timeout.addEventListener("abort", resolve, { once: true }));
   const byTimeout = await settle(createNavigator({ world: flatWorld(), bot: new FakeNavigationBot() }), {
     ...far,
     signal: timeout,
@@ -817,6 +791,32 @@ test("a run pushed back to where it began reports no progress after three routes
   assert.equal(outcome.failure.reason, "repeated_execution_checkpoint");
   assert.match(outcome.failure.observation, /3 executed routes in a row/);
   assert.equal(executed, 3);
+});
+
+test("repeated start invalidation settles as planning_stalled and releases the navigation owner", async (t) => {
+  let now = 0;
+  t.mock.method(performance, "now", () => now);
+  const bot = new FakeNavigationBot();
+  bot.current = { ...bot.current, position: { ...bot.current.position, x: 0.99 } };
+  const world = flatWorld();
+  let retries = 0;
+  const navigator = createNavigator({ world, bot, telemetry: onEvent((event) => {
+    if (event.kind === "search_started") {
+      now += 4_000;
+      if (event.reason === "start_changed") retries++;
+    }
+    if (event.kind === "search_slice")
+      bot.current = { ...bot.current, position: { ...bot.current.position, x: bot.current.position.x < 1 ? 1.01 : 0.99 } };
+  }) });
+  const outcome = await settle(navigator, { goal: exactBlockGoal({ x: 6, y: 63, z: 0 }), policy: walking() });
+  assert.equal(outcome.kind, "failed");
+  if (outcome.kind !== "failed" || outcome.failure.kind !== "no_progress") assert.fail(JSON.stringify(outcome));
+  assert.equal(outcome.failure.reason, "planning_stalled");
+  assert.ok(retries >= 3, `only ${retries} searches restarted for a changed start`);
+  assert.equal(outcome.evidence.plans, 0);
+  assert.equal(navigator.active, null);
+  assert.equal(world.listenerCount, 0);
+  assert.deepEqual(outcome.evidence.cleanup, { listeners: 0, controls: 0, expectations: 0 });
 });
 
 test("a timed-out calculation carries its actual search statistics to the caller", async () => {

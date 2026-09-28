@@ -1,4 +1,4 @@
-template: ../../templates/collect/single-action.yaml
+template: ../../templates/single-action.yaml
 
 name: obsidian-hazards
 tags: [regression]
@@ -8,7 +8,6 @@ description: >-
   Guards the Run 10 lava/water refusals and the cave regression that repeatedly arrived
   at an occluded mining stance. All three blocks must be recovered without injury or death.
 
-minecraft: { version: "1.21.4" }
 world:
   type: flat
   time: noon

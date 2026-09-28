@@ -363,18 +363,19 @@ test("a drop keeps moving until the bot is over its lower landing, whether or no
     ],
     [{ x: 1, y: 62, z: 0 }],
   ]) {
+    const which = arrivals.length > 1 ? "with the overshoot cell valid" : "with only the landing valid";
     const { actuator, landed } = ledge();
     const result = await executeBotMovement(actuator, drop(arrivals), { end: "settled" });
-    assert.equal(result.kind, "completed");
+    assert.equal(result.kind, "completed", which);
     const after = landed();
-    assert.equal(after.y, 62);
-    assert.equal(after.releasedBeforeDescent, true, "forward is released before the descent");
-    assert.equal(after.sneaking, false);
-    assert.equal(after.usedSprint, false, "a drop never sprints");
-    assert.ok(after.lookedAt);
-    assert.ok(Math.abs(after.lookedAt.x - 1.33) < 1e-9);
-    assert.equal(after.lookedAt.y, 63);
-    assert.equal(after.lookedAt.z, 0.5);
+    assert.equal(after.y, 62, which);
+    assert.equal(after.releasedBeforeDescent, true, `${which}: forward is released before the descent`);
+    assert.equal(after.sneaking, false, which);
+    assert.equal(after.usedSprint, false, `${which}: a drop never sprints`);
+    assert.ok(after.lookedAt, which);
+    assert.ok(Math.abs(after.lookedAt.x - 1.33) < 1e-9, `${which}: looked at x=${after.lookedAt.x}`);
+    assert.equal(after.lookedAt.y, 63, which);
+    assert.equal(after.lookedAt.z, 0.5, which);
   }
 
   // Already standing on the overshoot cell: that is a valid arrival, and it is reported as the one reached.

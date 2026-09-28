@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import test from "node:test";
-import { SqlBotData } from "./sql-bot-data.js";
-import { temporaryBotData } from "../test-support/bot-data.js";
+import { persistentBotData, temporaryBotData } from "../test-support/bot-data.js";
+import { captureOutput } from "../test-support/output.js";
 
 const DICTIONARY =
   "SELECT database_name, table_name, column_name, description FROM data_dictionary ORDER BY table_name, column_name";
@@ -107,19 +104,11 @@ test("publishes compact map rows with a deterministic dominant biome", (t) => {
 });
 
 test("rebuilds rather than duplicates the data dictionary when a persistent database reopens", (t) => {
-  const root = mkdtempSync(path.join(tmpdir(), "mine-ai-bot-data-schema-"));
-  const options = {
-    storage: { kind: "persistent" as const, root },
-    identity: { worldId: "dictionary-reopen-test", scope: { kind: "shared" as const } },
-  };
-  let data = SqlBotData.create(options);
-  t.after(() => {
-    data.close();
-    rmSync(root, { recursive: true, force: true });
-  });
-  const expected = data.read(DICTIONARY);
-  data.close();
+  const storage = persistentBotData(t);
+  captureOutput(t);
+  const first = storage.open("dictionary-reopen-test");
+  const expected = first.read(DICTIONARY);
+  first.close();
 
-  data = SqlBotData.create(options);
-  assert.deepEqual(data.read(DICTIONARY), expected);
+  assert.deepEqual(storage.open("dictionary-reopen-test").read(DICTIONARY), expected);
 });

@@ -5,6 +5,7 @@ import type { Bot } from "mineflayer";
 import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import { createMovements, type NavigationRuntime } from "../../navigation/index.js";
+import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { recoverEyeDrop } from "./recover-eye.js";
 
 function fixture() {
@@ -42,19 +43,24 @@ test("recovers delayed native item metadata and requires inventory gain", async 
   assert.equal(f.bot.inventory.listenerCount("updateSlot"), f.inventoryListeners);
 });
 
-test("a shattered eye or unrelated distant drop does not start a route", async () => {
+test("a shattered eye or unrelated distant drop does not start a route", async (t) => {
   const f = fixture();
   f.item.position = new Vec3(28, 64, 0); f.addDrop();
   const nav = { navigate: async () => { assert.fail("No matching drop exists."); } } as unknown as NavigationRuntime;
-  assert.equal(await recoverEyeDrop(f.bot, nav, endpoint), undefined);
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const recovery = recoverEyeDrop(f.bot, nav, endpoint);
+  // The drop's metadata may still arrive; recovery gives it 1.5 s before leaving.
+  t.mock.timers.tick(1_500);
+  assert.equal(await recovery, undefined);
   assert.equal(f.count(), 15);
   assert.equal(f.bot.listenerCount("itemDrop"), 0);
 });
 
-test("unreachable eye recovery returns without claiming inventory gain", async () => {
+test("unreachable eye recovery returns without claiming inventory gain", async (t) => {
   const f = fixture(); f.addDrop();
   const nav = { navigate: async () => ({ status: "stopped", reason: "no safe path", elapsedMs: 1 }) } as unknown as NavigationRuntime;
-  assert.equal((await recoverEyeDrop(f.bot, nav, endpoint))?.kind, "not_collected");
+  const { value: recovery } = await onVirtualClock(t, () => recoverEyeDrop(f.bot, nav, endpoint));
+  assert.equal(recovery?.kind, "not_collected");
   assert.equal(f.count(), 15);
 });
 

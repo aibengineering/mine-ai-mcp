@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
 import { botFixture, registry, type FakeStack } from "../../test-support/bot.js";
+import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import { createSmeltItemAction, parseSmeltItemRequest, smeltItem, type SmeltItemDependencies } from "./index.js";
 
 test("a named furnace and a temporary one are exclusive, and a temporary one must be carried", async () => {
@@ -286,15 +287,16 @@ test("distinguishes exhausted fuel from a cook stall", async () => {
   assert.equal(fixture.now, 1_000);
 });
 
-test("reports only the raw count removed from a partially recovered furnace slot", async () => {
+test("reports only the raw count removed from a partially recovered furnace slot", async (t) => {
   const fixture = observedFurnace({ cookMs: 2_000, stopAfter: 1, recoverInputCount: 1 });
-  const result = await smeltItem(
+  // The raw input left in the furnace never returns, so the inventory settle lapses.
+  const { value: result } = await onVirtualClock(t, () => smeltItem(
     fixture.bot,
     navigation,
     { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 },
     {},
     fixture.dependencies,
-  );
+  ));
 
   assert.equal(result.status, "partial");
   assert.equal(result.smelt.produced, 1);
@@ -345,7 +347,7 @@ test("the production action clock is monotonic when the wall clock jumps", async
   await assert.rejects(pending, /clock test cancelled/);
 });
 
-test("a nonsettling slot take closes the window without starting later recovery mutations", async () => {
+test("a nonsettling slot take closes the window without starting later recovery mutations", async (t) => {
   const { bot, dependencies } = smeltingBot();
   let closed = false;
   let inputTakes = 0;
@@ -375,19 +377,17 @@ test("a nonsettling slot take closes the window without starting later recovery 
       close: () => { closed = true; },
     }) as never,
   };
-  const started = performance.now();
-  const result = await smeltItem(
+  const { value: result, elapsedMs } = await onVirtualClock(t, () => smeltItem(
     bot,
     navigation,
     { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 },
     {},
     stuckDependencies,
-  );
-  const elapsed = performance.now() - started;
+  ));
 
   assert.equal(result.status, "failed");
   assert.match(result.error, /takeOutput did not settle within 2000 ms/);
-  assert(elapsed >= 1_900 && elapsed < 3_000, `bounded settlement took ${elapsed} ms`);
+  assert(elapsedMs >= 2_000 && elapsedMs < 3_000, `bounded settlement took ${elapsedMs} ms`);
   assert.equal(closed, true);
   assert.equal(inputTakes, 0);
   assert.equal(fuelTakes, 0);
@@ -431,7 +431,7 @@ test("refuses furnace output recovery before clicking when inventory has no room
   assert.equal(clicks, 0);
 });
 
-test("does not start a multi-click raw recovery after output consumes the last inventory slot", async () => {
+test("does not start a multi-click raw recovery after output consumes the last inventory slot", async (t) => {
   const { bot, dependencies } = smeltingBot();
   let loaded = false;
   let outputRemoved = false;
@@ -445,7 +445,7 @@ test("does not start a multi-click raw recovery after output consumes the last i
     const items = bot.inventory.items() as unknown as FakeStack[];
     items.push({ name: "iron_ingot", count: 1, type: registry.itemsByName.iron_ingot!.id });
   };
-  const result = await smeltItem(
+  const { value: result } = await onVirtualClock(t, () => smeltItem(
     bot,
     navigation,
     { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 },
@@ -466,7 +466,7 @@ test("does not start a multi-click raw recovery after output consumes the last i
         close: () => undefined,
       }) as never,
     },
-  );
+  ));
 
   assert.equal(result.status, "partial");
   assert.equal(result.smelt.produced, 1);

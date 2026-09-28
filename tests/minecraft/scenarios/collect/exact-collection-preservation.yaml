@@ -1,4 +1,4 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
 name: exact-collection-preservation
 tags: [regression]
@@ -12,8 +12,6 @@ description: >-
 # Origins: mine_ai db5384ea (protected storage) and e148dee5 (requested door).
 # Preserves coal-exact-target and birch-door-exact-target. The door arrangement
 # is translated twenty blocks west and one down; the storage barrier is unchanged.
-minecraft:
-  version: "1.21.4"
 world:
   type: flat
   time: noon

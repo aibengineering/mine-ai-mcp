@@ -1,14 +1,12 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
-name: barter-ground-first
+name: ground-first
 tags: [regression]
 description: >-
   Guard against spending gold on piglin trades when the requested pearls are
   already on the ground nearby. With a live adult piglin in front, gold armour
   and three spendable ingots, collect the pearl beyond the low wall without
   offering or spending any gold.
-minecraft:
-  version: "1.21.4"
 world:
   type: flat
   time: noon

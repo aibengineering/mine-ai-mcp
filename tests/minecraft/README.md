@@ -20,7 +20,8 @@ it recursively discovers every YAML file, including templates.
 Group scenarios by behavior: `collect`, `craft`, `build`, `bucket`, `barter`,
 `drop`, `explore`, `hunt`, `combat`, and `pathfinder`. World type and multi-location
 verification belong in the fixture's YAML, so flat and natural-world cases
-appear together when reviewing a capability.
+appear together when reviewing a capability. A fixture's `name` is its file
+name without `.yaml`, and Mine Labs lists it as `<folder>/<file>`.
 
 ## One action, specified in YAML
 
@@ -152,19 +153,24 @@ The timeout is the trial's budget, not an action timeout.
 
 ## Shared setup
 
-`templates/flat-single-action.yaml` owns the shared flat world, reset region,
-spectator rule, and client command. It lives beside `scenarios/` so Mine Labs
-will not discover it as a runnable test.
+Every fixture names one of two templates. They live beside `scenarios/` so Mine
+Labs will not discover them as runnable tests, and both supply the Minecraft
+version, the viewer mod and the single-action client:
 
-Fixtures using it live in `scenarios/<category>/`. The default spectator rule
-expects one player named `Actor`; fixtures with other player names override
-`tick` to preserve those participants. Each fixture declares its own position,
-equipment and geometry.
+- `templates/single-action.yaml` supplies only those. The fixture arranges its
+  own world, reset region and players.
+- `templates/flat-single-action.yaml` adds a shared flat world, reset region
+  and spectator rule for small flat arenas. The spectator rule expects one
+  player named `Actor`; fixtures with other player names override `tick` to
+  preserve those participants. The reset region covers the small collect
+  arenas; a larger arena must override it.
+
+Each fixture declares its own position, equipment and geometry.
 The client working directory resolves from each fixture to this suite's root;
 the host and driver arguments are relative to that root.
-The reset region covers these collect arenas; a larger arena must override it.
 Mine Labs replaces whole top-level fields when merging templates, so a fixture
-overriding `world` or `client` must supply that entire field.
+overriding `world` or `client` must supply that entire field. Templates are one
+level deep: a template cannot name another template.
 
 The host connects the bot, observes the arranged player state, and waits for
 landing and vitals before creating the runtime and reporting prepared.
@@ -226,13 +232,8 @@ Existing artifacts from earlier runs are not removed by this setting.
 To retain the SQLite database and incident files for an investigation, set the
 host's `MINE_AI_SCENARIO_EVIDENCE=1` environment variable before launching Mine Labs:
 
-```powershell
-$env:MINE_AI_SCENARIO_EVIDENCE = "1"
-try {
-  bunx --bun mine-labs run tests/minecraft/scenarios/collect/sand-single.yaml --repeat 1
-} finally {
-  Remove-Item Env:MINE_AI_SCENARIO_EVIDENCE
-}
+```sh
+MINE_AI_SCENARIO_EVIDENCE=1 bunx --bun mine-labs run tests/minecraft/scenarios/collect/sand-single.yaml --repeat 1
 ```
 
 Only the exact value `1` enables retention. Evidence goes under that trial's
@@ -251,10 +252,18 @@ preparation or runtime-configuration hooks. Add capabilities to this contract
 only when a real fixture needs them. Shared connection, recording and cleanup
 stay in the host.
 
+Mine Labs starts each Minecraft 1.21.4 server with Java 21: `$JAVA_HOME/bin/java`
+when `JAVA_HOME` is set, otherwise `java` on `PATH`. If the default Java is
+older, point `JAVA_HOME` at a Java 21 installation for the command. The viewer
+build below uses the same rule.
+
 Run the Minecraft suite once:
 
 ```bash
-bunx --bun mine-labs run tests/minecraft/scenarios --repeat 1
+bun run scenarios:once
+
+# With a Java 21 that is not the default:
+JAVA_HOME=/path/to/jdk-21 bun run scenarios:once
 ```
 
 Build the highlighter from the installed dependency and open the spectator:

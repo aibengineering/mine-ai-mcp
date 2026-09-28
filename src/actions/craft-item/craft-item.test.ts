@@ -3,6 +3,7 @@ import test from "node:test";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { ActionRunner } from "../../session/action-runner.js";
 import { craftingBot } from "../../test-support/crafting.js";
+import { onVirtualClock } from "../../test-support/virtual-clock.js";
 import {
   createCraftItemAction,
   formatCraftItemResult,
@@ -170,7 +171,7 @@ test("temporary crafting requires a carried table even with a nearby table and b
   assert.deepEqual(craftCalls, []);
 });
 
-test("a native crafting failure claims no output and still asks for the inventory window to close", async () => {
+test("a native crafting failure claims no output and still asks for the inventory window to close", async (t) => {
   const { bot } = craftingBot({ oak_log: 1 });
   const closed: unknown[] = [];
   Object.assign(bot, {
@@ -182,7 +183,9 @@ test("a native crafting failure claims no output and still asks for the inventor
     },
   });
 
-  const result = await craftItem(bot, navigation, { items: [{ itemName: "crafting_table", count: 1 }] }, {});
+  // Nothing was crafted, so the wait for the requested gain lapses.
+  const { value: result } = await onVirtualClock(t, () =>
+    craftItem(bot, navigation, { items: [{ itemName: "crafting_table", count: 1 }] }, {}));
 
   assert.equal(result.status, "failed");
   assert.match(

@@ -5,7 +5,9 @@ import type { Bot } from "mineflayer";
 import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import type { NavigationRuntime } from "../../navigation/index.js";
-import { beginBarter } from "./barter.js";
+import { ActionRunner } from "../../session/action-runner.js";
+import { onVirtualClock } from "../../test-support/virtual-clock.js";
+import { beginBarter, createBarterAction } from "./barter.js";
 import { barterInputSchema, barterResultSchema } from "./contract.js";
 
 function fixture(t: TestContext) {
@@ -74,6 +76,7 @@ function fixture(t: TestContext) {
 }
 const request = (gold_budget = 1) =>
   barterInputSchema.parse({ piglin_id: 7, item_name: "ender_pearl", count: 2, gold_budget });
+const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 test("existing desired drops satisfy a zero-gold request without activating a recipient", async (t) => {
   const f = fixture(t);
@@ -92,14 +95,14 @@ test("a consumed offer survives cancellation and resumption without spending twi
   const run = beginBarter(f.bot, f.navigation, request(), f.lifetime.signal);
   const cancel = new AbortController();
   const pending = run({ signal: cancel.signal });
-  await new Promise((resolve) => setImmediate(resolve));
+  await turn();
   assert.equal(f.offers(), 1);
   cancel.abort("reflex takeover");
   const interrupted = await pending;
   assert.equal(interrupted.barter.goldSpent, 1);
   assert.equal(interrupted.barter.goldOffers, 1);
   const resumed = run({});
-  await new Promise((resolve) => setImmediate(resolve));
+  await turn();
   f.complete();
   const result = await resumed;
   assert.equal(result.status, "succeeded");
@@ -111,7 +114,7 @@ test("a consumed offer survives cancellation and resumption without spending twi
 test("a gone recipient settles an accepted exchange without inventing completion", async (t) => {
   const f = fixture(t);
   const pending = beginBarter(f.bot, f.navigation, request(), f.lifetime.signal)({});
-  await new Promise((resolve) => setImmediate(resolve));
+  await turn();
   f.target.isValid = false;
   delete f.entities[7];
   f.events.emit("entityGone", f.target as never);
@@ -129,17 +132,13 @@ test("invalid and baby recipients cannot consume a gold offer", async (t) => {
       f.target.metadata[f.bot.registry.entitiesByName.piglin!.metadataKeys!.indexOf("baby")] =
         invalid === "baby" ? true : "unsupported";
     const result = await beginBarter(f.bot, f.navigation, request(), f.lifetime.signal)({});
-    assert.equal(result.status, "failed");
-    assert.equal(f.offers(), 0);
+    assert.equal(result.status, "failed", `${invalid} recipient`);
+    assert.equal(f.offers(), 0, `${invalid} recipient`);
   }
 });
-import { ActionRunner } from "../../session/action-runner.js";
-import { createBarterAction } from "./barter.js";
-
 function runnerAction(f: ReturnType<typeof fixture>) {
   return { ...createBarterAction(f.bot, f.navigation), execution: { kind: "resumable_task" as const } };
 }
-const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 test("runner takeover preserves a pending offer and accepts desired gains during the reflex", async (t) => {
   const f = fixture(t);
@@ -235,11 +234,14 @@ test("a recipient moving out of reach while equipping receives no reserved offer
 
 test("gold hand release without a new output does not make another offer or report success", async (t) => {
   const f = fixture(t);
-  const pending = beginBarter(f.bot, f.navigation, request(2), f.lifetime.signal)({});
-  await turn();
-  f.target.equipment[1] = null;
-  f.events.emit("entityEquip", f.target);
-  const result = await pending;
+  // With no output to see, the offer's acknowledgement window lapses.
+  const { value: result } = await onVirtualClock(t, async () => {
+    const pending = beginBarter(f.bot, f.navigation, request(2), f.lifetime.signal)({});
+    await turn();
+    f.target.equipment[1] = null;
+    f.events.emit("entityEquip", f.target);
+    return pending;
+  });
   assert.equal(result.status, "partial");
   assert.equal(result.barter.goldOffers, 1);
   assert.equal(result.barter.gained, 0);
@@ -252,11 +254,12 @@ test("full inventory without a partial requested stack stops before offering any
     f.pearl.count = carriedPearls;
     f.bot.inventory.emptySlotCount = () => 0;
     const result = await beginBarter(f.bot, f.navigation, request(), f.lifetime.signal)({});
-    assert.equal(result.status, "failed");
-    assert.equal(result.barter.goldOffers, 0);
-    assert.equal(result.barter.goldSpent, 0);
-    assert.equal(f.offers(), 0);
-    assert.match(result.error!, /no free slot or compatible partial stack for ender_pearl/);
+    const carrying = `carrying ${carriedPearls} pearls`;
+    assert.equal(result.status, "failed", carrying);
+    assert.equal(result.barter.goldOffers, 0, carrying);
+    assert.equal(result.barter.goldSpent, 0, carrying);
+    assert.equal(f.offers(), 0, carrying);
+    assert.match(result.error!, /no free slot or compatible partial stack for ender_pearl/, carrying);
   }
 });
 
@@ -389,24 +392,26 @@ test("an incidental reward observed entirely during takeover allows the next res
       f.complete();
     }
   };
-  const pending = runner.run(runnerAction(f), request(2));
-  await turn();
-  const claim = runner.claim("fixture_reflex", "Wait through incidental output", async () => {
-    f.entities[9] = {
-      id: 9,
-      name: "item",
-      isValid: true,
-      position: new Vec3(2, 64, 0),
-      getDroppedItem: () => ({ name: "blackstone", count: 9 }),
-    };
-    f.events.emit("itemDrop", f.entities[9]);
-    f.target.equipment[1] = null;
-    f.events.emit("entityEquip", f.target);
-    delete f.entities[9];
-    return { value: null, continuation: { kind: "resume" as const } };
+  const { value: result } = await onVirtualClock(t, async () => {
+    const pending = runner.run(runnerAction(f), request(2));
+    await turn();
+    const claim = runner.claim("fixture_reflex", "Wait through incidental output", async () => {
+      f.entities[9] = {
+        id: 9,
+        name: "item",
+        isValid: true,
+        position: new Vec3(2, 64, 0),
+        getDroppedItem: () => ({ name: "blackstone", count: 9 }),
+      };
+      f.events.emit("itemDrop", f.entities[9]);
+      f.target.equipment[1] = null;
+      f.events.emit("entityEquip", f.target);
+      delete f.entities[9];
+      return { value: null, continuation: { kind: "resume" as const } };
+    });
+    assert.equal(claim.kind, "claimed");
+    return pending;
   });
-  assert.equal(claim.kind, "claimed");
-  const result = await pending;
   assert.equal(offered, 2);
   assert.equal(result.result.status, "succeeded");
   assert.equal(f.bot.listenerCount("itemDrop"), 0);

@@ -1,12 +1,11 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
-name: exploration-necessary-lava-bridge
+name: necessary-lava-bridge
 tags: [acceptance]
 description: >-
   Extend the eastern frontier across an unavoidable lava trench. A higher placement
   cost must still permit bridging: leave a netherrack crossing, reach the far bank
   and finish with full health.
-minecraft: { version: "1.21.4" }
 world:
   type: flat
   time: noon

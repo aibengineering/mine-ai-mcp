@@ -217,8 +217,8 @@ test("omitted height refuses a canopy, overhang, or Nether roof instead of choos
       createNavigateAction(bot, fakeNavigation, dependencies(run)),
       { x: 3, z: 0 },
     );
-    assert.equal(output.result.status, "failed");
-    assert.match(output.result.error ?? "", /Supply y/);
+    assert.equal(output.result.status, "failed", roof);
+    assert.match(output.result.error ?? "", /Supply y/, roof);
   }
 });
 
@@ -250,7 +250,7 @@ test("parses one absolute destination and defaults its reached range", () => {
     { x: 1, y: 2, z: 3, dig: "false" },
     { x: 1, y: 2, z: 3, combat: "off" },
   ]) {
-    assert.throws(() => parseNavigateRequest(input));
+    assert.throws(() => parseNavigateRequest(input), Error, JSON.stringify(input));
   }
 });
 

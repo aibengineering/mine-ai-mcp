@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture } from "../../test-support/bot.js";
 import { persistentBotData, temporaryBotData } from "../../test-support/bot-data.js";
+import { captureOutput } from "../../test-support/output.js";
 import { createNoteReadAction, parseNoteReadRequest } from "../note-read/index.js";
 import { createNoteSaveAction, parseNoteSaveRequest } from "./index.js";
 
@@ -33,6 +34,7 @@ test("note contracts require meaningful text and a positive integer count", () =
 
 test("notes persist across reopen, snapshot location and time, and read newest first without consumption", async (t) => {
   const storage = persistentBotData(t);
+  captureOutput(t);
   {
     const first = await (async () => {
       using data = storage.open("notes-test");

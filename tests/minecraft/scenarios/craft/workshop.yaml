@@ -1,4 +1,4 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
 name: workshop
 tags: [regression]
@@ -15,7 +15,6 @@ description: >-
 # progression failures previously covered by floating-furnace.
 # Also preserves smelt-batch-lag and smelt-temporary-furnace; the nine-item
 # slow batch clearly exceeds the old count * 10s + 5s recovery deadline.
-minecraft: { version: "1.21.4" }
 world:
   type: flat
   time: noon

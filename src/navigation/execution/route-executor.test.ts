@@ -44,6 +44,30 @@ function routeExecutor(request: Omit<RouteExecutionRequest, "passages" | "effect
   });
 }
 
+/** An executor for `plan` whose caller takes no interest in step progress. */
+function planExecutor(options: {
+  readonly plan: RouteExecutionRequest["plan"];
+  readonly bot: FakeNavigationBot;
+  readonly world?: ReturnType<typeof flatWorld>;
+  readonly ledger?: ExpectedMutationLedger;
+  readonly signal?: AbortSignal;
+  readonly runId?: string;
+}): RouteExecutor {
+  return routeExecutor({
+    context: {
+      runId: options.runId ?? "run",
+      world: options.world ?? flatWorld(),
+      bot: options.bot,
+      ledger: options.ledger ?? new ExpectedMutationLedger(),
+      signal: options.signal ?? new AbortController().signal,
+    },
+    plan: options.plan,
+    stepStarted: () => undefined,
+    phase: () => undefined,
+    stepCompleted: () => "continue",
+  });
+}
+
 function executeSingleStep(options: {
   readonly step: PlannedStep;
   readonly world: ReturnType<typeof flatWorld>;
@@ -51,19 +75,7 @@ function executeSingleStep(options: {
   readonly ledger?: ExpectedMutationLedger;
   readonly signal?: AbortSignal;
 }) {
-  return routeExecutor({
-    context: {
-      runId: "run",
-      world: options.world,
-      bot: options.bot,
-      ledger: options.ledger ?? new ExpectedMutationLedger(),
-      signal: options.signal ?? new AbortController().signal,
-    },
-    plan: routePlan([options.step]),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
-  }).execute();
+  return planExecutor({ ...options, plan: routePlan([options.step]) }).execute();
 }
 
 /**
@@ -299,19 +311,7 @@ test("route cancellation waits for an active physical effect to settle", async (
 test("one physics-tick subscription advances a complete movement-only route", async () => {
   const bot = new TickDrivenBot();
   const steps = [walkStep("first", 0, 1), walkStep("second", 1, 2)];
-  const result = routeExecutor({
-    context: {
-      runId: "run",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: new AbortController().signal,
-    },
-    plan: routePlan(steps, { id: "continuous-route", totalCost: 8 }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
-  }).execute();
+  const result = planExecutor({ plan: routePlan(steps, { id: "continuous-route", totalCost: 8 }), bot }).execute();
   await nextTurn();
   bot.tickAt(1);
   while (bot.preparations < 2) await nextTurn();
@@ -329,12 +329,10 @@ test("a mixed-kind continuous handoff reuses the route tick's velocity snapshot"
   const controller = new AbortController();
   const approach = walkStep("approach", 0, 1);
   const next = stepUpStep("next", 1, 2);
-  const result = routeExecutor({
-    context: { runId: "run", world: flatWorld(), bot, ledger: new ExpectedMutationLedger(), signal: controller.signal },
+  const result = planExecutor({
     plan: routePlan([approach, next], { id: "snapshot-handoff", totalCost: 16 }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
+    bot,
+    signal: controller.signal,
   }).execute();
   await nextTurn();
 
@@ -373,18 +371,9 @@ test("a failed continuous handoff clears the controls it inherited", async () =>
     }
   }
   const bot = new FailedHandoffBot();
-  const result = routeExecutor({
-    context: {
-      runId: "run",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: new AbortController().signal,
-    },
+  const result = planExecutor({
     plan: routePlan([walkStep("first", 0, 1), walkStep("second", 1, 2)], { id: "failed-handoff", totalCost: 8 }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
+    bot,
   }).execute();
   await nextTurn();
   bot.tickAt(1);
@@ -399,18 +388,10 @@ test("a failed continuous handoff clears the controls it inherited", async () =>
 test("the route applies a gap controller's per-tick landing steering", async () => {
   const bot = new TickDrivenBot();
   const cancellation = new AbortController();
-  const result = routeExecutor({
-    context: {
-      runId: "run",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: cancellation.signal,
-    },
+  const result = planExecutor({
     plan: routePlan([gapStep("parkour", 3, 1)], { id: "steered-gap", totalCost: 20 }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
+    bot,
+    signal: cancellation.signal,
   }).execute();
   await nextTurn();
 
@@ -444,19 +425,7 @@ test("route cancellation clears controls and detaches its physics-tick subscript
 
 test("route invalidation interrupts movement at a cleaned physical checkpoint", async () => {
   const bot = new TickDrivenBot();
-  const executor = routeExecutor({
-    context: {
-      runId: "run",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: new AbortController().signal,
-    },
-    plan: routePlan([walkStep("invalidated", 0, 3)], { id: "invalidated-route" }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
-  });
+  const executor = planExecutor({ plan: routePlan([walkStep("invalidated", 0, 3)], { id: "invalidated-route" }), bot });
   const execution = executor.execute();
   await nextTurn();
   executor.invalidate();
@@ -468,18 +437,11 @@ test("route invalidation interrupts movement at a cleaned physical checkpoint", 
 test("a terminal world invalidation releases a cancelled jump without another physics tick", async () => {
   const bot = new TickDrivenBot();
   const control = new AbortController();
-  const executor = routeExecutor({
-    context: {
-      runId: "terminated-gap",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: control.signal,
-    },
+  const executor = planExecutor({
     plan: routePlan([gapStep("parkour", 4)], { id: "gap" }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
+    bot,
+    signal: control.signal,
+    runId: "terminated-gap",
   });
   let settled = false;
   const completion = executor.execute().then((result) => {

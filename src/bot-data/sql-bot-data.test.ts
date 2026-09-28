@@ -6,13 +6,9 @@ import { Worker } from "node:worker_threads";
 import type { BotDataScope } from "./bot-data-identity.js";
 import { closeSqlDatabase, SqlBotData } from "./sql-bot-data.js";
 import { persistentBotData } from "../test-support/bot-data.js";
+import { captureOutput } from "../test-support/output.js";
 import { BotDataLockError } from "./storage-diagnostics.js";
 import { queryBotData } from "../actions/query-bot-data/query-bot-data.js";
-
-/**
- * A persistent storage root, with every store opened in it closed before the
- * directory is removed: Windows refuses to remove an open SQLite file.
- */
 
 /** One in-memory store, closed when this test finishes. */
 function temporarySqlBotData(t: TestContext, worldId = "temporary-world", scope: BotDataScope = { kind: "shared" }) {
@@ -32,8 +28,13 @@ function withObservations(data: SqlBotData): SqlBotData {
   return data;
 }
 
+// Every persistent store reports its opening and closing, and every lock
+// failure, on stderr for operators; the tests that open one capture that,
+// after the storage whose teardown closes the stores.
+
 test("async call migration preserves historical replies and publishes execution storage", (t) => {
   const storage = persistentBotData(t);
+  captureOutput(t);
   const original = storage.open("async-migration");
   const historical = JSON.stringify({ response: { format: "markdown", markdown: "Original physical evidence\nunchanged" } });
   original.transaction((db) => {
@@ -63,6 +64,7 @@ test("async call migration preserves historical replies and publishes execution 
 
 test("runtime lock contention reports an error without consuming the watchdog allowance", (t) => {
   const storage = persistentBotData(t);
+  const output = captureOutput(t);
   const data = storage.open("locked-runtime");
   const writer = new DatabaseSync(persistentFile(data));
   storage.alsoClose(() => {
@@ -91,6 +93,9 @@ test("runtime lock contention reports an error without consuming the watchdog al
   // observed five-second synchronous SQLite wait, without timing normal SQL.
   assert.ok(performance.now() - began < 1000, "Lock contention must not block the runtime for seconds.");
   assert.equal(data.diagnostics().lockFailures, 1, "Diagnostic reads must work while the other writer holds its lock.");
+  const reported = output.including('"sqliteCode":5');
+  assert.equal(reported.length, 1, "The operator is told about the lock even though the database cannot record it.");
+  assert.match(reported[0]!, /^\[minecraft-bot-data\] .*"operation":\{"name":"recordActionResponse","requestId":115\}/);
   assert.equal(data.read("PRAGMA query_only")[0]?.query_only, 1);
   writer.exec("ROLLBACK");
   assert.equal(
@@ -102,6 +107,7 @@ test("runtime lock contention reports an error without consuming the watchdog al
 
 test("distinguishes a stale read snapshot from an active competing writer", (t) => {
   const storage = persistentBotData(t);
+  captureOutput(t);
   const data = withObservations(storage.open("stale-snapshot"));
   data.transaction((db) => db.exec("INSERT INTO observations VALUES ('one'), ('two')"));
   const writer = new DatabaseSync(persistentFile(data));
@@ -133,6 +139,7 @@ test("distinguishes a stale read snapshot from an active competing writer", (t) 
 
 test("bounded and rejected public SQL reads release their cursors before a later write", async (t) => {
   const storage = persistentBotData(t);
+  captureOutput(t);
   const data = withObservations(storage.open("read-lifetime"));
   data.transaction((db) =>
     db.exec(`WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM n WHERE x<150)
@@ -152,6 +159,7 @@ test("bounded and rejected public SQL reads release their cursors before a later
 
 test("waits for a transient database lock while configuring persistent storage", async (t) => {
   const storage = persistentBotData(t);
+  captureOutput(t);
   const initial = storage.open("locked-startup");
   const file = persistentFile(initial);
   initial.close();
@@ -179,6 +187,7 @@ test("waits for a transient database lock while configuring persistent storage",
 
 test("persistent files are stable per world and scope, and neither shares the other's writes", (t) => {
   const storage = persistentBotData(t);
+  const output = captureOutput(t);
   const shared = storage.open("local/world");
   const sameShared = storage.open("local/world");
   // A world id that differs only where the file name would be sanitised.
@@ -192,6 +201,10 @@ test("persistent files are stable per world and scope, and neither shares the ot
   assert.notEqual(persistentFile(collector), persistentFile(builder));
   assert.match(persistentFile(shared), /[\\/]shared[\\/]bot-data\.sqlite$/);
   assert.match(persistentFile(collector), /[\\/]bots[\\/].+[\\/]bot-data\.sqlite$/);
+  // Lifecycle records let an operator correlate a lock with the connection holding this exact file.
+  const opened = output.including('"event":"opened"').join("\n");
+  for (const data of [shared, collisionSafeWorld, collector, builder])
+    assert.ok(opened.includes(JSON.stringify(persistentFile(data))), `an opened record names ${persistentFile(data)}`);
 
   for (const data of [shared, collector, builder]) withObservations(data);
   shared.transaction((database) => database.prepare("INSERT INTO observations VALUES (?)").run("shared"));
@@ -252,7 +265,9 @@ test("a transaction is synchronous, all-or-nothing, and never interleaved with a
 });
 
 test("host reads cannot mutate temporary or persistent bot data", (t) => {
-  const sources = [temporarySqlBotData(t), persistentBotData(t).open("persistent-world")];
+  const persistent = persistentBotData(t);
+  captureOutput(t);
+  const sources = [temporarySqlBotData(t), persistent.open("persistent-world")];
 
   for (const data of sources) {
     assert.throws(
@@ -269,6 +284,7 @@ test("host reads cannot mutate temporary or persistent bot data", (t) => {
 
 test("rejects a SQL database whose recorded identity has been altered", (t) => {
   const storage = persistentBotData(t);
+  captureOutput(t);
   const data = storage.open("world");
   const file = persistentFile(data);
   data.close();

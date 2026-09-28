@@ -1,4 +1,4 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
 # One full portal-sized collection in unmodified natural terrain.
 # Starting position surveyed on vanilla 1.21.4; no terrain is placed or reset.
@@ -8,8 +8,6 @@ name: cast-obsidian
 tags: [acceptance]
 description: Collect ten obsidian for a portal in natural terrain on seed 8675309,
   recover the water bucket, and complete without a recorded death.
-minecraft:
-  version: 1.21.4
 world:
   type: default
   seed: 8675309
@@ -34,10 +32,6 @@ players:
         count: 1
       - item: cobblestone
         count: 32
-client:
-  command: bun
-  cwd: ../..
-  args: [client-host.ts, drivers/single-action.ts]
 params:
   action: collect_block
   input:

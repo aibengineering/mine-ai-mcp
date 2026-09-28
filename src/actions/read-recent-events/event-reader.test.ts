@@ -3,6 +3,7 @@ import test from "node:test";
 import { readNotificationSummary, recordEvent, type BotEventInput } from "../../bot-data/index.js";
 import { readRecentEvents } from "./read-recent-events.js";
 import { persistentBotData, temporaryBotData } from "../../test-support/bot-data.js";
+import { captureOutput } from "../../test-support/output.js";
 
 function playerMessage(
   summary: string,
@@ -128,6 +129,7 @@ test("reads all event directions oldest-first and advances the cursor atomically
 
 test("events and their cursors survive a restart, including one predating the event-reader table name", (t) => {
   const storage = persistentBotData(t);
+  captureOutput(t);
   const open = () => storage.open("world");
   const first = open();
   recordEvent(first, "collector", playerMessage("persisted"));
@@ -142,6 +144,7 @@ test("events and their cursors survive a restart, including one predating the ev
   reopened.close();
 
   const migration = persistentBotData(t);
+  captureOutput(t);
   const openOld = () => migration.open("world");
   const beforeRename = openOld();
   recordEvent(beforeRename, "collector", playerMessage("already read"));

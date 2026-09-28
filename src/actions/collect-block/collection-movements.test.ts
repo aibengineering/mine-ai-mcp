@@ -168,8 +168,9 @@ test("only the requested interactive block state may be broken, and only at a na
     [table, chest],
   ]) {
     const policy = collectionPolicy(bot, { matchingStateIds: new Set([requested!.stateId]) });
-    assert.equal(policy.evaluateBreak(requested!, position, world).decision.kind, "penalized");
-    assert.equal(policy.evaluateBreak(other!, position, world).decision.kind, "prohibited");
+    const asked = requested === chest ? "the chest" : "the table";
+    assert.equal(policy.evaluateBreak(requested!, position, world).decision.kind, "penalized", `${asked} was requested`);
+    assert.equal(policy.evaluateBreak(other!, position, world).decision.kind, "prohibited", `only ${asked} was requested`);
   }
 
   // An exact target names one cell; another chest of the same state is not it.

@@ -231,6 +231,6 @@ test("keeps the map request deliberately bounded", () => {
     { perspective: "materials" },
     { surprise: true },
   ]) {
-    assert.throws(() => parseViewFrontierRequest(input));
+    assert.throws(() => parseViewFrontierRequest(input), Error, JSON.stringify(input));
   }
 });

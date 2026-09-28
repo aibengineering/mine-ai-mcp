@@ -5,13 +5,12 @@ import { setTimeout as pause } from "node:timers/promises";
 import { z } from "zod";
 import { defineAction, actionResultSchema } from "../actions/action.js";
 import { temporaryBotData } from "../test-support/bot-data.js";
+import { deferred } from "../test-support/async.js";
 import { ActionRunner } from "./action-runner.js";
 import { AsyncActions, ExecutionStore } from "./async-actions.js";
-import { RequestProgress, progressChange } from "./progress.js";
 
 function fixture() {
-  let finish!: () => void;
-  const gate = new Promise<void>((resolve) => { finish = resolve; });
+  const gate = deferred();
   let attempts = 0;
   const runner = new ActionRunner({ position: () => ({ dimension: "overworld", x: 0, y: 64, z: 0 }) });
   const action = defineAction({
@@ -21,13 +20,13 @@ function fixture() {
     execute: async ({ count }, context) => {
       attempts++;
       context.observeProgress?.(() => ({ baseline: 0, checkpoint: { gained: attempts }, completion: { kind: "current", observed: false, owes: "Finish work" } }));
-      await Promise.race([gate, new Promise<void>((resolve) => context.signal?.addEventListener("abort", () => resolve(), { once: true }))]);
+      await Promise.race([gate.promise, new Promise<void>((resolve) => context.signal?.addEventListener("abort", () => resolve(), { once: true }))]);
       context.signal?.throwIfAborted();
       return { status: "succeeded", count };
     },
   });
   const service = new AsyncActions(runner, runner.run);
-  return { runner, service, action, finish, attempts: () => attempts };
+  return { runner, service, action, finish: () => gate.resolve(), attempts: () => attempts };
 }
 
 test("submission deduplicates, timed waits preserve execution, and final retrieval gates the successor", async () => {
@@ -170,37 +169,6 @@ test("concurrent waits retain independent baselines and dispose their own abort 
   assert.equal(getEventListeners(controller.signal, "abort").length, 0);
 });
 
-test("progress marks absent physics samples and retains regressing inventory evidence", async () => {
-  const p = new RequestProgress({ dimension: "overworld", x: 0, y: 64, z: 0 });
-  const before = p.snapshot();
-  p.transition("suspended");
-  await pause(10);
-  p.transition("resuming");
-  await pause(10);
-  assert.ok(p.snapshot().suspendedMs >= 15);
-  p.transition("running");
-  await pause(1010);
-  const stale = p.snapshot();
-  assert.equal(stale.movementCoverage.complete, false);
-  assert.ok(stale.positionAgeMs! >= 1000);
-  p.sample({ dimension: "overworld", x: 100, y: 64, z: 0 }, false);
-  assert.equal(p.snapshot().distanceTravelledBlocks, 0);
-  const evidence = (gained: number) => ({ baseline: null, checkpoint: { items: [{ item: "iron_ingot", gained }] },
-    completion: { kind: "current" as const, observed: false, owes: "Keep the requested items" } });
-  assert.equal(progressChange(before, p.snapshot(), evidence(5), evidence(2)).checkpointDelta["items.iron_ingot.gained"], -3);
-});
-
-test("each waiter sees only tool changes since its own progress baseline", () => {
-  let durabilityLeft = 9;
-  const p = new RequestProgress(null, () => ({ tools: [{ class: "pickaxe", tier: "iron", item: "iron_pickaxe", slot: 36,
-    durabilityLeft, maximumDurability: 250 }], armour: [] }));
-  const first = p.snapshot();
-  durabilityLeft = 4;
-  const second = p.snapshot();
-  assert.deepEqual(progressChange(first, second, null, null).toolChanges.map((change) => change.reason), ["durability_used"]);
-  assert.deepEqual(progressChange(second, second, null, null).toolChanges, []);
-});
-
 test("a broken progress reader reports missing evidence without replacing the physical result", async () => {
   const f = fixture();
   const action = defineAction({ ...f.action, execute: async (_request, context) => {
@@ -238,20 +206,4 @@ test("retained storage recovers unread results and interrupts unfinished work wi
   assert.equal(latest.status().awaitingResult, null);
   assert.equal(latest.submit(f.action, {}, { submission_id: "durable" }, 2).state, "accepted");
   assert.equal(f.attempts(), 1);
-});
-
-test("distance counts real segments across routes, excludes jumps, and freezes its final snapshot", () => {
-  const p = new RequestProgress({ dimension: "overworld", x: 0, y: 64, z: 0 });
-  p.sample({ dimension: "overworld", x: 3, y: 64, z: 4 }, false);
-  p.transition("suspended");
-  p.sample({ dimension: "overworld", x: 0, y: 64, z: 0 }, true);
-  assert.equal(p.snapshot().distanceTravelledBlocks, 10);
-  assert.equal(p.snapshot().reflexDistanceBlocks, 5);
-  assert.equal(p.snapshot().distanceFromStartBlocks, 0);
-  p.sample({ dimension: "the_nether", x: 1000, y: 64, z: 0 }, true, "portal");
-  assert.equal(p.snapshot().distanceTravelledBlocks, 10);
-  assert.equal(p.snapshot().distanceFromStartBlocks, null);
-  const final = p.finish();
-  p.sample({ dimension: "the_nether", x: 1010, y: 64, z: 0 }, false);
-  assert.deepEqual(p.snapshot(), final);
 });

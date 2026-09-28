@@ -1,13 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import minecraftData from "minecraft-data";
-import { botFixture } from "../test-support/bot.js";
+import { botFixture, registry } from "../test-support/bot.js";
 import { formatToolChange, harvestTier, snapshotTools, toolChanges } from "./tool-tiers.js";
 
-const registry = minecraftData("1.21.4");
-
 test("uses registry harvest capability separately from mining speed", () => {
-  const bot = botFixture({ registry } as never);
+  const bot = botFixture();
   assert.equal(harvestTier(bot, "golden_pickaxe"), harvestTier(bot, "wooden_pickaxe"));
   assert.ok(harvestTier(bot, "stone_pickaxe") > harvestTier(bot, "golden_pickaxe"));
   assert.ok(registry.materials["mineable/pickaxe"]![registry.itemsByName.golden_pickaxe!.id]! >
@@ -15,7 +12,7 @@ test("uses registry harvest capability separately from mining speed", () => {
 });
 
 test("snapshots the best carried tier and exact remaining durability", () => {
-  const bot = botFixture({ registry } as never);
+  const bot = botFixture();
   bot.inventory.items = () => [
     { name: "golden_pickaxe", slot: 9, maxDurability: 32, durabilityUsed: 0 },
     { name: "stone_pickaxe", slot: 10, maxDurability: 131, durabilityUsed: 126 },

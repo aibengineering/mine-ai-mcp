@@ -1,11 +1,10 @@
-template: ../../templates/collect/single-action.yaml
+template: ../../templates/single-action.yaml
 
 name: obsidian-scoop-before-mining
 tags: [acceptance]
 description: Recover the water covering an obsidian target into the supplied empty bucket,
   seal the adjacent lava, and collect the obsidian. Finish with the water bucket, full
   health, and no recorded death.
-minecraft: { version: "1.21.4" }
 world:
   type: flat
   time: noon

@@ -9,15 +9,22 @@ import mineflayer from "mineflayer";
 import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 import { SqlBotData } from "../bot-data/index.js";
 import { botFixture, type BotFixtureOptions } from "../test-support/bot.js";
+import { captureOutput } from "../test-support/output.js";
 import { parseHostOptions } from "./config.js";
 import { startRuntimeHost } from "./runtime-host.js";
 
 const source = { kind: "unavailable", reason: "Host lifecycle test" } as const;
 
+/**
+ * Host options over a data root removed when the test ends. The host reports
+ * its readiness, connections and bot-data lifecycle on stdout and stderr,
+ * captured here.
+ */
 async function configuration(t: TestContext) {
   const directory = await mkdtemp(path.join(os.tmpdir(), "host-lifetime-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  return { ...parseHostOptions(["--data-root", directory]), listenPort: 0 };
+  const output = captureOutput(t);
+  return { options: { ...parseHostOptions(["--data-root", directory]), listenPort: 0 }, output };
 }
 
 function connectedBot(t: TestContext, fixture: BotFixtureOptions = {}) {
@@ -52,7 +59,7 @@ function failures(error: unknown): unknown[] {
 }
 
 test("a plugin startup failure still quits the newly created bot", async (t) => {
-  const options = await configuration(t);
+  const { options } = await configuration(t);
   const bot = connectedBot(t);
   const pluginFailure = new Error("Plugin loading failed");
   // Force the real plugin-loading boundary to fail before any spawn waiter exists.
@@ -67,7 +74,7 @@ test("a plugin startup failure still quits the newly created bot", async (t) => 
 });
 
 test("failed HTTP binding releases the runtime and bot and retains combined cleanup failures", async (t) => {
-  const options = await configuration(t);
+  const { options } = await configuration(t);
   const bot = connectedBot(t);
   await using occupied = createServer();
   await once(occupied.listen(0, "127.0.0.1"), "listening");
@@ -108,7 +115,7 @@ test(
   "host disposal drains MCP streams before HTTP, runtime and bot, and concurrent close shares completion",
   { timeout: 10_000 },
   async (t) => {
-    const options = await configuration(t);
+    const { options, output } = await configuration(t);
     const bot = connectedBot(t);
     const signals = [process.listenerCount("SIGINT"), process.listenerCount("SIGTERM")];
     await using host = await startRuntimeHost(source, options);
@@ -159,11 +166,16 @@ test(
     await closed;
     await streamClosed;
     assert.deepEqual(releases, ["database", "bot"]);
+    assert.equal(
+      output.including("Minecraft connection ended: Connection lost during test").length,
+      1,
+      "The operator is told why the runtime stopped serving.",
+    );
   },
 );
 
 test("health publishes the bot's own slots and the calls an observer cannot otherwise see", async (t) => {
-  const options = await configuration(t);
+  const { options } = await configuration(t);
   connectedBot(t, {
     items: [{ name: "cobblestone", count: 12, slot: 36 }],
     slots: { 5: { name: "iron_helmet", count: 1 } },
