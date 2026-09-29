@@ -149,11 +149,13 @@ column names describe individual columns.
 ## What tables and views does bot data provide?
 
 The schema defined in [src/bot-data/bot-data.sql](../../src/bot-data/bot-data.sql)
-carries a version, and the runtime opens only stores written at its own
-version: an older file is refused at open with a message naming both versions,
-and the fix is to delete that `bot-data.sqlite` (with its `-wal` and `-shm`
-files) so the store is recreated. There are no in-place migrations. The schema
-exposes these tables and views:
+carries a version. A store written by an older runtime is migrated forward
+when it opens, in one transaction, so notes, events and learned queries
+survive an upgrade (version 2 drops the event rows of types the runtime no
+longer writes). A store at a version this runtime does not know is refused at
+open with a message naming both versions; open it with the runtime that wrote
+it, or delete that `bot-data.sqlite` (with its `-wal` and `-shm` files) to
+recreate it. The schema exposes these tables and views:
 
 | Name                       | Type  | Purpose                                                                           |
 | -------------------------- | ----- | --------------------------------------------------------------------------------- |

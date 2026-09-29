@@ -253,21 +253,50 @@ test("rejects a SQL database whose recorded identity has been altered", (t) => {
   assert.throws(() => storage.open("world"), /SQL bot data identity mismatch for world_id/);
 });
 
-test("refuses a store written at another schema version and names the file to recreate", (t) => {
+test("migrates a version 1 store on open, keeping its notes and dropping retired events", (t) => {
+  const storage = persistentBotData(t);
+  const data = storage.open("world");
+  const file = persistentFile(data);
+  data.close();
+
+  // Turn the fresh file back into what version 1 left behind: the old cursor
+  // table name, a retired event beside a current one, and a note to keep.
+  const database = new DatabaseSync(file);
+  database.exec("ALTER TABLE event_read_state RENAME TO notification_state");
+  database
+    .prepare("INSERT INTO notes (bot_id, note, context, remembered_at, dimension, x, y, z) VALUES (?, ?, ?, ?, ?, 0, 64, 0)")
+    .run("Steve", "iron at the ravine", "mining", "2026-09-01T00:00:00.000Z", "overworld");
+  const insertEvent = database.prepare(
+    "INSERT INTO events (bot_id, event_type, observed_at, summary, payload_json) VALUES (?, ?, ?, ?, ?)",
+  );
+  insertEvent.run("Steve", "hostile_encounter", "2026-09-01T00:00:01.000Z", "fought a zombie", "{}");
+  insertEvent.run("Steve", "player_death", "2026-09-01T00:00:02.000Z", "died", '{"cause":"drowned"}');
+  database.prepare("UPDATE sql_bot_data_metadata SET value = '1' WHERE key = 'schema_version'").run();
+  closeSqlDatabase(database);
+
+  const migrated = storage.open("world");
+  assert.equal(migrated.read("SELECT value FROM sql_bot_data_metadata WHERE key = 'schema_version'")[0]?.value, "2");
+  assert.equal(migrated.read("SELECT note FROM notes")[0]?.note, "iron at the ravine");
+  assert.deepEqual(migrated.read("SELECT event_type FROM events ORDER BY event_id").map((row) => row.event_type), ["player_death"]);
+  const tables = migrated.read("SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('event_read_state', 'notification_state')");
+  assert.deepEqual(tables.map((row) => row.name), ["event_read_state"]);
+});
+
+test("refuses a store at a schema version it does not know and names the file", (t) => {
   const storage = persistentBotData(t);
   const data = storage.open("world");
   const file = persistentFile(data);
   data.close();
 
   const database = new DatabaseSync(file);
-  database.prepare("UPDATE sql_bot_data_metadata SET value = '1' WHERE key = 'schema_version'").run();
+  database.prepare("UPDATE sql_bot_data_metadata SET value = '99' WHERE key = 'schema_version'").run();
   closeSqlDatabase(database);
 
   assert.throws(
     () => storage.open("world"),
     (error: Error) =>
       error.message.includes(file) &&
-      /schema version 1, but this runtime reads only schema version 2/.test(error.message) &&
+      /schema version 99, but this runtime knows schema versions up to 2/.test(error.message) &&
       /recreate the store/.test(error.message),
   );
 });
