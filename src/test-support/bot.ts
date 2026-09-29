@@ -15,6 +15,7 @@ import { EventEmitter } from "node:events";
 import minecraftData from "minecraft-data";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
+import { EQUIPMENT_SLOTS as WORN_SLOTS } from "../bot-data/bot-status.js";
 import { type CellReader, raycastThrough, worldOf } from "./world.js";
 
 export const registry = minecraftData("1.21.4");
@@ -46,15 +47,11 @@ export interface BotFixtureOptions {
 
 export type FakeBot = Bot & { inventory: Bot["inventory"] & EventEmitter };
 
-/** Mineflayer's window slot for each equipment destination. */
-export const EQUIPMENT_SLOTS: Record<string, number> = {
-  hand: 36,
-  "off-hand": 45,
-  head: 5,
-  torso: 6,
-  legs: 7,
-  feet: 8,
-};
+/**
+ * Mineflayer's window slot for each equipment destination: the worn slots
+ * bot data names, plus the first hotbar slot for `hand`.
+ */
+export const EQUIPMENT_SLOTS: Record<string, number> = { hand: 36, ...WORN_SLOTS };
 
 /**
  * A bot with the shared surfaces above, then `overrides` spread on top for

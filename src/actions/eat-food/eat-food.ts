@@ -5,7 +5,6 @@ import { carriedCount, settledNow, settleInventoryCount, type SettledInventoryCo
 import { defineAction, type ActionContext } from "../action.js";
 import { unconfirmedCount } from "../markdown.js";
 import {
-  eatFoodAnnotations,
   eatFoodOutcomes,
   parseEatFoodRequest,
   EAT_FOOD,
@@ -167,7 +166,11 @@ export function createEatFoodAction(bot: Bot) {
     resultSchema: eatFoodResultSchema,
     formatResult: formatEatFoodResult,
     execution: { kind: "task" },
-    annotations: eatFoodAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
     parse: parseEatFoodRequest,
     execute: (request, context) => eatFood(bot, request, context),
   });

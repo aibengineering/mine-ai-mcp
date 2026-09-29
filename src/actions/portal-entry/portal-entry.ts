@@ -4,7 +4,6 @@ import {
   createMovements,
   enterPortal,
   portalApproachGoal,
-  type Navigate,
   type NavigationRuntime,
   type PortalBlock,
 } from "../../navigation/index.js";
@@ -33,11 +32,6 @@ import {
 } from "./contract.js";
 import { personalRespawnObservation } from "./respawn-knowledge.js";
 import { portalSupplyWarning, type PortalDestination } from "./portal-policy.js";
-
-export interface PortalEntryDependencies {
-  readonly navigate: Navigate;
-  readonly createMovements: typeof createMovements;
-}
 
 function destinationFor(kind: PortalEntryRequest["kind"], from: string): PortalDestination | null {
   if (kind === "nether") return from === "overworld" ? "the_nether" : from === "the_nether" ? "overworld" : null;
@@ -93,17 +87,17 @@ export async function enterPortalAction(
   bot: Bot,
   request: PortalEntryRequest,
   context: ActionContext,
-  dependencies: PortalEntryDependencies,
+  navigation: Pick<NavigationRuntime, "navigate">,
   lifetime: AbortSignal,
   observe: ObserveRequest = () => {},
 ): Promise<PortalEntryResult> {
-  return beginPortalEntry(bot, request, dependencies, lifetime, observe)(context);
+  return beginPortalEntry(bot, request, navigation, lifetime, observe)(context);
 }
 
 export function beginPortalEntry(
   bot: Bot,
   request: PortalEntryRequest,
-  dependencies: PortalEntryDependencies,
+  navigation: Pick<NavigationRuntime, "navigate">,
   lifetime: AbortSignal,
   observe: ObserveRequest = () => {},
 ) {
@@ -158,7 +152,7 @@ export function beginPortalEntry(
     const startedAt = Date.now();
     const elapsedBefore = elapsedMs;
     try {
-      let route = await dependencies.navigate({ movements: dependencies.createMovements(bot), goal: portalApproachGoal(bot, cell, block), signal: context.signal, stopSignal: toolLoss.signal, onToolSelected: toolLoss.select });
+      let route = await navigation.navigate({ movements: createMovements(bot), goal: portalApproachGoal(bot, cell, block), signal: context.signal, stopSignal: toolLoss.signal, onToolSelected: toolLoss.select });
       elapsedMs += route.elapsedMs;
       const lost = toolLoss.loss();
       if (lost) return { status: "partial", error: lost.reason, navigation: receipt() };
@@ -187,7 +181,12 @@ export function beginPortalEntry(
   };
 }
 
-function createPortalAction(bot: Bot, navigation: NavigationRuntime, kind: "nether" | "end", dependencies: PortalEntryDependencies = { navigate: navigation.navigate, createMovements }) {
+/**
+ * Both portal tools are this one action: the same approach, entry and
+ * server-positioned arrival, differing only in the portal block and the
+ * End-only respawn guard their parsers carry.
+ */
+function createPortalAction(bot: Bot, navigation: NavigationRuntime, kind: "nether" | "end") {
   const end = kind === "end";
   return defineAction({
     checkpointSchema: navigateCheckpointSchema,
@@ -199,9 +198,9 @@ function createPortalAction(bot: Bot, navigation: NavigationRuntime, kind: "neth
     execution: { kind: "resumable_task", prepare: () => prepareBotForMovement(bot, navigation) },
     annotations: { title: end ? ENTER_END_PORTAL : ENTER_NETHER_PORTAL, destructiveHint: true, openWorldHint: true },
     parse: end ? parseEndPortalRequest : parseNetherPortalRequest,
-    begin: (request, lifetime, observe) => beginPortalEntry(bot, request, dependencies, lifetime, observe),
+    begin: (request, lifetime, observe) => beginPortalEntry(bot, request, navigation, lifetime, observe),
   });
 }
 
-export const createEnterNetherPortalAction = (bot: Bot, navigation: NavigationRuntime, dependencies?: PortalEntryDependencies) => createPortalAction(bot, navigation, "nether", dependencies);
-export const createEnterEndPortalAction = (bot: Bot, navigation: NavigationRuntime, dependencies?: PortalEntryDependencies) => createPortalAction(bot, navigation, "end", dependencies);
+export const createEnterNetherPortalAction = (bot: Bot, navigation: NavigationRuntime) => createPortalAction(bot, navigation, "nether");
+export const createEnterEndPortalAction = (bot: Bot, navigation: NavigationRuntime) => createPortalAction(bot, navigation, "end");

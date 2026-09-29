@@ -1,6 +1,5 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const DROP_ITEM = "drop_item" as const;
@@ -137,14 +136,6 @@ export type DropRecipient = z.output<typeof dropRecipientSchema>;
 export type HoleClosure = z.output<typeof holeClosureSchema>;
 export type DropItemEvidence = z.output<typeof dropItemEvidenceSchema>;
 export type DropItemResult = z.output<typeof dropItemResultSchema>;
-export type DropItemOutput = ActionOutput<typeof DROP_ITEM, DropItemResult>;
-
-export const dropItemAnnotations = {
-  // Dropped items despawn and can be taken by anyone; this is not undoable.
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: false,
-} satisfies ToolAnnotations;
 
 export const dropItemOutcomes = {
   notCarried: (item: string) => `[DROP_NOT_CARRIED] No ${item} is carried.`,

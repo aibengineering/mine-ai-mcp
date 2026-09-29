@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
+import { botFixture } from "../../test-support/bot.js";
 import { blockNamed } from "../../test-support/world.js";
 import { compareCollectionTargets } from "./target-selection.js";
 
@@ -14,16 +15,15 @@ const blaze = (id: number, x: number, y: number) =>
     width: 0.6,
   }) as Bot["entities"][number];
 
+/** Ground below y 64 whose name depends on x; `null` is an unloaded column. */
 function terrain(ground: (x: number) => string | null): Bot {
-  return {
-    blockAt: (position: Vec3) => {
-      const name = ground(position.x);
-      if (name === null) return null;
-      return blockNamed(position.y < 64 ? name : "air", position.floored());
+  return botFixture({
+    position: { x: 0, y: 64, z: 0 },
+    blocks: (cell: Vec3) => {
+      const name = ground(cell.x);
+      return name === null ? null : blockNamed(cell.y < 64 ? name : "air", cell.floored());
     },
-    entity: { position: new Vec3(0, 64, 0), height: 1.8 },
-    world: { raycast: () => null },
-  } as unknown as Bot;
+  });
 }
 
 test("collection prefers a farther supported blaze drop over a nearby lava landing", () => {

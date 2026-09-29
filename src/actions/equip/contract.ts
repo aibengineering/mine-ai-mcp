@@ -1,6 +1,5 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const EQUIP = "equip" as const;
@@ -91,14 +90,6 @@ export const equipResultSchema = actionResultSchema({ equip: equipEvidenceSchema
 export type EquipmentSlots = z.output<typeof equipmentSlotsSchema>;
 export type EquipEvidence = z.output<typeof equipEvidenceSchema>;
 export type EquipResult = z.output<typeof equipResultSchema>;
-export type EquipOutput = ActionOutput<typeof EQUIP, EquipResult>;
-
-export const equipAnnotations = {
-  destructiveHint: false,
-  // A swap changes the source slot, so repeating an explicit selection can select another copy.
-  idempotentHint: false,
-  openWorldHint: false,
-} satisfies ToolAnnotations;
 
 export const equipOutcomes = {
   notCarried: (item: string) => `[EQUIP_NOT_CARRIED] No ${item} is carried.`,

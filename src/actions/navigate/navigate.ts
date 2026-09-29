@@ -33,6 +33,11 @@ import {
   type NavigateResult,
 } from "./contract.js";
 
+/**
+ * The movement policy and route engine a navigate request runs on. Production
+ * passes the defaults; the Mine Labs pathfinder scenarios pass a narrowed
+ * policy or tighter search limits to qualify one behaviour in a small fixture.
+ */
 export interface NavigateDependencies {
   readonly createMovements: typeof createMovements;
   readonly navigate: Navigate;

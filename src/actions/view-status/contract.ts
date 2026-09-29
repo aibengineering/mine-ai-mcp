@@ -1,7 +1,6 @@
 import { MOB_AGES } from "../../world/mob-age.js";
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { toolSnapshotSchema } from "../../world/tool-tiers.js";
 
 export const VIEW_STATUS = "view_status" as const;
@@ -20,13 +19,6 @@ export const VIEW_STATUS_DESCRIPTION =
   "It also refreshes main.bot_status, main.bot_inventory, and main.bot_tools for query_bot_data.";
 
 export const viewStatusInputSchema = z.strictObject({});
-export type ViewStatusInput = z.input<typeof viewStatusInputSchema>;
-export type ViewStatusRequest = Record<string, never>;
-
-export function parseViewStatusRequest(raw: unknown): ViewStatusRequest {
-  viewStatusInputSchema.parse(raw ?? {});
-  return {};
-}
 
 const positionSchema = z.strictObject({ x: z.number(), y: z.number(), z: z.number() });
 
@@ -265,8 +257,3 @@ export type LiveSituation = z.output<typeof liveSituationSchema>;
 
 export const viewStatusResultSchema = actionResultSchema({ situation: liveSituationSchema });
 export type ViewStatusResult = z.output<typeof viewStatusResultSchema>;
-export type ViewStatusOutput = ActionOutput<typeof VIEW_STATUS, ViewStatusResult>;
-
-export const viewStatusAnnotations = {
-  openWorldHint: false,
-} satisfies ToolAnnotations;

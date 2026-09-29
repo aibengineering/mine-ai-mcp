@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { parseViewStatusRequest, viewStatusResultSchema } from "./contract.js";
+import { viewStatusResultSchema } from "./contract.js";
 import { createViewStatusAction, formatViewStatusResult, observeLiveSituation } from "./view-status.js";
 import { botFixture, registry } from "../../test-support/bot.js";
 import { temporaryBotData } from "../../test-support/bot-data.js";
-import { recordLastDeath } from "../../bot-data/index.js";
+import { recordEvent } from "../../bot-data/index.js";
 
 const idleActivity = () => ({ owner: "idle" as const, activeAction: null });
 
@@ -111,10 +111,6 @@ test("reports the observed clock without predicting daylight outside the Overwor
 });
 
 test("reports vitals, the clock, position, inventory, and loaded neighbours from the live bot", (t) => {
-  assert.deepEqual(parseViewStatusRequest(undefined), {});
-  assert.deepEqual(parseViewStatusRequest({}), {});
-  assert.throws(() => parseViewStatusRequest({ radius: 8 }), "the range is the action's, not the caller's");
-
   const data = temporaryBotData({ botId: "TestBot", closeAfter: t });
   const situation = observeLiveSituation(liveBot(), data, idleActivity);
 
@@ -381,9 +377,9 @@ test("species-age groups expose a farther adult without losing the nearest baby 
 test("status exposes the retained death after the live position has changed", (t) => {
   const bot = liveBot();
   const data = temporaryBotData({ botId: "TestBot", closeAfter: t });
-  recordLastDeath(data, {
-    botId: "TestBot", dimension: "overworld", position: { x: 4.5, y: 63, z: -9.5 },
-    observedAt: "2026-09-13T09:00:00.000Z", cause: "fell from a high place",
+  recordEvent(data, "TestBot", {
+    type: "player_death", observedAt: "2026-09-13T09:00:00.000Z", summary: "TestBot died.",
+    payload: { dimension: "overworld", position: { x: 4.5, y: 63, z: -9.5 }, cause: "fell from a high place" },
   });
 
   const situation = observeLiveSituation(bot, data, idleActivity);

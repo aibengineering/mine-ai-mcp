@@ -2,34 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture } from "../../test-support/bot.js";
 import { persistentBotData, temporaryBotData } from "../../test-support/bot-data.js";
-import { createNoteReadAction, parseNoteReadRequest } from "../note-read/index.js";
-import { createNoteSaveAction, parseNoteSaveRequest } from "./index.js";
+import { createNoteReadAction } from "../note-read/index.js";
+import { createNoteSaveAction } from "./index.js";
 
 function noteBot(username = "NoteBot", age: number | null = 24000) {
   return botFixture({ username, position: { x: 12.5, y: 64, z: -3.25 } }, { time: { age } });
 }
 
 const request = { note: "Bring a bucket", context: "Found lava while looking for iron." };
-
-test("note contracts require meaningful text and a positive integer count", () => {
-  assert.deepEqual(parseNoteSaveRequest({ note: "  A fact  ", context: "  Why  " }), {
-    note: "A fact",
-    context: "Why",
-  });
-  for (const input of [
-    { note: " ", context: "why" },
-    { note: "fact", context: " " },
-    { note: "fact" },
-    { ...request, x: 0 },
-  ]) {
-    assert.throws(() => parseNoteSaveRequest(input));
-  }
-  assert.deepEqual(parseNoteReadRequest({}), { n: 10 });
-  assert.deepEqual(parseNoteReadRequest({ n: 200 }), { n: 200 });
-  for (const n of [0, -1, 1.5, "2", Infinity, Number.MAX_SAFE_INTEGER + 1]) {
-    assert.throws(() => parseNoteReadRequest({ n }));
-  }
-});
 
 test("notes persist across reopen, snapshot location and time, and read newest first without consumption", async (t) => {
   const storage = persistentBotData(t);
@@ -39,9 +19,6 @@ test("notes persist across reopen, snapshot location and time, and read newest f
       const bot = noteBot();
       const save = createNoteSaveAction(bot, data);
       const read = createNoteReadAction(data, bot.username);
-      assert.equal(save.annotations?.readOnlyHint, false);
-      assert.equal(read.annotations?.readOnlyHint, true);
-      assert.equal(read.execution.kind, "information");
       assert.deepEqual((await read.execute({ n: 10 }, {})).notes, []);
 
       const before = Date.now();

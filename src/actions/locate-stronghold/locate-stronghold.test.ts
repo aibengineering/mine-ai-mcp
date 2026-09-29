@@ -1,20 +1,17 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import test from "node:test";
-import type { Bot } from "mineflayer";
-import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import { SqlBotData, botEventSchema } from "../../bot-data/index.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
+import { botFixture, registry } from "../../test-support/bot.js";
 import { persistentBotData } from "../../test-support/bot-data.js";
 import { createLocateStrongholdAction, loadedStrongholdFrame } from "./locate-stronghold.js";
-import { locateStrongholdInputSchema, locateStrongholdResultSchema } from "./contract.js";
+import { locateStrongholdResultSchema } from "./contract.js";
 import { StrongholdEyeFlights, awaitFlight } from "./throw-eye.js";
 import { StrongholdThrows } from "./throw-store.js";
 import { triangulate, type Bearing } from "./triangulation.js";
 import { strongholdSupplies } from "./supplies.js";
 
-const registry = minecraftData("1.21.4");
 /**
  * Eye recovery short enough to lapse for real: these fixtures never drop the
  * observed eye, so recovery waits out its whole drop window.
@@ -27,22 +24,18 @@ const bearing = (x: number, z: number, tx: number, tz: number): Bearing => {
 const makeData = () =>
   SqlBotData.create({ storage: { kind: "temporary" }, identity: { worldId: "test", scope: { kind: "shared" } } });
 function fixture() {
-  const events = new EventEmitter();
   let activations = 0;
-  const bot = Object.assign(events, {
-    username: "Locator",
-    game: { dimension: "overworld" },
-    registry,
-    entity: { position: new Vec3(0, 70, 0), height: 1.8, onGround: true, effects: {} },
-    entities: {},
-    world: { getColumns: () => [] },
-    inventory: Object.assign(new EventEmitter(), { items: () => [], slots: [] }),
-    activateItem: () => {
-      activations++;
+  const bot = botFixture(
+    // Mineflayer's window slots are an array; the supply count walks it.
+    { username: "Locator", position: { x: 0, y: 70, z: 0 }, slots: [] },
+    {
+      activateItem: () => {
+        activations++;
+      },
+      // Nothing is loaded until a test supplies the columns it reads.
+      blockAt: () => null,
     },
-    equip: async () => {},
-    blockAt: () => null,
-  }) as unknown as Bot;
+  );
   return { bot, activations: () => activations };
 }
 const eye = (id = 42) => ({ id, uuid: `eye-${id}`, name: "eye_of_ender", position: new Vec3(0, 71.5, 0) });
@@ -137,16 +130,6 @@ test("unrelated eyes are ignored and runtime disposal persists an incomplete obs
 test("pre-aborted waits return without attaching abort listeners", async () => {
   const signal = AbortSignal.abort(new Error("already cancelled"));
   await assert.rejects(awaitFlight(Promise.resolve(), signal), /already cancelled/);
-});
-test("published input rejects unknown arguments and defaults the durable search", () => {
-  assert.deepEqual(locateStrongholdInputSchema.parse({}), {
-    phase: "estimate",
-    continue_without_recommended_items: false,
-    search_id: "stronghold",
-    search_radius: 128,
-  });
-  for (const input of [{ search_id: " " }, { search_radius: 0 }, { x: 10 }])
-    assert.equal(locateStrongholdInputSchema.safeParse(input).success, false);
 });
 test("masonry alone is not confirmation; a loaded frame produces a typed durable final event", async () => {
   using data = makeData();

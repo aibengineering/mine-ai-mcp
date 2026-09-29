@@ -1,37 +1,34 @@
 import { MemoryWorld as GoalTestWorld } from "../../navigation/world/memory-world.js";
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
+import { botFixture } from "../../test-support/bot.js";
+import type { FakeBlock } from "../../test-support/world.js";
 import { activatePortal, type ActivatePortalDependencies } from "./activate-portal.js";
-import { parseActivatePortalRequest, activatePortalResultSchema } from "./contract.js";
+import { activatePortalResultSchema } from "./contract.js";
 import { endFrameAt, findEndFrame, outsideEndOpening } from "./end-frame.js";
 import { findNetherFrame } from "./nether-frame.js";
 
 const goalTestWorld = new GoalTestWorld();
 
 function world() {
-  const blocks = new Map<
-    string,
-    { name: string; position: Vec3; getProperties: () => Record<string, string | boolean> }
-  >();
+  const blocks = new Map<string, FakeBlock>();
   const key = (p: Vec3) => `${p.x},${p.y},${p.z}`;
   const put = (p: Vec3, name: string, properties: Record<string, string | boolean> = {}) =>
-    blocks.set(key(p), { name, position: p, getProperties: () => properties });
+    blocks.set(key(p), { name, position: p, stateId: 0, shapes: [], boundingBox: "block", getProperties: () => properties });
   const items = [
     { name: "ender_eye", count: 12 },
     { name: "flint_and_steel", count: 1 },
   ];
-  const bot = {
-    game: { dimension: "overworld" },
-    entity: { position: new Vec3(0.5, 64, -3.5) },
-    inventory: { items: () => items.filter((item) => item.count > 0) },
-    blockAt: (p: Vec3) => blocks.get(key(p)) ?? { name: "air", position: p, getProperties: () => ({}) },
-  } as unknown as Bot;
+  const bot = botFixture({
+    position: { x: 0.5, y: 64, z: -3.5 },
+    blocks: (p) => blocks.get(key(p)) ?? { name: "air", position: p, stateId: 0, shapes: [], boundingBox: "empty", getProperties: () => ({}) },
+  });
+  // A used-up stack leaves the inventory, as Mineflayer's window reports it.
+  bot.inventory.items = () => items.filter((item) => item.count > 0) as never;
   const uses: Vec3[] = [];
   const frame = endFrameAt(new Vec3(0, 64, 0));
   const dependencies: ActivatePortalDependencies = {
-    createMovements: () => ({}) as never,
     navigate: async ({ goal }) => {
       const resolved = goal.resolve({ position: bot.entity.position } as never);
       assert.equal(resolved.kind, "active");
@@ -74,12 +71,6 @@ function world() {
   };
   return { bot, dependencies, uses, frame, put, items, end, nether };
 }
-
-test("portal contract accepts coordinates and rejects invented portal-type flags", () => {
-  assert.deepEqual(parseActivatePortalRequest({ x: 1, y: -20, z: 3 }), { x: 1, y: -20, z: 3 });
-  assert.throws(() => parseActivatePortalRequest({ x: 1, y: 2, z: 3, type: "end" }));
-  assert.throws(() => parseActivatePortalRequest({ x: 0.5, y: 2, z: 3 }));
-});
 
 test("Nether frame detection accepts frame blocks and interior cells on both axes, without corners", () => {
   for (const axis of ["x", "z"] as const) {

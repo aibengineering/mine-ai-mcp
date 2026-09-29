@@ -1,6 +1,5 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const EAT_FOOD = "eat_food" as const;
@@ -39,13 +38,6 @@ export const eatFoodResultSchema = actionResultSchema({
 
 export type EatFoodEvidence = z.output<typeof eatFoodEvidenceSchema>;
 export type EatFoodResult = z.output<typeof eatFoodResultSchema>;
-export type EatFoodOutput = ActionOutput<typeof EAT_FOOD, EatFoodResult>;
-
-export const eatFoodAnnotations = {
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: false,
-} satisfies ToolAnnotations;
 
 export const eatFoodOutcomes = {
   unknownFood: (foodName: string) => `[EAT_UNKNOWN_FOOD] Minecraft does not classify ${foodName} as food.`,

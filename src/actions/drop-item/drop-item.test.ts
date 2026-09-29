@@ -98,7 +98,6 @@ function deps(overrides: Partial<DropItemDependencies> = {}): DropItemDependenci
     navigate: async () => ({ status: "completed", elapsedMs: 10 }) as never,
     breakInPlace: async () => ({ status: "broken" }),
     placeInto: async () => ({ kind: "failed", error: "not placed in this test" }),
-    createMovements: (() => ({})) as never,
     settleMs: 50,
     ...overrides,
   };

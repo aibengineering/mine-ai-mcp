@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture, type FakeStack } from "../../test-support/bot.js";
-import { parseEatFoodRequest } from "./contract.js";
 import { formatEatFoodResult, eatFood, type EatFoodDependencies } from "./eat-food.js";
 import { INVENTORY_SETTLE_MS } from "../../world/inventory-count.js";
 
@@ -32,12 +31,6 @@ test("cancellation releases a native bite without waiting for consume's bookkeep
   assert.equal(bot.usingHeldItem, false);
   rejectNative(new Error("Late native consume timeout"));
   await new Promise(resolve => setImmediate(resolve));
-});
-
-test("parses one normalized exact food name", () => {
-  assert.deepEqual(parseEatFoodRequest({ food_name: "Minecraft:Cooked Beef" }), {
-    foodName: "cooked_beef",
-  });
 });
 
 test("equips and consumes one named food while reporting observed changes", async () => {

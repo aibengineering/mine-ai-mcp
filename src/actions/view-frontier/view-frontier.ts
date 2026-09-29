@@ -17,7 +17,6 @@ import {
   VIEW_FRONTIER_DESCRIPTION,
   parseViewFrontierRequest,
   viewFrontierResultSchema,
-  viewFrontierAnnotations,
   viewFrontierInputSchema,
   type FrontierMapScale,
   type ViewFrontierResult,
@@ -308,7 +307,7 @@ export function createViewFrontierAction(
     queries: VIEW_FRONTIER_QUERIES,
     formatResult: formatViewFrontierResult,
     execution: { kind: "information" },
-    annotations: viewFrontierAnnotations,
+    annotations: { openWorldHint: false },
     parse: parseViewFrontierRequest,
     execute: async (request) => ({
       status: "succeeded",

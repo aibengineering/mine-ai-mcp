@@ -9,14 +9,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
 import { botFixture, registry, type FakeStack } from "../../test-support/bot.js";
-import { createSmeltItemAction, parseSmeltItemRequest, smeltItem, type SmeltItemDependencies } from "./index.js";
+import { parseSmeltItemRequest, smeltItem, type SmeltItemDependencies } from "./index.js";
+import { createSmeltItemAction } from "./smelt-item.js";
 
 test("a named furnace and a temporary one are exclusive, and a temporary one must be carried", async () => {
   assert.deepEqual(
     parseSmeltItemRequest({
-      item_name: " Minecraft:Raw Iron ",
+      item_name: "raw_iron",
       count: 3,
-      fuel_item_name: "Coal",
+      fuel_item_name: "coal",
       x: 4,
       y: 64,
       z: -2,
@@ -82,8 +83,6 @@ function smeltingBot() {
     output = null;
   };
   const dependencies: SmeltItemDependencies = {
-    createMovements: () => ({}) as never,
-    navigate: async () => ({ status: "completed", elapsedMs: 0 }),
     openFurnace: async () => furnace as never,
     now: Date.now,
     pause: async () => undefined,
@@ -218,8 +217,6 @@ function observedFurnace(options: { readonly cookMs: number; readonly stopAfter?
   };
   let elapsedInItem = 0;
   const dependencies: SmeltItemDependencies = {
-    createMovements: () => ({}) as never,
-    navigate: async () => ({ status: "completed", elapsedMs: 0 }),
     openFurnace: async () => furnace as never,
     now: () => now,
     pause: async (milliseconds, signal) => {
@@ -333,23 +330,6 @@ for (const stop of ["cancelled", "disconnected"] as const) {
   });
 }
 
-test("the production action clock is monotonic when the wall clock jumps", async (t) => {
-  const originalDateNow = Date.now;
-  let wallNow = originalDateNow();
-  Date.now = () => (wallNow += 1_000_000);
-  t.after(() => { Date.now = originalDateNow; });
-  const fixture = observedFurnace({ cookMs: 20_000, stopAfter: 0 });
-  fixture.bot.openFurnace = async () => fixture.furnace as never;
-  const controller = new AbortController();
-  const pending = createSmeltItemAction(fixture.bot, navigation).execute(
-    { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 },
-    { signal: controller.signal },
-  );
-  setTimeout(() => controller.abort(new Error("clock test cancelled")), 20);
-
-  await assert.rejects(pending, /clock test cancelled/);
-});
-
 test("a nonsettling slot take closes the window without starting later recovery mutations", async () => {
   const { bot, dependencies } = smeltingBot();
   let closed = false;
@@ -402,9 +382,33 @@ test("a nonsettling slot take closes the window without starting later recovery 
   assert.equal(inputTakes, 0);
   assert.equal(fuelTakes, 0);
   assert.deepEqual(outputClick, [2, 0, 1], "furnace output uses one shift-click, never the result-slot cursor path");
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  // A real wait: the stuck take is still pending inside the window when the
+  // action returns, so give any continuation it could have scheduled a whole
+  // slot-recovery window to show itself before asserting nothing followed.
+  await new Promise((resolve) => setTimeout(resolve, SHORT_SLOT_RECOVERY_MS));
   assert.equal(inputTakes, 0, "the timed-out operation cannot advance to a later slot after close");
   assert.equal(fuelTakes, 0, "the timed-out operation cannot advance to a later slot after close");
+});
+
+test("the production action clock is monotonic when the wall clock jumps", async (t) => {
+  // The one test that patches the global clock, on purpose: the property is
+  // that the DEFAULT `now` (performance.now) ignores wall-clock jumps, so a
+  // system clock stepping forward cannot expire a cook deadline early.
+  // Injecting a clock would bypass the very default under test.
+  const originalDateNow = Date.now;
+  let wallNow = originalDateNow();
+  Date.now = () => (wallNow += 1_000_000);
+  t.after(() => { Date.now = originalDateNow; });
+  const fixture = observedFurnace({ cookMs: 20_000, stopAfter: 0 });
+  fixture.bot.openFurnace = async () => fixture.furnace as never;
+  const controller = new AbortController();
+  const pending = createSmeltItemAction(fixture.bot, navigation).execute(
+    { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 },
+    { signal: controller.signal },
+  );
+  setTimeout(() => controller.abort(new Error("clock test cancelled")), 20);
+
+  await assert.rejects(pending, /clock test cancelled/);
 });
 
 test("refuses furnace output recovery before clicking when inventory has no room", async () => {

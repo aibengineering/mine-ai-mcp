@@ -14,7 +14,6 @@ import {
   USE_CONTAINER_DESCRIPTION,
   useContainerInputSchema,
   useContainerResultSchema,
-  useContainerAnnotations,
   useContainerOutcomes,
   type ContainerTarget,
   type ContainerTransferResult,
@@ -73,14 +72,14 @@ type OrganizeTarget = Extract<ContainerTarget, { readonly operation: "organize" 
 
 class UseContainerActionError extends Error {}
 
+/** The route into reach, and the clock that stamps each remembered observation. */
 export interface UseContainerDependencies {
   readonly navigate: Navigate;
-  readonly createMovements: typeof createMovements;
   readonly now: () => Date;
 }
 
 function productionDependencies(navigate: Navigate): UseContainerDependencies {
-  return { navigate, createMovements, now: () => new Date() };
+  return { navigate, now: () => new Date() };
 }
 
 class OpenedContainer implements Disposable {
@@ -467,7 +466,7 @@ export async function useContainer(
     if (bot.entity.position.distanceTo(position) > CONTAINER_REACH) {
       const route = await dependencies
         .navigate({
-          movements: dependencies.createMovements(bot),
+          movements: createMovements(bot),
           goal: nearGoal(position, 2),
           signal: context.signal,
         })
@@ -671,7 +670,11 @@ export function createUseContainerAction(
       kind: "task",
       prepare: () => prepareBotForMovement(bot, navigation),
     },
-    annotations: useContainerAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     parse: parseUseContainerRequest,
     execute: (request, context) => useContainer(bot, data, request, context, dependencies),
   });

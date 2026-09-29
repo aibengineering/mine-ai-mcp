@@ -1,6 +1,5 @@
 /** MCP schemas and factual outcome wording for frontier exploration. */
 import { z } from "zod";
-import type { ActionOutput } from "../action.js";
 import { sqlActionResultSchema } from "../sql-action.js";
 
 export const EXPLORE_FRONTIER = "explore_frontier" as const;
@@ -77,7 +76,6 @@ export const nearestFrontierSchema = z.strictObject({
   distanceBlocks: z.number(),
   heading: z.number(),
 });
-export type NearestFrontier = z.output<typeof nearestFrontierSchema>;
 
 const explorationEvidenceSchema = z.strictObject({
   dimension: z.string(),
@@ -104,10 +102,6 @@ export const exploreFrontierResultSchema = sqlActionResultSchema({
 });
 
 export type ExploreFrontierResult = z.output<typeof exploreFrontierResultSchema>;
-export type ExploreFrontierOutput = ActionOutput<
-  typeof EXPLORE_FRONTIER,
-  ExploreFrontierResult
->;
 
 export const exploreOutcomes = {
   emptyFrontier: (dimension: string) =>

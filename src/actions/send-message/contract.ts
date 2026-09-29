@@ -1,6 +1,4 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import type { ActionOutput } from "../action.js";
 
 export const SEND_MESSAGE = "send_message" as const;
 export const SEND_MESSAGE_DESCRIPTION =
@@ -29,17 +27,6 @@ export const sendMessageResultSchema = z.discriminatedUnion("status", [
 ]);
 
 export type SendMessageResult = z.output<typeof sendMessageResultSchema>;
-export type SendMessageOutput = ActionOutput<typeof SEND_MESSAGE, SendMessageResult>;
-
-export const sendMessageAnnotations = {
-  destructiveHint: false,
-  idempotentHint: false,
-  openWorldHint: true,
-} satisfies ToolAnnotations;
-
-export function parseSendMessageRequest(input: unknown): SendMessageRequest {
-  return sendMessageInputSchema.parse(input ?? {});
-}
 
 export const sendMessageOutcomes = {
   notObserved: (seconds: number) =>

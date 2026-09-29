@@ -30,7 +30,6 @@ function testWorld(targetName = "air", carried = 2) {
     bot.inventory.emit("updateSlot");
   };
   const dependencies: PlaceBlockDependencies = {
-    createMovements: () => ({}) as never,
     navigate: async () => ({ status: "completed", elapsedMs: 0 }),
     placeBlock: async (_bot, placement) => {
       assert.deepEqual(placement.support.position, target.offset(0, -1, 0));
@@ -51,16 +50,15 @@ function testWorld(targetName = "air", carried = 2) {
   return { bot, blocks, dependencies, target, takeOneFromInventory };
 }
 
-test("parses one normalized block name and exact absolute target", () => {
-  assert.deepEqual(parsePlaceBlockRequest({ block_name: "Minecraft:Cobble Stone", x: 2, y: 64, z: 0 }), {
-    blockName: "cobble_stone",
+test("an exact cell becomes the target and no cell leaves the choice to the action", () => {
+  assert.deepEqual(parsePlaceBlockRequest({ block_name: "cobblestone", x: 2, y: 64, z: 0 }), {
+    blockName: "cobblestone",
     target: { x: 2, y: 64, z: 0 },
   });
   assert.deepEqual(parsePlaceBlockRequest({ block_name: "crafting_table" }), {
     blockName: "crafting_table",
     target: null,
   });
-  assert.throws(() => parsePlaceBlockRequest({ block_name: "crafting_table", x: 1 }), /all of x, y, and z/);
 });
 
 test("chooses a cell beside the bot when no target is given", async () => {

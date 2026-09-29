@@ -1,28 +1,24 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import test from "node:test";
 import type { Bot } from "mineflayer";
-import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import { blockClass } from "../../navigation/mineflayer/world.js";
 import { createMovementPolicy } from "../../navigation/movements/policy.js";
+import { botFixture, registry, type FakeStack } from "../../test-support/bot.js";
 import { prepareDisposalHole, observeHoleDrops, sealDisposalHole, snapshotDroppedCounts } from "./disposal-hole.js";
 
-const registry = minecraftData("1.21.4");
 const Block = blockClass({ registry } as Pick<Bot, "registry">);
 
-function ground(carried: { name: string; count: number }[] = []) {
+/** Dirt below y 64 and air above, as real Prismarine blocks, with every cell the test changes by name. */
+function ground(carried: FakeStack[] = []) {
   const changed = new Map<string, string>();
-  const bot = {
-    registry,
-    entity: { position: new Vec3(0.5, 64, 0.5), onGround: true },
-    inventory: { items: () => carried },
-    blockAt(position: Vec3) {
+  const bot = botFixture({
+    items: carried,
+    blocks: (position) => {
       const name = changed.get(position.toString()) ?? (position.y < 64 ? "dirt" : "air");
-      return Block.fromStateId(registry.blocksByName[name]!.defaultState, 0);
+      return Block.fromStateId(registry.blocksByName[name]!.defaultState, 0) as never;
     },
-    lookAt: async () => {},
-  } as unknown as Bot;
+  });
   return { bot, changed };
 }
 
@@ -161,7 +157,7 @@ test("a tunnel wall is excavated above an enclosed disposal pit", async () => {
 
 test("hole evidence counts merged stack growth and ignores existing items", async () => {
   const entity = { id: 1, position: new Vec3(1.5, 62, 0.5), getDroppedItem: () => ({ name: "dirt", count: 2 }) };
-  const bot = Object.assign(new EventEmitter(), { entities: { 1: entity } }) as unknown as Bot;
+  const bot = botFixture({ entities: { 1: entity } });
   const baseline = snapshotDroppedCounts(bot);
   entity.getDroppedItem = () => ({ name: "dirt", count: 12 });
   assert.equal(

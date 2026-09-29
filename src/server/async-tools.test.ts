@@ -93,8 +93,8 @@ test("MCP accepts immediately, retains work across client reconnect, and deliver
   await service.settled();
   const refused = await reconnected.callTool({ name: action.name, arguments: { submission_id: "two", rationale: "Check the result retrieval gate" } });
   const refusalText = (refused.structuredContent as { response: { markdown: string } }).response.markdown;
+  // The gate itself is the service's (async-actions.test.ts); here, how its refusal reads.
   assert.match(refusalText.replaceAll("\\", ""), /Refused \(RESULT_NOT_RETRIEVED\)/);
-  assert.equal(service.status().awaitingResult?.actionId, accepted.actionId);
   const finalReply = await reconnected.callTool({ name: "wait_for_action", arguments: { action_id: accepted.actionId, timeout_ms: 1000, rationale: "Read result", response_format: "json" } });
   const final = (finalReply.structuredContent as { response: { data: { state: string; output: { result: { collected: number } } } } }).response.data;
   assert.equal(final.state, "settled");
@@ -161,7 +161,6 @@ test("initial waits return typed results or progress, deduplicate retries, and c
   assert.equal(runner.status().busy, true, "Cancelling an initial wait must preserve admitted work");
   const pending = data(await client.callTool(request("slow", 1, 0)));
   assert.equal(pending.state, "pending");
-  assert.equal(data(await client.callTool(request("busy", 2, 1000))).code, "ACTION_BUSY");
   const invalid = await client.callTool(request("invalid", 2, -1));
   assert.equal(invalid.isError, true);
   assert.equal(attempts, 2);
@@ -170,6 +169,8 @@ test("initial waits return typed results or progress, deduplicate retries, and c
   assert.equal(final.state, "settled");
   assert.equal(final.actionId, pending.actionId);
   assert.equal(final.output?.result.count, 1);
+  // wait_timeout_ms is a reply option, not part of the submission, so a retry
+  // that changes it is the same submission and does not run again.
   assert.equal(attempts, 2, "Changing wait timeout on retry must not repeat execution");
   assert.equal(service.status().awaitingResult, null);
   const markdown = await client.callTool({ name: action.name, arguments: {

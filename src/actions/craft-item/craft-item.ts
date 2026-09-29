@@ -1,6 +1,5 @@
 import { craftCheckpointSchema } from "../checkpoint-schemas.js";
 import type { Bot } from "mineflayer";
-import { observeInventoryProgress } from "../progress.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { planCraftingFromInventory, type CraftPreparation, type CraftTarget } from "../../utils/craft-plan.js";
 import type { Position3 } from "../../utils/index.js";
@@ -11,7 +10,6 @@ import { defineAction, type ActionContext } from "../action.js";
 import { markdownCodeBlock, unconfirmedCount } from "../markdown.js";
 import { formatWorkstation, useTemporaryWorkstation, workstationOperations } from "../temporary-workstation.js";
 import {
-  craftItemAnnotations,
   craftItemOutcomes,
   parseCraftItemRequest,
   CRAFT_ITEM,
@@ -110,6 +108,26 @@ function preparationFailureResult(
   };
 }
 
+/** Current carried achievement can decrease; it is never a count of attempted effects. */
+function observeCraftProgress(context: ActionContext, bot: Bot, targets: readonly { itemName: string; count: number }[]): void {
+  const items = targets.map(({ itemName, count }) => ({ item: itemName, requested: count, initial: carriedCount(bot, itemName) }));
+  context.observeProgress?.(() => {
+    const checkpoint = craftCheckpointSchema.parse({ phase: "crafting", items: items.map((item) => {
+      const current = carriedCount(bot, item.item);
+      return { ...item, current, gained: current - item.initial };
+    }) });
+    return {
+      baseline: items,
+      checkpoint,
+      completion: {
+        kind: "current",
+        observed: checkpoint.items.every((item) => item.gained >= item.requested),
+        owes: "All requested net item gains are still carried after crafting and workstation cleanup.",
+      },
+    };
+  });
+}
+
 /** Plan the complete batch before consuming anything, then settle every requested inventory gain. */
 export async function craftItem(
   bot: Bot,
@@ -118,7 +136,7 @@ export async function craftItem(
   context: ActionContext,
   options: CraftItemOptions = {},
 ): Promise<CraftItemResult> {
-  observeInventoryProgress(context, bot, request.items, () => "crafting", "All requested net item gains are still carried after crafting and workstation cleanup.");
+  observeCraftProgress(context, bot, request.items);
   if (!request.temporaryWorkstation) return craftBatch(bot, request, context, options);
   const tablesBefore = carriedCount(bot, "crafting_table");
   const result = await useTemporaryWorkstation(
@@ -322,7 +340,11 @@ export function createCraftItemAction(bot: Bot, navigation: NavigationRuntime, o
     resultSchema: craftItemResultSchema,
     formatResult: formatCraftItemResult,
     execution: { kind: "task" },
-    annotations: craftItemAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
     parse: parseCraftItemRequest,
     execute: (request, context) => craftItem(bot, navigation, request, context, options),
   });

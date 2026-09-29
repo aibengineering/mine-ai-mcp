@@ -1,5 +1,5 @@
 /** Reach the surface alive from a wounded, foodless start with mid-route hostile contact. */
-import { CANCEL_FOREGROUND_ACTION, NAVIGATE } from "@aibengineering/mine-ai-mcp";
+import { NAVIGATE } from "@aibengineering/mine-ai-mcp";
 import type { ClientCompletion } from "mine-labs/client";
 import { z } from "zod";
 import { openRuntime, standStill, type Runtime } from "../../src/runtime.ts";
@@ -93,14 +93,16 @@ export async function run(context: MineAiScenarioContext): Promise<ClientComplet
     context.log(`bot at ${bot.health} health and ${bot.food} hunger with nothing to eat`);
 
     const navigate = runtime.actions.find((action) => action.name === NAVIGATE);
-    const cancel = runtime.actions.find((action) => action.name === CANCEL_FOREGROUND_ACTION);
-    if (!navigate || !cancel) throw new Error("The ascent scenario requires the navigate and cancel actions.");
+    if (!navigate) throw new Error("The ascent scenario requires the navigate action.");
+    // The route runs directly on the runner, not as an asynchronous submission
+    // with an action ID, so a failed setup stops it the way death does.
+    const cancel = (reason: string) => runtime.asyncActions.runner.cancelActive(reason);
     const [x, y, z] = params.target;
     const request = { x, y, z, range: 1, dig: true, scaffold: true };
 
     const pending = runtime.run(navigate, request, context.signal);
     if (!(await awaitRouteUnderWay(context, runtime, 200))) {
-      await runtime.run(cancel, { reason: "The route never got under way." }, context.signal);
+      cancel("The route never got under way.");
       const output = await pending;
       return {
         status: "failed",
@@ -108,7 +110,7 @@ export async function run(context: MineAiScenarioContext): Promise<ClientComplet
       };
     }
     if (!(await placeZombie(context, params.zombie))) {
-      await runtime.run(cancel, { reason: "The zombie never arrived on its ledge." }, context.signal);
+      cancel("The zombie never arrived on its ledge.");
       await pending;
       return { status: "failed", detail: `No zombie was seen within sight of ${params.zombie.join(",")}` };
     }

@@ -1,13 +1,12 @@
 import type { Bot } from "mineflayer";
 import { planCraftingFromInventory, type CraftTarget } from "../../utils/craft-plan.js";
 import { defineAction, type ActionContext } from "../action.js";
+import { parseCraftingRequest } from "../crafting.js";
 import { markdownCodeBlock } from "../markdown.js";
 import {
-  parseViewCraftingRequirementsRequest,
   VIEW_CRAFTING_REQUIREMENTS,
   VIEW_CRAFTING_REQUIREMENTS_DESCRIPTION,
   viewCraftingRequirementsResultSchema,
-  viewCraftingRequirementsAnnotations,
   viewCraftingRequirementsInputSchema,
   viewCraftingRequirementsOutcomes,
   type ViewCraftingRequirementsResult,
@@ -91,8 +90,12 @@ export function createViewCraftingRequirementsAction(bot: Bot) {
     resultSchema: viewCraftingRequirementsResultSchema,
     formatResult: formatViewCraftingRequirementsResult,
     execution: { kind: "information" },
-    annotations: viewCraftingRequirementsAnnotations,
-    parse: parseViewCraftingRequirementsRequest,
+    annotations: {
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    parse: parseCraftingRequest,
     execute: (request, context) => viewCraftingRequirements(bot, request, context),
   });
 }

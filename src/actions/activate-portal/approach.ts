@@ -5,8 +5,12 @@ import { useItemAt } from "../../world/index.js";
 import type { Position3 } from "../../utils/index.js";
 import type { ActionContext } from "../action.js";
 
+/**
+ * The engine the activation drives: the route to the frame and the item use on
+ * it. Tests replace both with a fake that places the resulting blocks, so the
+ * frame and socket decisions are proven without a server.
+ */
 export interface ActivatePortalDependencies {
-  readonly createMovements: typeof createMovements;
   readonly navigate: Navigate;
   readonly useItem: typeof useItemAt;
 }
@@ -47,7 +51,7 @@ export async function approachPortalBlock(
   };
   try {
     const route = await dependencies.navigate({
-      movements: dependencies.createMovements(bot, { protectedBlockNames: ["obsidian", "end_portal_frame"] }),
+      movements: createMovements(bot, { protectedBlockNames: ["obsidian", "end_portal_frame"] }),
       goal,
       signal: context.signal,
     });

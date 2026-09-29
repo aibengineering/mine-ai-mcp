@@ -1,6 +1,4 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import type { ActionOutput } from "../action.js";
 import type { Position3 } from "../../utils/index.js";
 
 export const SLEEP = "sleep" as const;
@@ -54,10 +52,6 @@ export const sleepResultSchema = z.discriminatedUnion("status", [
   z.strictObject({ status: z.literal("failed"), error: z.string(), sleep: sleepEvidenceSchema.optional() }),
 ]) as z.ZodType<SleepResult, SleepResult>;
 
-export const sleepAnnotations = {
-  openWorldHint: false,
-} satisfies ToolAnnotations;
-
 export const sleepOutcomes = {
   dimensionUnsafe: "[BED_DIMENSION_UNSAFE] Beds explode in the Nether and the End.",
   alreadySleeping: "Bot is already sleeping in a bed.",
@@ -82,11 +76,5 @@ export const sleepOutcomes = {
     `No bed remains in inventory. If travel is planned and coordinating sleep with others is more important than retaining this respawn point, collect the ${bedName} at ${position.x},${position.y},${position.z} afterward with collect_block.`,
 } as const;
 
-export type SleepInput = z.input<typeof sleepInputSchema>;
-export type SleepRequest = Record<string, never>;
-export type SleepOutput = ActionOutput<typeof SLEEP, SleepResult>;
-
-export function parseSleepRequest(raw: unknown): SleepRequest {
-  sleepInputSchema.parse(raw ?? {});
-  return {};
-}
+/** Sleep takes no arguments; the bed is found or placed, not named. */
+export type SleepRequest = z.output<typeof sleepInputSchema>;

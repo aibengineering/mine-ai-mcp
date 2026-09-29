@@ -1,6 +1,5 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const VIEW_BLOCKS = "view_blocks" as const;
@@ -78,8 +77,6 @@ export const viewBlocksInputSchema = z.strictObject({
   box: boxRequestSchema.optional().describe("Every cell of a box around a point, drawn layer by layer."),
   cells: z.array(cellRequestSchema).min(1).max(MAX_CELLS).optional().describe("Exact cells to read."),
 });
-
-export type ViewBlocksInput = z.input<typeof viewBlocksInputSchema>;
 
 export interface ViewBlocksRequest {
   readonly find: { readonly blockNames: readonly string[]; readonly limit: number } | null;
@@ -170,11 +167,6 @@ export type ViewBlocksReport = z.output<typeof viewBlocksReportSchema>;
 
 export const viewBlocksResultSchema = actionResultSchema({ blocks: viewBlocksReportSchema });
 export type ViewBlocksResult = z.output<typeof viewBlocksResultSchema>;
-export type ViewBlocksOutput = ActionOutput<typeof VIEW_BLOCKS, ViewBlocksResult>;
-
-export const viewBlocksAnnotations = {
-  openWorldHint: false,
-} satisfies ToolAnnotations;
 
 export const viewBlocksOutcomes = {
   unknownBlock: (blockName: string) => `[VIEW_UNKNOWN_BLOCK] Minecraft has no block named ${blockName}.`,

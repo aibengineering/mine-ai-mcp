@@ -30,7 +30,6 @@ import {
 } from "../../world/item-pickup.js";
 import { defineAction, type ActionContext } from "../action.js";
 import {
-  huntMobAnnotations,
   huntMobOutcomes,
   parseHuntMobRequest,
   COLLECT_MOB_DROP,
@@ -897,7 +896,7 @@ export function createCollectMobDropAction(
     resultSchema: huntMobResultSchema,
     formatResult: formatHuntMobResult,
     execution: { kind: "resumable_task", prepare: () => prepareBotForMovement(bot, navigation) },
-    annotations: huntMobAnnotations,
+    annotations: { destructiveHint: true, idempotentHint: false, openWorldHint: true },
     parse: parseHuntMobRequest,
     begin: (request, lifetime, observe) => {
       if (request.dropName === "arrow") combat.policy.reserveArrows(lifetime);

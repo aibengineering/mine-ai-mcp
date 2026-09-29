@@ -2,21 +2,20 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test, { type TestContext } from "node:test";
 import type { Bot } from "mineflayer";
+import { botFixture } from "../test-support/bot.js";
 import { temporaryBotData } from "../test-support/bot-data.js";
 import { BOT_STATUS_COALESCE_MS, BOT_STATUS_HEARTBEAT_MS, observeBotStatus } from "./bot-status.js";
 
+type Stack = { slot: number; name: string; count: number };
+type Window = EventEmitter & { inventoryStart: number; items(): Stack[] };
+
+/** A bot whose carried items are exactly the occupied window slots a test writes. */
 function fixture() {
-  const inventory = Object.assign(new EventEmitter(), {
-    inventoryStart: 9,
-    slots: [] as Array<{ slot: number; name: string; count: number } | null>,
-    items() { return this.slots.filter(item => item && item.slot >= 9 && item.slot <= 44); },
-  });
-  const bot = Object.assign(new EventEmitter(), {
-    username: "StreamBot", inventory, currentWindow: null as (EventEmitter & {
-      inventoryStart: number; items(): Array<{ slot: number; name: string; count: number }>;
-    }) | null,
-    quickBarSlot: 0, game: { dimension: "overworld" },
-  });
+  const base = botFixture({ username: "StreamBot" }, { currentWindow: null, quickBarSlot: 0 });
+  const inventory = base.inventory as unknown as EventEmitter & { slots: Array<Stack | null>; items(): Stack[] };
+  inventory.slots = [];
+  inventory.items = () => inventory.slots.filter((item): item is Stack => !!item && item.slot >= 9 && item.slot <= 44);
+  const bot = base as unknown as EventEmitter & { currentWindow: Window | null; quickBarSlot: number };
   return { bot, inventory };
 }
 

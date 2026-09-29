@@ -55,7 +55,6 @@ function poolWorld(held: string | null = null) {
   Object.defineProperty(bot, "heldItem", { get: () => hand });
   const uses: unknown[] = [];
   const dependencies: UseBucketDependencies = {
-    createMovements: () => ({}) as never,
     navigate: async () => ({ status: "completed", elapsedMs: 0 }),
     world: {
       blockAt(x, y, z) {
@@ -107,7 +106,8 @@ function poolWorld(held: string | null = null) {
   return { bot, blocks, dependencies, uses };
 }
 
-test("parses fill without a cell and pour with one, and refuses a partial cell", () => {
+test("a fill may omit its cell, but a pour must name the cell the liquid ends up in", () => {
+  // The partial-cell refusal is the shared rule proven in cell.test.ts.
   assert.deepEqual(parseUseBucketRequest({ action: "fill" }), { action: "fill", liquid: "water", cell: null });
   assert.deepEqual(parseUseBucketRequest({ action: "pour", liquid: "lava", x: 1, y: 2, z: 3 }), {
     action: "pour",
@@ -115,7 +115,6 @@ test("parses fill without a cell and pour with one, and refuses a partial cell",
     cell: { x: 1, y: 2, z: 3 },
   });
   assert.throws(() => parseUseBucketRequest({ action: "pour" }), /pour needs/);
-  assert.throws(() => parseUseBucketRequest({ action: "fill", x: 1 }), /all three/);
 });
 
 test("fill finds the nearest source, looks at its surface, and confirms the full bucket", async () => {

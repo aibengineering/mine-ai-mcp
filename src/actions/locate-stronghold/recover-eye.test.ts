@@ -1,29 +1,19 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import test from "node:test";
-import type { Bot } from "mineflayer";
-import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import { createMovements, type NavigationRuntime } from "../../navigation/index.js";
+import { botFixture } from "../../test-support/bot.js";
 import { recoverEyeDrop } from "./recover-eye.js";
 
 function fixture() {
-  let count = 15;
-  const bot = Object.assign(new EventEmitter(), {
-    registry: minecraftData("1.21.4"),
-    entity: { position: new Vec3(0, 64, 0), effects: {} },
-    entities: {},
-    inventory: Object.assign(new EventEmitter(), {
-      items: () => [{ name: "ender_eye", count, stackSize: 64 }],
-      emptySlotCount: () => 35,
-    }),
-  }) as unknown as Bot;
+  const eyes = { name: "ender_eye", count: 15, stackSize: 64 };
+  const bot = botFixture({ position: { x: 0, y: 64, z: 0 }, items: [eyes] });
   createMovements(bot); // Install the runtime inventory observer before measuring pickup cleanup.
   const inventoryListeners = bot.inventory.listenerCount("updateSlot");
   const item = { id: 90, position: new Vec3(12, 64, 0), getDroppedItem: () => ({ name: "ender_eye" }) };
   const addDrop = () => { bot.entities[item.id] = item as never; bot.emit("itemDrop", item as never); };
-  const collect = () => { count++; delete bot.entities[item.id]; bot.inventory.emit("updateSlot", 36, null, null); };
-  return { bot, item, addDrop, collect, inventoryListeners, count: () => count };
+  const collect = () => { eyes.count++; delete bot.entities[item.id]; bot.inventory.emit("updateSlot", 36, null, null); };
+  return { bot, item, addDrop, collect, inventoryListeners, count: () => eyes.count };
 }
 const endpoint = new Vec3(12, 72, 0);
 /** Settle windows short enough that a test can let them lapse for real. */

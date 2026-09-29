@@ -10,10 +10,8 @@ import {
   DEBUG_LOG_MAX_CHARS,
   DEBUG_LOG_MAX_LINES,
   DEBUG_RENDERED_VALUE_MAX_CHARS,
-  debugExecuteJavaScriptAnnotations,
   debugExecuteJavaScriptInputSchema,
   debugExecuteJavaScriptResultSchema,
-  parseDebugExecuteJavaScriptRequest,
   type DebugExecuteJavaScriptRequest,
   type DebugExecuteJavaScriptResult,
 } from "./contract.js";
@@ -138,8 +136,13 @@ export function createDebugExecuteJavaScriptAction(bot: Bot) {
     resultSchema: debugExecuteJavaScriptResultSchema,
     formatResult: formatDebugExecuteJavaScriptResult,
     execution: { kind: "task" },
-    annotations: debugExecuteJavaScriptAnnotations,
-    parse: parseDebugExecuteJavaScriptRequest,
+    annotations: {
+      title: DEBUG_EXECUTE_JAVASCRIPT,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+    parse: (input: unknown) => debugExecuteJavaScriptInputSchema.parse(input ?? {}),
     execute: (request) => executeDebugJavaScript(bot, request),
   });
 }

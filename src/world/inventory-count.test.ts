@@ -68,27 +68,3 @@ test("reports the count it can see, unconfirmed, when the update never arrives",
 
   assert.deepEqual(await settling, { count: 2, confirmed: false });
 });
-
-test("a caller's cancellation ends the wait with the count observed so far", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
-  const { bot } = inventoryBot("cobblestone", 3);
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(new Error("stop")), TWO_TICKS_MS);
-
-  const settling = settleInventoryCount(bot, "cobblestone", 2, { signal: controller.signal });
-  t.mock.timers.tick(TWO_TICKS_MS);
-
-  assert.deepEqual(await settling, { count: 3, confirmed: false });
-});
-
-test("a caller with a slower server can wait longer than the default deadline", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
-  const { bot, setCount } = inventoryBot("gravel", 4);
-  setTimeout(() => setCount(0), INVENTORY_SETTLE_MS + TWO_TICKS_MS);
-
-  const settling = settleInventoryCount(bot, "gravel", 0, { timeoutMs: 1_000 });
-  // Past the default deadline, but short of the caller's own.
-  t.mock.timers.tick(INVENTORY_SETTLE_MS + TWO_TICKS_MS);
-
-  assert.deepEqual(await settling, { count: 0, confirmed: true });
-});

@@ -28,7 +28,6 @@ import { placeBlock } from "../../world/index.js";
 import { defineAction, type ActionContext } from "../action.js";
 import { observeToolTierLoss } from "../../world/tool-loss.js";
 import {
-  buildStructureAnnotations,
   buildStructureOutcomes,
   NAMED_CELLS_PER_REASON,
   parseBuildStructureRequest,
@@ -261,7 +260,11 @@ export function createBuildStructureAction(
     resultSchema: buildStructureResultSchema,
     formatResult: formatBuildStructureResult,
     execution: { kind: "task", prepare: () => prepareBotForMovement(bot, navigation) },
-    annotations: buildStructureAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
     parse: parseBuildStructureRequest,
     execute: (request, context) =>
       buildStructure(bot, request, context, physics ?? productionPhysics(bot, navigation, request)),

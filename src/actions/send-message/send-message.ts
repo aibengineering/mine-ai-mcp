@@ -3,8 +3,6 @@ import type { Bot, BotEvents } from "mineflayer";
 import { defineAction, type ActionContext } from "../action.js";
 import { markdownCodeBlock } from "../markdown.js";
 import {
-  parseSendMessageRequest,
-  sendMessageAnnotations,
   sendMessageOutcomes,
   SEND_MESSAGE,
   SEND_MESSAGE_DESCRIPTION,
@@ -110,8 +108,12 @@ export function createSendMessageAction(bot: Bot) {
     resultSchema: sendMessageResultSchema,
     formatResult: formatSendMessageResult,
     execution: { kind: "task" },
-    annotations: sendMessageAnnotations,
-    parse: parseSendMessageRequest,
+    annotations: {
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+    parse: (input: unknown) => sendMessageInputSchema.parse(input ?? {}),
     execute: (request, context) => sendMessage(bot, request, context),
   });
 }

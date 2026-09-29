@@ -437,7 +437,6 @@ export async function createMinecraftRuntime(
       navigation,
       strongholdEyeFlights,
       combat,
-      cancelForegroundAction: runner.cancelActive,
       observeStatusActivity: () => {
         const { owner, activeAction } = runner.status();
         return { owner, activeAction };

@@ -3,15 +3,14 @@
  * drop, a pursuit that walks straight to each, and effects that script the
  * fights. Shared by the hunt's own tests and its shield-gate tests.
  */
-import minecraftData from "minecraft-data";
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import { Vec3 } from "vec3";
 import type { NavigationRuntime } from "../navigation/index.js";
 import type { HuntTarget } from "../navigation/processes/hunting/hunt-process.js";
 import type { CombatController, CombatOutcome } from "../survival/index.js";
 import { SurvivalPolicyState } from "../survival/state/survival-policy.js";
+import { botFixture, registry } from "./bot.js";
 import type { HuntMobRequest } from "../actions/hunt-mob/contract.js";
 import type { HuntMobDependencies, TargetEngagement } from "../actions/hunt-mob/hunt-mob.js";
 
@@ -36,22 +35,20 @@ export function huntRequest(mobName: string, allowWithoutShield = false): HuntMo
 
 /** A bot beside `targets` whose inventory counts `inventory.count` white wool and nothing else. */
 export function huntBot(targets: readonly Entity[], inventory: { count: number }, health = 20): Bot {
-  const registry = minecraftData("1.21.4");
-  return Object.assign(new EventEmitter(), {
-    registry,
-    health,
-    blockAt: () => null,
-    world: { raycast: () => null },
-    entity: { id: 0, position: new Vec3(0, 64, 0) },
-    entities: Object.fromEntries(targets.map((target) => [target.id, target])),
-    inventory: Object.assign(new EventEmitter(), {
-      emptySlotCount: () => 36,
-      count: (itemId: number) => (itemId === registry.itemsByName.white_wool.id ? inventory.count : 0),
-      items: () => [],
-      slots: new Array(46).fill(null),
-    }),
-    nearestEntity: (predicate: (entity: Entity) => boolean) => targets.find(predicate) ?? null,
-  }) as unknown as Bot;
+  const bot = botFixture(
+    { position: new Vec3(0, 64, 0), entities: Object.fromEntries(targets.map((target) => [target.id, target])) },
+    {
+      health,
+      blockAt: () => null,
+      world: { raycast: () => null },
+      nearestEntity: (predicate: (entity: Entity) => boolean) => targets.find(predicate) ?? null,
+    },
+  );
+  bot.entity.id = 0;
+  // The wool count is scripted: the hunt's effects credit a drop by raising it.
+  bot.inventory.count = (itemId: number) => (itemId === registry.itemsByName.white_wool!.id ? inventory.count : 0);
+  bot.inventory.emptySlotCount = () => 36;
+  return bot;
 }
 
 /**

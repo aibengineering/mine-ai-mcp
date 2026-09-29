@@ -3,9 +3,10 @@ import test from "node:test";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { Vec3 } from "vec3";
 import minecraftData from "minecraft-data";
+import { deferred, nextTurn } from "../../test-support/async.js";
 import { botFixture, registry } from "../../test-support/bot.js";
 import { createRequire } from "node:module";
-import { parseSleepRequest, sleepOutcomes } from "./contract.js";
+import { sleepOutcomes } from "./contract.js";
 import { executeSleep, formatSleepResult } from "./sleep.js";
 
 const loadChunk = createRequire(import.meta.url)("prismarine-chunk") as typeof import("prismarine-chunk").default;
@@ -41,6 +42,8 @@ function mockBot(overrides: Record<string, any> = {}) {
       activateBlock: async () => {},
       sleep: async () => {
         bot.isSleeping = true;
+        // Morning comes on a later tick than the bed is entered, so the action is
+        // already waiting for it, as on a server.
         setTimeout(() => {
           bot.isSleeping = false;
           bot.time.timeOfDay = 0; // Morning
@@ -73,12 +76,6 @@ test("finds the bed in the diagonal section missed during the run 12 underground
   const result = await executeSleep(bot, navigation, {});
   assert.equal(result.status, "succeeded", JSON.stringify(result));
   assert.deepEqual(result.sleep?.bedPosition, { x: 80, y: 66, z: 135 });
-});
-
-test("parses sleep requests with zero arguments and rejects unknown keys", () => {
-  assert.deepEqual(parseSleepRequest({}), {});
-  assert.deepEqual(parseSleepRequest(undefined), {});
-  assert.throws(() => parseSleepRequest({ unexpected: 123 }));
 });
 
 test("refuses to sleep in the Nether or the End to avoid explosions", async () => {
@@ -259,18 +256,21 @@ test("keeps waiting for morning if the bot leaves bed early", async () => {
       pos.equals(bedPos) ? mockBed("red_bed", bedPos) : { name: "air", boundingBox: "empty", position: pos },
     sleep: async () => {
       bot.isSleeping = true;
-      setTimeout(() => {
-        bot.isSleeping = false;
-        bot.emit("wake");
-      }, 5);
+      lyingDown.resolve();
     },
   });
+  const lyingDown = deferred();
 
   let settled = false;
   const execution = executeSleep(bot, fakeNavigation, {}, controller.signal).finally(() => {
     settled = true;
   });
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  // Let the action reach its wait for morning, then get out of bed while it is still night.
+  await lyingDown.promise;
+  await nextTurn();
+  bot.isSleeping = false;
+  bot.emit("wake");
+  await nextTurn();
 
   assert.equal(settled, false);
   controller.abort();

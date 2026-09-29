@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 
 export const DEBUG_SET_PATHFINDER_TELEMETRY = "debug_set_pathfinder_telemetry" as const;
 export const DEBUG_SET_PATHFINDER_TELEMETRY_DESCRIPTION =
@@ -16,13 +16,4 @@ export const debugSetPathfinderTelemetryResultSchema = actionResultSchema({
   }),
 });
 
-export type DebugSetPathfinderTelemetryRequest = z.output<typeof debugSetPathfinderTelemetryInputSchema>;
 export type DebugSetPathfinderTelemetryResult = z.output<typeof debugSetPathfinderTelemetryResultSchema>;
-export type DebugSetPathfinderTelemetryOutput = ActionOutput<
-  typeof DEBUG_SET_PATHFINDER_TELEMETRY,
-  DebugSetPathfinderTelemetryResult
->;
-
-export function parseDebugSetPathfinderTelemetryRequest(raw: unknown): DebugSetPathfinderTelemetryRequest {
-  return debugSetPathfinderTelemetryInputSchema.parse(raw ?? {});
-}

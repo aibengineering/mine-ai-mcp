@@ -5,14 +5,16 @@ import { Vec3 } from "vec3";
 import { botFixture } from "../../test-support/bot.js";
 import { physicsEveryMillisecond } from "../../test-support/physics.js";
 import { TestEndCombat } from "../../test-support/combat.js";
-import { DragonShotObservation } from "../../survival/perception/combat/dragon-shot.js";
+import type { DragonShotObservation } from "../../survival/perception/combat/dragon-shot.js";
 import type { FootingRecovery } from "../../survival/responses/footing.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { ActionRunner } from "../../session/action-runner.js";
 import type { CombatController } from "../../survival/control/combat/contract.js";
 import { createShootDragonAction } from "./index.js";
-import { shootDragonInputSchema } from "./contract.js";
 
+// The shot itself is proven beside EndCombat (survival/responses/end/shoot-dragon.test.ts)
+// and the observation beside DragonShotObservation; this file proves only what
+// the action adds: one observation carried across a takeover and its resume.
 function fixture() {
   let drawing = false, releases = 0;
   const dragon = { id: 42, name: "ender_dragon", isValid: true, position: new Vec3(30, 84, 0),
@@ -25,29 +27,6 @@ function fixture() {
   const end = new TestEndCombat(bot, {} as NavigationRuntime, { needed: false } as FootingRecovery);
   return { bot, dragon, end, releases: () => releases };
 }
-
-test("shoot_dragon refuses absent arrows and arrow-immune perches without releasing", async () => {
-  const f = fixture();
-  using _physics = physicsEveryMillisecond(f.bot);
-  f.bot.inventory.items().pop();
-  using missing = new DragonShotObservation(f.bot, 42);
-  assert.equal((await f.end.shootDragon(new AbortController().signal, missing)).outcome, "weapon_unavailable");
-  f.bot.inventory.items().push({ name: "arrow", count: 1 } as never);
-  Reflect.set(f.dragon.metadata, 16, 5);
-  using perched = new DragonShotObservation(f.bot, 42);
-  assert.match((await f.end.shootDragon(new AbortController().signal, perched)).reason!, /DRAGON_PERCHED/);
-  assert.equal(f.releases(), 0);
-});
-
-test("caller cancellation during the draw does not release an arrow", async () => {
-  const f = fixture(), stop = new AbortController();
-  f.bot.activateItem = () => { stop.abort("cancelled while drawing"); };
-  using _physics = physicsEveryMillisecond(f.bot);
-  using observation = new DragonShotObservation(f.bot, 42);
-  await assert.rejects(f.end.shootDragon(stop.signal, observation));
-  assert.equal(observation.attacks, 0);
-  assert.equal(f.releases(), 0);
-});
 
 test("a released shot survives takeover, reports health loss, and is never fired twice", async () => {
   const f = fixture(), runner = new ActionRunner();
@@ -77,73 +56,4 @@ test("a released shot survives takeover, reports health loss, and is never fired
   assert.equal(first!.damageObserved, 3);
   assert.equal(f.releases(), 0);
   assert.equal(f.bot.listenerCount("entityDead"), 0);
-});
-
-test("disappearance and numeric entity-id reuse do not manufacture a bow hit", () => {
-  const f = fixture();
-  using observation = new DragonShotObservation(f.bot, 42);
-  observation.released(10);
-  f.bot.entities[42] = { ...f.dragon, metadata: { 9: 0, 16: 9 } } as unknown as Bot["entity"];
-  f.bot.emit("entityUpdate", f.bot.entities[42]);
-  assert.equal(observation.loaded, false);
-  assert.equal(observation.damageObserved, 0);
-  assert.equal(observation.died, false);
-  assert.equal(shootDragonInputSchema.parse({ entity_id: 42 }).hitbox_margin, 0.5);
-  assert.equal(shootDragonInputSchema.safeParse({ entity_id: 42, hitbox_margin: 2 }).success, false);
-  using deadDragon = new DragonShotObservation(f.bot, 42);
-  assert.equal(deadDragon.died, true, "already observed zero health survives the gap between requests");
-  f.bot.entities[42]!.name = "cow";
-  using wrongSpecies = new DragonShotObservation(f.bot, 42);
-  assert.equal(wrongSpecies.died, false);
-});
-
-test("native death remains terminal when its health metadata packet is still stale", () => {
-  const f = fixture();
-  using observation = new DragonShotObservation(f.bot, 42);
-  observation.released(10);
-  f.bot.emit("entityDead", f.dragon);
-  f.bot.emit("physicsTick");
-  assert.equal(observation.died, true);
-  assert.equal(observation.healthAfter, 0);
-});
-
-test("a released arrow without health loss is a miss and is not retried", async () => {
-  const f = fixture();
-  using _physics = physicsEveryMillisecond(f.bot);
-  using observation = new DragonShotObservation(f.bot, 42);
-  const result = await f.end.shootDragon(new AbortController().signal, observation);
-  assert.equal(result.outcome, "shot_missed");
-  assert.equal(result.attacks, 1);
-  assert.equal(f.releases(), 1);
-  assert.equal(observation.damageObserved, 0);
-});
-
-test("a perch update during the final aim cancels the charged arrow", async () => {
-  const f = fixture();
-  using _physics = physicsEveryMillisecond(f.bot);
-  let looks = 0;
-  f.bot.look = async () => { if (++looks === 22) Reflect.set(f.dragon.metadata, 16, 5); };
-  using observation = new DragonShotObservation(f.bot, 42);
-  const result = await f.end.shootDragon(new AbortController().signal, observation);
-  assert.match(result.reason!, /DRAGON_PERCHED/);
-  assert.equal(looks, 22);
-  assert.equal(f.releases(), 0);
-});
-
-test("even the strictest shot margin yields the charged bow to dragon evasion", async () => {
-  const f = fixture(), stop = new AbortController();
-  using _physics = physicsEveryMillisecond(f.bot);
-  let danger = false, looks = 0, evasions = 0;
-  Object.defineProperty(f.end, "danger", { get: () => danger });
-  f.bot.look = async () => { if (++looks === 22) danger = true; };
-  f.end.evade = async () => {
-    evasions++;
-    assert.equal(f.releases(), 0);
-    stop.abort("evasion owns the body");
-    return { outcome: "evaded", attacks: 0, healthBefore: null, healthAfter: null, reason: null };
-  };
-  using observation = new DragonShotObservation(f.bot, 42, 1.25);
-  await assert.rejects(f.end.shootDragon(stop.signal, observation));
-  assert.equal(evasions, 1);
-  assert.equal(f.releases(), 0);
 });

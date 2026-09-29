@@ -1,7 +1,7 @@
 import { smeltCheckpointSchema } from "../checkpoint-schemas.js";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { createMovements, nearGoal, type Navigate, type NavigationRuntime } from "../../navigation/index.js";
+import { createMovements, nearGoal, type NavigationRuntime } from "../../navigation/index.js";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
 import { carriedCount, settleInventoryCount, settleInventoryMinimum } from "../../world/inventory-count.js";
 import { waitForSignal } from "../../utils/signals.js";
@@ -15,7 +15,6 @@ import {
   SMELT_ITEM_DESCRIPTION,
   smeltItemInputSchema,
   smeltItemResultSchema,
-  smeltItemAnnotations,
   smeltItemOutcomes,
   type SmeltItemRequest,
   type SmeltItemResult,
@@ -31,9 +30,12 @@ const SLOT_RECOVERY_MS = 2_000;
 type FurnaceWindow = Awaited<ReturnType<Bot["openFurnace"]>>;
 type FurnaceBlock = NonNullable<ReturnType<Bot["blockAt"]>>;
 
+/**
+ * The furnace engine and the clock the cook is judged by. Tests replace the
+ * furnace with one whose progress they drive and the clock with one they
+ * advance, so stall and fuel decisions are proven without waiting minutes.
+ */
 export interface SmeltItemDependencies {
-  readonly createMovements: typeof createMovements;
-  readonly navigate: Navigate;
   readonly openFurnace: (bot: Bot, block: FurnaceBlock) => Promise<FurnaceWindow>;
   readonly now: () => number;
   readonly pause: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
@@ -62,15 +64,13 @@ function abortablePause(milliseconds: number, signal?: AbortSignal): Promise<voi
   });
 }
 
-function productionDependencies(navigate: Navigate): SmeltItemDependencies {
-  return {
-    createMovements,
-    navigate,
-    openFurnace: (bot, block) => bot.openFurnace(block),
-    now: () => performance.now(),
-    pause: abortablePause,
-  };
-}
+const productionDependencies: SmeltItemDependencies = {
+  openFurnace: (bot, block) => bot.openFurnace(block),
+  // Monotonic, not the wall clock: an NTP step or a resumed laptop moves
+  // Date.now by minutes, which the cook wait would read as a stalled furnace.
+  now: () => performance.now(),
+  pause: abortablePause,
+};
 
 function fuelCapacity(name: string): number {
   if (name === "coal" || name === "charcoal") return 8;
@@ -278,14 +278,14 @@ async function waitForCook(
 
 async function approach(
   bot: Bot,
+  navigation: NavigationRuntime,
   request: ExistingFurnaceRequest,
   context: ActionContext,
-  dependencies: SmeltItemDependencies,
 ): Promise<string | null> {
   const target = new Vec3(request.x, request.y, request.z);
   if (bot.entity.position.distanceTo(target) <= FURNACE_REACH) return null;
-  const route = await dependencies.navigate({
-    movements: dependencies.createMovements(bot),
+  const route = await navigation.navigate({
+    movements: createMovements(bot),
     goal: nearGoal(target, 2),
     signal: context.signal,
   });
@@ -300,7 +300,7 @@ export async function smeltItem(
   context: ActionContext,
   dependencies: SmeltItemDependencies,
 ): Promise<SmeltItemResult> {
-  if (request.temporaryWorkstation !== true) return smeltInFurnace(bot, request, context, dependencies);
+  if (request.temporaryWorkstation !== true) return smeltInFurnace(bot, navigation, request, context, dependencies);
   return useTemporaryWorkstation(
     bot,
     "furnace",
@@ -309,6 +309,7 @@ export async function smeltItem(
     (block) =>
       smeltInFurnace(
         bot,
+        navigation,
         {
           itemName: request.itemName,
           count: request.count,
@@ -333,6 +334,7 @@ export async function smeltItem(
 
 async function smeltInFurnace(
   bot: Bot,
+  navigation: NavigationRuntime,
   request: ExistingFurnaceRequest,
   context: ActionContext,
   dependencies: SmeltItemDependencies,
@@ -377,7 +379,7 @@ async function smeltInFurnace(
 
   let routeFailure: string | null;
   try {
-    routeFailure = await approach(bot, request, context, dependencies);
+    routeFailure = await approach(bot, navigation, request, context);
   } catch (cause) {
     context.signal?.throwIfAborted();
     routeFailure = cause instanceof Error ? cause.message : String(cause);
@@ -528,7 +530,7 @@ export function formatSmeltItemResult(result: SmeltItemResult): string {
 export function createSmeltItemAction(
   bot: Bot,
   navigation: NavigationRuntime,
-  dependencies: SmeltItemDependencies = productionDependencies(navigation.navigate),
+  dependencies: SmeltItemDependencies = productionDependencies,
 ) {
   return defineAction({
     checkpointSchema: smeltCheckpointSchema,
@@ -538,7 +540,11 @@ export function createSmeltItemAction(
     resultSchema: smeltItemResultSchema,
     formatResult: formatSmeltItemResult,
     execution: { kind: "task", prepare: () => prepareBotForMovement(bot, navigation) },
-    annotations: smeltItemAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     parse: parseSmeltItemRequest,
     execute: (request, context) => smeltItem(bot, navigation, request, context, dependencies),
   });

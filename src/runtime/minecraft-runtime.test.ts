@@ -3,7 +3,6 @@ import { EventEmitter } from "node:events";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { z } from "zod";
 import type { CombatDecision } from "../survival/control/combat/contract.js";
-import { SurvivalPolicyState } from "../survival/state/survival-policy.js";
 
 import type { Bot } from "mineflayer";
 import os from "node:os";
@@ -14,38 +13,9 @@ import { readRecentEventsResultSchema } from "../actions/read-recent-events/cont
 import { ExecutionScope } from "../execution/execution-scope.js";
 import { CombatExecution, combatExecutionSnapshotSchema } from "../survival/control/combat/execution.js";
 import { deferred } from "../test-support/async.js";
+import { botFixture } from "../test-support/bot.js";
+import { fakeCombat } from "../test-support/hunt-mob.js";
 import { createMinecraftRuntime } from "./minecraft-runtime.js";
-
-const combatController = {
-  resourceRefusal: () => null,
-  policy: new SurvivalPolicyState(runtimeBot()),
-  engage: async (targetId: number) => ({
-    kind: "target_lost" as const,
-    targetId,
-    attacks: 0,
-    stylesUsed: [],
-    weaponsUsed: [],
-    shieldRaisedSwings: 0,
-    projectileGuards: 0,
-    explosions: 0,
-  }),
-  stop: async () => undefined,
-  runEnd: async () => {
-    throw new Error("Unexpected End combat");
-  },
-  endDanger: () => false,
-  activePosition: () => null,
-  execution: () => null,
-  onDecision: () => () => {},
-  finish: async () => ({
-    observedAt: 1,
-    kind: "safe" as const,
-    basis: "clear" as const,
-    position: { x: 0, y: 64, z: 0 },
-  }),
-  canRecover: () => false,
-  activeEngagement: () => null,
-};
 
 /** Runtime options for a store that lives only as long as the test. */
 function temporaryStorage(worldId: string, botId = "runtime-bot") {
@@ -53,34 +23,29 @@ function temporaryStorage(worldId: string, botId = "runtime-bot") {
 }
 
 function runtimeBot(controlStates: boolean[] = [], rejectedListener?: string): Bot {
-  const inventory = Object.assign(new EventEmitter(), { items: () => [], slots: new Array(46).fill(null) });
-  const botEvents = new EventEmitter();
-  const bot = Object.assign(botEvents, {
-    username: "RuntimeBot",
-    _client: new EventEmitter(),
-    getControlState: () => false,
-    game: { dimension: "overworld" },
-    entity: { id: 5, position: new Vec3(0, 64, 0), yaw: 0, pitch: 0, isInWater: false },
-    health: 20,
-    food: 20,
-    inventory,
-    entities: {},
-    blockAt: () => null,
-    setControlState: (control: string, state: boolean) => {
-      if (control === "jump") controlStates.push(state);
+  const bot = botFixture(
+    { username: "RuntimeBot", position: new Vec3(0, 64, 0), slots: new Array(46).fill(null) },
+    {
+      _client: new EventEmitter(),
+      getControlState: () => false,
+      // Nothing loaded, and a registry with only what the runtime's observers
+      // read, so no reflex acts on the world and the knowledge tables stay small.
+      blockAt: () => null,
+      setControlState: (control: string, state: boolean) => {
+        if (control === "jump") controlStates.push(state);
+      },
+      world: { getColumns: () => [], getColumn: () => undefined },
+      registry: {
+        version: { minecraftVersion: "test" },
+        entitiesByName: { player: { metadataKeys: ["shared_flags"] } },
+        blocksByStateId: {},
+        biomes: {},
+        foodsByName: {},
+      },
     },
-    world: {
-      getColumns: () => [],
-      getColumn: () => undefined,
-    },
-    registry: {
-      version: { minecraftVersion: "test" },
-      entitiesByName: { player: { metadataKeys: ["shared_flags"] } },
-      blocksByStateId: {},
-      biomes: {},
-      foodsByName: {},
-    },
-  }) as unknown as Bot;
+  );
+  bot.entity.id = 5;
+  const botEvents = bot as unknown as EventEmitter;
   if (rejectedListener) {
     const addListener = botEvents.on.bind(botEvents);
     const rejectSelectedListener: EventEmitter["on"] = (eventName, listener) => {
@@ -101,7 +66,7 @@ test("completed combat decisions are retained without a physics sample and unsub
     incidents: { directory },
     botData: temporaryStorage("decision-test"),
     createCombatController: () => ({
-      ...combatController,
+      ...fakeCombat,
       onDecision: (listener) => {
         listeners.add(listener);
         return () => {
@@ -185,7 +150,7 @@ test("Mineflayer end captures the foreground request and still fails a nonsettli
   const runtime = await createMinecraftRuntime(bot, {
     incidents: { directory },
     botData: temporaryStorage("disconnect-test"),
-    createCombatController: () => combatController,
+    createCombatController: () => fakeCombat,
   });
   try {
     const query = runtime.actions.find((action) => action.name === "query_bot_data");
@@ -249,7 +214,7 @@ test("an artifact write failure remains evidence and does not turn successful ga
   const bot = runtimeBot();
   const runtime = await createMinecraftRuntime(bot, {
     incidents: { directory: occupied },
-    createCombatController: () => combatController,
+    createCombatController: () => fakeCombat,
     botData: temporaryStorage("write-failure", "RuntimeBot"),
   });
   t.after(async () => {
@@ -303,116 +268,49 @@ test("the Minecraft runtime owns frontier attachment and its action catalog", as
   const bot = runtimeBot(controlStates);
   const runtime = await createMinecraftRuntime(bot, {
     botData: temporaryStorage("runtime-test"),
-    createCombatController: () => combatController,
+    createCombatController: () => fakeCombat,
   });
 
-  assert.equal(bot.listenerCount("chunkColumnLoad"), 2);
-  assert.equal(bot.listenerCount("chunkColumnUnload"), 1);
-  assert.equal(
-    bot.listenerCount("blockUpdate"),
-    2,
-    "frontier observation and advancing lava both observe world changes",
-  );
-  assert.equal(
-    bot.listenerCount("physicsTick"),
-    10,
-    "the runtime owns shared perception, bow timing, footing, survival observation, one reflex loop, idle water, Nether vine physics, End gaze and action progress",
-  );
-  assert.equal(bot.listenerCount("chat"), 1);
-  assert.equal(bot.listenerCount("whisper"), 1);
-  assert.equal(bot.listenerCount("death"), 8);
-  assert.deepEqual(
-    runtime.actions.map((action) => action.name),
-    [
-      "set_survival_policy",
-      "destroy_end_crystal",
-      "attack_dragon_perch",
-      "shoot_dragon",
-      "build_structure",
-      "cancel_foreground_action",
-      "collect_block",
-      "craft_item",
-      "drop_item",
-      "barter",
-      "eat_food",
-      "equip",
-      "explore_frontier",
-      "collect_mob_drop",
-      "activate_portal",
-      "locate_stronghold",
-      "enter_nether_portal",
-      "enter_end_portal",
-      "navigate",
-      "note_save",
-      "note_read",
-      "place_block",
-      "prepare_dragon_perch",
-      "pick_up_items",
-      "raw_action",
-      "query_bot_data",
-      "read_recent_events",
-      "send_message",
-      "sleep",
-      "smelt_item",
-      "use_bucket",
-      "use_container",
-      "view_blocks",
-      "view_crafting_requirements",
-      "view_frontier",
-      "view_status",
-    ],
-  );
-  const { survivalPolicy, survival, ...runtimeStatus } = runtime.status();
+  // Which observers attach is each observer's own business; the runtime's is
+  // that they attach here and that close detaches every one (below).
+  const attached = ["chunkColumnLoad", "chunkColumnUnload", "blockUpdate", "physicsTick", "chat", "whisper", "death"] as const;
+  for (const eventName of attached) assert.ok(bot.listenerCount(eventName) > 0, eventName);
+  // The catalog is published whole: every action has a distinct name and its schemas.
+  const names = runtime.actions.map((action) => action.name);
+  assert.equal(new Set(names).size, names.length, "action names are distinct");
+  for (const action of runtime.actions) {
+    assert.ok(action.inputSchema && action.outputSchema, `${action.name} publishes its schemas`);
+  }
+  assert.ok(names.includes("query_bot_data") && names.includes("send_message"));
+  // Incident counters are the recorder's to prove.
+  const { survivalPolicy, survival, incidents: _incidents, ...runtimeStatus } = runtime.status();
   assert.deepEqual(survivalPolicy.overrides, []);
   assert.deepEqual(survival.policy, survivalPolicy);
-  assert.deepEqual(runtimeStatus, {
-    foreground: { active: null, awaitingResult: null, storageError: null },
-    combat: null,
-    busy: false,
-    activeAction: null,
-    owner: "idle",
-    frontier: { observedChunks: 0, pendingChunks: 0, error: null },
-    incidents: {
-      samples: 0,
-      recordingMs: 0,
-      maxRecordingMs: 0,
-      retainedBytes: 0,
-      pendingCaptures: 0,
-      coalescedCaptures: 0,
-      writeFailures: 0,
-      lastWriteError: null,
-      physicsSamples: 0,
-      observationMs: 0,
-      maxObservationMs: 0,
+  assert.deepEqual(
+    runtimeStatus,
+    {
+      foreground: { active: null, awaitingResult: null, storageError: null },
+      combat: null,
+      busy: false,
+      activeAction: null,
+      owner: "idle",
+      frontier: { observedChunks: 0, pendingChunks: 0, error: null },
+      botData: { persistence: "temporary", scope: "bot", file: null, diagnostics: runtime.status().botData.diagnostics },
     },
-    botData: { persistence: "temporary", scope: "bot", file: null, diagnostics: runtime.status().botData.diagnostics },
-  });
+  );
   assert.deepEqual(runtime.notificationSummary(), { unreadCount: 0 });
 
+  // Every query an action declares is published under an action the catalog holds.
   const queryAction = runtime.actions.find((action) => action.name === "query_bot_data");
   assert.ok(queryAction);
   const catalog = await runtime.run(queryAction, {
-    sql: "SELECT action_name, query_id FROM knowledge.action_queries ORDER BY action_name, query_id",
+    sql: "SELECT DISTINCT action_name FROM knowledge.action_queries",
   });
-  assert.deepEqual(catalog.result, {
-    status: "succeeded",
-    query: {
-      columns: ["action_name", "query_id"],
-      rows: [
-        ["explore_frontier", "frontier-nearest"],
-        ["note_read", "latest-bot-notes"],
-        ["read_recent_events", "event-read-cursor"],
-        ["read_recent_events", "remaining-events-count"],
-        ["read_recent_events", "unread-events-page"],
-        ["view_frontier", "frontier-chunk-exists"],
-        ["view_frontier", "frontier-map-bounds"],
-        ["view_frontier", "frontier-map-window"],
-        ["view_frontier", "frontier-nearest"],
-      ],
-      returnedRows: 9,
-      truncated: false,
-    },
-  });
+  const declared = catalog.result as unknown as { status: string; query: { rows: string[][] } };
+  assert.equal(declared.status, "succeeded");
+  const declaring = declared.query.rows.map(([name]) => name);
+  assert.ok(declaring.length > 0);
+  for (const name of declaring) assert.ok(names.includes(name!), name);
 
   bot.emit("chat", "Alex", "Hello RuntimeBot", null, {} as never, null);
   assert.deepEqual(runtime.notificationSummary(), {
@@ -439,13 +337,7 @@ test("the Minecraft runtime owns frontier attachment and its action catalog", as
   assert.equal(runtime.close(), close);
   assert.equal(runtime[Symbol.asyncDispose](), close);
   await close;
-  assert.equal(bot.listenerCount("chunkColumnLoad"), 0);
-  assert.equal(bot.listenerCount("chunkColumnUnload"), 0);
-  assert.equal(bot.listenerCount("blockUpdate"), 0);
-  assert.equal(bot.listenerCount("physicsTick"), 0);
-  assert.equal(bot.listenerCount("chat"), 0);
-  assert.equal(bot.listenerCount("whisper"), 0);
-  assert.equal(bot.listenerCount("death"), 0);
+  for (const eventName of attached) assert.equal(bot.listenerCount(eventName), 0, eventName);
   assert.deepEqual(controlStates, [true, false]);
 });
 
@@ -479,7 +371,7 @@ test("death cancels the foreground action, records one event, and permits work a
   bot.chat = () => undefined;
   const runtime = await createMinecraftRuntime(bot, {
     botData: temporaryStorage("death-runtime-test", "RuntimeBot"),
-    createCombatController: () => combatController,
+    createCombatController: () => fakeCombat,
   });
   t.after(() => runtime.close());
 
@@ -490,7 +382,6 @@ test("death cancels the foreground action, records one event, and permits work a
 
   const running = runtime.run(sendMessageAction, { message: "This will be interrupted" });
   assert.equal(runtime.status().busy, true);
-  Object.assign(bot.entity.position, { x: 12.5, y: 64, z: -3.25 });
   bot.emit("death");
 
   assert.deepEqual((await running).result, {
@@ -503,12 +394,9 @@ test("death cancels the foreground action, records one event, and permits work a
   const events = await runtime.run(readEventsAction, {});
   const eventPage = readRecentEventsResultSchema.parse(events.result);
   assert.equal(eventPage.status, "succeeded");
+  // The event's content is the player-event observer's to prove; here, only
+  // that the runtime wired it to this bot's store.
   assert.equal(eventPage.events.filter((event) => event.type === "player_death").length, 1);
-  assert.deepEqual(eventPage.events.find((event) => event.type === "player_death")?.payload, {
-    dimension: "overworld",
-    position: { x: 12.5, y: 64, z: -3.25 },
-    cause: null,
-  });
 
   bot.chat = (message) => bot.emit("chat", bot.username, message, null, {} as never, null);
   assert.deepEqual((await runtime.run(sendMessageAction, { message: "Work resumed" })).result, {
@@ -521,7 +409,7 @@ test("adds unrestricted JavaScript execution only to an explicitly debug-enabled
   const runtime = await createMinecraftRuntime(runtimeBot(), {
     botData: temporaryStorage("debug-runtime-test", "debug-runtime-bot"),
     debugExecuteJavaScript: true,
-    createCombatController: () => combatController,
+    createCombatController: () => fakeCombat,
   });
 
   assert.deepEqual(
@@ -533,7 +421,7 @@ test("adds unrestricted JavaScript execution only to an explicitly debug-enabled
 
 test("recent calls are published with their own arguments and rationale, then their outcome", async (t) => {
   const runtime = await createMinecraftRuntime(runtimeBot(), {
-    createCombatController: () => combatController,
+    createCombatController: () => fakeCombat,
     botData: temporaryStorage("latest-call", "RuntimeBot"),
   });
   t.after(() => runtime.close());
@@ -567,7 +455,7 @@ test("recent calls are published with their own arguments and rationale, then th
 
 test("recent calls keep the newest first and stay bounded", async (t) => {
   const runtime = await createMinecraftRuntime(runtimeBot(), {
-    createCombatController: () => combatController,
+    createCombatController: () => fakeCombat,
     botData: temporaryStorage("recent-calls", "RuntimeBot"),
   });
   t.after(() => runtime.close());

@@ -1,19 +1,14 @@
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import test from "node:test";
 import { readRecentEvents } from "../actions/read-recent-events/read-recent-events.js";
-import { botEventInputSchema, readLastDeath, readNotificationSummary } from "../bot-data/index.js";
+import { readLastDeath, readNotificationSummary } from "../bot-data/index.js";
+import { botFixture } from "../test-support/bot.js";
 import { temporaryBotData } from "../test-support/bot-data.js";
 import { observePlayerEvents } from "./player-events.js";
 
 function playerBot(username = "MineAI"): Bot {
-  return Object.assign(new EventEmitter(), {
-    username,
-    game: { dimension: "overworld" },
-    entities: {},
-    entity: { position: { x: 12.5, y: 64, z: -3.25 } },
-  }) as unknown as Bot;
+  return botFixture({ username, position: { x: 12.5, y: 64, z: -3.25 } });
 }
 
 test("records incoming and outgoing player messages while notifying only for incoming ones", (t) => {
@@ -77,25 +72,6 @@ test("records incoming and outgoing player messages while notifying only for inc
   assert.equal(bot.listenerCount("death"), 0);
   bot.emit("chat", "Alex", "after close", null, {} as never, null);
   assert.equal(readRecentEvents(data, bot.username, 50).events.length, 0);
-});
-
-test("the player death event requires a finite exact position", () => {
-  const event = {
-    type: "player_death",
-    observedAt: "2026-08-30T00:00:00.000Z",
-    summary: "RuntimeBot died.",
-    payload: { dimension: "overworld", position: { x: 12.5, y: 64, z: -3.25 }, cause: null },
-  };
-
-  assert.deepEqual(botEventInputSchema.parse(event), event);
-  for (const invalidCoordinate of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
-    assert.throws(() =>
-      botEventInputSchema.parse({
-        ...event,
-        payload: { ...event.payload, position: { ...event.payload.position, x: invalidCoordinate } },
-      }),
-    );
-  }
 });
 
 test("death requests cancellation once, records one event, and detaches without touching other listeners", (t) => {

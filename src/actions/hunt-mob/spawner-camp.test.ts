@@ -30,12 +30,10 @@ function fixture(waitMs = 15) {
   };
 }
 
-test("normal hunting defaults to no wait; camping requires explicit finite patience", () => {
-  const input = { mob_name: "blaze", drop_name: "blaze_rod" };
-  assert.equal(parseHuntMobRequest(input).observeForMs, 0);
-  assert.equal(parseHuntMobRequest(input).campSpawner, false);
-  assert.throws(() => parseHuntMobRequest({ ...input, camp_spawner: true }), /positive observe_for_ms/);
-  assert.equal(parseHuntMobRequest({ ...input, camp_spawner: true, observe_for_ms: 100 }).campSpawner, true);
+test("camping a spawner requires explicit finite patience", () => {
+  const input = { mob_name: "blaze", drop_name: "blaze_rod", camp_spawner: true };
+  assert.throws(() => parseHuntMobRequest(input), /positive observe_for_ms/);
+  assert.equal(parseHuntMobRequest({ ...input, observe_for_ms: 100 }).campSpawner, true);
 });
 
 test("an empty camp returns observation_exhausted after one return and a finite wait", async () => {

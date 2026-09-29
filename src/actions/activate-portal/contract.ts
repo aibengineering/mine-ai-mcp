@@ -1,6 +1,5 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 
 export const ACTIVATE_PORTAL = "activate_portal" as const;
 export const ACTIVATE_PORTAL_DESCRIPTION =
@@ -14,9 +13,6 @@ export const activatePortalInputSchema = z.strictObject({
   z: coordinate("Z"),
 });
 export type ActivatePortalRequest = z.output<typeof activatePortalInputSchema>;
-export function parseActivatePortalRequest(input: unknown): ActivatePortalRequest {
-  return activatePortalInputSchema.parse(input ?? {});
-}
 
 const position = z.strictObject({ x: z.number().int(), y: z.number().int(), z: z.number().int() });
 export const netherPortalFrameSchema = z.strictObject({
@@ -50,10 +46,3 @@ export const activatePortalResultSchema = actionResultSchema({
 });
 export type PortalActivationEvidence = z.output<typeof portalActivationEvidenceSchema>;
 export type ActivatePortalResult = z.output<typeof activatePortalResultSchema>;
-export type ActivatePortalOutput = ActionOutput<typeof ACTIVATE_PORTAL, ActivatePortalResult>;
-
-export const activatePortalAnnotations = {
-  destructiveHint: true,
-  idempotentHint: true,
-  openWorldHint: true,
-} satisfies ToolAnnotations;

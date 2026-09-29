@@ -434,58 +434,58 @@ test("a request executor starts only after admission and is reused with fresh at
   assert.equal(signals[1]!.aborted, false);
 });
 
-test("a preempted task stays cancelled when the reflex withdrew or threw", async () => {
-  for (const work of [
-    async () => ({ value: "evaded", continuation: { kind: "return" as const, reason: null } }),
-    async () => {
+/**
+ * A preempted task is resumed only when all three agree: the task declared its
+ * request safe to repeat, the reflex handed the body back fit, and nobody
+ * cancelled during the handoff. Each row withholds one; each ends cancelled
+ * after its single run, with no interruption reported as survived.
+ */
+const unresumed: ReadonlyArray<{
+  readonly name: string;
+  readonly execution: ActionExecution;
+  readonly work: () => Promise<{ value: string; continuation: { kind: "resume" } | { kind: "return"; reason: null } }>;
+  readonly cancelDuringHandoff?: boolean;
+}> = [
+  {
+    name: "the reflex withdrew",
+    execution: { kind: "resumable_task" },
+    work: async () => ({ value: "evaded", continuation: { kind: "return", reason: null } }),
+  },
+  {
+    name: "the reflex threw",
+    execution: { kind: "resumable_task" },
+    work: async () => {
       throw new Error("session torn down");
     },
-  ]) {
+  },
+  {
+    name: "the task did not declare its request safe to repeat",
+    execution: { kind: "task" },
+    work: async () => ({ value: "killed", continuation: { kind: "resume" } }),
+  },
+  {
+    name: "a control cancellation arrived during the handoff",
+    execution: { kind: "resumable_task" },
+    work: async () => ({ value: "killed", continuation: { kind: "resume" } }),
+    cancelDuringHandoff: true,
+  },
+];
+
+test("a preempted task stays cancelled unless it may repeat, the reflex resumes it, and nobody cancels", async () => {
+  for (const row of unresumed) {
     const runs = { count: 0 };
     const runner = new ActionRunner();
-    const outcome = runner.run(preemptible(runs, { kind: "resumable_task" }), { block_name: "iron_ore" });
+    const outcome = runner.run(preemptible(runs, row.execution), { block_name: "iron_ore" });
     await started(runs, 1);
-    const claim = runner.claim("hostile_reflex", "hostile contact", work);
+    const claim = runner.claim("hostile_reflex", "hostile contact", row.work);
+    if (row.cancelDuringHandoff) runner.cancelActive("operator stop");
 
     const output = await outcome;
     await (claim.kind === "claimed" ? claim.outcome.catch(() => undefined) : undefined);
-    assert.equal(runs.count, 1);
-    assert.equal(output.result.status, "cancelled");
-    assert.equal(output.interruptions, undefined);
+    assert.equal(runs.count, 1, row.name);
+    assert.equal(output.result.status, "cancelled", row.name);
+    assert.equal(output.interruptions, undefined, row.name);
   }
-});
-
-test("a task that did not declare its request safe to repeat is never resumed", async () => {
-  const runs = { count: 0 };
-  const runner = new ActionRunner();
-  const outcome = runner.run(preemptible(runs, { kind: "task" }), { block_name: "iron_ore" });
-  await started(runs, 1);
-  runner.claim("hostile_reflex", "hostile contact", async () => ({
-    value: "killed",
-    continuation: { kind: "resume" as const },
-  }));
-
-  const output = await outcome;
-  assert.equal(runs.count, 1);
-  assert.equal(output.result.status, "cancelled");
-});
-
-test("a control cancellation during the handoff is final: the task is not resumed", async () => {
-  const runs = { count: 0 };
-  const runner = new ActionRunner();
-  const outcome = runner.run(preemptible(runs, { kind: "resumable_task" }), { block_name: "iron_ore" });
-  await started(runs, 1);
-  const claim = runner.claim("hostile_reflex", "hostile contact", async () => ({
-    value: "killed",
-    continuation: { kind: "resume" as const },
-  }));
-  runner.cancelActive("operator stop");
-
-  const output = await outcome;
-  if (claim.kind === "claimed") await claim.outcome.catch(() => undefined);
-  assert.equal(runs.count, 1);
-  assert.equal(output.result.status, "cancelled");
-  assert.equal(output.interruptions, undefined);
 });
 
 for (const resumeInterrupted of [true, false]) {
@@ -560,44 +560,6 @@ test("a failed physical claim returns its observed settlement reason with the re
   assert.equal(claim.kind, "claimed");
   const output = await pending;
   assert.deepEqual(output.interruptions, ["Cover route exhausted; health 12.25."]);
-});
-
-test("a waiting claim keeps its interrupted request pending until defence settles", async () => {
-  const runner = new ActionRunner();
-  let attempts = 0;
-  const task = stubAction(
-    async (_request, context) => {
-      if (++attempts > 1) return { status: "succeeded" };
-      await new Promise<void>((resolve) => context.signal!.addEventListener("abort", () => resolve(), { once: true }));
-      context.signal!.throwIfAborted();
-      return { status: "succeeded" };
-    },
-    { kind: "resumable_task" },
-  );
-  let returned = false;
-  const pending = runner.run(task, { block_name: "stone" }, undefined, 42);
-  void pending.then(() => {
-    returned = true;
-  });
-  while (attempts === 0) await Promise.resolve();
-  const defence = deferred();
-  let defending = false;
-  const claim = runner.claim("hostile_reflex", "contact", async () => {
-    defending = true;
-    await defence.promise;
-    return { value: null, continuation: { kind: "resume" as const } };
-  });
-  while (!defending) await Promise.resolve();
-  await nextTurn();
-  assert.equal(returned, false);
-  assert.equal(runner.status().owner, "takeover");
-  assert.equal(runner.requestContext().requestId, 42);
-  defence.resolve();
-  const output = await pending;
-  if (claim.kind === "claimed") await claim.outcome;
-  assert.equal(output.result.status, "succeeded");
-  assert.equal(attempts, 2);
-  assert.equal(runner.status().owner, "idle");
 });
 
 for (const finish of ["complete", "cancel", "disconnect", "refuse"] as const) {

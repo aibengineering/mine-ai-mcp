@@ -2,15 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { collectBlockInputSchema, formatCollectBlockResult, parseCollectBlockRequest } from "./index.js";
-import type { Bot } from "mineflayer";
+import { botFixture } from "../../test-support/bot.js";
 import { inventoryStop, pursuedInventoryStop, settle } from "./collect-block.js";
 
 test("capacity admission allows a clearing break with free space or a compatible partial stack", () => {
   let empty = 4;
   const stacks = [{ name: "cobbled_deepslate", count: 63, stackSize: 64 }];
-  const bot = {
-    inventory: { inventoryStart: 9, inventoryEnd: 45, emptySlotCount: () => empty, items: () => stacks },
-  } as unknown as Bot;
+  const bot = botFixture({ items: stacks });
+  bot.inventory.emptySlotCount = () => empty;
   const request = parseCollectBlockRequest({ block_name: "deepslate", count: 1 });
   const collectable = new Set(["cobbled_deepslate"]);
   assert.equal(inventoryStop(bot, request, collectable), null);
@@ -28,13 +27,14 @@ test("capacity admission allows a clearing break with free space or a compatible
  */
 test("a running collection asks whether the drop being walked to can enter, not whether any matching stack can", () => {
   const stacks = [{ name: "birch_log", count: 3, stackSize: 64 }];
-  const bot = {
-    inventory: { inventoryStart: 9, inventoryEnd: 45, emptySlotCount: () => 0, items: () => stacks },
+  const bot = botFixture({
+    items: stacks,
     entities: {
       7: { id: 7, name: "item", getDroppedItem: () => ({ name: "oak_log" }) },
       8: { id: 8, name: "item", getDroppedItem: () => ({ name: "birch_log" }) },
     },
-  } as unknown as Bot;
+  });
+  bot.inventory.emptySlotCount = () => 0;
   const request = parseCollectBlockRequest({ block_name: "logs", count: 4 });
   const collectable = new Set(["oak_log", "birch_log"]);
   const drop = (entityId: number) => ({ kind: "drop" as const, entityId, position: { x: 0, y: 64, z: 0 } });
@@ -50,7 +50,7 @@ test("a running collection asks whether the drop being walked to can enter, not 
 
 test("sixteen obsidian cannot conceal a casting bucket absent from the final inventory", () => {
   const stacks = [{ name: "obsidian", count: 16 }];
-  const bot = { inventory: { items: () => stacks } } as unknown as Bot;
+  const bot = botFixture({ items: stacks });
   const request = parseCollectBlockRequest({ block_name: "obsidian", count: 16 });
   const result = settle(bot, request, { water_bucket: 1 }, new Set(["obsidian"]), new Vec3(0, 0, 0), {
     status: "satisfied",

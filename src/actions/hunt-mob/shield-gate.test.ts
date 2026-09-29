@@ -12,9 +12,7 @@ import {
   huntBot,
   huntRequest,
   mob,
-  pursueLoaded,
 } from "../../test-support/hunt-mob.js";
-import { parseHuntMobRequest } from "./contract.js";
 import { huntMob, huntMobDependencies } from "./hunt-mob.js";
 
 // The shield gate. The refusal's whole value is that it lands before the bot
@@ -28,106 +26,63 @@ function carryingShield(bot: Bot): Bot {
   return bot;
 }
 
-/** A skeleton by `kind`, a hoglin only by the registry category its `type` contradicts. */
-for (const mobName of ["skeleton", "hoglin"])
-  test(`a shieldless ${mobName} hunt is refused before the pursuit takes a step`, async () => {
+/**
+ * One admission rule, by loadout, policy, override and quarry. A hoglin is
+ * hostile only by the registry category its `type` contradicts, so it is
+ * refused on the same terms as a skeleton. Every refusal is counted against
+ * the pursuit as well as read from the verdict.
+ */
+test("the shield gate admits or refuses a hunt before the pursuit takes a step", async () => {
+  const rows: ReadonlyArray<{
+    readonly mobName: string;
+    readonly hostile: boolean;
+    readonly shield: "none" | "permitted" | "forbidden";
+    readonly override?: boolean;
+    /** Null when admitted; otherwise what the refusal must name to be acted on. */
+    readonly names: RegExp | null;
+  }> = [
+    { mobName: "skeleton", hostile: true, shield: "none", names: /allow_without_shield: true/ },
+    { mobName: "hoglin", hostile: true, shield: "none", names: /allow_without_shield: true/ },
+    { mobName: "skeleton", hostile: true, shield: "forbidden", names: /set_survival_policy/ },
+    { mobName: "skeleton", hostile: true, shield: "permitted", names: null },
+    { mobName: "skeleton", hostile: true, shield: "none", override: true, names: null },
+    { mobName: "chicken", hostile: false, shield: "none", names: null },
+  ];
+  for (const row of rows) {
+    const label = `${row.mobName}, shield ${row.shield}${row.override ? ", override" : ""}`;
     const inventory = { count: 0 };
     const registry = minecraftData("1.21.4");
-    const bot = huntBot([mob(7, registry.entitiesByName[mobName]!.id, mobName, 3, "Hostile mobs")], inventory);
+    const quarry = mob(7, registry.entitiesByName[row.mobName]!.id, row.mobName, 3, row.hostile ? "Hostile mobs" : undefined);
+    const bot = huntBot([quarry], inventory);
+    if (row.shield !== "none") carryingShield(bot);
     let pursued = 0;
-    const result = await huntMob(bot, huntRequest(mobName), {}, {
-      ...dependencies(bot, inventory, []),
+    const effects = dependencies(bot, inventory, [died(2, 3)]);
+    const result = await huntMob(bot, huntRequest(row.mobName, row.override), {}, {
+      ...effects,
+      shieldPermitted: () => row.shield !== "forbidden",
       pursue: async (pursuit) => {
         pursued += 1;
-        return pursueLoaded(bot)(pursuit);
+        return effects.pursue(pursuit);
       },
     });
 
-    assert.equal(result.status, "failed");
-    assert.equal(result.termination, "shield_required");
-    assert.match(result.error, /HUNT_NO_SHIELD/);
-    assert.match(result.error, /allow_without_shield: true/, "the refusal names the parameter that overrides it");
-    assert.equal(pursued, 0, "the refusal precedes the approach");
-    assert.equal(result.hunt.targetsEngaged, 0);
-  });
-
-test("a carried shield the policy forbids is refused on the same terms as no shield at all", async () => {
-  const inventory = { count: 0 };
-  const registry = minecraftData("1.21.4");
-  const bot = carryingShield(huntBot([mob(7, registry.entitiesByName.skeleton.id, "skeleton", 3, "Hostile mobs")], inventory));
-  const result = await huntMob(bot, huntRequest("skeleton"), {}, {
-    ...dependencies(bot, inventory, []),
-    shieldPermitted: () => false,
-  });
-
-  assert.equal(result.status, "failed");
-  assert.equal(result.termination, "shield_required");
-  assert.match(result.error, /HUNT_NO_SHIELD/);
-  assert.match(result.error, /set_survival_policy/, "a forbidden shield names the policy that forbade it");
+    if (row.names === null) {
+      assert.equal(result.status, "succeeded", label);
+      assert.equal(result.hunt.gained, 1, label);
+      continue;
+    }
+    assert.equal(result.status, "failed", label);
+    assert.equal(result.termination, "shield_required", label);
+    assert.match(result.error, /HUNT_NO_SHIELD/, label);
+    assert.match(result.error, row.names, `${label}: the refusal names what overrides it`);
+    assert.equal(pursued, 0, `${label}: the refusal precedes the approach`);
+    assert.equal(result.hunt.targetsEngaged, 0, label);
+  }
 });
 
-test("a carried, permitted shield admits the hostile hunt without the override", async () => {
-  const inventory = { count: 0 };
-  const registry = minecraftData("1.21.4");
-  const bot = carryingShield(huntBot([mob(7, registry.entitiesByName.skeleton.id, "skeleton", 3, "Hostile mobs")], inventory));
-  const result = await huntMob(bot, huntRequest("skeleton"), {}, dependencies(bot, inventory, [died(2, 3)]));
-
-  assert.equal(result.status, "succeeded");
-  assert.equal(result.hunt.gained, 1);
-});
-
-test("allow_without_shield admits the hunt a missing shield would have refused", async () => {
-  const inventory = { count: 0 };
-  const registry = minecraftData("1.21.4");
-  const bot = huntBot([mob(7, registry.entitiesByName.skeleton.id, "skeleton", 3, "Hostile mobs")], inventory);
-  const result = await huntMob(bot, huntRequest("skeleton", true), {}, dependencies(bot, inventory, [died(2, 3)]));
-
-  assert.equal(result.status, "succeeded");
-  assert.equal(result.hunt.gained, 1);
-});
-
-test("passive quarry is never asked for a shield", async () => {
-  const inventory = { count: 0 };
-  const registry = minecraftData("1.21.4");
-  const bot = huntBot([mob(7, registry.entitiesByName.chicken.id, "chicken", 3)], inventory);
-  const result = await huntMob(bot, huntRequest("chicken"), {}, dependencies(bot, inventory, [died(2, 3)]));
-
-  assert.equal(result.status, "succeeded");
-  assert.equal(result.hunt.gained, 1);
-});
-
-test("a shield lost mid-hunt refuses the next leg rather than the drop already collected", async () => {
-  const inventory = { count: 0 };
-  const registry = minecraftData("1.21.4");
-  const type = registry.entitiesByName.skeleton.id;
-  const bot = carryingShield(huntBot([mob(7, type, "skeleton", 3, "Hostile mobs")], inventory));
-  const result = await huntMob(
-    bot,
-    { ...huntRequest("skeleton"), count: 2, observeForMs: 5_000 },
-    {},
-    {
-      ...dependencies(bot, inventory, [died(2, 3)]),
-      // The shield breaks on the kill, and a second skeleton wanders in during
-      // the observation window, so the next leg re-enters the gate carrying
-      // nothing to block with.
-      collectDropAfterDeath: async () => {
-        inventory.count += 1;
-        bot.inventory.items = () => [];
-        setTimeout(() => {
-          bot.entities[8] = mob(8, type, "skeleton", 5, "Hostile mobs");
-          bot.emit("entitySpawn", bot.entities[8]!);
-        }, 0);
-        return { kind: "collected" };
-      },
-    },
-  );
-
-  assert.equal(result.termination, "shield_required");
-  assert.equal(result.status, "partial", "the drop already collected is not erased by the refusal");
-  assert.equal(result.hunt.gained, 1);
-  assert.equal(result.hunt.targetDeathsObserved, 1, "the leg fought while shielded still happened");
-});
-
+// A shield lost during the hunt re-enters the same gate on the next leg,
+// whether the next enemy was already loaded or wanders in afterwards; the
+// already-loaded case is the one that must also stop before the approach.
 for (const loss of ["broken", "forbidden"] as const) {
   test(`a ${loss} shield stops the real pursuit before approaching the next loaded enemy`, async () => {
     const inventory = { count: 0 };
@@ -182,12 +137,4 @@ test("a shield lost while gathering drops at contact is checked again before eng
   });
   assert.equal(result.termination, "shield_required");
   assert.equal(result.hunt.targetsEngaged, 0);
-});
-
-test("the default request does not opt out of the shield gate", () => {
-  assert.equal(parseHuntMobRequest({ mob_name: "skeleton", drop_name: "bone" }).allowWithoutShield, false);
-  assert.equal(
-    parseHuntMobRequest({ mob_name: "skeleton", drop_name: "bone", allow_without_shield: true }).allowWithoutShield,
-    true,
-  );
 });

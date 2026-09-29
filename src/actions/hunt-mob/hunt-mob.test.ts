@@ -1,7 +1,5 @@
 import minecraftData from "minecraft-data";
-import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import type { NavigationRuntime } from "../../navigation/index.js";
@@ -11,6 +9,7 @@ import type { CombatController } from "../../survival/index.js";
 import { Budgets } from "../../survival/state/budgets.js";
 import { SurvivalPolicyState } from "../../survival/state/survival-policy.js";
 import { createDiscardedItems } from "../../world/discarded-items.js";
+import { botFixture } from "../../test-support/bot.js";
 import {
   dependencies,
   died,
@@ -22,7 +21,6 @@ import {
   outcome,
   type Entity,
 } from "../../test-support/hunt-mob.js";
-import { parseHuntMobRequest } from "./contract.js";
 import {
   createCollectMobDropAction,
   engageTarget,
@@ -32,41 +30,33 @@ import {
   type HuntMobDependencies,
 } from "./hunt-mob.js";
 
-test("a hunt delegates health recovery to combat and preserves its terminal evidence", async () => {
-  const bot = Object.assign(new EventEmitter(), { health: 20 }) as unknown as Bot;
-  const target = mob(7, 1, "blaze", 2, "Hostile mobs");
-  const combat: CombatController = {
-    ...fakeCombat,
-    policy: new SurvivalPolicyState(bot),
-    engage: async (_id, signal) => {
-      bot.health = 11;
-      bot.emit("health");
-      assert.equal(signal.aborted, false, "the hunt does not independently cancel combat recovery");
-      return outcome("capability_blocked", 2, { reason: "recovery", observation: "No food remains." });
-    },
-  };
-  const result = await engageTarget(bot, combat, target, {});
-  assert.equal(result.outcome.kind, "capability_blocked");
-  assert.equal(result.outcome.attacks, 2);
-  if (result.outcome.kind === "capability_blocked") assert.equal(result.outcome.reason, "recovery");
-  assert.equal(bot.listenerCount("health"), 0);
-  assert.equal(bot.listenerCount("entityDead"), 0);
-});
-
-test("the hostile fight boundary does not cancel a passive quarry engagement", async () => {
-  const bot = Object.assign(new EventEmitter(), { health: 20 }) as unknown as Bot;
-  const combat: CombatController = {
-    ...fakeCombat,
-    policy: new SurvivalPolicyState(bot),
-    engage: async (_id, signal) => {
-      bot.health = 11;
-      bot.emit("health");
-      assert.equal(signal.aborted, false, "a passive quarry's wound does not cancel its engagement");
-      return outcome("died", 2);
-    },
-  };
-  const result = await engageTarget(bot, combat, mob(7, 1, "cow", 2), {});
-  assert.equal(result.outcome.kind, "died");
+// A wound during the fight is combat's to answer: for a hostile quarry that
+// is health recovery, for a passive one it is nothing at all. Either way the
+// hunt's own fight boundary must not cancel the engagement, and the outcome
+// combat reports is the one the hunt keeps.
+test("a wound mid-engagement is left to combat and its terminal evidence is kept", async () => {
+  const rows = [
+    { quarry: mob(7, 1, "blaze", 2, "Hostile mobs"), reported: outcome("capability_blocked", 2, { reason: "recovery", observation: "No food remains." }) },
+    { quarry: mob(7, 1, "cow", 2), reported: outcome("died", 2) },
+  ];
+  for (const { quarry, reported } of rows) {
+    const name = quarry.name ?? "quarry";
+    const bot = botFixture();
+    const combat: CombatController = {
+      ...fakeCombat,
+      policy: new SurvivalPolicyState(bot),
+      engage: async (_id, signal) => {
+        bot.health = 11;
+        bot.emit("health");
+        assert.equal(signal.aborted, false, `${name}: the hunt does not cancel combat's engagement`);
+        return reported;
+      },
+    };
+    const result = await engageTarget(bot, combat, quarry, {});
+    assert.deepEqual(result.outcome, reported, name);
+    assert.equal(bot.listenerCount("health"), 0, name);
+    assert.equal(bot.listenerCount("entityDead"), 0, name);
+  }
 });
 
 test("quota attainment waits for handoff and cannot report success when withdrawal is unsafe", async () => {
@@ -285,17 +275,6 @@ test("a terminal reflex interruption returns the hunt's uncollected drop sightin
   assert.equal(output.result.hunt.drops[0]?.collectedByBot, false);
   assert.equal(output.result.hunt.drops[0]?.state, "loaded");
   assert.equal(bot.listenerCount("itemDrop"), 0);
-});
-
-test("normalizes exact registry names and defaults to one requested drop", () => {
-  assert.deepEqual(parseHuntMobRequest({ mob_name: "Minecraft:Sheep", drop_name: "White Wool" }), {
-    campSpawner: false,
-    allowWithoutShield: false,
-    observeForMs: 0,
-    mobName: "sheep",
-    dropName: "white_wool",
-    count: 1,
-  });
 });
 
 test("hunts loaded targets until the requested inventory gain is observed", async () => {
@@ -656,19 +635,6 @@ test("real pursuit reports selected target changes and the refusal that caused t
   assert.equal(result.hunt.targetChanges[0]?.toTargetId, 8);
   assert.match(result.hunt.targetChanges[0]?.reason ?? "", /roof opening is obstructed/);
   assert.match(formatHuntMobResult(result), /retargets: 1/);
-});
-
-test("publishes the action as an intentional destructive task", () => {
-  const action = createCollectMobDropAction(
-    huntBot([], { count: 0 }),
-    fakeNavigation,
-    fakeCombat,
-    createDiscardedItems(),
-  );
-  assert.equal(action.name, "collect_mob_drop");
-  assert.equal(action.execution.kind, "resumable_task");
-  assert.equal(action.annotations?.destructiveHint, true);
-  assert.equal(action.annotations?.readOnlyHint, false);
 });
 
 test("evidence lists quarry as loaded at return, not as the pursuit once scanned it", async () => {
