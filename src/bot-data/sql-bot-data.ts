@@ -15,25 +15,15 @@ import {
 } from "./storage-diagnostics.js";
 
 export { BOT_DATA_SCHEMA };
-export const SQL_BOT_DATA_SCHEMA_VERSION = 1;
-
-/** Extend call statuses without rewriting any historical response payload. */
-function migrateActionResponses(database: DatabaseSync): void {
-  const row = database.prepare("SELECT sql FROM sqlite_master WHERE name = 'action_responses'").get() as { sql: string } | undefined;
-  if (!row || row.sql.includes("'accepted'")) return;
-  database.exec(`BEGIN IMMEDIATE;
-    CREATE TABLE action_responses_async (
-      request_id INTEGER PRIMARY KEY, responded_at TEXT NOT NULL,
-      duration_ms INTEGER NOT NULL CHECK(duration_ms >= 0),
-      status TEXT NOT NULL CHECK(status IN ('succeeded','partial','failed','cancelled','accepted','refused','pending','storage_failed','cancellation_requested')),
-      response_json TEXT NOT NULL CHECK(json_valid(response_json)),
-      FOREIGN KEY(request_id) REFERENCES action_requests(request_id) ON DELETE CASCADE
-    ) STRICT;
-    INSERT INTO action_responses_async SELECT * FROM action_responses;
-    DROP TABLE action_responses;
-    ALTER TABLE action_responses_async RENAME TO action_responses;
-    COMMIT;`);
-}
+/**
+ * The store's shape, recorded in each file's metadata. A file with another
+ * version is refused when it opens rather than migrated: nothing needs a
+ * development-era store kept, and a refused open names the file to recreate,
+ * where an unmigrated one failed deep inside a later query. Version 2 retired
+ * the pre-survival event types, the `notification_state` cursor table, the
+ * `bot_status` row without `time_of_day`, and synchronous-only call statuses.
+ */
+export const SQL_BOT_DATA_SCHEMA_VERSION = 2;
 
 export type SqlBotDataRow = Record<string, SQLOutputValue>;
 
@@ -104,10 +94,7 @@ export class SqlBotData {
     try {
       this.at({ name: "open-bot-data" }, "configure", () => {
         configureDatabase(database, location.kind);
-        validateExistingMetadata(database, metadata);
-        migrateEventReadState(database);
-        migrateBotStatus(database);
-        migrateActionResponses(database);
+        validateExistingMetadata(database, metadata, location);
         database.exec(BOT_DATA_SCHEMA);
         installAndValidateMetadata(database, metadata);
         // Startup may wait for a transient migration/journal lock. Once attached
@@ -275,27 +262,6 @@ export function closeSqlDatabase(database: DatabaseSync): void {
 
 const collectOrphanedStatements = (globalThis as { Bun?: { gc: (synchronous: boolean) => void } }).Bun?.gc;
 
-/** Preserve the cursor created before event reading was separated from notification policy. */
-function migrateEventReadState(database: DatabaseSync): void {
-  const oldTable = database
-    .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'notification_state'")
-    .get();
-  const currentTable = database
-    .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'event_read_state'")
-    .get();
-  if (oldTable !== undefined && currentTable === undefined) {
-    database.exec("ALTER TABLE notification_state RENAME TO event_read_state");
-  }
-}
-
-/** The live-status row is rewritten on every refresh, so an outdated shape is dropped rather than altered. */
-function migrateBotStatus(database: DatabaseSync): void {
-  const columns = database.prepare("SELECT name FROM pragma_table_info('bot_status')").all() as { name: string }[];
-  if (columns.length > 0 && !columns.some((column) => column.name === "time_of_day")) {
-    database.exec("DROP TABLE bot_status");
-  }
-}
-
 function resolveSqlBotDataLocation(storage: BotDataStorage, identity: BotDataIdentity): SqlBotDataLocation {
   if (storage.kind === "temporary") return Object.freeze({ kind: "temporary" });
 
@@ -329,7 +295,11 @@ function configureDatabase(database: DatabaseSync, location: SqlBotDataLocation[
 }
 
 /** Reject incompatible files before schema installation can modify them. */
-function validateExistingMetadata(database: DatabaseSync, expected: ReadonlyMap<string, string>): void {
+function validateExistingMetadata(
+  database: DatabaseSync,
+  expected: ReadonlyMap<string, string>,
+  location: SqlBotDataLocation,
+): void {
   const metadataTable = database
     .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'sql_bot_data_metadata'")
     .get();
@@ -338,10 +308,18 @@ function validateExistingMetadata(database: DatabaseSync, expected: ReadonlyMap<
   const find = database.prepare("SELECT value FROM sql_bot_data_metadata WHERE key = ?");
   for (const [key, expectedValue] of expected) {
     const existing = find.get(key) as { value: string } | undefined;
-    if (existing !== undefined && existing.value !== expectedValue) {
-      throw metadataMismatch(key, expectedValue, existing.value);
-    }
+    if (existing === undefined || existing.value === expectedValue) continue;
+    if (key === "schema_version") throw schemaVersionMismatch(location, existing.value);
+    throw metadataMismatch(key, expectedValue, existing.value);
   }
+}
+
+function schemaVersionMismatch(location: SqlBotDataLocation, found: string): Error {
+  const store = location.kind === "persistent" ? `SQL bot data at ${location.file}` : "SQL bot data";
+  return new Error(
+    `${store} has schema version ${found}, but this runtime reads only schema version ${SQL_BOT_DATA_SCHEMA_VERSION}. ` +
+      "Stores from other versions are not migrated: delete this file (with its -wal and -shm files) to recreate the store.",
+  );
 }
 
 function installAndValidateMetadata(database: DatabaseSync, expected: ReadonlyMap<string, string>): void {

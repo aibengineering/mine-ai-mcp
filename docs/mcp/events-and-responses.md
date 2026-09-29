@@ -72,18 +72,6 @@ The event log captures these event types:
   line reads: "drowned", "was slain by Zombie", "tried to swim in lava".
 - `player_dimension_change`: The bot crossing a portal, with the dimensions
   left and entered and where it arrived.
-- `hostile_encounter`: Combat reflex engagements detailing the response mode
-  (`fight`, `evade`, or `hide`), outcome, health before and after, engaged
-  threat IDs, combat styles used, and for a hide how deep it dug, whether it
-  capped the hole, whether the bot was already enclosed, and what it ate. The
-  outcome `standing_down` is the reflex reporting that it has no response left
-  that could help: a hide could not be built where the bot stands, so the body
-  stays with the model until the bot moves, the blocks it carries change, or
-  its threats do. Nothing is cancelled while that record stands, and the
-  reason names the placement the hide was refused.
-- `hunger_reflex`: A bite the runtime took without being asked when hunger
-  crossed its bar: the food, hunger and saturation before and after, and the
-  action it paused to do so.
 
 ## How does the cursor advance in read_recent_events?
 

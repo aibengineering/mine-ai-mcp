@@ -8,19 +8,7 @@ export interface LastDeath {
   readonly cause: string|null;
 }
 
-export function recordLastDeath(data: SqlBotData, death: LastDeath): void {
-  data.transaction(
-      (database) => database
-                        .prepare(
-                            `INSERT OR REPLACE INTO bot_last_death (bot_id, dimension, x, y, z, observed_at, cause)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                            )
-                        .run(
-                            death.botId, death.dimension, death.position.x, death.position.y, death.position.z,
-                            death.observedAt, death.cause),
-      {name: 'record-last-death'});
-}
-
+/** Written by `recordEvent` with each `player_death` event, so the two cannot disagree. */
 export function readLastDeath(data: SqlBotData, botId: string): LastDeath|null {
   const row = data.read(
       'SELECT bot_id, dimension, x, y, z, observed_at, cause FROM bot_last_death WHERE bot_id = ?',

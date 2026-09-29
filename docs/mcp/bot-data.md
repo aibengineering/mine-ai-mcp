@@ -149,6 +149,10 @@ column names describe individual columns.
 ## What tables and views does bot data provide?
 
 The schema defined in [src/bot-data/bot-data.sql](../../src/bot-data/bot-data.sql)
+carries a version, and the runtime opens only stores written at its own
+version: an older file is refused at open with a message naming both versions,
+and the fix is to delete that `bot-data.sqlite` (with its `-wal` and `-shm`
+files) so the store is recreated. There are no in-place migrations. The schema
 exposes these tables and views:
 
 | Name                       | Type  | Purpose                                                                           |
