@@ -5,6 +5,7 @@ import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { incomingShieldProjectiles } from "../perception/combat/shield-projectiles.js";
 import type { CombatPolicy } from "../policy/combat/contract.js";
 import { guardHealthRefusal } from "../policy/combat/health.js";
+import { holdsShield } from "./equipment.js";
 import { CombatItemUse } from "./item-use.js";
 import { projectileShieldFacing } from "./shield-facing.js";
 
@@ -22,7 +23,7 @@ type RetreatGuardResult = { kind: "finished" } | { kind: "stopped"; reason: stri
 export function retreatGuardLimit(bot: Bot, policy: Readonly<CombatPolicy>): string | null {
   const health = guardHealthRefusal(bot.health, policy);
   if (health) return health;
-  if (bot.inventory.slots[45]?.name !== "shield") return "Stationary projectile guard lost its equipped shield.";
+  if (!holdsShield(bot)) return "Stationary projectile guard lost its equipped shield.";
   return null;
 }
 

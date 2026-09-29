@@ -32,3 +32,19 @@ test("an escape with no physical progress expires without claiming clearance", a
   await assert.rejects(retreat, /stop without another physics tick/);
   assert.equal(controls.get("forward"), false);
 });
+
+test("a retreat releases sprint even when enabling forward movement fails", async () => {
+  const controls = new Map<string, boolean>();
+  const bot = botFixture({}, {
+    setControlState: (control: string, state: boolean) => {
+      if (control === "forward" && state) throw new Error("forward rejected");
+      controls.set(control, state);
+    },
+  });
+
+  await assert.rejects(retreatFromCreepers(bot, new AbortController().signal, () => false), /forward rejected/);
+
+  // Both controls end released; the order is only DisposableStack's unwinding.
+  assert.equal(controls.get("forward"), false);
+  assert.equal(controls.get("sprint"), false);
+});

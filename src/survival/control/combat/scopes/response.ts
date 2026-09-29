@@ -56,12 +56,24 @@ export function answeredResponses(
   policy: () => Readonly<Pick<SurvivalPolicy, "combat" | "food">>,
   survival: SurvivalResources,
 ): Set<string> {
-  const blocked = new Set<string>();
+  return new Set(answeredResponseEntries(bot, policy, survival).keys());
+}
+
+/** The same exclusions by the entry that answered each, for a caller that
+ * also records which failure excluded the response. */
+export function answeredResponseEntries(
+  bot: Bot,
+  policy: () => Readonly<Pick<SurvivalPolicy, "combat" | "food">>,
+  survival: SurvivalResources,
+): Map<string, number> {
+  const entries = new Map<string, number>();
   for (const kind of ["hide", "evade"] as const) {
     const scope = responseScope(bot, policy, kind);
-    if (survival.answered.find(scope.capability, scope.scope)) blocked.add(kind);
+    const entry = survival.answered.find(scope.capability, scope.scope);
+    if (entry) entries.set(kind, entry.id);
   }
   const recovery = recoveryScope(bot, policy, recoveryHealth(policy().combat));
-  if (survival.answered.find(recovery.capability, recovery.scope)) blocked.add("recovery");
-  return blocked;
+  const entry = survival.answered.find(recovery.capability, recovery.scope);
+  if (entry) entries.set("recovery", entry.id);
+  return entries;
 }

@@ -1,9 +1,9 @@
-import minecraftData from "minecraft-data";
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
+import { botFixture } from "../../test-support/bot.js";
 import { combatTestContext } from "../../test-support/combat.js";
 import { DEFAULT_COMBAT_POLICY } from "../policy/combat/contract.js";
 import { hideInPlace } from "./hide.js";
@@ -35,35 +35,32 @@ function botIn(options: {
   readonly equipError?: string;
 }): Bot {
   const events = new EventEmitter();
-  return {
-    on: (event: string, listener: () => void) => {
-      events.on(event, listener);
-      if (event === "physicsTick")
-        queueMicrotask(() => {
-          for (let i = 0; i < 30; i++) events.emit(event);
-        });
+  return botFixture(
+    { items: options.items?.map((item) => ({ ...item })) },
+    {
+      // Each subscription to physicsTick is answered with a burst of thirty
+      // ticks, so a hold's tick-counted waits lapse without a real clock.
+      on: (event: string, listener: () => void) => {
+        events.on(event, listener);
+        if (event === "physicsTick")
+          queueMicrotask(() => {
+            for (let i = 0; i < 30; i++) events.emit(event);
+          });
+      },
+      off: (event: string, listener: () => void) => events.off(event, listener),
+      health: options.health,
+      food: options.food ?? 20,
+      version: "1.21.4",
+      blockAt: options.blockAt,
+      world: { raycast: () => null },
+      clearControlStates: () => undefined,
+      deactivateItem: () => undefined,
+      _client: { write: () => undefined },
+      equip: async () => {
+        if (options.equipError) throw new Error(options.equipError);
+      },
     },
-    off: (event: string, listener: () => void) => events.off(event, listener),
-    health: options.health,
-    food: options.food ?? 20,
-    version: "1.21.4",
-    registry: minecraftData("1.21.4"),
-    game: { gameMode: "survival" },
-    heldItem: null,
-    entity: { id: 1, onGround: true, position: new Vec3(0.5, 64, 0.5), width: 0.6, height: 1.8 },
-    entities: {},
-    inventory: { items: () => options.items ?? [], slots: new Array(46).fill(null) },
-    world: { raycast: () => null },
-    blockAt: options.blockAt,
-    clearControlStates: () => undefined,
-    deactivateItem: () => undefined,
-    setControlState: () => undefined,
-    _client: { write: () => undefined },
-    equip: async () => {
-      if (options.equipError) throw new Error(options.equipError);
-    },
-    waitForTicks: async () => undefined,
-  } as unknown as Bot;
+  );
 }
 
 function hide(bot: Bot): ReturnType<typeof hideInPlace> {

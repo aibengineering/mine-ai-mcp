@@ -3,18 +3,17 @@ import type { Bot, BotEvents } from "mineflayer";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
 import type { ResponseContext } from "../control/combat/context.js";
 import type { CombatController } from "../control/combat/contract.js";
-import { answeredResponses, responseScope } from "../control/combat/scopes/response.js";
+import { answeredResponseEntries, answeredResponses, responseScope } from "../control/combat/scopes/response.js";
 import { CombatPerception } from "../perception/combat/observations.js";
-import { recoveryHealth } from "../policy/combat/health.js";
 import { responsePolicyChanged } from "../policy/combat/permissions.js";
 import { decideHostileReflex } from "../policy/combat/reflex-decision.js";
 
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { BodyAbort } from "../../session/abort.js";
 import { observeCombatDecision } from "../control/combat/observation.js";
-import { recoveryScope } from "../control/combat/scopes/recovery.js";
 import type { ReflexDriver } from "../control/driver.js";
 import { incomingFireball } from "../perception/combat/fireball.js";
+import { ensureOffHandShield, holdsShield, OFF_HAND_SLOT } from "../weapons/equipment.js";
 import { HOSTILE_OBSERVATION_RANGE, isHostile, observeHostileContact } from "../perception/combat/threats.js";
 import { combatDecisionEvidence, decideCombatResponse } from "../policy/combat/decision.js";
 import type { Facts } from "../state/answered.js";
@@ -61,11 +60,6 @@ export function attachHostileReflex(
   let previousPolicy = policy.combat;
   let previousFood = policy.food;
   let closing: Promise<void> | null = null;
-
-  function answered(kind: HostileResponse["kind"], targetId?: number) {
-    const scope = responseScope(bot, () => policy.effective, kind, targetId);
-    return driver.answered.find(scope.capability, scope.scope);
-  }
 
   const context: ResponseContext = {
     perception,
@@ -134,28 +128,35 @@ export function attachHostileReflex(
         transition(policy.endEncounter());
       }
       // Aggression without attribution can require avoidance; it is not an attack authorization.
-      const facts = observeCombatDecision(bot, context);
+      // One read of the answered scopes serves both the decision and the
+      // receipt's entry ids, so the two cannot disagree within a tick.
+      const blocked = answeredResponseEntries(bot, () => policy.effective, driver);
+      const facts = observeCombatDecision(bot, {
+        perception,
+        resolvedIds,
+        attackerIds,
+        survival: driver,
+        policy: policy.combat,
+        food: policy.food,
+        unreachableIds: context.unreachableIds,
+        blockedResponses: new Set(blocked.keys()),
+      });
       const purpose = { kind: "automatic", quarry: policy.quarry } as const;
       const directive = decideCombatResponse(facts, purpose);
-      const prepareShield = policy.combat.shield && bot.inventory.slots[45]?.name !== "shield" &&
+      const prepareShield = policy.combat.shield && !holdsShield(bot) &&
         !bot.usingHeldItem && !bot.currentWindow && bot.inventory.items().some((item) => item.name === "shield") &&
         Object.values(bot.entities).some((entity) => isHostile(entity) &&
           entity.position.distanceTo(bot.entity.position) < HOSTILE_OBSERVATION_RANGE);
       if (!prepareShield && !facts.contacts.length && directive.kind === "none" && !incomingFireball(bot, 16)) return null;
-      const entries = new Map<string, number>();
-      for (const kind of ["hide", "evade"] as const) {
-        const entry = answered(kind);
-        if (entry) entries.set(kind, entry.id);
-      }
+      const entries = new Map(blocked);
       for (const contact of facts.contacts) {
-        const entry = answered("fight", contact.id);
-        if (entry) entries.set("fight", entry.id);
+        const entry = facts.answeredFights.get(contact.id);
+        if (entry !== undefined) entries.set("fight", entry);
       }
-      const recovery = recoveryScope(bot, () => policy.effective, recoveryHealth(policy.combat));
-      const exhaustedRecovery = driver.answered.find(recovery.capability, recovery.scope);
-      if (exhaustedRecovery) entries.set("recovery", exhaustedRecovery.id);
       if (facts.fireball) {
-        const entry = answered("deflect", facts.fireball.id);
+        // The decision facts record only that deflect was answered, not by which entry.
+        const scope = responseScope(bot, () => policy.effective, "deflect", facts.fireball.id);
+        const entry = driver.answered.find(scope.capability, scope.scope);
         if (entry) entries.set("deflect", entry.id);
       }
 
@@ -201,7 +202,7 @@ export function attachHostileReflex(
     facts: (response) =>
       response.kind === "prepare_shield"
         ? { capability: "combat.prepare_shield", response: "prepare_shield", scope: "off-hand",
-            facts: () => ({ offHand: bot.inventory.slots[45]?.name ?? null,
+            facts: () => ({ offHand: bot.inventory.slots[OFF_HAND_SLOT]?.name ?? null,
               shields: bot.inventory.items().filter((item) => item.name === "shield").map((item) => item.slot) }),
             permissions: () => ({ shield: policy.combat.shield }) }
         : responseScope(bot, () => policy.effective, response.kind, "targetId" in response ? response.targetId : undefined),
@@ -210,17 +211,15 @@ export function attachHostileReflex(
         let error: string | null = null;
         try {
           signal.throwIfAborted();
-          if (policy.combat.shield && !bot.usingHeldItem && !bot.currentWindow && bot.inventory.slots[45]?.name !== "shield") {
+          if (policy.combat.shield && !bot.usingHeldItem && !bot.currentWindow) {
             const shield = bot.inventory.items().find((item) => item.name === "shield");
-            if (shield) {
-              await bot.equip(shield, "off-hand");
-              if (bot.inventory.slots[45]?.name !== "shield") error = "Shield equip did not settle in the off-hand.";
-            }
+            if (shield && await ensureOffHandShield(bot, shield) && !holdsShield(bot))
+              error = "Shield equip did not settle in the off-hand.";
           }
         } catch (cause) {
           error = message(cause);
         }
-        return { kind: "shield_prepared", equipped: bot.inventory.slots[45]?.name === "shield", error };
+        return { kind: "shield_prepared", equipped: holdsShield(bot), error };
       }
       activeResponse = directive.kind;
       responseRevision = policy.snapshot().revision;

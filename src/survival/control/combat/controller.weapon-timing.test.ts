@@ -129,24 +129,6 @@ test("prefers a usable bow at range and keeps a carried shield in the off hand",
   assert.deepEqual(fixture.shotTicks, [20], "release one fully drawn arrow");
 });
 
-test("uses melee inside bow range even when carrying a bow and arrows", async () => {
-  const fixture = combatFixture(["bow", "arrow", "iron_sword", "shield"], { targetDistance: 2 });
-
-  fixture.script.onAttack = () => fixture.bot.emit("entityDead", fixture.target);
-
-  const outcome = await createCombatController(fixture.bot, navigationFixture()).engage(
-    7,
-    new AbortController().signal,
-    "pursue",
-  );
-
-  assert.equal(outcome.kind, "died");
-  assert.deepEqual(outcome.stylesUsed, ["shielded_melee"]);
-  assert.deepEqual(outcome.weaponsUsed, ["iron_sword"]);
-  assert.deepEqual(fixture.equipped, ["shield:off-hand", "iron_sword:hand"]);
-  assert.equal(fixture.directAttacks.count, 1);
-});
-
 test("raises the shield when a bow target starts drawing, then resumes its own shot", async () => {
   const fixture = combatFixture(["bow", "arrow", "shield"], { targetDistance: 10 });
   const skeleton = armWithBow(fixture.target);

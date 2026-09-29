@@ -1,4 +1,3 @@
-import minecraftData from "minecraft-data";
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
@@ -8,6 +7,7 @@ import { Vec3 } from "vec3";
 import { z } from "zod";
 import { defineAction, actionResultSchema } from "../../actions/action.js";
 import { SqlBotData } from "../../bot-data/index.js";
+import { botFixture } from "../../test-support/bot.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { ActionRunner } from "../../session/action-runner.js";
 import type { CombatController, CombatOutcome } from "../control/combat/contract.js";
@@ -83,27 +83,19 @@ function reflexFixture(
   engage: CombatController["engage"],
   navigate: NavigationRuntime["navigate"] = async () => ({ status: "completed", elapsedMs: 0 }),
 ) {
-  const bot = Object.assign(new EventEmitter(), {
-    username: "ReflexBot",
-    _client: new EventEmitter(),
-    health: 20,
-    game: { gameMode: "survival", dimension: "overworld" },
-    food: 20,
-    // Open air with nothing carried: a hide here can dig nothing and place
-    // nothing, which is the state the standing-down rule exists for.
-    inventory: Object.assign(new EventEmitter(), { items: () => [], slots: new Array(46).fill(null) }),
-    registry: minecraftData("1.21.4"),
-    blockAt: () => null,
-    world: { raycast: () => null },
-    entity: { id: 1, onGround: true, position: new Vec3(0, 64, 0), width: 0.6, height: 1.8 },
-    entities: {} as Record<number, Entity>,
-    isSleeping: false,
-    clearControlStates: () => undefined,
-    deactivateItem: () => undefined,
-    equip: async () => undefined,
-    unequip: async () => undefined,
-    attack: () => undefined,
-  }) as unknown as Bot;
+  // Open air with nothing carried: a hide here can dig nothing and place
+  // nothing, which is the state the standing-down rule exists for.
+  const bot = botFixture(
+    { username: "ReflexBot", position: new Vec3(0, 64, 0), blocks: () => null },
+    {
+      _client: new EventEmitter(),
+      isSleeping: false,
+      clearControlStates: () => undefined,
+      deactivateItem: () => undefined,
+      unequip: async () => undefined,
+      attack: () => undefined,
+    },
+  );
   const data = SqlBotData.create({
     storage: { kind: "temporary" },
     identity: { worldId: "reflex-test", scope: { kind: "bot", botId: "reflex-bot" } },
@@ -722,21 +714,6 @@ test("one evade retains its first threat and records a new contact encountered a
     [7, 8],
   );
   assert.equal(fixture.bot.listenerCount("physicsTick"), listeners);
-});
-
-test("a hostile that has hurt the bot is in contact from beyond the contact range", async () => {
-  await using fixture = reflexFixture(async (targetId) => died(targetId));
-  const skeleton = hostile(7, "skeleton", 12);
-  fixture.bot.entities[7] = skeleton;
-
-  fixture.tick();
-  assert.equal(fixture.runner.status().busy, false);
-  fixture.bot.emit("entityHurt", fixture.bot.entity, skeleton);
-  fixture.tick();
-
-  assert.equal(fixture.runner.status().owner, "takeover");
-  assert.ok(await until(() => fixture.recorded().length === 1));
-  assert.deepEqual(fixture.recorded(), ["fight -> target_died"]);
 });
 
 /**

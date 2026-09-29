@@ -26,6 +26,7 @@ import {
 } from "../../../world/dragon-hazards.js";
 import { entityHealth, dragonPhase, isDragonLanding, isDragonPerched, observedDragonLandingCenter, perchAttackCell, perchedDragonHead, perchedDragonBodyParts } from "../../../world/end-fight.js";
 import { nearestBodyPoint } from "../../../world/entity-geometry.js";
+import { observedEyeHeight } from "../../../world/block-visibility.js";
 import { REGENERATION_HUNGER } from "../../../world/food.js";
 import { isReplaceableForPlacement } from "../../../world/block-classification.js";
 import { selectPolicyFood } from "../../perception/food.js";
@@ -296,7 +297,7 @@ export class EndCombat {
         observation.blockedBy = "Dragon is beyond the 64-block firing range; move closer or wait for its next pass.";
         return null;
       }
-      const trajectory = bowTrajectory(this.eyePosition().offset(0, -0.1, 0), target, velocity);
+      const trajectory = bowTrajectory(this.bot.entity.position.offset(0, observedEyeHeight(this.bot.entity) - 0.1, 0), target, velocity);
       if (!trajectory || !clearBowTrajectory(trajectory, (p, d, n) => bot.world.raycast(p, d, n))) {
         observation.blockedBy = "No clear intercept from this footing; wait for a pass or move to an exposed position.";
         return null;
@@ -887,7 +888,7 @@ export class EndCombat {
       if (blastUnsafe(finalBlast)) continue;
       observation.recordSwing(
         bot.entity.position.floored().equals(observation.staircase.stance),
-        bot.entity.position.offset(0, 1.62, 0).distanceTo(aim),
+        bot.entity.position.offset(0, observedEyeHeight(bot.entity), 0).distanceTo(aim),
         { cover: crystalBlastCoverCell(bot, crystal.position, bot.entity.position), exposure: finalBlast.exposure, damage: finalBlast.damage },
       );
       observation.released(0);
@@ -1047,7 +1048,7 @@ export class EndCombat {
           const cleared = await this.clearPerchSightline(block.position.offset(0.5, 0.5, 0.5), signal, changed);
           return cleared.kind === "arrived" ? { kind: "changed" } : cleared;
         }
-    const eye = this.eyePosition();
+    const eye = this.bot.entity.position.offset(0, observedEyeHeight(this.bot.entity), 0);
     // Open a small arrival window, including lower/higher body-eye positions.
     // Visibility is observable; a native unseen-player cache is not.
     for (const dx of [-1, 0, 1]) for (const dy of [-1, 0, 1]) for (const dz of [-1, 0, 1]) {
@@ -1134,7 +1135,7 @@ export class EndCombat {
    * or the observed perch pose makes the current block unsafe to work on. */
   private async clearPerchSightline(point: Vec3, signal: AbortSignal, changed: () => boolean): Promise<EndMoveResult> {
     await this.bot.lookAt(point, true);
-    const eye = this.eyePosition();
+    const eye = this.bot.entity.position.offset(0, observedEyeHeight(this.bot.entity), 0);
     const ray = point.minus(eye);
     const length = ray.norm();
     if (length === 0) return { kind: "changed" };
@@ -1170,11 +1171,6 @@ export class EndCombat {
     } finally {
       this.bot.off("physicsTick", watch);
     }
-  }
-
-  private eyePosition(): Vec3 {
-    const entity = this.bot.entity as Bot["entity"] & { eyeHeight?: number };
-    return entity.position.offset(0, entity.eyeHeight ?? 1.62, 0);
   }
 
   // TODO(dragon combat): revisit after the 2026-09-14 qualification (one full
@@ -1423,7 +1419,7 @@ export class EndCombat {
           await this.tick(signal);
           continue;
         }
-        const aim = nearestBodyPoint(bot.entity.position.offset(0, 1.62, 0), target);
+        const aim = nearestBodyPoint(bot.entity.position.offset(0, observedEyeHeight(bot.entity), 0), target);
         if (!canMeleeTarget(bot, target)) {
           observation.blockedBy = `Clearing the observed block between the low stance and ${target.name}.`;
           report("clearing_part_sightline", { aim: point(aim) });

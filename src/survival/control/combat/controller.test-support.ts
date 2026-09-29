@@ -3,13 +3,13 @@
  * target, a refusing navigation runtime, and the arenas the cover and roof
  * tests plan against. Like `*.test.ts`, this file is left out of the build.
  */
-import minecraftData from "minecraft-data";
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { Vec3 } from "vec3";
 import type { NavigationRuntime } from "../../../navigation/index.js";
 import { MemoryWorld } from "../../../navigation/world/memory-world.js";
+import { botFixture, registry } from "../../../test-support/bot.js";
 import { createTestCombatController as createCombatController } from "../../../test-support/combat.js";
 import { observation } from "../../../test-support/navigation.js";
 import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
@@ -172,7 +172,7 @@ export function armWithBow(target: Entity): { drawing: (active: boolean) => void
 
 /**
  * A scripted bot fighting target #7 (a zombie `targetDistance` blocks along +x)
- * with each of `items` carried once. It records every equipment, item-use,
+ * with a full stack of each of `items`. It records every equipment, item-use,
  * control and attack effect, and its physics clock advances one tick per
  * macrotask while anything listens for `physicsTick`. Test files stop the clocks
  * with `afterEach(stopCombatFixtureClocks)`.
@@ -202,7 +202,6 @@ export function combatFixture(
   const attackTicks: number[] = [];
   const shotTicks: number[] = [];
   let using: "idle" | "bow" | "shield" = "idle";
-  const events = new EventEmitter();
   const target = {
     id: 7,
     name: "zombie",
@@ -211,8 +210,7 @@ export function combatFixture(
     width: 0.6,
     position: new Vec3(options.targetDistance ?? 2, 64, 0),
   } as Entity;
-  const inventory = items.map((name, type) => ({ name, type }));
-  const slots: unknown[] = new Array(46).fill(null);
+  const slots: Record<number, { name: string } | null> = {};
   const equipped: string[] = [];
   const unequipped: string[] = [];
   const itemUse: boolean[] = [];
@@ -225,72 +223,77 @@ export function combatFixture(
     ? { name: options.startingHeld, type: -1 }
     : null;
 
-  const bot = Object.assign(events, {
-    _client: new EventEmitter(),
-    game: { dimension: "overworld" },
-    entities: { [target.id]: target },
-    entity: { id: 2, yaw: 0, position: new Vec3(0, 64, 0) },
-    world: { raycast: () => null },
-    blockAt: () => null,
-    // Only the approach's movement policy reads this; it is what an unreachable target costs to test.
-    registry: minecraftData("1.21.4"),
-    heldItem: null,
-    inventory: Object.assign(new EventEmitter(), { items: () => inventory, slots }),
-    equip: async (item: { name: string; type: number }, destination: string) => {
-      equipped.push(`${item.name}:${destination}`);
-      if (destination === "hand") heldItem = item;
-      if (destination === "off-hand") slots[45] = item;
+  // The shared double with this fixture's recorders as overrides. The entity
+  // keeps the bare id, yaw and position these tests were written against: a
+  // test that needs a body size or footing sets it, as blazeCoverArena does.
+  const bot: Bot = botFixture(
+    {
+      // A full stack of each: one bow or shield, but enough blocks to build a
+      // cover and enough arrows that no test runs out by accident.
+      items: items.map((name, type) => ({ name, type, count: registry.itemsByName[name]?.stackSize ?? 1 })),
+      slots,
+      blocks: () => null,
+      entities: { [target.id]: target },
     },
-    unequip: async (destination: string) => {
-      unequipped.push(destination);
-      if (destination === "hand") heldItem = null;
+    {
+      _client: new EventEmitter(),
+      entity: { id: 2, yaw: 0, position: new Vec3(0, 64, 0) },
+      world: { raycast: () => null },
+      equip: async (item: { name: string; type: number }, destination: string) => {
+        equipped.push(`${item.name}:${destination}`);
+        if (destination === "hand") heldItem = item;
+        if (destination === "off-hand") slots[45] = item;
+      },
+      unequip: async (destination: string) => {
+        unequipped.push(destination);
+        if (destination === "hand") heldItem = null;
+      },
+      quickBarSlot: 0,
+      setQuickBarSlot: (slot: number) => {
+        timeline.push(`slot:${slot}`);
+        (bot as { quickBarSlot: number }).quickBarSlot = slot;
+        using = "idle";
+        bot.usingHeldItem = false;
+      },
+      activateItem: (offHand = false) => {
+        itemUse.push(offHand);
+        timeline.push(offHand ? "shield-up" : "item-use");
+        using = offHand ? "shield" : "bow";
+        bot.usingHeldItem = true;
+      },
+      deactivateItem: () => {
+        itemUse.push(false);
+        timeline.push("item-down");
+        const shot = using === "bow";
+        using = "idle";
+        bot.usingHeldItem = false;
+        if (shot) {
+          shotTicks.push(clock.tick);
+          script.onShot?.();
+        }
+      },
+      clearControlStates: () => {
+        controlsCleared.count += 1;
+        activeControls.clear();
+      },
+      setControlState: (control: string, active: boolean) => {
+        controls.push(control);
+        if (active) activeControls.add(control);
+        else activeControls.delete(control);
+      },
+      waitForTicks: (ticks: number) => waitForPhysicsTicks(bot, ticks, new AbortController().signal),
+      lookAt: async (point: Vec3) => {
+        timeline.push("look");
+        bot.entity.yaw = Math.atan2(bot.entity.position.x - point.x, bot.entity.position.z - point.z);
+      },
+      attack: () => {
+        directAttacks.count += 1;
+        timeline.push("attack");
+        attackTicks.push(clock.tick);
+        script.onAttack?.();
+      },
     },
-    quickBarSlot: 0,
-    usingHeldItem: false,
-    setQuickBarSlot: (slot: number) => {
-      timeline.push(`slot:${slot}`);
-      (bot as { quickBarSlot: number }).quickBarSlot = slot;
-      using = "idle";
-      bot.usingHeldItem = false;
-    },
-    activateItem: (offHand = false) => {
-      itemUse.push(offHand);
-      timeline.push(offHand ? "shield-up" : "item-use");
-      using = offHand ? "shield" : "bow";
-      bot.usingHeldItem = true;
-    },
-    deactivateItem: () => {
-      itemUse.push(false);
-      timeline.push("item-down");
-      const shot = using === "bow";
-      using = "idle";
-      bot.usingHeldItem = false;
-      if (shot) {
-        shotTicks.push(clock.tick);
-        script.onShot?.();
-      }
-    },
-    clearControlStates: () => {
-      controlsCleared.count += 1;
-      activeControls.clear();
-    },
-    setControlState: (control: string, active: boolean) => {
-      controls.push(control);
-      if (active) activeControls.add(control);
-      else activeControls.delete(control);
-    },
-    waitForTicks: (ticks: number) => waitForPhysicsTicks(events, ticks, new AbortController().signal),
-    lookAt: async (point: Vec3) => {
-      timeline.push("look");
-      bot.entity.yaw = Math.atan2(bot.entity.position.x - point.x, bot.entity.position.z - point.z);
-    },
-    attack: () => {
-      directAttacks.count += 1;
-      timeline.push("attack");
-      attackTicks.push(clock.tick);
-      script.onAttack?.();
-    },
-  }) as unknown as Bot;
+  );
   Object.defineProperty(bot, "heldItem", { get: () => heldItem });
   // Physics is independent of the controller's wait API, as it is on a server.
   // A new listener starts the fixture clock; the test owns its final cleanup.
@@ -300,14 +303,14 @@ export function combatFixture(
     if (scheduled || stopped) return;
     scheduled = setImmediate(() => {
       scheduled = null;
-      if (stopped || events.listenerCount("physicsTick") === 0) return;
+      if (stopped || bot.listenerCount("physicsTick") === 0) return;
       clock.tick++;
       script.onWait?.();
-      events.emit("physicsTick");
+      bot.emit("physicsTick");
       schedule();
     });
   };
-  events.on("newListener", (event) => {
+  (bot as unknown as EventEmitter).on("newListener", (event) => {
     if (event === "physicsTick") schedule();
   });
   fixtureClocks.add(() => {

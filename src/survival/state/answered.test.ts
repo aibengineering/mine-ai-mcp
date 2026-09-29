@@ -38,19 +38,14 @@ test("failed recovery does not erase enclosure or rearm on damage", () => {
   assert.equal(answered.find("recovery", "protected-cell"), null);
 });
 
-test("only a declared temporal premise expires, and one arrangement cannot exclude another", () => {
-  let now = 100;
-  const answered = new Answered(() => now);
+test("one arrangement cannot exclude another", () => {
+  const answered = new Answered();
   const scope = { capability: "position", response: "fight", scope: "A", facts: () => null, permissions: () => null };
-  answered.remember(scope, { kind: "unproductive", why: "No requested-target damage." });
-  answered.remember(
-    { ...scope, scope: "B" },
-    { kind: "projectile_window", why: "Shot still crossing the opening." },
-    { premise: "flight_complete", expiresAt: 200, why: "Observed launch and predicted flight duration." },
-  );
-  now = 200;
-  assert.ok(answered.find("position", "A"));
-  assert.equal(answered.find("position", "B"), null);
+  const a = answered.remember(scope, { kind: "unproductive", why: "No requested-target damage." });
+  // Remembering scope B replaces only an earlier B of the same capability.
+  const b = answered.remember({ ...scope, scope: "B" }, { kind: "projectile_window", why: "Shot still crossing the opening." });
+  assert.equal(answered.find("position", "A")?.id, a.id);
+  assert.equal(answered.find("position", "B")?.id, b.id);
   answered.clear();
   assert.deepEqual(answered.snapshot(), []);
 });

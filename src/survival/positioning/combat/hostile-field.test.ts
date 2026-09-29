@@ -2,6 +2,7 @@ import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
+import { botFixture, registry } from "../../../test-support/bot.js";
 import type { HostileContext } from "../../control/combat/context.js";
 import { DEFAULT_COMBAT_POLICY, type CombatPolicy } from "../../policy/combat/contract.js";
 import { DEFAULT_NAVIGATION_POLICY } from "../../policy/contract.js";
@@ -35,32 +36,39 @@ interface BotOptions {
 }
 
 function botWith(mobs: readonly Mob[], options: BotOptions = {}): Bot {
-  return {
-    health: options.health ?? 20,
-    // Night, because a spider is only priced as a threat while it is one.
-    time: { timeOfDay: 18_000 },
-    blockAt: () => null,
-    world: { raycast: options.raycast ?? (() => null) },
-    registry: { entitiesByName: { piglin: { metadataKeys: ["mob_flags"] } } },
-    entity: { id: 1, position: new Vec3(0, 0, 0), width: 0.6, height: 1.8 },
-    entities: Object.fromEntries(
-      mobs.map((mob) => [
-        mob.id,
-        {
-          id: mob.id,
-          name: mob.name,
-          displayName: mob.name,
-          type: "hostile",
-          kind: "kind" in mob ? mob.kind : "Hostile mobs",
-          isValid: true,
-          metadata: mob.metadata ?? [],
-          position: new Vec3(mob.x, mob.y ?? 0, mob.z ?? 0),
-          width: 0.6,
-          height: 1.95,
-        },
-      ]),
-    ),
-  } as unknown as Bot;
+  return botFixture(
+    {
+      position: new Vec3(0, 0, 0),
+      blocks: () => null,
+      // Night, because a spider is only priced as a threat while it is one.
+      time: { timeOfDay: 18_000 },
+      entities: Object.fromEntries(
+        mobs.map((mob) => [
+          mob.id,
+          {
+            id: mob.id,
+            name: mob.name,
+            displayName: mob.name,
+            type: "hostile",
+            kind: "kind" in mob ? mob.kind : "Hostile mobs",
+            isValid: true,
+            metadata: mob.metadata ?? [],
+            position: new Vec3(mob.x, mob.y ?? 0, mob.z ?? 0),
+            width: 0.6,
+            height: 1.95,
+          },
+        ]),
+      ),
+    },
+    { health: options.health ?? 20, world: { raycast: options.raycast ?? (() => null) } },
+  );
+}
+
+/** Piglin metadata with `mob_flags` at its 1.21.4 index. */
+function piglinFlags(flags: number): unknown[] {
+  const metadata: unknown[] = [];
+  metadata[registry.entitiesByName.piglin!.metadataKeys!.indexOf("mob_flags")] = flags;
+  return metadata;
 }
 
 function context(
@@ -97,20 +105,30 @@ test("an admitted evade keeps proximity costs without repricing its escape as a 
   assert.notEqual(escaping?.fingerprint, ordinary?.fingerprint);
 });
 
-test("a hostile's cost falls off linearly to nothing at its radius", () => {
-  // A zombie: eight blocks of reach, twenty ticks at its own cell. Twenty ticks
-  // is five sprinting blocks, so standing on it is worth a five-block detour.
-  const field = fieldFor([{ id: 7, name: "zombie", x: 0 }]);
+test("a hostile's cost falls off linearly to nothing at its radius, measured in three dimensions", () => {
+  const field = fieldFor([{ id: 7, name: "zombie", x: 0, y: 0, z: 0 }]);
   assert.notEqual(field, null);
   if (!field) return;
 
-  assert.equal(field.costAt(0, 0, 0), 20);
-  assert.equal(field.costAt(2, 0, 0), 15);
-  assert.equal(field.costAt(4, 0, 0), 10);
-  assert.equal(field.costAt(6, 0, 0), 5);
-  // Zero exactly at the radius, and nothing beyond it.
-  assert.equal(field.costAt(8, 0, 0), 0);
-  assert.equal(field.costAt(20, 0, 0), 0);
+  for (const [cell, cost] of [
+    // A zombie: eight blocks of reach, twenty ticks at its own cell. Twenty ticks
+    // is five sprinting blocks, so standing on it is worth a five-block detour.
+    [[0, 0, 0], 20],
+    [[2, 0, 0], 15],
+    [[4, 0, 0], 10],
+    [[6, 0, 0], 5],
+    // Zero exactly at the radius, and nothing beyond it.
+    [[8, 0, 0], 0],
+    [[20, 0, 0], 0],
+    // A hostile below does not price the cell overhead any less than one beside
+    // it prices the cell alongside; a cave ceiling is not a defence the field
+    // knows about, but eight blocks of rock still puts the cell out of reach.
+    [[0, 4, 0], 10],
+    [[0, 8, 0], 0],
+    // Diagonally: five blocks away in the xz plane costs the same as five along one axis.
+    [[3, 0, 4], 20 * (1 - 5 / 8)],
+  ] as const)
+    assert.equal(field.costAt(cell[0], cell[1], cell[2]), cost, `cell ${cell}`);
 });
 
 test("live policy scales capped proximity for evasion and ordinary routes, preserves exposure, and expires", async () => {
@@ -147,20 +165,6 @@ test("live policy scales capped proximity for evasion and ordinary routes, prese
   assert.equal(provider()!.costAt(0, 0, 0), SEVERE_CAP);
   assert.equal(provider()!.fingerprint, original.fingerprint);
   assert.deepEqual(policy.snapshot().overrides, []);
-});
-
-test("distance is measured in three dimensions", () => {
-  const field = fieldFor([{ id: 7, name: "zombie", x: 0, y: 0, z: 0 }]);
-  assert.notEqual(field, null);
-  if (!field) return;
-
-  // A hostile below does not price the cell overhead any less than one beside
-  // it prices the cell alongside; a cave ceiling is not a defence the field
-  // knows about, but eight blocks of rock still puts the cell out of reach.
-  assert.equal(field.costAt(0, 4, 0), 10);
-  assert.equal(field.costAt(0, 8, 0), 0);
-  // Diagonally: five blocks away in the xz plane costs the same as five along one axis.
-  assert.equal(field.costAt(3, 0, 4), 20 * (1 - 5 / 8));
 });
 
 test("the species table prices what each hostile actually does", () => {
@@ -307,9 +311,9 @@ test("the fingerprint does not depend on the order the entity table was in", () 
 });
 
 test("observed aggressive piglin is priced for avoidance without attacker attribution", () => {
-  const piglin = { id: 7, name: "piglin", x: 0, metadata: [4] };
+  const piglin = { id: 7, name: "piglin", x: 0, metadata: piglinFlags(4) };
   assert.ok(fieldFor([piglin])?.costAt(0, 0, 0));
-  assert.equal(fieldFor([{ ...piglin, metadata: [0] }]), null);
+  assert.equal(fieldFor([{ ...piglin, metadata: piglinFlags(0) }]), null);
   assert.equal(fieldFor([piglin], context({ resolved: [7] })), null);
 });
 

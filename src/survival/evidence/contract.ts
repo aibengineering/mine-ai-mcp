@@ -87,7 +87,6 @@ export const survivalStatusSchema = z.strictObject({
       consumed: factsSchema,
       failure: z.strictObject({ kind: z.string(), why: z.string() }),
       since: z.number(),
-      temporal: z.strictObject({ premise: z.string(), expiresAt: z.number(), why: z.string() }).nullable(),
     }),
   ),
   observations: z.strictObject({ missing: z.array(z.string()), stale: z.array(z.string()) }),

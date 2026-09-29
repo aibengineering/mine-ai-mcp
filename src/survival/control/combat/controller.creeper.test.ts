@@ -10,22 +10,6 @@ import { combatFixture, navigationFixture, stopCombatFixtureClocks, type Entity 
 
 afterEach(stopCombatFixtureClocks);
 
-test("a retreat releases sprint even when enabling forward movement fails", async () => {
-  const fixture = combatFixture(["iron_sword"]);
-  const writes: string[] = [];
-  fixture.bot.setControlState = (control, state) => {
-    writes.push(`${control}:${state}`);
-    if (control === "forward" && state) throw new Error("forward rejected");
-  };
-
-  await assert.rejects(
-    retreatFromCreepers(fixture.bot, new AbortController().signal, () => false),
-    /forward rejected/,
-  );
-
-  assert.deepEqual(writes, ["sprint:true", "forward:true", "forward:false", "sprint:false"]);
-});
-
 test("hits a creeper sprinting and sprints clear of its fuse instead of waiting a cooldown beside it", async () => {
   const fixture = combatFixture(["iron_sword", "shield"]);
   fixture.target.name = "creeper";

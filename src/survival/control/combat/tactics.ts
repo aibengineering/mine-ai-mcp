@@ -5,7 +5,7 @@ import type { FightWeapons } from "../../responses/fight/weapons.js";
 import { blastBarrierCells, blastBarrierMaterial } from "../../positioning/combat/blast-barrier.js";
 import { blastBarrierScope } from "./scopes/blast-barrier.js";
 import { permitsHide } from "../../policy/combat/permissions.js";
-import { selectPolicyFood } from "../../perception/food.js";
+import { recoveryAvailable } from "../../perception/combat/recovery.js";
 import { canMeleeTarget } from "../../weapons/melee.js";
 
 /** One interruptible effect under the existing combat owner. Observation selects;
@@ -28,7 +28,7 @@ export class CombatTactics {
     // material check rebuilds Prismarine's Block class (~1.5 ms) on every
     // call, and this runs more than once per tick for every fight.
     const canBuild = creepers.length > 0 && !escapeAvailable && scene.policy.combat.terrain?.place &&
-      permitsHide(scene.policy.combat, bot.food >= 18 || selectPolicyFood(bot, scene.policy.food).food !== null) && blastBarrierMaterial(bot);
+      permitsHide(scene.policy.combat, recoveryAvailable(bot, scene.policy.food)) && blastBarrierMaterial(bot);
     const barrier = canBuild ? blastBarrierCells(bot, creepers).find(cell => {
       const scope = blastBarrierScope(bot, cell, () => scene.policy.combat);
       return !scene.survival.answered.find(scope.capability, scope.scope);

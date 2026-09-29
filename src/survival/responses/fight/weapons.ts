@@ -19,7 +19,9 @@ import { aimPoint } from "../../weapons/aim.js";
 import { bowTrajectory, clearBowTrajectory } from "../../weapons/bow-trajectory.js";
 import {
   BOW_DRAW_TICKS,
+  ensureOffHandShield,
   equipCombatLoadout,
+  holdsShield,
   MELEE_RANGE,
   selectCombatLoadout,
   selectMeleeLoadout,
@@ -363,7 +365,7 @@ export class FightWeapons {
   readonly currentLoadout = () => this.loadoutFrom(this.scene.bot.entity.position);
   /** A commanded guard is not proof that the off-hand item survived a hit. */
   readonly maintainGuard = async (): Promise<void> => {
-    if (!this.itemUse.shieldRaised || this.scene.bot.inventory.slots[45]?.name === "shield") return;
+    if (!this.itemUse.shieldRaised || holdsShield(this.scene.bot)) return;
     this.itemUse.invalidateShield();
     this.scene.signal.throwIfAborted();
     await this.raiseGuard();
@@ -371,12 +373,9 @@ export class FightWeapons {
   readonly raiseGuard = async () => {
     if (!this.scene.policy.combat.shield) return;
     const shield = this.currentLoadout().shield;
-    if (!shield || (this.itemUse.shieldRaised && this.scene.bot.inventory.slots[45]?.name === "shield")) return;
+    if (!shield || (this.itemUse.shieldRaised && holdsShield(this.scene.bot))) return;
     return this.scene.execution.run("guard", async () => {
-      if (shield && this.scene.bot.inventory.slots[45]?.name !== "shield") {
-        await this.scene.bot.equip(shield, "off-hand");
-        this.itemUse.invalidateShield();
-      }
+      if (await ensureOffHandShield(this.scene.bot, shield)) this.itemUse.invalidateShield();
       this.scene.signal.throwIfAborted();
       await this.itemUse.raiseShield();
     });
