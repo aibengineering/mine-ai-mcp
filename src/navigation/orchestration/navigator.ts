@@ -14,7 +14,7 @@ import type { StepFieldProvider } from "../step-field.js";
 import { silentTelemetry, type TelemetrySink } from "../telemetry/index.js";
 import type { WorldView } from "../world/world.js";
 import { NavigationRun, type RunContext } from "./navigation-run.js";
-import type { NavigationOutcome, NavigationStatus } from "./outcome.js";
+import type { NavigationOutcome } from "./outcome.js";
 import type {
   NavigationArrival,
   NavigationArrivalResult,
@@ -82,7 +82,11 @@ export interface Navigator {
    * caller to remember and for a model to get wrong.
    */
   setStepFieldProvider(provider: StepFieldProvider): void;
-  readonly active: NavigationStatus | null;
+  /**
+   * Whether a run holds admission: from `startRun` until the run has settled
+   * and cleaned up, so a caller never takes the body while a run still has it.
+   */
+  readonly running: boolean;
   cancelActive(reason?: string): void;
   terminateActive(reason: string): void;
 }
@@ -96,7 +100,6 @@ export function createNavigator(dependencies: {
 }): Navigator {
   let activeRun: NavigationRun | undefined;
   let activeControl: AbortController | undefined;
-  let activeStatus: NavigationStatus | null = null;
   let sequence = 0;
   const ledger = new ExpectedMutationLedger();
   const catalogue = dependencies.catalogue ?? createMovementCatalogue();
@@ -104,8 +107,8 @@ export function createNavigator(dependencies: {
   const createId = dependencies.createId ?? (() => `navigation-${Date.now()}-${++sequence}`);
   let stepFieldProvider: StepFieldProvider | null = null;
   return {
-    get active() {
-      return activeStatus;
+    get running() {
+      return activeRun !== undefined;
     },
     setStepFieldProvider(provider) {
       stepFieldProvider = provider;
@@ -132,9 +135,6 @@ export function createNavigator(dependencies: {
       const run = new NavigationRun({
         context,
         request,
-        status: (status) => {
-          if (activeRun === run) activeStatus = status;
-        },
         release: () => {
           if (activeRun === run) {
             activeRun = undefined;

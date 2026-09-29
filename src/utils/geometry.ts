@@ -17,9 +17,9 @@ import { Vec3 } from "vec3";
  * `offset`, `floored` and `distanceTo`.
  */
 export interface Position3 {
-  x: number;
-  y: number;
-  z: number;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
 }
 
 /** Convert any structural position into this package's Vec3 implementation. */

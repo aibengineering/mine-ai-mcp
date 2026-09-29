@@ -5,8 +5,8 @@ import type { useItemAt } from "../../../world/item-use.js";
 import { HORIZONTAL, sourceFeeding, sourceInSight } from "../../../world/liquid.js";
 import type { PlaceIntoCell } from "../../../world/placement.js";
 import { holdWaterPosition } from "../../steering/hold-water-position.js";
-import { UNLOADED, type BlockPosition } from "../../world/world.js";
-import { observeMineflayerBlock } from "../../mineflayer/world.js";
+import type { BlockPosition } from "../../world/world.js";
+import { blockReader, observeMineflayerBlock } from "../../mineflayer/world.js";
 import { waterMiningStance } from "../../world/water.js";
 
 const touching = (cell: Vec3) => [
@@ -24,11 +24,7 @@ export async function clearMiningWater(
   signal?: AbortSignal,
 ): Promise<string | null> {
   const target = new Vec3(position.x, position.y, position.z);
-  const read = (x: number, y: number, z: number) => {
-    const block = bot.blockAt(new Vec3(x, y, z));
-    return block ? observeMineflayerBlock(block) : UNLOADED;
-  };
-  if (waterMiningStance(read, bot.entity.position.floored(), bot.entity.onGround)) return null;
+  if (waterMiningStance(blockReader(bot), bot.entity.position.floored(), bot.entity.onGround)) return null;
   const wetFaces = () => {
     const above = bot.blockAt(target.offset(0, 1, 0));
     const connected = above && observeMineflayerBlock(above).traits.empty

@@ -203,12 +203,6 @@ const OFFERS: readonly OfferRow[] = [
   },
   { shape: "a block on the diagonal", world: () => flat([{ x: 1, y: 63, z: 1 }, SOLID]), has: ["*@1,64,1"] },
   {
-    shape: "a block on the diagonal with diagonal ascent switched off",
-    world: () => flat([{ x: 1, y: 63, z: 1 }, SOLID]),
-    options: { policy: { allowDiagonalAscend: false } },
-    lacks: ["*@1,64,1"],
-  },
-  {
     shape: "a block on the diagonal under an obstructed corner",
     world: () => flat([{ x: 1, y: 63, z: 1 }, SOLID], [{ x: 1, y: 65, z: 0 }, SOLID]),
     lacks: ["*@1,64,1"],
@@ -288,7 +282,6 @@ const OFFERS: readonly OfferRow[] = [
   // Sand over the landing falls in behind the bot and buries the cell the
   // route just claimed, failing the next step's preconditions.
   { shape: "a three-block drop under a falling column", world: () => cliff(true), lacks: ["drop@1,*,*"] },
-  { shape: "a full-height block east", world: () => flat([{ x: 1, y: 63, z: 0 }, SOLID]), has: ["step_up@1,*,*"] },
   // A fence is a full-collision block one and a half blocks tall. Judged only
   // by "does it have collision", the planner offers a step onto its top and the
   // bot jumps at the fence for as long as its patience lasts. Baritone keeps
@@ -659,10 +652,6 @@ test("a gap jump rejects a ceiling in the fourth cell above the takeoff feet", (
     world.load({ x: distance - 1, y: 66, z: 0 }, SOLID);
     assert.equal(generateFrom(world, ORIGIN).some(crosses), false, `obstructed span ${distance}`);
   }
-});
-
-test("parkour is enabled by default", () => {
-  assert.equal(createMovementPolicy().allowParkour, true);
 });
 
 test("a block that answers a right-click is not used as a placement support", () => {

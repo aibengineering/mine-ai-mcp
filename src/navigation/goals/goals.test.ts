@@ -14,6 +14,7 @@ import {
   itemPickupGoal,
   nearEntityGoal,
   nearGoal,
+  occupyGoal,
 } from "./index.js";
 
 const goalTestWorld = new GoalTestWorld();
@@ -62,6 +63,38 @@ test("goal constructors preserve satisfaction and admissible distance", () => {
   // A satisfied goal must estimate zero. A positive estimate at a node that
   // already answers the goal lets A* defer a destination it has reached.
   assert.equal(near.heuristic(at), 0);
+});
+
+/**
+ * Occupying a block, which is how mining reaches a drop: the target's cell is
+ * one the body stands in. The planner asks a goal about the bot's own feet
+ * before it searches, so a goal that is satisfied where the bot already stands
+ * ends the run without moving. For a mining goal that is a spin: nothing is
+ * broken, the quantity is never met, and the process asks again forever.
+ */
+const OCCUPANCY = [
+  { name: "standing in the target's cell", feet: { x: 5, y: 64, z: -2 }, target: { x: 5, y: 64, z: -2 }, levels: 3, occupied: true },
+  // A player is two blocks tall, so standing one or two below still occupies it.
+  { name: "one below the target", feet: { x: 5, y: 63, z: -2 }, target: { x: 5, y: 64, z: -2 }, levels: 3, occupied: true },
+  { name: "two below the target", feet: { x: 5, y: 62, z: -2 }, target: { x: 5, y: 64, z: -2 }, levels: 3, occupied: true },
+  { name: "one below, two levels", feet: { x: 5, y: 63, z: -2 }, target: { x: 5, y: 64, z: -2 }, levels: 2, occupied: true },
+  // Two-level occupancy excludes the cell two below the target.
+  { name: "two below, two levels", feet: { x: 5, y: 62, z: -2 }, target: { x: 5, y: 64, z: -2 }, levels: 2, occupied: false },
+  { name: "another column", feet: { x: 0, y: 64, z: 0 }, target: { x: 5, y: 64, z: -2 }, levels: 3, occupied: false },
+  // The consequence worth stating, because it is a trap rather than a bug: a
+  // target in the bot's own column at head height is *already* occupied, so
+  // the planner reports the goal reached without moving or breaking anything.
+  // Baritone answers this in `MineProcess.onTick`, which breaks a known
+  // location directly above or below the player itself rather than pathing to it.
+  { name: "a target at head height", feet: { x: 5, y: 64, z: -2 }, target: { x: 5, y: 65, z: -2 }, levels: 3, occupied: true },
+  { name: "a target at the feet", feet: { x: 5, y: 66, z: -2 }, target: { x: 5, y: 66, z: -2 }, levels: 3, occupied: true },
+] as const;
+
+test("occupying a target means standing in its column within reach of the body's height", () => {
+  for (const row of OCCUPANCY) {
+    const goal = active(occupyGoal(row.target, row.levels).resolve({ ...observation(), position: row.feet }));
+    assert.equal(goal.isSatisfied(node(row.feet), goalTestWorld), row.occupied, row.name);
+  }
 });
 
 /**

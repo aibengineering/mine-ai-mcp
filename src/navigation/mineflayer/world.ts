@@ -143,6 +143,14 @@ export function observeMineflayerBlock(block: MineflayerBlock): LoadedBlock {
   );
 }
 
+/** Read the bot's world cell by cell as planning does: an observation, or `UNLOADED` where there is no chunk. */
+export function blockReader(bot: Pick<Bot, "blockAt">): (x: number, y: number, z: number) => BlockObservation {
+  return (x, y, z) => {
+    const block = bot.blockAt(new Vec3(x, y, z));
+    return block ? observeMineflayerBlock(block) : UNLOADED;
+  };
+}
+
 type BlockClass = {
   fromStateId(stateId: number, biomeId: number): MineflayerBlock;
   fromProperties(

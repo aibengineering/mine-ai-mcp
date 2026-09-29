@@ -8,6 +8,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { FakeNavigationBot, flatWorld, observation, onEvent, settle } from "../../test-support/navigation.js";
+import { nextTurn } from "../../test-support/async.js";
 import type { EffectHandle } from "../bot.js";
 import { exactBlockGoal } from "../goals/index.js";
 import { createMovementPolicy } from "../movements/policy.js";
@@ -124,12 +125,12 @@ test("cancelling a pin release stops the effect and waits for its cleanup withou
   if (admission.kind !== "started") assert.fail("busy");
   await issued;
   admission.handle.cancel("stop the escape");
-  await new Promise<void>((resolve) => setImmediate(resolve));
+  await nextTurn();
   assert.equal(cancellations, 1);
-  assert.notEqual(navigator.active, null, "physical cleanup still owns admission");
+  assert.equal(navigator.running, true, "physical cleanup still owns admission");
   finish();
   assert.equal((await admission.handle.outcome).kind, "stopped");
-  assert.equal(navigator.active, null);
+  assert.equal(navigator.running, false);
   assert.equal(bot.ticks.size, 0);
 });
 
@@ -141,7 +142,7 @@ test("cancelling while a second ceiling still pins the body releases the observa
   const navigator = createNavigator({ world, bot });
   const admission = navigator.startRun({ goal: exactBlockGoal({ x: 2, y: 63, z: 0 }), policy: createMovementPolicy() });
   if (admission.kind !== "started") assert.fail("busy");
-  await new Promise<void>((resolve) => setImmediate(resolve));
+  await nextTurn();
   assert.equal(bot.breaks.length, 1);
   assert.equal(bot.ticks.size, 1, "waiting for body clearance");
   admission.handle.cancel();

@@ -391,10 +391,13 @@ function canPlace(context: MovementGenerationContext): boolean {
 function ascend(context: MovementGenerationContext, a: Approach, out: MovementCandidates): void {
   const { x, y, z } = a;
   const from = context.state.node.feet;
+  // Always offered, an intentional difference from Baritone, which gates
+  // diagonal ascent behind an `allowDiagonalAscend` that defaults off: the
+  // movement is useful, its swept volume is checked here, and dedicated
+  // physical fixtures qualify both valid and blocked rises.
   if (
     a.diagonal &&
     !(
-      context.policy.allowDiagonalAscend &&
       isHeadPassable(look(context, from.x + a.dx, y + 2, from.z)) &&
       isHeadPassable(look(context, from.x, y + 2, from.z + a.dz))
     )
@@ -735,7 +738,6 @@ function gapJumps(context: MovementGenerationContext, dx: number, dz: number, ou
 function climb(context: MovementGenerationContext, out: MovementCandidates): void {
   const { x, y, z } = context.state.node.feet;
   const here = context.feetCell;
-  if (!context.policy.allowClimbing) return;
   const insideClimbable = here.kind === "loaded" && here.traits.climbable;
   const below = context.support;
   const overClimbable = below.kind === "loaded" && below.traits.climbable;

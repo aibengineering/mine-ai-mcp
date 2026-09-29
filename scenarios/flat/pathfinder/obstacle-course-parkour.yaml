@@ -81,7 +81,6 @@ tick:
 params:
   target: [30, -58, 2]
   range: 1.5
-  allowDoors: true
 
 goal:
   kind: all

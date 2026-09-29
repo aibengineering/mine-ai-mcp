@@ -29,8 +29,7 @@ import {
   type Navigate,
   type NavigationResult,
 } from "../../index.js";
-import { observeMineflayerBlock } from "../../mineflayer/world.js";
-import { UNLOADED } from "../../world/world.js";
+import { blockReader, observeMineflayerBlock } from "../../mineflayer/world.js";
 import { isSafeSupport } from "../../world/block-geometry.js";
 import { admitsDive, openWaterSurface } from "../../world/swimming.js";
 import { holdWaterPosition } from "../../steering/hold-water-position.js";
@@ -261,10 +260,7 @@ function isDropTarget(
  */
 function workingCells(bot: Bot, target: MineBlockTarget, movements: MovementPolicy): readonly BlockPosition[] {
   const position = target.position;
-  const read = (x: number, y: number, z: number) => {
-    const block = bot.blockAt(new Vec3(x, y, z));
-    return block ? observeMineflayerBlock(block) : UNLOADED;
-  };
+  const read = blockReader(bot);
   return [
     { x: position.x + 1, y: position.y - 1, z: position.z },
     { x: position.x - 1, y: position.y - 1, z: position.z },
@@ -558,10 +554,7 @@ async function sealAndBreakInReach(
   const feet = bot.entity.position.floored();
   const eye = bot.entity.position.offset(0, STANDING_EYE_HEIGHT, 0);
   const currentNeedsPreparation = bot.blockAt(feet)?.name === "water" &&
-    !waterMiningStance((x, y, z) => {
-      const block = bot.blockAt(new Vec3(x, y, z));
-      return block ? observeMineflayerBlock(block) : UNLOADED;
-    }, feet, bot.entity.onGround);
+    !waterMiningStance(blockReader(bot), feet, bot.entity.onGround);
   const target = targeting
     .targets()
     .find(

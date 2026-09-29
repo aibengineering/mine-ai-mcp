@@ -15,7 +15,14 @@ import type { NavigationObservation } from "../world/world.js";
 import { createNavigator } from "./navigator.js";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { FakeNavigationBot, flatWorld, observation, onEvent, settle } from "../../test-support/navigation.js";
+import {
+  countingTelemetry,
+  FakeNavigationBot,
+  flatWorld,
+  observation,
+  onEvent,
+  settle,
+} from "../../test-support/navigation.js";
 
 const walking = () => createMovementPolicy({ allowSprinting: false });
 /** Commit as soon as there is a segment worth walking, so a run is made of continuations rather than one route. */
@@ -37,7 +44,7 @@ test("the service admits one run and settles from observed final state", async (
   const outcome = await admission.handle.outcome;
   assert.equal(outcome.kind, "completed");
   assert.equal(actuator.current.position.x, 2.5);
-  assert.equal(navigator.active, null);
+  assert.equal(navigator.running, false);
   assert.equal(world.listenerCount, 0);
   // Measured after cleanup, so a leak would show here rather than being hidden.
   assert.deepEqual(outcome.evidence.cleanup, { listeners: 0, controls: 0, expectations: 0 });
@@ -72,7 +79,7 @@ test("a run stops in the words of whoever asked, before it moves, and a timeout 
   const byOperator = await admission.handle.outcome;
   assert.equal(byOperator.kind, "stopped");
   if (byOperator.kind === "stopped") assert.equal(byOperator.reason, "operator stop");
-  assert.equal(navigator.active, null);
+  assert.equal(navigator.running, false);
   assert.equal(world.listenerCount, 0);
   assert.equal(byOperator.evidence.cleanup.listeners, 0);
 });
@@ -87,7 +94,8 @@ const BROKEN = [
       };
     },
     message: "control release failed",
-    lastEvents: ["cleanup_completed", "run_settled"],
+    /** A release that throws is still followed by the run reporting its cleanup and settlement. */
+    reports: ["cleanup_completed", "run_settled"],
   },
   {
     name: "a failed world subscription",
@@ -130,8 +138,8 @@ test("a run that cannot set up or clean up reports why, releases the navigator, 
     assert.deepEqual(outcome.failure, { kind: "internal_error", message: row.message }, row.name);
     assert.equal(outcome.evidence.cleanup.listeners, 0, row.name);
     assert.equal(world.listenerCount, 0, row.name);
-    assert.equal(navigator.active, null, row.name);
-    if (row.lastEvents) assert.deepEqual(events.slice(-2), row.lastEvents, row.name);
+    assert.equal(navigator.running, false, row.name);
+    for (const kind of row.reports ?? []) assert.ok(events.includes(kind), `${row.name}: no ${kind}`);
 
     world.subscribe = pristine.subscribe;
     bot.clearOwnedControls = pristine.clearOwnedControls;
@@ -240,22 +248,18 @@ test("an arrival cancelled by observed pickup is stopped rather than an internal
 test("a non-terminal arrival continues under the same navigation run", async () => {
   const actuator = new FakeNavigationBot();
   let destination = 1;
-  const events: string[] = [];
+  let runs = 0;
+  const arrivals: string[] = [];
   const goal: Goal = {
     resolve(observed) {
       return exactBlockGoal({ x: destination, y: 63, z: 0 }).resolve(observed);
     },
   };
-  const navigator = createNavigator({
-    world: flatWorld(),
-    bot: actuator,
-    createId: () => "continuous-process",
-    telemetry: onEvent((event) => {
-      if (event.kind === "run_started") events.push("run");
-      if (event.kind === "search_started") events.push(`search:${event.reason}`);
-      if (event.kind === "goal_arrived") events.push(`arrival:${event.result}`);
-    }),
+  const { counts, telemetry } = countingTelemetry((event) => {
+    if (event.kind === "run_started") runs += 1;
+    if (event.kind === "goal_arrived") arrivals.push(event.result);
   });
+  const navigator = createNavigator({ world: flatWorld(), bot: actuator, createId: () => "continuous-process", telemetry });
   const outcome = await settle(navigator, {
     goal,
     policy: walking(),
@@ -271,35 +275,31 @@ test("a non-terminal arrival continues under the same navigation run", async () 
   assert.equal(outcome.kind, "completed");
   if (outcome.kind !== "completed") return;
   assert.equal(actuator.current.position.x, 2.5);
-  assert.equal(outcome.evidence.searches, 2);
-  assert.equal(outcome.evidence.continuations, 1);
-  assert.equal(outcome.evidence.replans, 0);
-  assert.deepEqual(events, [
-    "run",
-    "search:initial",
-    "arrival:continue",
-    "search:arrival_continuation",
-    "arrival:completed",
-  ]);
+  assert.equal(runs, 1);
+  assert.deepEqual(arrivals, ["continue", "completed"]);
+  assert.equal(counts.searches, 2);
+  assert.equal(counts.continuations, 1);
+  assert.equal(counts.replans, 0);
 });
 
 test("a calculation failure can revise a process goal under the same navigation run", async () => {
   let destination = 5;
-  const events: string[] = [];
+  let runs = 0;
+  const failures: string[] = [];
   const goal: Goal = {
     resolve(observed) {
       return exactBlockGoal({ x: destination, y: 63, z: 0 }).resolve(observed);
     },
   };
+  const { counts, telemetry } = countingTelemetry((event) => {
+    if (event.kind === "run_started") runs += 1;
+    if (event.kind === "calculation_failed") failures.push(event.result);
+  });
   const navigator = createNavigator({
     world: flatWorld(),
     bot: new FakeNavigationBot(),
     createId: () => "continuous-failure",
-    telemetry: onEvent((event) => {
-      if (event.kind === "run_started") events.push("run");
-      if (event.kind === "search_started") events.push(`search:${event.reason}`);
-      if (event.kind === "calculation_failed") events.push(`failure:${event.result}`);
-    }),
+    telemetry,
   });
   const outcome = await settle(navigator, {
     goal,
@@ -312,7 +312,10 @@ test("a calculation failure can revise a process goal under the same navigation 
   });
 
   assert.equal(outcome.kind, "completed");
-  assert.deepEqual(events, ["run", "search:initial", "failure:continue"]);
+  assert.equal(runs, 1);
+  assert.deepEqual(failures, ["continue"]);
+  // The revised goal is already satisfied where the bot stands, so nothing is searched again.
+  assert.equal(counts.searches, 1);
 });
 
 test("the next segment is searched for while the current one is being walked", async () => {
@@ -434,8 +437,9 @@ test("a continuation the bot did not arrive at is stopped, not waited for", asyn
 test("a failed plan-ahead search recalculates inline from the reached endpoint", async () => {
   const actuator = new FakeNavigationBot();
   actuator.current = observation(-5);
+  const { counts, telemetry } = countingTelemetry();
   const outcome = await settle(
-    createNavigator({ world: flatWorld(), bot: actuator, createId: () => "continuation-budget" }),
+    createNavigator({ world: flatWorld(), bot: actuator, createId: () => "continuation-budget", telemetry }),
     {
       goal: nearGoal({ x: 5, y: 63, z: 0 }, 0),
       policy: walking(),
@@ -445,8 +449,8 @@ test("a failed plan-ahead search recalculates inline from the reached endpoint",
   );
 
   assert.equal(outcome.kind, "completed");
-  assert.ok(outcome.evidence.continuations >= 1);
-  assert.ok(outcome.evidence.replans >= 1);
+  assert.ok(counts.continuations >= 1);
+  assert.ok(counts.replans >= 1);
 });
 
 // ── A goal that changes while the run is under way ───────────────────────────
@@ -513,16 +517,13 @@ test("a goal revised during planning keeps a route whose terminal state still sa
   for (const row of PLANNING_REVISIONS) {
     const actuator = new MovingEntityBot();
     let revised = false;
-    const navigator = createNavigator({
-      world: flatWorld(),
-      bot: actuator,
-      telemetry: onEvent((event) => {
-        if (revised || event.kind !== "search_slice") return;
-        revised = true;
-        if (row.target === null) actuator.removeTarget();
-        else actuator.moveTargetTo(row.target);
-      }),
+    const { counts, telemetry } = countingTelemetry((event) => {
+      if (revised || event.kind !== "search_slice") return;
+      revised = true;
+      if (row.target === null) actuator.removeTarget();
+      else actuator.moveTargetTo(row.target);
     });
+    const navigator = createNavigator({ world: flatWorld(), bot: actuator, telemetry });
     const outcome = await settle(navigator, {
       goal: nearEntityGoal({ id: 7 }, 2),
       policy: walking(),
@@ -530,9 +531,9 @@ test("a goal revised during planning keeps a route whose terminal state still sa
     });
     assert.equal(outcome.kind, row.expect.kind, row.change);
     assert.equal(revised, true, row.change);
-    assert.equal(outcome.evidence.searches, 1, row.change);
-    assert.equal(outcome.evidence.replans, 0, row.change);
-    if (row.expect.slices !== null) assert.equal(outcome.evidence.searchSlices, row.expect.slices, row.change);
+    assert.equal(counts.searches, 1, row.change);
+    assert.equal(counts.replans, 0, row.change);
+    if (row.expect.slices !== null) assert.equal(counts.slices, row.expect.slices, row.change);
     if (row.expect.x !== null) assert.equal(actuator.current.position.x, row.expect.x, row.change);
     if (outcome.kind === "failed") assert.equal(outcome.failure.kind, "invalid_goal", row.change);
   }
@@ -573,8 +574,9 @@ test("a target oscillating between two cells is not mistaken for a repeated sear
 test("a goal revised during execution keeps a route whose terminal state still satisfies it", async () => {
   const actuator = new MovingEntityBot();
   actuator.moveAfterFirstStep = true;
+  const { counts, telemetry } = countingTelemetry();
   const outcome = await settle(
-    createNavigator({ world: flatWorld(), bot: actuator, createId: () => "execution-revision" }),
+    createNavigator({ world: flatWorld(), bot: actuator, createId: () => "execution-revision", telemetry }),
     {
       goal: nearEntityGoal({ id: 7 }, 2),
       policy: walking(),
@@ -582,8 +584,8 @@ test("a goal revised during execution keeps a route whose terminal state still s
   );
   assert.equal(outcome.kind, "completed");
   assert.equal(actuator.moved, true);
-  assert.equal(outcome.evidence.searches, 1);
-  assert.equal(outcome.evidence.replans, 0);
+  assert.equal(counts.searches, 1);
+  assert.equal(counts.replans, 0);
 });
 
 test("a revised goal retains a partial route that never promised to reach the old goal", async () => {
@@ -600,21 +602,17 @@ test("a revised goal retains a partial route that never promised to reach the ol
         : { ...snapshot, revision: revised ? "same-target:latest" : "same-target:planned" };
     },
   };
-  const navigator = createNavigator({
-    world: flatWorld(),
-    bot: actuator,
-    createId: () => "partial-goal-revision",
-    telemetry: onEvent((event) => {
-      if (event.kind === "route_committed" && !event.plan.complete) partialRouteObserved = true;
-      if (event.kind === "step_completed") revised = true;
-    }),
+  const { counts, telemetry } = countingTelemetry((event) => {
+    if (event.kind === "route_committed" && !event.plan.complete) partialRouteObserved = true;
+    if (event.kind === "step_completed") revised = true;
   });
+  const navigator = createNavigator({ world: flatWorld(), bot: actuator, createId: () => "partial-goal-revision", telemetry });
   const outcome = await settle(navigator, { goal, policy: walking(), searchLimits: EARLY_COMMIT });
 
   assert.equal(outcome.kind, "completed");
   assert.equal(partialRouteObserved, true);
   assert.equal(revised, true);
-  assert.equal(outcome.evidence.replans, 0);
+  assert.equal(counts.replans, 0);
   assert.equal(actuator.current.position.x, 5.5);
 });
 
@@ -637,29 +635,23 @@ test("a discovered target replaces a partial exploration route that now leads aw
         : { kind: "active", revision: "exploring-east", isSatisfied: () => false, heuristic: (node) => -node.feet.x };
     },
   };
-  const navigator = createNavigator({
-    world,
-    bot: actuator,
-    telemetry: onEvent((event) => {
-      if (event.kind === "route_committed" && !discovered) firstEndpoint = event.plan.end.x;
-      if (event.kind === "step_completed") {
-        discovered = true;
-        furthestX = Math.max(furthestX, actuator.current.position.x);
-      }
-    }),
+  const { counts, telemetry } = countingTelemetry((event) => {
+    if (event.kind === "route_committed" && !discovered) firstEndpoint = event.plan.end.x;
+    if (event.kind === "step_completed") {
+      discovered = true;
+      furthestX = Math.max(furthestX, actuator.current.position.x);
+    }
   });
+  const navigator = createNavigator({ world, bot: actuator, telemetry });
   const outcome = await settle(navigator, { goal, policy: walking(), searchLimits: EARLY_COMMIT });
   assert.equal(outcome.kind, "completed", JSON.stringify(outcome));
   assert.ok(firstEndpoint > 1, "the original partial route contains more than the discovery step");
   assert.ok(furthestX < firstEndpoint, "replan before walking to the obsolete exploration endpoint");
-  assert.equal(outcome.evidence.replans, 1);
+  assert.equal(counts.replans, 1);
   assert.equal(actuator.current.position.x, -2.5);
 });
 
 // ── Movement that does not go to plan ────────────────────────────────────────
-
-const attempts = (outcome: { evidence: { movementAttempts: Readonly<Partial<Record<string, number>>> } }) =>
-  Object.values(outcome.evidence.movementAttempts).reduce((total: number, count) => total + (count ?? 0), 0);
 
 test("a movement failure that reaches a new checkpoint stabilizes through a replacement search", async () => {
   class RecoveringBot extends FakeNavigationBot {
@@ -676,31 +668,33 @@ test("a movement failure that reaches a new checkpoint stabilizes through a repl
       return { kind: "completed", arrival: step.to } as const;
     }
   }
+  const { counts, telemetry } = countingTelemetry();
   const outcome = await settle(
-    createNavigator({ world: flatWorld(), bot: new RecoveringBot(), createId: () => "recovering-run" }),
+    createNavigator({ world: flatWorld(), bot: new RecoveringBot(), createId: () => "recovering-run", telemetry }),
     {
       goal: exactBlockGoal({ x: 3, y: 63, z: 0 }),
       policy: walking(),
     },
   );
   assert.equal(outcome.kind, "completed");
-  assert.equal(outcome.evidence.searches, 2);
-  assert.equal(outcome.evidence.replans, 1);
-  assert.equal(attempts(outcome), 3);
+  assert.equal(counts.searches, 2);
+  assert.equal(counts.replans, 1);
+  assert.equal(counts.steps, 3);
 });
 
 test("an observed overshoot skips the movement-only edge it already completed", async () => {
+  const { counts, telemetry } = countingTelemetry();
   const outcome = await settle(
-    createNavigator({ world: flatWorld(), bot: new OvershootingBot(), createId: () => "overshoot-run" }),
+    createNavigator({ world: flatWorld(), bot: new OvershootingBot(), createId: () => "overshoot-run", telemetry }),
     {
       goal: exactBlockGoal({ x: 3, y: 63, z: 0 }),
       policy: walking(),
     },
   );
   assert.equal(outcome.kind, "completed");
-  assert.equal(outcome.evidence.searches, 1);
-  assert.equal(outcome.evidence.replans, 0);
-  assert.equal(attempts(outcome), 2);
+  assert.equal(counts.searches, 1);
+  assert.equal(counts.replans, 0);
+  assert.equal(counts.steps, 2);
 });
 
 test("a calculation that fails after a movement failure reports what it was replanning around", async () => {
@@ -800,21 +794,22 @@ test("repeated start invalidation settles as planning_stalled and releases the n
   bot.current = { ...bot.current, position: { ...bot.current.position, x: 0.99 } };
   const world = flatWorld();
   let retries = 0;
-  const navigator = createNavigator({ world, bot, telemetry: onEvent((event) => {
+  const { counts, telemetry } = countingTelemetry((event) => {
     if (event.kind === "search_started") {
       now += 4_000;
       if (event.reason === "start_changed") retries++;
     }
     if (event.kind === "search_slice")
       bot.current = { ...bot.current, position: { ...bot.current.position, x: bot.current.position.x < 1 ? 1.01 : 0.99 } };
-  }) });
+  });
+  const navigator = createNavigator({ world, bot, telemetry });
   const outcome = await settle(navigator, { goal: exactBlockGoal({ x: 6, y: 63, z: 0 }), policy: walking() });
   assert.equal(outcome.kind, "failed");
   if (outcome.kind !== "failed" || outcome.failure.kind !== "no_progress") assert.fail(JSON.stringify(outcome));
   assert.equal(outcome.failure.reason, "planning_stalled");
   assert.ok(retries >= 3, `only ${retries} searches restarted for a changed start`);
-  assert.equal(outcome.evidence.plans, 0);
-  assert.equal(navigator.active, null);
+  assert.equal(counts.routes, 0);
+  assert.equal(navigator.running, false);
   assert.equal(world.listenerCount, 0);
   assert.deepEqual(outcome.evidence.cleanup, { listeners: 0, controls: 0, expectations: 0 });
 });
@@ -843,14 +838,10 @@ test("each search freezes one step field snapshot, and a request may opt out of 
   // in one bucket.
   const buckets: Array<Set<string>> = [];
   let snapshots = 0;
-  const navigator = createNavigator({
-    world: flatWorld(),
-    bot: new FakeNavigationBot(),
-    createId: () => "field-freeze",
-    telemetry: onEvent((event) => {
-      if (event.kind === "search_started") buckets.push(new Set());
-    }),
+  const { counts, telemetry } = countingTelemetry((event) => {
+    if (event.kind === "search_started") buckets.push(new Set());
   });
+  const navigator = createNavigator({ world: flatWorld(), bot: new FakeNavigationBot(), createId: () => "field-freeze", telemetry });
   navigator.setStepFieldProvider(() => {
     snapshots += 1;
     const fingerprint = `snapshot-${snapshots}`;
@@ -869,10 +860,10 @@ test("each search freezes one step field snapshot, and a request may opt out of 
   });
   assert.equal(outcome.kind, "completed");
   if (outcome.kind !== "completed") return;
-  assert.ok(outcome.evidence.searches > 1, `expected several searches, saw ${outcome.evidence.searches}`);
+  assert.ok(counts.searches > 1, `expected several searches, saw ${counts.searches}`);
   // Asked once per search: not once per run, which two live searches would
   // share, and not once per cell, which would let a mob move mid-search.
-  assert.equal(snapshots, outcome.evidence.searches);
+  assert.equal(snapshots, counts.searches);
   for (const [index, used] of buckets.entries()) {
     assert.ok(used.size <= 1, `search ${index} read ${used.size} snapshots: ${[...used].join(", ")}`);
   }

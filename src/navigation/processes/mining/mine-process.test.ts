@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import type { Bot } from "mineflayer";
-import { occupyGoal, type Goal } from "../../index.js";
+import type { Goal } from "../../index.js";
 import type { NavigationArrival, NavigationCalculationFailureEvent } from "../../orchestration/process-events.js";
 import type { BlockPosition } from "../../world/world.js";
 import { raycastThrough } from "../../../test-support/world.js";
@@ -12,49 +12,6 @@ import { DROP_PICKUP_TIMEOUT_MS } from "./mine-drops.js";
 import { mine, type MineRequest } from "./mine-process.js";
 
 const goalTestWorld = new GoalTestWorld();
-
-/**
- * The planner asks a goal about the bot's own feet before it searches, so a
- * goal that is satisfied where the bot already stands ends the run without
- * moving. For a mining goal that is a spin: nothing is broken, the quantity is
- * never met, and the process asks again forever.
- */
-function satisfiedAt(feet: Vec3, target: Vec3, levels: 2 | 3): boolean {
-  const snapshot = occupyGoal(target, levels).resolve({ position: feet, entities: new Map() } as never);
-  assert.equal(snapshot.kind, "active");
-  if (snapshot.kind !== "active") throw new Error("unreachable");
-  return snapshot.isSatisfied({ feet, remainingScaffolds: [], overlayId: "overlay:0" } as never, goalTestWorld);
-}
-
-test("occupying a target means standing in its cell", () => {
-  assert.equal(satisfiedAt(new Vec3(5, 64, -2), new Vec3(5, 64, -2), 3), true);
-});
-
-test("a player standing below a target occupies it, because it is two blocks tall", () => {
-  assert.equal(satisfiedAt(new Vec3(5, 63, -2), new Vec3(5, 64, -2), 3), true);
-  assert.equal(satisfiedAt(new Vec3(5, 62, -2), new Vec3(5, 64, -2), 3), true);
-});
-
-test("two-level occupancy excludes the cell two below the target", () => {
-  assert.equal(satisfiedAt(new Vec3(5, 63, -2), new Vec3(5, 64, -2), 2), true);
-  assert.equal(satisfiedAt(new Vec3(5, 62, -2), new Vec3(5, 64, -2), 2), false);
-});
-
-test("a target in another column is never occupied", () => {
-  assert.equal(satisfiedAt(new Vec3(0, 64, 0), new Vec3(5, 64, -2), 3), false);
-});
-
-/**
- * The consequence worth stating, because it is a trap rather than a bug: a
- * target in the bot's own column at head height is *already* occupied, so the
- * planner reports the goal reached without moving or breaking anything.
- * Baritone answers this in `MineProcess.onTick`, which breaks a known location
- * directly above or below the player itself rather than pathing to it.
- */
-test("a target at head height is already occupied, so pathing to it does nothing", () => {
-  assert.equal(satisfiedAt(new Vec3(5, 64, -2), new Vec3(5, 65, -2), 3), true);
-  assert.equal(satisfiedAt(new Vec3(5, 66, -2), new Vec3(5, 66, -2), 3), true);
-});
 
 function fakeBot(options: {
   blocks?: Vec3[];
@@ -402,114 +359,176 @@ test("an anticipated drop follows Mineflayer's item entity before its metadata a
   assert.equal(result.status, "satisfied");
 });
 
-test("an occupied drop arrival yields a server pickup interval before continuing", async () => {
-  let ticks = 0;
-  const bot = fakeBot({
-    drops: [new Vec3(0, 64, 0)],
-    feet: new Vec3(0, 64, 0),
-    onWaitForTicks: () => {
-      ticks += 1;
-    },
-  });
-  let satisfied = false;
+/** What a drop-arrival script can do between ticks: play the server, the clock, or the inventory. */
+interface DropArrivalWorld {
+  readonly bot: FakeWorld;
+  readonly cell: Vec3;
+  readonly clock: ReturnType<typeof testClock>;
+  gain(): void;
+  satisfy(): void;
+}
 
-  const result = await mine(
-    bot,
-    request(bot, {
-      isSatisfied: () => satisfied,
-      route: async (options) => {
-        const resolution = await options.onArrival?.(arrivalAt(bot));
-        assert.equal(resolution?.kind, "continue");
-        satisfied = true;
-        return { status: "completed", elapsedMs: 0 };
-      },
-    }),
-  );
-
-  assert.equal(result.status, "satisfied");
-  assert.equal(ticks, 1);
-});
-
-test("a vanished item stays pending until Mineflayer applies the inventory packet", async () => {
-  const cell = new Vec3(0, 64, 0);
-  let bot: Bot;
-  let satisfied = false;
-  let inventoryGain = 0;
-  let ticks = 0;
-  bot = fakeBot({
-    drops: [cell],
-    feet: cell,
-    onWaitForTicks: () => {
-      ticks += 1;
-      if (ticks === 1) delete bot.entities[0];
-      if (ticks === 2) {
-        inventoryGain = 1;
-        satisfied = true;
+/**
+ * The bot stands in the cell of a drop and the route reports arrival there,
+ * again and again. Each arrival waits a tick for the server, then reads the
+ * cell afresh; `script` plays what happens on each tick, and `arrivals` is
+ * what each successive arrival must answer.
+ */
+const DROP_ARRIVALS: readonly {
+  readonly name: string;
+  readonly drops: number;
+  /** Give the item its pickup box, for rows judged on overlap with the body. */
+  readonly pickupBox?: boolean;
+  readonly script?: (tick: number, world: DropArrivalWorld) => void;
+  readonly arrivals: readonly ("continue" | "completed")[];
+  /** Whether the route has what it came for once its arrivals are answered. */
+  readonly thenSatisfied: boolean;
+  readonly ticks: number | null;
+  readonly status: "satisfied" | "unreachable";
+  readonly reason?: RegExp;
+  /** The drops the last announcement named, as `kind:entityId`. */
+  readonly lastAnnounced?: readonly string[];
+}[] = [
+  {
+    name: "an occupied drop arrival yields a server pickup interval before continuing",
+    drops: 1,
+    arrivals: ["continue"],
+    thenSatisfied: true,
+    ticks: 1,
+    status: "satisfied",
+  },
+  {
+    name: "a vanished item stays pending until Mineflayer applies the inventory packet",
+    drops: 1,
+    script: (tick, { bot, gain, satisfy }) => {
+      if (tick === 1) delete bot.entities[0];
+      if (tick === 2) {
+        gain();
+        satisfy();
       }
     },
-  });
-
-  const result = await mine(
-    bot,
-    request(bot, {
-      isSatisfied: () => satisfied,
-      observedInventoryGain: () => inventoryGain,
-      route: async (options) => {
-        const arrival = arrivalAt(bot);
-        assert.equal((await options.onArrival?.(arrival))?.kind, "continue");
-        assert.equal((await options.onArrival?.(arrival))?.kind, "completed");
-        return { status: "completed", elapsedMs: 0 };
-      },
-    }),
-  );
-
-  assert.equal(result.status, "satisfied");
-  assert.equal(ticks, 2);
-});
-
-test("a confirmed pickup does not linger while another item remains", async () => {
-  const cell = new Vec3(0, 64, 0);
-  let bot: Bot;
-  let inventoryGain = 0;
-  let satisfied = false;
-  const announcements: string[][] = [];
-  bot = fakeBot({
-    drops: [cell, cell],
-    feet: cell,
-    onWaitForTicks: () => {
+    arrivals: ["continue", "completed"],
+    thenSatisfied: false,
+    ticks: 2,
+    status: "satisfied",
+  },
+  {
+    name: "a confirmed pickup does not linger while another item remains",
+    drops: 2,
+    script: (_tick, { bot, gain }) => {
       if (bot.entities[0]) {
         delete bot.entities[0];
-        inventoryGain = 1;
+        gain();
       }
     },
-  });
+    arrivals: ["continue", "continue"],
+    thenSatisfied: true,
+    ticks: null,
+    status: "satisfied",
+    lastAnnounced: ["drop:1"],
+  },
+  {
+    name: "an old item does not hide a later item entering the same cell",
+    drops: 1,
+    script: (tick, { bot, cell, clock }) => {
+      if (tick !== 1) return;
+      clock.advance(1_550);
+      delete bot.entities[0];
+      bot.entities[1] = fakeItemEntity(1, cell);
+    },
+    arrivals: ["continue", "continue"],
+    thenSatisfied: true,
+    ticks: 2,
+    status: "satisfied",
+  },
+  {
+    name: "a live drop remains a target after the vanished-item settlement window",
+    drops: 1,
+    script: (tick, { clock }) => {
+      if (tick === 1) clock.advance(1_550);
+    },
+    arrivals: ["continue", "continue"],
+    thenSatisfied: true,
+    ticks: 2,
+    status: "satisfied",
+  },
+  /**
+   * The five-minute stand: an item the inventory cannot take stays a live drop
+   * target, the pickup goal is satisfied where the bot stands, and nothing ends
+   * the arrival until the server despawns the item. The overlap itself is the
+   * evidence: past vanilla's pickup delay, an item still under the bot is not
+   * coming in.
+   */
+  {
+    name: "a drop the bot stands in without gaining anything is given up before the server despawns it",
+    drops: 1,
+    // The overlap is judged against the item's pickup box, which the fake must carry.
+    pickupBox: true,
+    script: (tick, { clock }) => {
+      if (tick === 1) clock.advance(DROP_PICKUP_TIMEOUT_MS + 50);
+    },
+    arrivals: ["continue", "completed"],
+    thenSatisfied: false,
+    ticks: 1,
+    status: "unreachable",
+    reason: /the stone drop at 0,64,0 was not picked up after 3 s in reach/,
+  },
+];
 
-  const result = await mine(
-    bot,
-    request(bot, {
-      isSatisfied: () => satisfied,
-      observedInventoryGain: () => inventoryGain,
-      onTargets: (targets) => {
-        announcements.push(
-          targets.map((target) =>
-            target.kind === "drop" || target.kind === "settling_drop"
-              ? `${target.kind}:${target.entityId}`
-              : target.kind,
-          ),
-        );
+test("standing on a drop, each arrival waits for the server and answers from what the cell then holds", async () => {
+  for (const row of DROP_ARRIVALS) {
+    const clock = testClock();
+    const cell = new Vec3(0, 64, 0);
+    let ticks = 0;
+    let inventoryGain = 0;
+    let satisfied = false;
+    const announcements: string[][] = [];
+    const bot = fakeBot({
+      drops: Array.from({ length: row.drops }, () => cell),
+      feet: cell,
+      onWaitForTicks: () => {
+        ticks += 1;
+        row.script?.(ticks, {
+          bot,
+          cell,
+          clock,
+          gain: () => (inventoryGain = 1),
+          satisfy: () => (satisfied = true),
+        });
       },
-      route: async (options) => {
-        const arrival = arrivalAt(bot);
-        assert.equal((await options.onArrival?.(arrival))?.kind, "continue");
-        assert.equal((await options.onArrival?.(arrival))?.kind, "continue");
-        satisfied = true;
-        return { status: "completed", elapsedMs: 0 };
-      },
-    }),
-  );
+    });
+    if (row.pickupBox) Object.assign(bot.entities[0]!, { width: 0.25, height: 0.25 });
 
-  assert.equal(result.status, "satisfied");
-  assert.deepEqual(announcements.at(-1), ["drop:1"]);
+    const result = await mine(
+      bot,
+      request(bot, {
+        now: clock.now,
+        isSatisfied: () => satisfied,
+        observedInventoryGain: () => inventoryGain,
+        onTargets: (targets) => {
+          announcements.push(
+            targets.map((target) =>
+              target.kind === "drop" || target.kind === "settling_drop"
+                ? `${target.kind}:${target.entityId}`
+                : target.kind,
+            ),
+          );
+        },
+        route: async (options) => {
+          const arrival = arrivalAt(bot);
+          for (const expected of row.arrivals)
+            assert.equal((await options.onArrival?.(arrival))?.kind, expected, row.name);
+          if (row.thenSatisfied) satisfied = true;
+          return { status: "completed", elapsedMs: 0 };
+        },
+      }),
+    );
+
+    assert.equal(result.status, row.status, row.name);
+    if (row.ticks !== null) assert.equal(ticks, row.ticks, row.name);
+    if (row.reason) assert.match(result.reason ?? "", row.reason, row.name);
+    if (row.lastAnnounced) assert.deepEqual(announcements.at(-1), row.lastAnnounced, row.name);
+  }
 });
 
 test("a vanished route target does not blacklist a different live item", async () => {
@@ -623,13 +642,16 @@ test("standing inside an upward vein does not declare its excavation complete", 
   assert.equal(result.status, "satisfied");
 });
 
-test("a target the movement policy cannot mine is reported as observed but unmineable", async () => {
-  const bot = fakeBot({ blocks: [new Vec3(5, 64, 0)] });
+test("rejection reasons are counted separately so one bad tool does not hide a lava face", async () => {
+  const bot = fakeBot({ blocks: [new Vec3(5, 64, 0), new Vec3(6, 64, 0), new Vec3(7, 64, 0)] });
   let routes = 0;
   const result = await mine(
     bot,
     request(bot, {
-      canMine: () => ({ kind: "prohibited", reason: "3 lava faces, 1 block carried" }),
+      canMine: (block) => ({
+        kind: "prohibited",
+        reason: block.position.x === 5 ? "no carried tool can harvest this block" : "2 lava faces, 0 blocks carried",
+      }),
       route: async () => {
         routes += 1;
         return { status: "completed", elapsedMs: 0 };
@@ -639,27 +661,12 @@ test("a target the movement policy cannot mine is reported as observed but unmin
 
   assert.equal(result.status, "unreachable");
   // The numbers, not "the movement policy": this is what the model reads.
-  assert.equal(result.reason, "1 loaded matching block(s) cannot be mined: 3 lava faces, 1 block carried");
-  assert.equal(routes, 0);
-});
-
-test("rejection reasons are counted separately so one bad tool does not hide a lava face", async () => {
-  const bot = fakeBot({ blocks: [new Vec3(5, 64, 0), new Vec3(6, 64, 0), new Vec3(7, 64, 0)] });
-  const result = await mine(
-    bot,
-    request(bot, {
-      canMine: (block) => ({
-        kind: "prohibited",
-        reason: block.position.x === 5 ? "no carried tool can harvest this block" : "2 lava faces, 0 blocks carried",
-      }),
-    }),
-  );
-
-  assert.equal(result.status, "unreachable");
   assert.equal(
     result.reason,
     "3 loaded matching block(s) cannot be mined: 2 lava faces, 0 blocks carried (×2); no carried tool can harvest this block",
   );
+  // Observed but unmineable is reported without a route being walked to any of them.
+  assert.equal(routes, 0);
 });
 
 /**
@@ -1557,78 +1564,81 @@ test("an unreachable drop is blacklisted without delaying the remaining block ta
   assert.equal(ticks, 0);
 });
 
-test("an unreachable live drop does not wait forever for a packet transition", async () => {
-  const bot = fakeBot({
-    drops: [new Vec3(3, 61, 0)],
-    onWaitForTicks: () => {
-      throw new Error("a live unreachable drop must not loiter");
-    },
-  });
-  let failures = 0;
-  const result = await mine(
-    bot,
-    request(bot, {
-      route: async (options) => {
-        failures += 1;
-        const resolution = await options.onCalculationFailure?.(noPath(bot));
-        assert.equal(resolution?.kind, "completed");
-        return { status: "completed", elapsedMs: 0 };
-      },
-    }),
-  );
-  assert.equal(failures, 1);
-  assert.equal(result.status, "unreachable");
-});
+/**
+ * A pickup search that found no path, for one drop in three states. Only a
+ * drop falling through air is waited for, because where it lands decides
+ * whether it is reachable; a resting drop, or one sinking through lava, is
+ * judged at once rather than loitered over.
+ */
+const FAILED_PICKUP_SEARCHES = [
+  {
+    name: "an unreachable live drop does not wait forever for a packet transition",
+    drop: [3, 61, 0],
+    falling: false,
+    lava: false,
+    floor: null,
+    landing: null,
+    resolution: "completed",
+    status: "unreachable",
+  },
+  {
+    name: "a failed pickup search waits for a falling log to land before judging its reachability",
+    drop: [3, 67.5, 0],
+    falling: true,
+    lava: false,
+    floor: [3, 63, 0],
+    // Three ticks of fall, then it rests on the floor, reachable.
+    landing: { ticks: 3, y: 64 },
+    resolution: "continue",
+    status: "satisfied",
+  },
+  {
+    name: "a moving drop in lava does not receive the free-flight wait",
+    drop: [3, 61, 0],
+    falling: true,
+    lava: true,
+    floor: null,
+    landing: null,
+    resolution: "completed",
+    status: "unreachable",
+  },
+] as const;
 
-test("a failed pickup search waits for a falling log to land before judging its reachability", async () => {
-  let ticks = 0;
-  let satisfied = false;
-  const bot = fakeBot({
-    drops: [new Vec3(3, 67.5, 0)],
-    solids: [new Vec3(3, 63, 0)],
-    onWaitForTicks: () => {
-      ticks += 1;
-      bot.entities[0]!.position.y = ticks === 3 ? 64 : 67.5 - ticks;
-    },
-  });
-  bot.entities[0]!.velocity = new Vec3(0, -0.2, 0);
-  const result = await mine(
-    bot,
-    request(bot, {
-      isSatisfied: () => satisfied,
-      route: async (options) => {
-        const resolution = await options.onCalculationFailure?.(noPath(bot));
-        assert.equal(ticks, 3);
-        assert.equal(resolution?.kind, "continue");
-        satisfied = true;
-        return { status: "completed", elapsedMs: 0 };
+test("a failed pickup search waits only for a drop falling through air", async () => {
+  for (const row of FAILED_PICKUP_SEARCHES) {
+    const [x, y, z] = row.drop;
+    const cell = new Vec3(x, y, z);
+    let ticks = 0;
+    let routes = 0;
+    let satisfied = false;
+    const bot = fakeBot({
+      drops: [cell],
+      solids: row.floor ? [new Vec3(row.floor[0], row.floor[1], row.floor[2])] : [],
+      lava: row.lava ? [cell.clone()] : [],
+      onWaitForTicks: () => {
+        if (!row.landing) throw new Error(`${row.name}: must not wait`);
+        ticks += 1;
+        bot.entities[0]!.position.y = ticks === row.landing.ticks ? row.landing.y : y - ticks;
       },
-    }),
-  );
-  assert.equal(result.status, "satisfied");
-});
-
-test("a moving drop in lava does not receive the free-flight wait", async () => {
-  const cell = new Vec3(3, 61, 0);
-  const bot = fakeBot({
-    drops: [cell],
-    lava: [cell],
-    onWaitForTicks: () => {
-      throw new Error("lava is not free flight");
-    },
-  });
-  bot.entities[0]!.velocity = new Vec3(0, -0.2, 0);
-  const result = await mine(
-    bot,
-    request(bot, {
-      route: async (options) => {
-        const resolution = await options.onCalculationFailure?.(noPath(bot));
-        assert.equal(resolution?.kind, "completed");
-        return { status: "completed", elapsedMs: 0 };
-      },
-    }),
-  );
-  assert.equal(result.status, "unreachable");
+    });
+    if (row.falling) bot.entities[0]!.velocity = new Vec3(0, -0.2, 0);
+    const result = await mine(
+      bot,
+      request(bot, {
+        isSatisfied: () => satisfied,
+        route: async (options) => {
+          routes += 1;
+          const resolution = await options.onCalculationFailure?.(noPath(bot));
+          assert.equal(ticks, row.landing?.ticks ?? 0, row.name);
+          assert.equal(resolution?.kind, row.resolution, row.name);
+          if (row.status === "satisfied") satisfied = true;
+          return { status: "completed", elapsedMs: 0 };
+        },
+      }),
+    );
+    assert.equal(routes, 1, row.name);
+    assert.equal(result.status, row.status, row.name);
+  }
 });
 
 test("a failed block cell does not hide an item that later lands there", async () => {
@@ -1661,43 +1671,6 @@ test("a failed block cell does not hide an item that later lands there", async (
   assert.equal(routes, 2);
 });
 
-test("an old item does not hide a later item entering the same cell", async () => {
-  const clock = testClock();
-  const cell = new Vec3(0, 64, 0);
-  let bot: Bot;
-  let ticks = 0;
-  let satisfied = false;
-  bot = fakeBot({
-    drops: [cell],
-    feet: cell,
-    onWaitForTicks: async () => {
-      ticks += 1;
-      if (ticks !== 1) return;
-      clock.advance(1_550);
-      delete bot.entities[0];
-      bot.entities[1] = fakeItemEntity(1, cell);
-    },
-  });
-
-  const result = await mine(
-    bot,
-    request(bot, {
-      now: clock.now,
-      isSatisfied: () => satisfied,
-      route: async (options) => {
-        const arrival = arrivalAt(bot);
-        assert.equal((await options.onArrival?.(arrival))?.kind, "continue");
-        assert.equal((await options.onArrival?.(arrival))?.kind, "continue");
-        satisfied = true;
-        return { status: "completed", elapsedMs: 0 };
-      },
-    }),
-  );
-
-  assert.equal(result.status, "satisfied");
-  assert.equal(ticks, 2);
-});
-
 test("the 64-target goal width is not a lifetime calculation-failure limit", async () => {
   const blocks = Array.from({ length: 65 }, (_, index) => new Vec3((index % 15) + 1, 64, Math.floor(index / 15)));
   const bot = fakeBot({ blocks });
@@ -1723,77 +1696,6 @@ test("the 64-target goal width is not a lifetime calculation-failure limit", asy
   assert.equal(result.status, "unreachable");
   assert.equal(routes, 1);
   assert.equal(failures, 65);
-});
-
-test("a live drop remains a target after the vanished-item settlement window", async () => {
-  const clock = testClock();
-  let ticks = 0;
-  let satisfied = false;
-  const bot = fakeBot({
-    drops: [new Vec3(0, 64, 0)],
-    feet: new Vec3(0, 64, 0),
-    onWaitForTicks: async () => {
-      ticks += 1;
-      if (ticks === 1) clock.advance(1_550);
-    },
-  });
-  const result = await mine(
-    bot,
-    request(bot, {
-      now: clock.now,
-      isSatisfied: () => satisfied,
-      route: async (options) => {
-        const arrival = arrivalAt(bot);
-        assert.equal((await options.onArrival?.(arrival))?.kind, "continue");
-        assert.equal((await options.onArrival?.(arrival))?.kind, "continue");
-        satisfied = true;
-        return { status: "completed", elapsedMs: 0 };
-      },
-    }),
-  );
-
-  assert.equal(result.status, "satisfied");
-  assert.equal(ticks, 2);
-});
-
-/**
- * The five-minute stand: an item the inventory cannot take stays a live drop
- * target, the pickup goal is satisfied where the bot stands, and nothing ends
- * the arrival until the server despawns the item. The overlap itself is the
- * evidence: past vanilla's pickup delay, an item still under the bot is not
- * coming in.
- */
-test("a drop the bot stands in without gaining anything is given up before the server despawns it", async () => {
-  const clock = testClock();
-  const cell = new Vec3(0, 64, 0);
-  let ticks = 0;
-  const bot = fakeBot({
-    drops: [cell],
-    feet: cell,
-    onWaitForTicks: async () => {
-      ticks += 1;
-      if (ticks === 1) clock.advance(DROP_PICKUP_TIMEOUT_MS + 50);
-    },
-  });
-  // The overlap is judged against the item's pickup box, which the fake must carry.
-  Object.assign(bot.entities[0]!, { width: 0.25, height: 0.25 });
-
-  const result = await mine(
-    bot,
-    request(bot, {
-      now: clock.now,
-      route: async (options) => {
-        const arrival = arrivalAt(bot);
-        assert.equal((await options.onArrival?.(arrival))?.kind, "continue");
-        assert.equal((await options.onArrival?.(arrival))?.kind, "completed");
-        return { status: "completed", elapsedMs: 0 };
-      },
-    }),
-  );
-
-  assert.equal(ticks, 1);
-  assert.equal(result.status, "unreachable");
-  assert.match(result.reason ?? "", /the stone drop at 0,64,0 was not picked up after 3 s in reach/);
 });
 
 test("mining stops once the requested quantity arrives mid-route", async () => {

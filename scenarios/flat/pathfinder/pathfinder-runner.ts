@@ -21,8 +21,6 @@ const paramsSchema = z.strictObject({
   target: z.tuple([z.number(), z.number(), z.number()]).optional(),
   range: z.number().optional().default(1.5),
   legs: z.array(navLegSchema).optional(),
-  allowDoors: z.boolean().optional(),
-  allowDiagonalAscend: z.boolean().optional(),
 });
 
 export type PathfinderRunnerParams = z.infer<typeof paramsSchema>;
@@ -57,11 +55,7 @@ export async function run(
 
     const runner = new ActionRunner();
     const navigate = createNavigateAction(bot, context.navigation, {
-      createMovements: (movementBot) =>
-        createMovements(movementBot, {
-          ...(params.allowDoors !== undefined ? { allowDoors: params.allowDoors } : {}),
-          ...(params.allowDiagonalAscend !== undefined ? { allowDiagonalAscend: params.allowDiagonalAscend } : {}),
-        }),
+      createMovements: (movementBot) => createMovements(movementBot),
       navigate: context.navigation.navigate,
     });
     const legResults: string[] = [];

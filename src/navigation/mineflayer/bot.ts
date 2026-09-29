@@ -15,7 +15,6 @@ import { horizontalControlsToward } from "../steering/local-steering.js";
  */
 import type { Bot } from "mineflayer";
 import { recordCombatResourceReceipt } from "../../runtime/combat-resource-receipts.js";
-import { appendFileSync } from "node:fs";
 import { Vec3 } from "vec3";
 import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../world/block-visibility.js";
 import { occupiedCell, placeWithoutLooking, type WorldBlock } from "../../world/placement.js";
@@ -58,17 +57,6 @@ const NETHER_VINES = new Set(["weeping_vines", "weeping_vines_plant", "twisting_
 // physicsTick observers therefore see this value and carry it into the next move.
 const NETHER_VINE_CLIMB_VELOCITY = (0.2 - 0.08) * 0.98;
 const NETHER_VINE_HORIZONTAL_VELOCITY = 0.15 * 0.91;
-
-/** Temporary dig timing trace, appended as JSON lines to the file named by MINE_AI_DIG_TRACE. */
-function traceDig(record: Record<string, unknown>): void {
-  const file = process.env.MINE_AI_DIG_TRACE;
-  if (!file) return;
-  try {
-    appendFileSync(file, `${JSON.stringify({ at: new Date().toISOString(), ...record })}\n`);
-  } catch {
-    // A trace that cannot be written is not a navigation failure.
-  }
-}
 
 export interface MineflayerBotSurface {
   readonly entity: {
@@ -422,7 +410,11 @@ export class MineflayerBot implements NavigationBot {
     const hold = () => {
       const snapshot = this.movementSnapshot();
       if (snapshot.isInWater) {
-          // An admitted dive holds depth through search; ordinary water holds rise.
+        // An admitted dive holds depth through search; ordinary water holds rise.
+        // The same correction as `holdWaterPosition`, with the opposite jump
+        // rule, so the two stay separate. That one holds a dig on its floor,
+        // where a jump multiplies dig time; this one holds a search, where a
+        // body left to sink in open water drowns while it waits for a route.
         const correction = horizontalControlsToward(
           { position: snapshot.position, yaw: snapshot.yaw },
           start.position,
@@ -712,9 +704,6 @@ export class MineflayerBot implements NavigationBot {
           issued = true;
           // Read before the hold so the dig aims where the route left the head.
           const yaw = this.bot.entity.yaw;
-          const digStartedAt = Date.now();
-          const airborne = !this.bot.entity.onGround;
-          const inWater = this.bot.entity.isInWater;
           const releaseStance = holdWaterPosition(this.bot, signal, (control, active) =>
             this.#control(control, active),
           );
@@ -762,14 +751,6 @@ export class MineflayerBot implements NavigationBot {
             }
           } finally {
             releaseStance();
-            traceDig({
-              position: operation.position,
-              belowFeet: directlyBelowFeet,
-              airborne,
-              inWater,
-              toolType: operation.toolType,
-              elapsedMs: Date.now() - digStartedAt,
-            });
           }
         } else if (operation.kind === "place") {
           const item = this.bot.inventory.items().find((candidate) => candidate.type === operation.placement.itemType);

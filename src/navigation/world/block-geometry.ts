@@ -260,10 +260,6 @@ export function isWater(block: BlockObservation): boolean {
   return (block.bits & TRAIT_WATER) !== 0;
 }
 
-export function isLava(block: BlockObservation): boolean {
-  return (block.bits & TRAIT_LAVA) !== 0;
-}
-
 /** A loaded cell holding any liquid. */
 export function isLiquid(block: BlockObservation): boolean {
   return (block.bits & TRAIT_LIQUID) !== 0;
@@ -280,10 +276,6 @@ export function isFalling(block: BlockObservation): boolean {
 
 export function isClimbable(block: BlockObservation): boolean {
   return (block.bits & TRAIT_CLIMBABLE) !== 0;
-}
-
-export function isThin(block: BlockObservation): boolean {
-  return (block.bits & GEOMETRY_THIN) !== 0;
 }
 
 export function isSolid(block: BlockObservation): boolean {

@@ -21,7 +21,7 @@
  *   and the identity of the overlay of predicted edits, empty for the live
  *   world. Goals and plans are judged against nodes, never raw positions.
  *
- * Three kinds of value flow through the loop:
+ * Two kinds of value flow through the loop:
  * - `PlanningResult`: a plan to walk, a reason to search again, or a final
  *   outcome. `ExecutionResult` is the same without the plan.
  * - Identities. A search is identified by goal revision, feet, world and
@@ -29,7 +29,6 @@
  *   the step and the cell it failed from. Meeting the same identity twice is
  *   how the run knows it is going in circles and reports `no_progress`
  *   instead of trying forever.
- * - Counters, which become the `NavigationEvidence` every outcome carries.
  *
  * The run owns the world subscription. Every change is classified by the
  * mutation ledger against the dependencies of the route being walked, and an
@@ -38,7 +37,6 @@
  * listener, and the continuation search before `execute` measures what was
  * left behind rather than asserting zero.
  */
-import type { MutationClassification } from "../execution/mutations.js";
 import { executeWorldEffect } from "../execution/world-effect.js";
 import { OpenedPassages } from "../execution/opened-passages.js";
 import { RouteExecutor, type RouteContext, type StepDecision } from "../execution/route-executor.js";
@@ -47,7 +45,6 @@ import { priceExcavation } from "../movements/excavation.js";
 import type { MovementCatalogue } from "../movements/catalogue.js";
 import {
   airMatcher,
-  type MovementKind,
   type PlannedStep,
   type PredictedWorldEffect,
   type RoutePlan,
@@ -74,39 +71,13 @@ import {
 import type { NavigationRequest } from "./navigator.js";
 import type {
   MovementFailure,
-  MovementPhase,
   NavigationEvidence,
   NavigationFailure,
   NavigationOutcome,
-  NavigationStatus,
+  NavigationSettlement,
   SearchReason,
 } from "./outcome.js";
 import type { NavigationCalculationFailure } from "./process-events.js";
-
-/** The evidence fields the run counts as it goes: mutable here, copied into every outcome. */
-interface Counters {
-  searches: number;
-  searchSlices: number;
-  plans: number;
-  continuations: number;
-  replans: number;
-  movementAttempts: Partial<Record<MovementKind, number>>;
-  breaks: number;
-  placements: number;
-  activations: number;
-  expectedMutations: number;
-  conflictingMutations: number;
-  invalidatingChanges: number;
-  irrelevantChanges: number;
-}
-
-/** Which counter each world-change classification lands in. */
-const CHANGE_COUNTER = {
-  expected: "expectedMutations",
-  conflicting: "conflictingMutations",
-  invalidating: "invalidatingChanges",
-  irrelevant: "irrelevantChanges",
-} as const satisfies Record<MutationClassification, keyof Counters>;
 
 type ActiveGoal = Extract<ResolvedGoal, { kind: "active" }>;
 type PlanningResult =
@@ -119,7 +90,7 @@ type PlanningResult =
       readonly plan: RoutePlan;
     }
   | { readonly kind: "retry"; readonly reason: SearchReason }
-  | { readonly kind: "outcome"; readonly outcome: NavigationOutcome };
+  | { readonly kind: "outcome"; readonly outcome: NavigationSettlement };
 /**
  * A search run while the current route is walked. It starts where that route
  * ends, in the world the route leaves behind: the segment's own digs and
@@ -223,8 +194,6 @@ export interface RunContext extends RouteContext {
 export interface NavigationRunDependencies {
   readonly context: RunContext;
   readonly request: NavigationRequest;
-  /** Publish the run's live status, and null once it has settled. */
-  readonly status: (status: NavigationStatus | null) => void;
   /** Called once, after the run has settled and cleaned up after itself. */
   readonly release: () => void;
 }
@@ -232,27 +201,11 @@ export interface NavigationRunDependencies {
 export class NavigationRun {
   readonly context: RunContext;
   readonly request: NavigationRequest;
-  readonly status: (status: NavigationStatus | null) => void;
   readonly release: () => void;
   readonly #events: RunTelemetry;
-  readonly #startedAt = Date.now();
-  readonly #start: NavigationObservation;
   readonly #passages: OpenedPassages;
-  readonly #counters: Counters = {
-    searches: 0,
-    searchSlices: 0,
-    plans: 0,
-    continuations: 0,
-    replans: 0,
-    movementAttempts: {},
-    breaks: 0,
-    placements: 0,
-    activations: 0,
-    expectedMutations: 0,
-    conflictingMutations: 0,
-    invalidatingChanges: 0,
-    irrelevantChanges: 0,
-  };
+  /** Numbers this run's search ids. */
+  #searches = 0;
   /** Whether the world subscription is still installed; the one thing execute itself can leak. */
   #subscribed = false;
   readonly #searchIdentities = new Set<string>();
@@ -283,19 +236,17 @@ export class NavigationRun {
     this.context = dependencies.context;
     this.request = dependencies.request;
     this.#policy = Object.freeze({ ...dependencies.request.policy });
-    this.status = dependencies.status;
     this.release = dependencies.release;
     this.#events = forRun(this.context.telemetry, this.context.runId);
-    this.#start = this.context.bot.observe();
-    this.#passages = new OpenedPassages(this.context.world, this.#start.dimension);
-    this.#visitedFeet.add(blockKey(navigationFeet(this.#start.position, this.#start.stance === "supported")));
+    const start = this.context.bot.observe();
+    this.#passages = new OpenedPassages(this.context.world, start.dimension);
+    this.#visitedFeet.add(blockKey(navigationFeet(start.position, start.stance === "supported")));
   }
   async execute(): Promise<NavigationOutcome> {
     const settled = await this.#navigateWithResources().catch((cause) => this.#internalError(cause));
     this.#events.emit({ kind: "cleanup_completed" });
-    // The evidence was gathered when the outcome was decided. Its cleanup
-    // record is only honest once cleanup has actually run, so it is measured
-    // again here, where a non-zero count is a leak and not a snapshot.
+    // Measured once cleanup has actually run, so a non-zero count is a leak
+    // and not a snapshot of what was still held while the run was deciding.
     const pending = this.#passages.pending(this.context.bot.observe());
     const result =
       settled.kind === "completed" && pending.length > 0
@@ -303,7 +254,7 @@ export class NavigationRun {
         : settled;
     const outcome: NavigationOutcome = {
       ...result,
-      evidence: { ...result.evidence, unrestoredPassages: pending, cleanup: this.#cleanupEvidence() },
+      evidence: { unrestoredPassages: pending, cleanup: this.#cleanupEvidence() },
     };
     this.#events.emit({ kind: "run_settled", outcome: outcome.kind });
     return outcome;
@@ -315,14 +266,13 @@ export class NavigationRun {
     // Every selected step checks its concrete preconditions again before it
     // moves, so an old search result cannot execute stale world assumptions.
     const classification = this.context.ledger.classify(change, this.#routeDependencies, Date.now());
-    this.#counters[CHANGE_COUNTER[classification]] += 1;
     this.#events.emit({ kind: "world_change", classification, change });
     // A conflicting change settles its own expectation in the ledger, and the
     // executor waiting on that expectation sees it there. Only an unrelated
     // change to a block the route depends on needs the executor told directly.
     if (classification === "invalidating") this.#routeExecutor?.invalidate();
   }
-  #internalError(cause: unknown): NavigationOutcome {
+  #internalError(cause: unknown): NavigationSettlement {
     if (this.context.signal.aborted) return this.#stopped();
     this.#events.error(cause);
     return this.#failed({ kind: "internal_error", message: describeError(cause) });
@@ -333,13 +283,12 @@ export class NavigationRun {
   }
 
   /** Own setup through settlement, including partial setup and failed cleanup. */
-  async #navigateWithResources(): Promise<NavigationOutcome> {
+  async #navigateWithResources(): Promise<NavigationSettlement> {
     await using resources = new AsyncDisposableStack();
     // Disposed in reverse order: stop controls, detach the world, drain the
     // speculative search, then release admission. One failed release must not
     // skip the others, and admission must stay held while a search can still run.
     resources.defer(this.release);
-    resources.defer(() => this.status(null));
     resources.defer(async () => {
       if (this.#pending) {
         this.#pending.abandon();
@@ -355,13 +304,6 @@ export class NavigationRun {
       this.#subscribed = false;
     });
     resources.defer(() => this.context.bot.clearOwnedControls());
-    resources.defer(() =>
-      this.status({
-        kind: "stopping",
-        runId: this.context.runId,
-        reason: this.context.signal.aborted ? describeAbort(this.context.signal.reason) : "settling",
-      }),
-    );
     // Await inside the scope so disposal cannot race the navigation it owns.
     return await this.#navigate();
   }
@@ -491,7 +433,7 @@ export class NavigationRun {
    * `#pending` owns the plan-ahead search for both this loop and cleanup.
    * `searchReason` says why the next search is being asked for.
    */
-  async #navigate(): Promise<NavigationOutcome> {
+  async #navigate(): Promise<NavigationSettlement> {
     let searchReason: SearchReason = "initial";
     for (;;) {
       if (this.context.signal.aborted) return this.#stopped();
@@ -511,7 +453,6 @@ export class NavigationRun {
       const planningStall = this.#planningStall.check(observation);
       if (planningStall) return this.#failed(planningStall);
       if (observation.stance === "airborne") {
-        this.status({ kind: "stabilizing", runId: this.context.runId, reason: "airborne" });
         const stable = await this.context.bot.stabilize(this.context.signal);
         if (stable.kind === "failed")
           return this.#failed({
@@ -554,7 +495,7 @@ export class NavigationRun {
    * a search cancelled because the bot drifted, or replanned for a changed
    * world, has not moved the bot and is not counted.
    */
-  #judgeProgress(goal: ActiveGoal, node: PlanningNode): NavigationOutcome | null {
+  #judgeProgress(goal: ActiveGoal, node: PlanningNode): NavigationSettlement | null {
     const executed = this.#executed;
     this.#executed = false;
     const estimate = goal.heuristic(node);
@@ -691,12 +632,9 @@ export class NavigationRun {
     field: StepField | null,
     ahead: PlanAhead | null,
   ): Promise<SearchAnswer> {
-    const searchId = `${this.context.runId}:search:${++this.#counters.searches}`;
+    const searchId = `${this.context.runId}:search:${++this.#searches}`;
     const searchStart = this.context.bot.observe();
     if (!ahead) this.#planningStall.begin(searchStart);
-    if (reason === "segment_continuation" || reason === "arrival_continuation" || reason === "alternate_arrival")
-      this.#counters.continuations += 1;
-    else if (reason !== "initial") this.#counters.replans += 1;
     this.#events.emit({ kind: "search_started", searchId, reason, goal: goal.revision });
     let overlay = new PlanningOverlay(new OverlayInterner());
     for (const effect of ahead?.effects ?? []) overlay = overlay.apply(effect);
@@ -719,7 +657,6 @@ export class NavigationRun {
       // result was abandoned, is a pause the bot's operator can see.
       limits: ahead ? (this.request.continuationSearchLimits ?? this.request.searchLimits) : this.request.searchLimits,
     });
-    this.status({ kind: "planning", runId: this.context.runId, goalRevision: goal.revision, searchId });
     for (;;) {
       // Every slice, the first included, starts on a fresh turn of the event
       // loop. Physics keeps ticking between slices, and whoever started this
@@ -760,7 +697,6 @@ export class NavigationRun {
                 ? "The declared search resource was exhausted; geometry outside that search remains untested."
                 : "This is the search result, before physical execution and arrival validation.",
         });
-      this.#counters.searchSlices += 1;
       this.#events.emit({
         kind: "search_slice",
         searchId,
@@ -810,7 +746,6 @@ export class NavigationRun {
   }
   async #executePlan(goal: ActiveGoal, plan: RoutePlan): Promise<ExecutionResult> {
     this.#planningStall.committed();
-    this.#counters.plans += 1;
     this.#lastMovementFailure = null;
     this.#executed = true;
     this.#routeDependencies = plan.dependencies;
@@ -824,13 +759,9 @@ export class NavigationRun {
       context: this.context,
       passages: this.#passages,
       plan,
-      stepStarted: (step) => this.#onStepStarted(plan, step),
-      phase: (step, phase) => this.#onStepPhase(goal, plan, step, phase),
-      effectConfirmed: (operation) => {
-        if (operation.kind === "break") this.#counters.breaks += 1;
-        else if (operation.kind === "place") this.#counters.placements += 1;
-        else this.#counters.activations += 1;
-      },
+      stepStarted: (step) =>
+        this.#events.emit({ kind: "step_started", planId: plan.id, stepId: step.id, movement: step.kind }),
+      phase: (step, phase) => this.#events.emit({ kind: "step_phase", stepId: step.id, phase }),
       stepCompleted: (step, arrival) => this.#onStepCompleted(goal, plan, step, arrival),
     });
     this.#routeExecutor = executor;
@@ -873,22 +804,6 @@ export class NavigationRun {
       case "exhausted":
         return { kind: "retry", reason: result.reason };
     }
-  }
-  #onStepStarted(plan: RoutePlan, step: PlannedStep): void {
-    this.#counters.movementAttempts[step.kind] = (this.#counters.movementAttempts[step.kind] ?? 0) + 1;
-    this.#events.emit({ kind: "step_started", planId: plan.id, stepId: step.id, movement: step.kind });
-  }
-  #onStepPhase(goal: ActiveGoal, plan: RoutePlan, step: PlannedStep, phase: MovementPhase): void {
-    this.status({
-      kind: "executing",
-      runId: this.context.runId,
-      goalRevision: goal.revision,
-      routeId: plan.id,
-      stepId: step.id,
-      movement: step.kind,
-      phase,
-    });
-    this.#events.emit({ kind: "step_phase", stepId: step.id, phase });
   }
   /**
    * After each step, whether the rest of the route is still worth walking.
@@ -978,7 +893,6 @@ export class NavigationRun {
     if (signal.aborted) return { kind: "outcome", outcome: this.#stopped() };
     if (result.kind !== "confirmed")
       return held(result.kind === "effect_failed" ? result.observation : `whose break was ${result.kind}`);
-    this.#counters.breaks += 1;
     const released = await this.#awaitRelease();
     if (signal.aborted) return { kind: "outcome", outcome: this.#stopped() };
     if (!released) return held("which did not release the body");
@@ -1023,7 +937,7 @@ export class NavigationRun {
     if (this.context.signal.aborted) return { kind: "outcome", outcome: this.#stopped() };
     return result.kind === "continue"
       ? { kind: "retry", reason: "arrival_continuation" }
-      : { kind: "outcome", outcome: { kind: "completed", evidence: this.#evidence() } };
+      : { kind: "outcome", outcome: { kind: "completed" } };
   }
   async #resolveCalculationFailure(
     failure: NavigationCalculationFailure,
@@ -1041,27 +955,12 @@ export class NavigationRun {
     if (this.context.signal.aborted) return { kind: "outcome", outcome: this.#stopped() };
     return result.kind === "continue"
       ? { kind: "retry", reason: "calculation_failure" }
-      : { kind: "outcome", outcome: { kind: "completed", evidence: this.#evidence() } };
+      : { kind: "outcome", outcome: { kind: "completed" } };
   }
-  #stopped(): NavigationOutcome {
-    return { kind: "stopped", reason: describeAbort(this.context.signal.reason), evidence: this.#evidence() };
+  #stopped(): NavigationSettlement {
+    return { kind: "stopped", reason: describeAbort(this.context.signal.reason) };
   }
-  #failed(failure: NavigationFailure): NavigationOutcome {
-    return { kind: "failed", failure, evidence: this.#evidence() };
-  }
-  #evidence(): NavigationEvidence {
-    return {
-      runId: this.context.runId,
-      startedAtMs: this.#startedAt,
-      settledAtMs: Date.now(),
-      start: this.#start,
-      final: this.context.bot.observe(),
-      goalRevision: this.#goalRevision,
-      ...this.#counters,
-      movementAttempts: { ...this.#counters.movementAttempts },
-      // Provisional: `execute` measures this again once cleanup has run.
-      cleanup: this.#cleanupEvidence(),
-      unrestoredPassages: this.#passages.pending(this.context.bot.observe()),
-    };
+  #failed(failure: NavigationFailure): NavigationSettlement {
+    return { kind: "failed", failure };
   }
 }

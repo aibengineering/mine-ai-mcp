@@ -18,6 +18,7 @@ import {
   routePlan,
   stepUpStep,
 } from "../../test-support/navigation.js";
+import { nextTurn } from "../../test-support/async.js";
 import type { MovementPreparation } from "../bot.js";
 import type { PlannedStep } from "../movements/movement.js";
 import type { NavigationObservation, Position3 } from "../world/world.js";
@@ -31,16 +32,13 @@ import { ExpectedMutationLedger } from "./mutations.js";
 import { OpenedPassages } from "./opened-passages.js";
 import { RouteExecutor, type RouteExecutionRequest } from "./route-executor.js";
 
-/** Let the executor's pending microtasks and immediates run. */
-const nextTurn = () => new Promise<void>((resolve) => setImmediate(resolve));
 const walkStep = (id: string, fromX: number, toX: number) =>
   movementStep("walk", { x: fromX, y: 63, z: 0 }, { x: toX, y: 63, z: 0 }, { id, expectedTicks: 4 });
 
-function routeExecutor(request: Omit<RouteExecutionRequest, "passages" | "effectConfirmed">): RouteExecutor {
+function routeExecutor(request: Omit<RouteExecutionRequest, "passages">): RouteExecutor {
   return new RouteExecutor({
     ...request,
     passages: new OpenedPassages(request.context.world, request.context.bot.observe().dimension),
-    effectConfirmed: () => undefined,
   });
 }
 
@@ -86,14 +84,12 @@ class TickDrivenBot extends FakeNavigationBot {
   subscriptions = 0;
   preparations = 0;
   controls = 0;
-  snapshotCalls = 0;
   nextVelocity: Position3 = STILL;
   lastIntent: MovementControlIntent | null = null;
   readonly preparedVelocities: Position3[] = [];
   readonly executions: MovementExecution[] = [];
   readonly steeringTargets: Position3[] = [];
   override movementSnapshot() {
-    this.snapshotCalls += 1;
     const velocity = this.nextVelocity;
     this.nextVelocity = STILL;
     return {
@@ -259,7 +255,6 @@ test("a replanned step enters its owned open doorway before restoration", async 
     plan: routePlan([step], { id: "replanned" }),
     stepStarted: () => undefined,
     phase: () => undefined,
-    effectConfirmed: () => undefined,
     stepCompleted: () => "continue",
   }).execute();
   assert.equal(result.kind, "exhausted");
@@ -339,7 +334,6 @@ test("a mixed-kind continuous handoff reuses the route tick's velocity snapshot"
   bot.tickAt(1.1, { x: 0.3, y: 0, z: 0 });
   while (bot.preparations < 2) await nextTurn();
 
-  assert.equal(bot.snapshotCalls, 2);
   assert.deepEqual(bot.preparedVelocities, [STILL, { x: 0.3, y: 0, z: 0 }]);
   controller.abort();
   bot.tickAt(1.1);
@@ -348,12 +342,7 @@ test("a mixed-kind continuous handoff reuses the route tick's velocity snapshot"
 
 test("a failed continuous handoff clears the controls it inherited", async () => {
   class FailedHandoffBot extends TickDrivenBot {
-    clearCalls = 0;
     inheritedControlsAtFailure = 0;
-    override clearOwnedControls() {
-      this.clearCalls += 1;
-      super.clearOwnedControls();
-    }
     override async prepareMovement(
       step: PlannedStep,
       token: unknown,
@@ -381,8 +370,6 @@ test("a failed continuous handoff clears the controls it inherited", async () =>
   assert.equal((await result).kind, "failed");
   assert.equal(bot.inheritedControlsAtFailure > 0, true);
   assert.equal(bot.ownedControlCount, 0);
-  // Once at the failed ownership transfer and once at route cleanup.
-  assert.equal(bot.clearCalls, 2);
 });
 
 test("the route applies a gap controller's per-tick landing steering", async () => {

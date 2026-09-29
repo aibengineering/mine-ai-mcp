@@ -75,14 +75,11 @@ Base policies configure feature toggles:
 - `allowPlacing`: Permits placing scaffold blocks for bridges and pillars.
 - `allowDoors`: Permits opening wooden doors and fence gates.
 - `allowSwimming`: Permits traversing water blocks.
-- `allowClimbing`: Permits using ladders and vines.
 - `allowParkour`: Enables two-block to four-block gap jumps.
-- `allowDiagonalAscend`: Enables diagonal step-ups.
 - `allowSprinting`: Enables sprint and sprint-jump edges.
 - `allowDownward`: Enables straight-down floor digging.
 - `maximumDrop`: Maximum safe fall height, defaulting to 3 blocks.
 - `placementPenalty`: Extra cost added to each scaffold placement, defaulting to 8 ticks.
-- `heuristicWeight`: Tuning multiplier applied to goal heuristics, defaulting to 1.
 
 Decisions evaluate to one of three variants: `"allowed"`, `"prohibited"` with a reason string, or `"penalized"` with an added tick cost.
 

@@ -247,7 +247,7 @@ export function createNavigationRuntime(bot: Bot): NavigationRuntime {
     },
     setStepFieldProvider: (provider) => navigator.setStepFieldProvider(provider),
     get active() {
-      return diving.active || navigator.active !== null;
+      return diving.active || navigator.running;
     },
     onEvent(listener) {
       listeners.add(listener);

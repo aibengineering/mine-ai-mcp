@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EventEmitter } from "node:events";
-import { blockClass, observeMineflayerBlock } from "../navigation/mineflayer/world.js";
-import { UNLOADED } from "../navigation/world/world.js";
-import { deferred, nextTurn } from "../test-support/async.js";
-import { type CellReader, worldOf } from "../test-support/world.js";
+import { blockClass, observeMineflayerBlock } from "./world.js";
+import { UNLOADED } from "../world/world.js";
+import { deferred, nextTurn } from "../../test-support/async.js";
+import { type CellReader, worldOf } from "../../test-support/world.js";
 import { Vec3 } from "vec3";
-import { MemoryWorld } from "../navigation/world/memory-world.js";
-import { botFixture } from "../test-support/bot.js";
-import { decideFootingResponse } from "../survival/policy/environment.js";
-import { bucketAvailable, bucketDropTotals, predictWaterLanding, saveWaterLanding, waterLandingActive, waterableLanding } from "../navigation/mineflayer/water-landing.js";
+import { MemoryWorld } from "../world/memory-world.js";
+import { botFixture } from "../../test-support/bot.js";
+import { decideFootingResponse } from "../../survival/policy/environment.js";
+import { bucketAvailable, bucketDropTotals, predictWaterLanding, saveWaterLanding, waterLandingActive, waterableLanding } from "./water-landing.js";
 function floor(y: number) {
   const world = new MemoryWorld();
   for (let x = -3; x <= 40; x++)

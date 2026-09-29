@@ -4,8 +4,7 @@ import type { BlockPosition, WorldView } from "../world/world.js";
 import { predictWaterLanding, waterableLanding } from "../world/water-landing.js";
 export { predictWaterLanding, waterableLanding } from "../world/water-landing.js";
 import { horizontalControlsToward } from "../steering/local-steering.js";
-import { observeMineflayerBlock } from "./world.js";
-import { UNLOADED } from "../world/world.js";
+import { blockReader } from "./world.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { observedEyeHeight } from "../../world/block-visibility.js";
 /** Stop waiting for an unavailable server; every continuation rechecks ownership before issuing another effect. */
@@ -49,10 +48,7 @@ export function bucketAvailable(bot: Bot): boolean {
   return supply.waterBuckets > 0 && supply.dimensionHoldsWater;
 }
 function view(bot: Bot): Pick<WorldView, "blockAt"> {
-  return { blockAt: (x, y, z) => {
-      const block = bot.blockAt(new Vec3(x, y, z));
-      return block ? observeMineflayerBlock(block) : UNLOADED;
-    } };
+  return { blockAt: blockReader(bot) };
 }
 /** One already-admitted body owner owns equip, aim, controls, placement and recovery through settlement. */
 export async function saveWaterLanding(bot: Bot, options: {
@@ -76,7 +72,7 @@ export async function saveWaterLanding(bot: Bot, options: {
     return fail("The planned landing no longer has a safe full-block floor and open air.");
   const dimension = bot.game.dimension;
   const originalSlot = bot.quickBarSlot;
-  const waterCount = () => bot.inventory.items().filter(item => item.name === "water_bucket").reduce((total, item) => total + item.count, 0);
+  const waterCount = () => waterLandingSupply(bot).waterBuckets;
   const fullBefore = waterCount();
   const lifetime = new AbortController();
   const signal = AbortSignal.any([options.signal, lifetime.signal, AbortSignal.timeout(15000)]);
@@ -289,8 +285,7 @@ export async function saveWaterLanding(bot: Bot, options: {
       if (reclaiming) { await waitForPhysicsTicks(bot, 1, signal); continue; }
       const cell = evidence.cell;
       if (issued && cell) {
-        const source = bot.blockAt(new Vec3(cell.x, cell.y, cell.z));
-        if (source?.name === "water" && Number(source.getProperties().level) === 0 && bot.heldItem?.name === "bucket" && waterCount() === fullBefore - 1)
+        if (sourceAt(cell) && bot.heldItem?.name === "bucket" && waterCount() === fullBefore - 1)
           evidence.phase = "poured";
         if (evidence.phase === "poured" && bot.entity.onGround && bot.entity.position.y <= cell.y + 0.05 && Reflect.get(bot.entity, "isInWater")) {
           const landingEpoch = recoveryEpoch;
@@ -315,7 +310,7 @@ export async function saveWaterLanding(bot: Bot, options: {
             check();
             if (landingEpoch !== recoveryEpoch) continue flight;
             const after = bot.blockAt(new Vec3(cell.x, cell.y, cell.z));
-            if (waterCount() === fullBefore && after && !(after.name === "water" && Number(after.getProperties().level) === 0)) {
+            if (waterCount() === fullBefore && after && !sourceAt(cell)) {
               evidence.waterRecovered = true;
               evidence.phase = "recovered";
               publish();

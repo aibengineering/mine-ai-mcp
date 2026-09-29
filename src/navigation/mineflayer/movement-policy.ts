@@ -14,7 +14,6 @@ import { readNavigationPolicy } from "../../survival/state/navigation-policy.js"
 import type { Bot } from "mineflayer";
 import { occupiedCell } from "../../world/placement.js";
 import { enchantmentsOf } from "../../world/enchantments.js";
-import { DEFAULT_SCAFFOLD_BLOCKS } from "../../survival/policy/contract.js";
 import type { BreakEvaluation, MovementPolicy, PolicyDecision, ToolSelection } from "../movements/policy.js";
 import { BREAK_OPENS_INTO_LIQUID, createMovementPolicy, type ScaffoldSelection } from "../movements/policy.js";
 import { TRAIT_DAMAGING, TRAIT_LAVA } from "../world/block-geometry.js";
@@ -26,9 +25,6 @@ import {
   type WorldView,
 } from "../world/world.js";
 import { blockClass, observeMineflayerBlock } from "./world.js";
-
-/** The only carried blocks standard navigation may spend to create a route: the cheap, plentiful block of each terrain. */
-export const STANDARD_SCAFFOLD_ITEMS = DEFAULT_SCAFFOLD_BLOCKS;
 
 export function scaffoldBlockNames(bot: Bot): readonly string[] {
   return readNavigationPolicy(bot).scaffold_blocks;
@@ -78,8 +74,6 @@ export interface MineflayerMovementPolicyOptions {
   readonly allowDigging?: boolean;
   readonly maximumDrop?: number;
   readonly allowParkour?: boolean;
-  readonly allowDiagonalAscend?: boolean;
-  readonly allowDoors?: boolean;
   /** Whether this block and cell are explicitly targeted for removal by the calling task. */
   readonly isRequestedBreak?: (
     block: Extract<BlockObservation, { kind: "loaded" }>,
@@ -340,7 +334,6 @@ export function createMineflayerMovementPolicy(
   bot: Bot,
   options: MineflayerMovementPolicyOptions = {},
 ): MovementPolicy {
-  const allowDoors = options.allowDoors ?? true;
   const allowParkour = options.allowParkour ?? true;
   const protectedBlockIds = new Set(
     [...ROUTE_PROTECTED_CROPS, ...(options.protectedBlockNames ?? [])].flatMap((name) => {
@@ -375,7 +368,7 @@ export function createMineflayerMovementPolicy(
   };
   /** A break the calling task must have asked for by cell: a container, a door, a sign. */
   const needsRequest = (observation: LoadedBlock, plan: BreakPlan) =>
-    plan.requiresExplicitRemoval || observation.traits.interactive || (allowDoors && observation.traits.openable);
+    plan.requiresExplicitRemoval || observation.traits.interactive || observation.traits.openable;
 
   // What breaking a state costs before its cell is known: prohibited outright,
   // breakable with the plan's tool and the terrain penalty, or breakable but
@@ -418,9 +411,7 @@ export function createMineflayerMovementPolicy(
   const policy = createMovementPolicy({
     allowDigging: options.allowDigging ?? true,
     allowPlacing: scaffolding,
-    allowDoors,
     allowParkour,
-    allowDiagonalAscend: options.allowDiagonalAscend ?? true,
     allowSprinting: options.allowSprinting ?? true,
     maximumDrop: options.maximumDrop ?? DEFAULT_MAXIMUM_DROP,
     placementPenalty: options.placementPenalty ?? 20,

@@ -63,21 +63,6 @@ export interface GeneratedMovements extends Iterable<GeneratedMovement> {
   toArray(): GeneratedMovement[];
 }
 
-/** Ready-made movements in the shape `generate` returns, for a catalogue stubbed in a test. */
-export function movementList(movements: readonly GeneratedMovement[]): GeneratedMovements {
-  return {
-    length: movements.length,
-    toX: movements.map((movement) => movement.to.x),
-    toY: movements.map((movement) => movement.to.y),
-    toZ: movements.map((movement) => movement.to.z),
-    remainingScaffolds: movements.map((movement) => movement.remainingScaffolds),
-    cost: movements.map((movement) => movement.cost),
-    settle: () => true,
-    movement: (index) => movements[index]!,
-    toArray: () => [...movements],
-    [Symbol.iterator]: () => movements[Symbol.iterator](),
-  };
-}
 
 /** What an opened door or gate must read as before the route walks through it. */
 const OPENED = {
