@@ -1,8 +1,5 @@
 import type { Bot } from "mineflayer";
-import { plugin as toolPlugin, type Tool } from "mineflayer-tool";
 import { observeDamageRegistry } from "./world/damage-registry.js";
-
-export type BotTool = Pick<Tool, "equipForBlock">;
 
 /**
  * Mineflayer creation options every Mine AI MCP bot shares.
@@ -19,31 +16,14 @@ export type BotTool = Pick<Tool, "equipForBlock">;
 export const BOT_PHYSICS_OPTIONS = { maxCatchupTicks: 1 } as const;
 
 /**
- * Install the physical bot plugins Mine AI MCP needs.
+ * Install the bot observers Mine AI MCP needs before login.
  *
  * Navigation is not among them: it is not a Mineflayer plugin, and the session
- * constructs its runtime explicitly.
+ * constructs its runtime explicitly. Neither is `mineflayer-tool`, which this
+ * once loaded for a tool check nothing called; it also loaded the upstream
+ * `mineflayer-pathfinder`, a second pathfinder whose tick listeners ran beside
+ * ours. Collection prices tools through navigation's `evaluateBreak`.
  */
 export function loadBotPlugins(bot: Bot): void {
   observeDamageRegistry(bot);
-  if (!botTool(bot)) bot.loadPlugin(toolPlugin);
-}
-
-function botTool(bot: Bot): BotTool | null {
-  const tool = (bot as Bot & { tool?: Partial<BotTool> }).tool;
-  return typeof tool?.equipForBlock === "function" ? tool : null;
-}
-
-/** Return the exact Tool capability Collect uses, or explain the host defect. */
-export function requireBotTool(bot: Bot): BotTool {
-  const tool = botTool(bot);
-  if (!tool) {
-    throw new Error("Collect Block requires the mineflayer-tool plugin.");
-  }
-  return tool;
-}
-
-/** Verify ambient plugin typings against the capabilities installed at runtime. */
-export function assertBotPluginsLoaded(bot: Bot): void {
-  requireBotTool(bot);
 }

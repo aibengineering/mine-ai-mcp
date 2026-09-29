@@ -1,6 +1,6 @@
 export * from "@aibengineering/minecraft-block-highlighter";
 export * from "./actions/index.js";
-export { BOT_PHYSICS_OPTIONS, assertBotPluginsLoaded, loadBotPlugins } from "./bot-capabilities.js";
+export { BOT_PHYSICS_OPTIONS, loadBotPlugins } from "./bot-capabilities.js";
 export * from "./bot-data/index.js";
 export { createNavigationRuntime, createMovements } from "./navigation/index.js";
 export type { Navigate, NavigationRuntime } from "./navigation/index.js";

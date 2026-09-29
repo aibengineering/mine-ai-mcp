@@ -47,7 +47,6 @@
   "dependencies": {
     "@aibengineering/minecraft-block-highlighter": "github:aibengineering/minecraft-block-highlighter#a15592231471d351550971d12d8edb1e9a647066",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "mineflayer-tool": "1.2.0",
     "prismarine-block": "^1.23.0",
     "prismarine-chat": "^1.13.0",
     "prismarine-item": "^1.18.0",

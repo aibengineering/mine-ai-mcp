@@ -2,7 +2,7 @@ import { once, type EventEmitter } from "node:events";
 import { setTimeout as delay } from "node:timers/promises";
 import mineflayer, { type Bot } from "mineflayer";
 import type { NodeClientSession } from "mine-labs/client";
-import { BOT_PHYSICS_OPTIONS, assertBotPluginsLoaded, loadBotPlugins } from "@aibengineering/mine-ai-mcp";
+import { BOT_PHYSICS_OPTIONS, loadBotPlugins } from "@aibengineering/mine-ai-mcp";
 import { observeScenarioPlayerPreparation } from "../../scenarios/src/player-preparation.ts";
 
 type PreparationSession = Pick<NodeClientSession, "scenario" | "signal" | "ready" | "arranged">;
@@ -13,7 +13,6 @@ export async function prepareScenarioBot(bot: Bot, session: PreparationSession):
   try {
     loadBotPlugins(bot);
     await waitForSpawnAndVitals(bot, session.signal);
-    assertBotPluginsLoaded(bot);
     await waitForArrangement(bot, session);
     await waitForStandingColumn(bot, session.signal);
   } finally {

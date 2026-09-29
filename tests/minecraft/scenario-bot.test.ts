@@ -11,7 +11,6 @@ function fixture() {
   const bot = Object.assign(new EventEmitter(), {
     username: "Actor",
     _client: new EventEmitter(),
-    tool: { equipForBlock: async () => {} },
     inventory: Object.assign(new EventEmitter(), { items: () => [] }),
     registry: { itemsByName: {} },
     game: { dimension: "overworld" },

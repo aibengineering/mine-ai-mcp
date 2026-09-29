@@ -4,7 +4,7 @@ import { attachHighlighter } from "@aibengineering/minecraft-block-highlighter";
 import mineflayer, { type Bot } from "mineflayer";
 import { once } from "node:events";
 import { createServer, type Server as HttpServer } from "node:http";
-import { BOT_PHYSICS_OPTIONS, assertBotPluginsLoaded, loadBotPlugins } from "../bot-capabilities.js";
+import { BOT_PHYSICS_OPTIONS, loadBotPlugins } from "../bot-capabilities.js";
 import {
   botDataLogLine,
   deriveMinecraftBotDataIdentity,
@@ -72,7 +72,6 @@ async function connectBot(configuration: HostOptions): Promise<ConnectedBot> {
     };
     const spawned = () => {
       try {
-        assertBotPluginsLoaded(bot);
         if (capture.kind === "waiting") {
           throw new Error("Minecraft spawned before supplying its login packet for bot data.");
         }

@@ -4,7 +4,6 @@ import mineflayer, { type Bot } from "mineflayer";
 import { runNodeClient, type NodeClientSession } from "mine-labs/client";
 import {
   BOT_PHYSICS_OPTIONS,
-  assertBotPluginsLoaded,
   createNavigationRuntime,
   loadBotPlugins,
 } from "@aibengineering/mine-ai-mcp";
@@ -27,7 +26,6 @@ async function runMineAiScenario(file: string, session: NodeClientSession): Prom
   holdStillWhileChunksLoad(bot);
 
   await waitForSpawn(bot, session.username);
-  assertBotPluginsLoaded(bot);
   const preparation = observeScenarioPlayerPreparation(bot, session.scenario, session.signal);
   try {
     session.ready();

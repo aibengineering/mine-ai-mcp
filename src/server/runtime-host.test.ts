@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { test, type TestContext } from "node:test";
-import mineflayer from "mineflayer";
+import mineflayer, { type Bot } from "mineflayer";
 import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 import { SqlBotData } from "../bot-data/index.js";
 import { botFixture, type BotFixtureOptions } from "../test-support/bot.js";
@@ -31,13 +31,23 @@ async function configuration(t: TestContext) {
   return { options: { ...parseHostOptions(["--data-root", directory]), listenPort: 0 }, notices, output };
 }
 
-function connectedBot(t: TestContext, fixture: BotFixtureOptions = {}) {
+/**
+ * `startup` is what the fake server does once the bot exists; by default it
+ * logs the bot in and spawns it.
+ */
+function connectedBot(
+  t: TestContext,
+  fixture: BotFixtureOptions = {},
+  startup: (bot: Bot, client: EventEmitter) => void = (bot, client) => {
+    client.emit("login", { worldState: { hashedSeed: 1n } });
+    bot.emit("spawn");
+  },
+) {
   const client = Object.assign(new EventEmitter(), { uuid: "host-test", write: () => {} });
   const bot = botFixture(
     fixture,
     {
       _client: client,
-      tool: { equipForBlock: async () => {} },
       getControlState: () => false,
       clearControlStates: () => {},
       quit: () => bot.emit("end", "Host test closed"),
@@ -49,10 +59,7 @@ function connectedBot(t: TestContext, fixture: BotFixtureOptions = {}) {
   for (const [slot, item] of Object.entries(fixture.slots ?? {})) slots[Number(slot)] = item;
   bot.inventory.slots = slots;
   t.mock.method(mineflayer, "createBot", () => {
-    queueMicrotask(() => {
-      client.emit("login", { worldState: { hashedSeed: 1n } });
-      bot.emit("spawn");
-    });
+    queueMicrotask(() => startup(bot, client));
     return bot;
   });
   return bot;
@@ -62,17 +69,13 @@ function failures(error: unknown): unknown[] {
   return error instanceof SuppressedError ? [...failures(error.suppressed), ...failures(error.error)] : [error];
 }
 
-test("a plugin startup failure still quits the newly created bot", async (t) => {
+test("a startup failure after the bot observers are installed still quits the bot and releases them", async (t) => {
   const { options, notices } = await configuration(t);
-  const bot = connectedBot(t);
-  const pluginFailure = new Error("Plugin loading failed");
-  // Force the real plugin-loading boundary to fail before any spawn waiter exists.
-  delete (bot as Partial<typeof bot>).tool;
-  bot.loadPlugin = () => {
-    throw pluginFailure;
-  };
+  // Spawning without the login packet is a startup failure the host detects
+  // only after `loadBotPlugins` has attached its registry observer.
+  const bot = connectedBot(t, {}, (bot) => bot.emit("spawn"));
   const quit = t.mock.method(bot, "quit");
-  await assert.rejects(startRuntimeHost(source, options, notices), (error) => error === pluginFailure);
+  await assert.rejects(startRuntimeHost(source, options, notices), /spawned before supplying its login packet/);
   assert.equal(quit.mock.callCount(), 1);
   assert.equal(bot._client.listenerCount("registry_data"), 0);
 });
