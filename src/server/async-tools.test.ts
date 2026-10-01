@@ -10,7 +10,8 @@ import type { SurvivalStatus } from "../survival/evidence/contract.js";
 import { DEFAULT_SURVIVAL_POLICY } from "../survival/policy/contract.js";
 import { createMinecraftMcpServer } from "./mcp.js";
 
-test("MCP accepts immediately, retains work across client reconnect, and delivers full typed output before the successor", async (t) => {
+for (const outputSchemaReferences of [false, true]) {
+test(`MCP accepts immediately, retains work across client reconnect, and delivers full typed output before the successor (references=${outputSchemaReferences})`, async (t) => {
   let release!: () => void;
   const done = new Promise<void>((resolve) => { release = resolve; });
   const runner = new ActionRunner();
@@ -51,11 +52,12 @@ test("MCP accepts immediately, retains work across client reconnect, and deliver
     recordActionResponse: (reply: unknown) => { records.push(reply); },
   };
   async function connect() {
-    const server = createMinecraftMcpServer(runtime, "TestBot");
+    const server = createMinecraftMcpServer(runtime, "TestBot", { outputSchemaReferences });
     const client = new Client({ name: "async-contract", version: "1" });
     const [c, s] = InMemoryTransport.createLinkedPair();
     await server.connect(s); await client.connect(c);
     t.after(async () => { await client.close(); await server.close(); });
+    await client.listTools();
     return client;
   }
   const client = await connect();
@@ -116,6 +118,7 @@ test("MCP accepts immediately, retains work across client reconnect, and deliver
   assert.equal(service.status().awaitingResult, null);
   assert.equal(records.length, 9);
 });
+}
 
 
 test("initial waits return typed results or progress, deduplicate retries, and cancellation stops only the wait", async (t) => {

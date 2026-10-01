@@ -208,6 +208,7 @@ Read these pages for each part of the system:
 - [Bot data](bot-data.md): The SQLite schema, query rules, data dictionary, and storage modes.
 - [Events and responses](events-and-responses.md): Response representations, notification summaries, and the event stream.
 - [Testing](testing.md): Mine Labs scenario suites, playtests, and execution scripts.
+- [Compact output schemas](output-schema-references.md): Default local-reference emission, the inline fallback, and host compatibility limits.
 - [Limitations](limitations.md): Current capability and dependency boundaries.
 
 ## Further reading

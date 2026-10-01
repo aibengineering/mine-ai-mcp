@@ -7,7 +7,7 @@ export type { Navigate, NavigationRuntime } from "./navigation/index.js";
 export * from "./runtime/minecraft-runtime.js";
 export { parseHostOptions, type HostOptions } from "./server/config.js";
 export { startHost, type Host } from "./server/host.js";
-export { createMinecraftMcpServer } from "./server/mcp.js";
+export { createMinecraftMcpServer, type McpCatalogueOptions } from "./server/mcp.js";
 export * from "./session/action-runner.js";
 export * from "./survival/index.js";
 export * from "./world/index.js";

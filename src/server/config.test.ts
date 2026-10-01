@@ -32,6 +32,11 @@ test("temporary bot data has no meaningless persistent root", () => {
   });
 });
 
+test("defaults to compact output schemas and permits the explicit inline fallback", () => {
+  assert.equal(parseHostOptions([]).outputSchemaReferences, true);
+  assert.equal(parseHostOptions(["--inline-output-schemas"]).outputSchemaReferences, false);
+});
+
 test("rejects unknown bot-data choices at the host boundary", () => {
   assert.throws(
     () => parseHostOptions(["--bot-data-persistence", "sometimes"]),
