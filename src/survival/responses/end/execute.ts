@@ -1,3 +1,4 @@
+import { findCrystalOpenings } from "../../positioning/combat/crystal-openings.js";
 import { buildCrystalStaircase, pillarShortfall, planCrystalStaircase } from "../../positioning/combat/crystal-staircase.js";
 import { standingCell } from "../../positioning/combat/geometry.js";
 import type { Bot } from "mineflayer";
@@ -633,17 +634,22 @@ export class EndCombat {
         while (!canShoot(bot.entity.position)) {
           // Give navigation actual firing openings to approach, rather than
           // the tower itself. Reachability remains the pathfinder's decision.
-          const openings = bot.findBlocks({
-            matching: block => block.boundingBox === "block",
-            useExtraInfo: block => {
-              const feet = block.position.offset(0, 1, 0);
-              return !unusableStances.has(`${feet.x},${feet.y},${feet.z}`) &&
-                standingCell(this.navigation.world, feet) && canShoot(feet.offset(0.5, 0, 0.5));
-            },
-            // Include the far side of the target's observable firing area,
-            // even when the bot starts across the island from this tower.
-            maxDistance: bot.entity.position.distanceTo(target.position) + EXPLOSION_RECEIPT_RANGE, count: 32,
-          }).map(floor => floor.offset(0, 1, 0));
+          const openings = await findCrystalOpenings({
+            world: this.navigation.world, columns: bot.world.getColumns(),
+            origin: bot.entity.position.clone(), target: target.position.clone(),
+            receiptRange: EXPLOSION_RECEIPT_RANGE, signal,
+            canShoot: feet => !unusableStances.has(`${Math.floor(feet.x)},${feet.y},${Math.floor(feet.z)}`) && canShoot(feet),
+            interrupted: () => this.danger || !target.isValid || observation.destroyed ||
+              bot.game.dimension !== observation.dimension || bot.entities[targetId] !== target,
+          });
+          if (bot.game.dimension !== observation.dimension || (bot.entities[targetId] && bot.entities[targetId] !== target && !observation.destroyed))
+            return this.crystalResult(observation, "stopped", "Selected crystal or its dimension is no longer observed.");
+          if (!target.isValid || !bot.entities[targetId] || observation.destroyed) return this.observeCrystalShot(observation, signal);
+          if (openings === null) {
+            const escaped = await this.evade(signal);
+            if (escaped.outcome !== "evaded") return this.crystalResult(observation, "stopped", escaped.reason);
+            continue;
+          }
           const goal: Goal = {
             resolve: () => ({
               kind: "active",

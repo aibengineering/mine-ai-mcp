@@ -10,6 +10,7 @@ import { CrystalObservation } from "./crystal.js";
 
 import { createDestroyEndCrystalAction } from "../../../actions/destroy-end-crystal/index.js";
 import type { NavigationRuntime } from "../../../navigation/index.js";
+import { MemoryWorld } from "../../../navigation/world/memory-world.js";
 import { ActionRunner } from "../../../session/action-runner.js";
 import type { FootingRecovery } from "../../responses/footing.js";
 
@@ -218,15 +219,17 @@ test("crystal bow search accepts distant clear shots without preferring a blocke
   f.bot.clearControlStates = () => {};
   f.bot.deactivateItem = () => {};
   f.bot.entity.position.set(100, 64, 0);
-  f.bot.findBlocks = options => {
-    const openingFloor = new Vec3(-15, 63, 0);
-    assert.ok(options.maxDistance! >= f.bot.entity.position.distanceTo(openingFloor), "include shots on the far side of a tower across the island");
-    return [openingFloor];
-  };
+  const world = new MemoryWorld();
+  world.load({ x: -15, y: 63, z: 0 }, { stateId: 1 });
+  world.load({ x: -15, y: 64, z: 0 }, { stateId: 0 });
+  world.load({ x: -15, y: 65, z: 0 }, { stateId: 0 });
+  f.bot.world.getColumns = () => [{ chunkX: -1, chunkZ: 0, column: {} as never }];
   let blocked = true;
-  f.bot.world.raycast = () => blocked ? ({ name: "obsidian" } as never) : null;
+  // A low obstruction beside the near stance leaves the far high arc clear.
+  f.bot.world.raycast = from => blocked && from.x >= 0 && from.y < 70
+    ? ({ name: "obsidian" } as never) : null;
   let checked = false;
-  const navigation = { navigate: async ({ goal }: Parameters<NavigationRuntime["navigate"]>[0]) => {
+  const navigation = { world, navigate: async ({ goal }: Parameters<NavigationRuntime["navigate"]>[0]) => {
     const resolved = goal.resolve({} as never);
     assert.equal(resolved.kind, "active");
     if (resolved.kind === "active") {
