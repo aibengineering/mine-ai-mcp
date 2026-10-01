@@ -207,7 +207,9 @@ export async function startRuntimeHost(source: SourceIdentity, configuration: Ho
   const application = resources.adopt(
     createMinecraftMcpHttpApplication({
       host: configuration.listenHost,
-      createServer: () => createMinecraftMcpServer(activeRuntime, bot.username).server,
+      createServer: () => createMinecraftMcpServer(activeRuntime, bot.username, {
+        outputSchemaReferences: configuration.outputSchemaReferences,
+      }).server,
       health: () => {
         const position = bot.entity?.position;
         const feet = position?.floored();

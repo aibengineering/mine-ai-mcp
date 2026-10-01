@@ -6,7 +6,9 @@ import os from "node:os";
 import path from "node:path";
 import { test, type TestContext } from "node:test";
 import mineflayer from "mineflayer";
-import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { LATEST_PROTOCOL_VERSION, ListToolsResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { SqlBotData } from "../bot-data/index.js";
 import { botFixture, type BotFixtureOptions } from "../test-support/bot.js";
 import { parseHostOptions } from "./config.js";
@@ -49,6 +51,35 @@ function connectedBot(t: TestContext, fixture: BotFixtureOptions = {}) {
 
 function failures(error: unknown): unknown[] {
   return error instanceof SuppressedError ? [...failures(error.suppressed), ...failures(error.error)] : [error];
+}
+
+for (const inline of [false, true]) {
+  test(`normal host publishes ${inline ? "explicit inline fallback" : "default reference"} output schemas`, async (t) => {
+    const options = await configuration(t);
+    connectedBot(t);
+    await using host = await startRuntimeHost(source, {
+      ...options,
+      outputSchemaReferences: parseHostOptions(inline ? ["--inline-output-schemas"] : []).outputSchemaReferences,
+    });
+    const address = host.server.address();
+    assert.ok(address && typeof address === "object");
+    const client = new Client({ name: "host-schema-contract", version: "1" });
+    const transport = new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${address.port}/mcp`));
+    try {
+      await client.connect(transport);
+      // Compare actual host discovery without paying the legacy catalogue's
+      // whole-client compilation cost. Validator integration lives in the
+      // catalogue and async-tools tests.
+      const catalogue = await client.request({ method: "tools/list" }, ListToolsResultSchema);
+      const wait = catalogue.tools.find((tool) => tool.name === "wait_for_action")!.outputSchema!;
+      const bytes = Buffer.byteLength(JSON.stringify(wait));
+      if (inline) assert.ok(bytes > 800_000, "the fallback must reach every normal-host protocol session");
+      else assert.ok(bytes < 200_000, "normal-host sessions must use compact schemas by default");
+      await transport.terminateSession();
+    } finally {
+      await client.close();
+    }
+  });
 }
 
 test("a plugin startup failure still quits the newly created bot", async (t) => {

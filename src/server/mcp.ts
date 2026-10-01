@@ -21,6 +21,7 @@ import { formatSurvivalStatus } from "../survival/evidence/format.js";
 import type { AsyncActions } from "../session/async-actions.js";
 import { foregroundStatusSchema, isForeground, registerAsyncTools } from "./async-tools.js";
 import { formatFinalProgress, formatForegroundStatus } from "./async-format.js";
+import { ReferenceToolCatalogue } from "./tool-catalogue.js";
 
 const rationaleSchema = z
   .string()
@@ -169,8 +170,18 @@ function serverInstructions(runtime: ActionRuntime, username: string): string {
   return instructions.join(" ");
 }
 
+export interface McpCatalogueOptions {
+  /**
+   * Emit equivalent, self-contained local references in outputSchema by default.
+   * Set false to use the SDK's previous inline conversion strategy for hosts
+   * whose reference handling is incompatible. Input schemas and call-time
+   * validation are unchanged; actual Claude/Codex host support is unverified.
+   */
+  readonly outputSchemaReferences?: boolean;
+}
+
 /** Create one disposable MCP protocol session over the process-owned bot session. */
-export function createMinecraftMcpServer(runtime: ActionRuntime, username: string): McpServer {
+export function createMinecraftMcpServer(runtime: ActionRuntime, username: string, options: McpCatalogueOptions = {}): McpServer {
   // No `capabilities` here: registerTool declares the tools capability itself,
   // and declaring it by hand only restates what the first registration does.
   const server = new McpServer(
@@ -179,6 +190,7 @@ export function createMinecraftMcpServer(runtime: ActionRuntime, username: strin
       instructions: serverInstructions(runtime, username),
     },
   );
+  const tools = options.outputSchemaReferences !== false ? new ReferenceToolCatalogue(server) : server;
 
   for (const action of runtime.actions) {
     if (runtime.asyncActions && (isForeground(action) || action.name === "cancel_foreground_action")) continue;
@@ -187,7 +199,7 @@ export function createMinecraftMcpServer(runtime: ActionRuntime, username: strin
       response_format: responseFormatSchema,
     });
     const structuredOutputSchema = mcpOutputSchema(action);
-    server.registerTool(
+    tools.registerTool(
       action.name,
       {
         description: action.description,
@@ -242,7 +254,7 @@ export function createMinecraftMcpServer(runtime: ActionRuntime, username: strin
     );
   }
 
-  if (runtime.asyncActions) registerAsyncTools(server, { ...runtime, asyncActions: runtime.asyncActions,
+  if (runtime.asyncActions) registerAsyncTools(tools, { ...runtime, asyncActions: runtime.asyncActions,
     survivalStatus: () => runtime.status?.().survival,
     notificationSummary: () => runtime.notificationSummary(), recordActionRequest: (input) => runtime.recordActionRequest(input),
     recordActionResponse: (input) => runtime.recordActionResponse(input),
@@ -250,6 +262,8 @@ export function createMinecraftMcpServer(runtime: ActionRuntime, username: strin
     const reply = response(action, output, "markdown", { unreadCount: 0 });
     return "markdown" in reply.structuredContent.response ? reply.structuredContent.response.markdown : "";
   });
+
+  if (tools instanceof ReferenceToolCatalogue) tools.publish();
 
   return server;
 }

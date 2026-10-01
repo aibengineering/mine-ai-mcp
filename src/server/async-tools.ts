@@ -41,7 +41,7 @@ export function isForeground(action: Action): boolean {
 }
 
 /** Protocol tools delegate execution lifetime to the bot-owned service. */
-export function registerAsyncTools(server: McpServer, runtime: Runtime, render: Render): void {
+export function registerAsyncTools(server: Pick<McpServer, "registerTool">, runtime: Runtime, render: Render): void {
   const foreground = runtime.actions.filter(isForeground);
   if (foreground.length === 0) return;
   function progressFor(action: Action) {
