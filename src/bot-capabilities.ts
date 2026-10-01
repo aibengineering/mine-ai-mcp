@@ -1,5 +1,6 @@
 import type { Bot } from "mineflayer";
 import { plugin as toolPlugin, type Tool } from "mineflayer-tool";
+import { acknowledgeEndCredits } from "./world/end-credits.js";
 import { observeDamageRegistry } from "./world/damage-registry.js";
 
 export type BotTool = Pick<Tool, "equipForBlock">;
@@ -26,6 +27,7 @@ export const BOT_PHYSICS_OPTIONS = { maxCatchupTicks: 1 } as const;
  */
 export function loadBotPlugins(bot: Bot): void {
   observeDamageRegistry(bot);
+  acknowledgeEndCredits(bot);
   if (!botTool(bot)) bot.loadPlugin(toolPlugin);
 }
 
