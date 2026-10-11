@@ -1,4 +1,5 @@
 import type { Bot } from "mineflayer";
+import { acknowledgeEndCredits } from "./world/end-credits.js";
 import { observeDamageRegistry } from "./world/damage-registry.js";
 
 /**
@@ -26,4 +27,5 @@ export const BOT_PHYSICS_OPTIONS = { maxCatchupTicks: 1 } as const;
  */
 export function loadBotPlugins(bot: Bot): void {
   observeDamageRegistry(bot);
+  acknowledgeEndCredits(bot);
 }

@@ -52,6 +52,12 @@ bun src/server/host.ts --minecraft-host 127.0.0.1 --minecraft-port 25565 --usern
 Complete documentation lives in
 [docs/mcp/README.md](docs/mcp/README.md).
 
+Tool output schemas use compact local references by default. If a client has
+incompatible reference handling, add `--inline-output-schemas` to the host command
+to restore the previous SDK representation. Actual Claude/Codex host compatibility
+with this catalogue remains unverified; see the
+[schema compatibility notes](docs/mcp/output-schema-references.md).
+
 Run a local Claude playthrough with the [Docker playthrough setup](docker/README.md).
 
 ## Rebuild the run that beat the game

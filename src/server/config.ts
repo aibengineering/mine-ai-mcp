@@ -25,6 +25,8 @@ export interface HostOptions {
   readonly version: string;
   readonly connectTimeoutMs: number;
   readonly debugExecuteJavaScript: boolean;
+  /** Defaults to true; false retains the SDK's previous output-schema representation. */
+  readonly outputSchemaReferences?: boolean;
   readonly botData: {
     readonly storage: BotDataStorage;
     readonly scope: BotDataScopeKind;
@@ -47,6 +49,7 @@ export function parseHostOptions(args: readonly string[] = process.argv.slice(2)
       version: { type: "string", default: "1.21.4" },
       "connect-timeout-ms": { type: "string", default: "45000" },
       "debug-execute-javascript": { type: "boolean", default: false },
+      "inline-output-schemas": { type: "boolean", default: false },
       "data-root": { type: "string", default: DEFAULT_DATA_ROOT },
       "bot-data-persistence": { type: "string", default: "persistent" },
       "bot-data-scope": { type: "string", default: "bot" },
@@ -74,6 +77,7 @@ export function parseHostOptions(args: readonly string[] = process.argv.slice(2)
     version: values.version,
     connectTimeoutMs: positiveInteger("--connect-timeout-ms", values["connect-timeout-ms"]),
     debugExecuteJavaScript: values["debug-execute-javascript"],
+    outputSchemaReferences: !values["inline-output-schemas"],
     botData: {
       storage:
         botDataPersistence === "temporary"
