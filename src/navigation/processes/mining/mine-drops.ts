@@ -57,10 +57,6 @@ export class MineDropTracker {
     private readonly anticipatedBlacklist: ReadonlySet<string>,
   ) {}
 
-  get anticipating(): boolean {
-    return this.#anticipatedDrops.size > 0;
-  }
-
   /** A native tossed/falling item has not reached the cell a pickup route can judge yet. */
   inFlight(entityId: number): boolean {
     const entity = this.bot.entities[entityId];

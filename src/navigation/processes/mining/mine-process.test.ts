@@ -560,6 +560,89 @@ test("a vanished route target does not blacklist a different live item", async (
   assert.equal(routes, 2);
 });
 
+test("a drop that vanished before its inventory packet is waited for where the bot stands, not searched for", async () => {
+  // The item was last seen above the bot's head, a cell it cannot stand in.
+  const clock = testClock();
+  let satisfied = false;
+  let routes = 0;
+  let waits = 0;
+  const bot = fakeBot({
+    drops: [new Vec3(0, 66, 0)],
+    feet: new Vec3(0.5, 64, 0.5),
+    onWaitForTicks: () => {
+      waits += 1;
+      satisfied = true;
+    },
+  });
+  const result = await mine(
+    bot,
+    request(bot, {
+      now: clock.now,
+      isSatisfied: () => satisfied,
+      route: async (options) => {
+        routes += 1;
+        delete bot.entities[0];
+        clock.advance(300);
+        const pending = activeGoal(bot, options.goal);
+        assert.equal(pending.revision, "await-pending-drops");
+        assert.equal(pending.isSatisfied({ feet: { x: 0, y: 64, z: 0 } } as never, {} as never), true);
+        return { status: "completed", elapsedMs: 0 };
+      },
+    }),
+  );
+  assert.equal(result.status, "satisfied");
+  assert.equal(routes, 1, "the pending drop must not start another route");
+  assert.equal(waits, 1);
+});
+
+test("standing on a drop in its pickup delay, the blocks beside the bot are mined without moving", async () => {
+  const floor = new Vec3(4, 64, 0);
+  // The touched drop rests on this block; breaking it would drop the item out of reach.
+  const support = new Vec3(5, 65, 0);
+  const beside = new Vec3(3, 65, 0);
+  const besideHead = new Vec3(3, 66, 0);
+  const bot = fakeBot({ blocks: [floor, support, beside, besideHead], drops: [new Vec3(5.5, 66, 0.5)], feet: new Vec3(4.5, 65, 0.5) });
+  Object.assign(bot.entities[0]!, { width: 0.25, height: 0.25 });
+  const broken: string[] = [];
+  const result = await mine(
+    bot,
+    request(bot, {
+      isSatisfied: () => broken.length === 2,
+      breakInPlace: async ({ position }) => {
+        broken.push(`${position.x},${position.y},${position.z}`);
+        bot.removeBlock(new Vec3(position.x, position.y, position.z));
+        return { status: "broken" };
+      },
+      route: async () => {
+        throw new Error("blocks in reach beside a touched drop need no route");
+      },
+    }),
+  );
+  assert.equal(result.status, "satisfied");
+  assert.deepEqual(broken, ["3,65,0", "3,66,0"]);
+});
+
+test("a drop out of reach is still collected before any block beside the bot", async () => {
+  const beside = new Vec3(3, 65, 0);
+  const bot = fakeBot({ blocks: [new Vec3(4, 64, 0), beside], drops: [new Vec3(7.5, 65, 0.5)], feet: new Vec3(4.5, 65, 0.5) });
+  Object.assign(bot.entities[0]!, { width: 0.25, height: 0.25 });
+  let satisfied = false;
+  const result = await mine(
+    bot,
+    request(bot, {
+      isSatisfied: () => satisfied,
+      breakInPlace: async () => {
+        throw new Error("a drop the bot is not touching comes first");
+      },
+      route: async () => {
+        satisfied = true;
+        return { status: "completed", elapsedMs: 0 };
+      },
+    }),
+  );
+  assert.equal(result.status, "satisfied");
+});
+
 test("a reachable shaft is submitted to search instead of bypassing excavation cost", async () => {
   const target = new Vec3(0, 66, 0);
   const bot = fakeBot({ blocks: [target], feet: new Vec3(0.5, 64, 0.5) });
@@ -729,6 +812,50 @@ test("a wet target already in reach can be mined while floating", async () => {
   );
   assert.equal(result.status, "satisfied");
   assert.equal(broken, true);
+});
+
+test("an in-place break waits for a bot dropping out of drained water to land before swinging", async () => {
+  const target = new Vec3(1, 64, 0);
+  const bot = fakeBot({ blocks: [target], feet: new Vec3(0.5, 64.3, 0.5), onGround: false });
+  // In water when the break is chosen; the cell drains before the swing.
+  let wet = true;
+  Object.defineProperty(bot.entity, "isInWater", {
+    get: () => {
+      const was = wet;
+      wet = false;
+      return was;
+    },
+  });
+  const physics = new EventEmitter();
+  Object.assign(bot, { on: physics.on.bind(physics), off: physics.off.bind(physics) });
+  let ticks = 0;
+  const clock = setInterval(() => {
+    ticks += 1;
+    if (ticks === 3) Object.assign(bot.entity, { onGround: true, position: new Vec3(0.5, 64, 0.5) });
+    physics.emit("physicsTick");
+  }, 1);
+  let groundedAtSwing: boolean | null = null;
+  try {
+    const result = await mine(
+      bot,
+      request(bot, {
+        canMine: () => ({ kind: "mineable", routeMayBreak: false }),
+        isSatisfied: () => groundedAtSwing !== null,
+        breakInPlace: async () => {
+          groundedAtSwing = bot.entity.onGround;
+          bot.removeBlock(target);
+          return { status: "broken" };
+        },
+        route: async () => {
+          throw new Error("the target is already in reach");
+        },
+      }),
+    );
+    assert.equal(result.status, "satisfied");
+  } finally {
+    clearInterval(clock);
+  }
+  assert.equal(groundedAtSwing, true, "a dig started mid-fall takes five times as long");
 });
 
 test("incidental inventory gain cannot satisfy an unbroken exact target", async () => {

@@ -21,7 +21,6 @@ import {
   exactBlockGoal,
   itemPickupGoal,
   nearGoal,
-  occupyGoal,
   type BlockPosition,
   type BreakBlockInPlace,
   type Goal,
@@ -31,6 +30,7 @@ import {
 } from "../../index.js";
 import { blockReader, observeMineflayerBlock } from "../../mineflayer/world.js";
 import { isSafeSupport } from "../../world/block-geometry.js";
+import { withinItemPickupReach } from "../../world/item-geometry.js";
 import { admitsDive, openWaterSurface } from "../../world/swimming.js";
 import { holdWaterPosition } from "../../steering/hold-water-position.js";
 import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
@@ -77,6 +77,9 @@ const MAX_FRUITLESS_STOPS = 5;
  * whole surface on the hot path to describe the same near edge.
  */
 const POOL_GOAL_LIPS = 8;
+
+/** How long an in-place break waits for a falling bot to land before swinging anyway. */
+const LANDING_TICKS = 20;
 
 function targetInSight(bot: Bot, eye: Vec3, position: BlockPosition): boolean {
   const block = bot.blockAt(asVec3(position));
@@ -253,6 +256,29 @@ function isDropTarget(
   return target.kind === "drop" || target.kind === "anticipated_drop" || target.kind === "settling_drop";
 }
 
+/** A drop between packets: its item has not been observed yet, or has vanished before the inventory says so. */
+function isPendingDrop(target: MineTarget): target is MineAnticipatedDropTarget | MineSettlingDropTarget {
+  return target.kind === "anticipated_drop" || target.kind === "settling_drop";
+}
+
+/**
+ * Where a pending drop is waited for: wherever the bot already stands.
+ *
+ * A pending drop has no place to walk to. Its cell is where the block was or
+ * where the item was last seen, which can be mid-air: a netherrack bank broke
+ * the block above the bot's head, and a goal to stand in that cell or the one
+ * below it sent the search through the whole breakable bank for its full two
+ * seconds, while the item had already fallen into the bot and been picked up.
+ */
+const AWAIT_PENDING_DROPS: Goal = {
+  resolve: () => ({
+    kind: "active",
+    revision: "await-pending-drops",
+    heuristic: () => 0,
+    isSatisfied: () => true,
+  }),
+};
+
 /**
  * Adjacent working cells with dry headroom or a budgeted, supported open-water dive.
  * The goal and the physical dig use the same cells. A stance found occluded
@@ -395,9 +421,12 @@ function waterStance(bot: Bot, target: MineWaterTarget, feet: BlockPosition): bo
 }
 
 /** The work or arrival represented by one live target. */
-function coalesce(bot: Bot, target: MineTarget, movements: MovementPolicy): Goal {
+function coalesce(
+  bot: Bot,
+  target: Exclude<MineTarget, MineAnticipatedDropTarget | MineSettlingDropTarget>,
+  movements: MovementPolicy,
+): Goal {
   if (target.kind === "drop") return itemPickupGoal({ id: target.entityId });
-  if (target.kind === "anticipated_drop" || target.kind === "settling_drop") return occupyGoal(target.position, 2);
   if (target.kind === "water") {
     const approach = nearGoal(target.position, USE_RAY_REACH + STANDING_EYE_HEIGHT);
     return {
@@ -518,6 +547,14 @@ async function breakTargetInPlace(
     targeting.blacklist(target, seal);
     return;
   }
+  // Minecraft fixes a dig's duration when it starts, five times longer for a
+  // body off the ground. Plugging the water above an obsidian target left the
+  // bot dropping the last quarter block as its cell drained, and the 9.4 s
+  // break took 47. A fall through air ends within ticks, so let it land;
+  // floating in water is the dive the physical dig already owns.
+  for (let tick = 0; tick < LANDING_TICKS && !bot.entity.onGround && Reflect.get(bot.entity, "isInWater") !== true; tick++) {
+    await waitForPhysicsTicks(bot, 1, signal ?? new AbortController().signal);
+  }
   const swing = await request.breakInPlace({ movements: request.movements, position: target.position, signal });
   if (swing.status === "failed") {
     targeting.blacklist(target, swing.reason);
@@ -576,6 +613,50 @@ async function sealAndBreakInReach(
     } finally { release(); }
     if (!bot.entity.onGround) return false;
   }
+  await breakTargetInPlace(bot, request, targeting, target, signal);
+  return true;
+}
+
+/**
+ * Break one more block from where the bot stands while it waits out the pickup
+ * delay of drops it is already touching.
+ *
+ * Drops come first so a cheap bank cannot spend the break budget while its
+ * items lie on ledges. But vanilla holds a block drop for ten ticks before
+ * anyone may take it, and a bot standing on its drop with nothing to do spent
+ * that half second idle after every block: thirty-two netherrack took thirty
+ * seconds, two of mining. Nothing here moves the bot, so no drop is left
+ * behind, and only blocks at feet or head height beside it qualify: never its
+ * own floor, nor the block a touched drop rests on.
+ */
+async function breakBesideDrops(
+  bot: Bot,
+  request: MineRequest,
+  targeting: MineTargeting,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  signal?.throwIfAborted();
+  if (!bot.entity.onGround || Reflect.get(bot.entity, "isInWater") === true || targeting.isSatisfied()) return false;
+  if (targeting.broken.length >= request.maximumBreaks) return false;
+  const position = bot.entity.position;
+  const drops = targeting.targets().filter((target) => target.kind === "drop");
+  if (drops.length === 0) return false;
+  for (const drop of drops) {
+    const entity = bot.entities[drop.entityId];
+    if (!entity || !withinItemPickupReach(position, entity)) return false;
+  }
+  const feet = position.floored();
+  const eye = position.offset(0, STANDING_EYE_HEIGHT, 0);
+  const supports = new Set(drops.map((drop) => cellKey({ ...drop.position, y: drop.position.y - 1 })));
+  const target = targeting.deferredBlocks.find(
+    (candidate) =>
+      candidate.routeMayBreak &&
+      candidate.position.y >= feet.y &&
+      !supports.has(cellKey(candidate.position)) &&
+      workingCells(bot, candidate, request.movements).some((cell) => cellKey(cell) === cellKey(feet)) &&
+      targetInSight(bot, eye, candidate.position),
+  );
+  if (!target) return false;
   await breakTargetInPlace(bot, request, targeting, target, signal);
   return true;
 }
@@ -694,10 +775,8 @@ class MineTargeting {
   rejections: ReadonlyMap<string, number> = new Map();
   readonly broken: BlockPosition[] = [];
   lastReason: string | null = null;
-  /** Whether a just-broken source is still awaiting its item entity. */
-  get anticipatingDrop(): boolean {
-    return this.#drops.anticipating;
-  }
+  /** Block targets set aside while drops are collected first; mined only from where the bot already stands. */
+  deferredBlocks: readonly MineBlockTarget[] = [];
 
   dropInFlight(entityId: number): boolean {
     return this.#drops.inFlight(entityId);
@@ -911,16 +990,27 @@ class MineTargeting {
     // in a netherrack bank otherwise keep winning at the current stance until
     // the break budget is exhausted, with the requested items still on ledges.
     // Keep known blocks above so route excavation remains part of the evidence.
-    if (this.#targets.some(isDropTarget)) this.#targets = this.#targets.filter(isDropTarget);
+    this.deferredBlocks = [];
+    if (this.#targets.some(isDropTarget)) {
+      this.deferredBlocks = this.#targets.filter((target) => target.kind === "block");
+      this.#targets = this.#targets.filter(isDropTarget);
+    }
     if (this.#water.kind === "pending") {
       if (carriesWaterBucket(this.bot)) this.#water = { kind: "none" };
       else if (!isLiquidSource(this.bot, this.bot.blockAt(asVec3(this.#water.target.position)), "water")) {
         this.blacklist(this.#water.target, "the poured source is no longer observed there");
       }
     }
+    if (this.#water.kind !== "none") this.deferredBlocks = [];
     if (this.#water.kind === "pending") this.#targets = [this.#water.target];
     if (this.#water.kind === "failed") this.#targets = [];
-    this.#goal = this.#targets.length === 0 ? null : anyGoal(this.#targets.map((target) => coalesce(this.bot, target, this.request.movements)));
+    const routable = this.#targets.filter((target) => !isPendingDrop(target));
+    this.#goal =
+      this.#targets.length === 0
+        ? null
+        : routable.length === 0
+          ? AWAIT_PENDING_DROPS
+          : anyGoal(routable.map((target) => coalesce(this.bot, target, this.request.movements)));
     if (this.#targets.length === 0 && this.request.explore && this.#branchGoal === null) {
       const feet = this.bot.entity.position.floored();
       this.#branchGoal = branchMiningGoal({ x: feet.x, y: feet.y, z: feet.z });
@@ -1017,8 +1107,9 @@ export async function mine(bot: Bot, request: MineRequest): Promise<MineResult> 
     if (bot.blockAt(bot.entity.position.offset(0, 1.62, 0))?.name !== "water" &&
       await sealAndBreakInReach(bot, request, targeting, request.signal)) continue;
     if (await castInReach(bot, request, targeting, request.signal)) continue;
+    if (await breakBesideDrops(bot, request, targeting, request.signal)) continue;
 
-    if (targeting.anticipatingDrop && targets.every(isDropTarget)) {
+    if (targets.length > 0 && targets.every(isPendingDrop)) {
       // Nothing to walk to and nothing to break: let the server deliver the
       // pickup rather than asking again as fast as the loop can turn.
       await waitForProcessTick(bot, request.signal);
@@ -1106,7 +1197,8 @@ async function runRoute(
         const acted =
           (await recoverWaterInReach(bot, request, targeting, signal)) ||
           (await sealAndBreakInReach(bot, request, targeting, signal)) ||
-          (await castInReach(bot, request, targeting, signal));
+          (await castInReach(bot, request, targeting, signal)) ||
+          (await breakBesideDrops(bot, request, targeting, signal));
         if (!acted) {
           // A stone lip can occlude a target even from an adjoining cell.
           // Re-approach that target instead of repeating the same arrival.
