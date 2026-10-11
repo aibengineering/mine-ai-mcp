@@ -5,9 +5,8 @@
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "allowImportingTsExtensions": true,
     "rootDir": "..",
-    "baseUrl": "..",
     "paths": {
-      "@aibengineering/mine-ai-mcp": ["src/index.ts"]
+      "@aibengineering/mine-ai-mcp": ["../src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "flat/**/*.ts", "default/**/*.ts", "manual/**/*.ts"],

@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "ES2023",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "ignoreDeprecations": "6.0",
     "strict": true,
     "noImplicitAny": false,
     "noUnusedLocals": true,
@@ -18,7 +17,6 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "baseUrl": ".",
     "rootDir": "src",
     "outDir": "dist"
   },

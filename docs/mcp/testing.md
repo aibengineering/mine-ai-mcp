@@ -1,9 +1,9 @@
 # Testing and scenarios
 
 Mine AI MCP proves itself at three speeds: colocated unit tests that run in
-about a minute with no server, Mine Labs scenarios that arrange a real Minecraft
-world and judge the outcome from outside the bot, and live playtests against a
-retained world. This page names the principles behind that shape, describes
+under fifteen seconds with no server, Mine Labs scenarios that arrange a real
+Minecraft world and judge the outcome from outside the bot, and live playtests
+against a retained world. This page names the principles behind that shape, describes
 the unit layer, then describes the scenario and playtest layers.
 
 ## What principles shape the tests?
@@ -14,8 +14,8 @@ Three practices with names and precedents meet in this package's tests.
   at the integration level, fewest end to end, because cost and flakiness rise
   with each layer. Mike Cohn described it in _Succeeding with Agile_ (2009) and
   Martin Fowler restated it as the practical test pyramid. Here the unit suite
-  runs in about a minute with no server, the scenarios need a Minecraft server
-  and take minutes each, and the playtests need a live MCP host. A one-tick
+  runs in under fifteen seconds with no server, the scenarios need a Minecraft
+  server and take minutes each, and the playtests need a live MCP host. A one-tick
   braking error belongs to the first layer; surviving a fortress belongs to the
   second.
 - **A test for every bug.** When a defect is found, write the test that fails
@@ -49,8 +49,10 @@ from the tests that described the old code.
 ## How is the unit layer arranged?
 
 Unit tests are colocated `*.test.ts` files run by `bun run test` using Bun and the `node:test` API;
-the same command typechecks the package and the scenario drivers first. The test
-command names `./src`, `./scenarios/src`, and `./tests` as explicit directories:
+the same command typechecks the package and the scenario drivers first, with
+`bun check` (Bun 1.4.3 or newer; the build still emits with `tsc`). The tests
+run with `--parallel`, so each file gets its own worker and fresh globals. The
+test command names `./src`, `./scenarios/src`, and `./tests` as explicit directories:
 bare names are Bun path filters and can also select ignored private experiments.
 Four rules keep the suite small and quick:
 
