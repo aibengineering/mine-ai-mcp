@@ -63,7 +63,7 @@ incidents are already recorded in code comments:
   have no plate. The descending branch does re-centre over the column, so the
   gap is specific to going up.
 
-The only fixture is [vine-ladder-column.yaml](../../scenarios/flat/pathfinder/vine-ladder-column.yaml):
+The only fixture is vine-ladder-column.yaml (now part of [movement-course.yaml](../../tests/minecraft/scenarios/pathfinder/movement-course.yaml)):
 one wall-backed vine column, one ladder, flat world. Everything that goes wrong
 in jungles and caves is outside that fixture.
 
@@ -154,7 +154,7 @@ rejected for a wall-attached vine.
 On dripstone the bot ended up standing where no action could act: the mining
 process refused to dig because the bot was not on solid ground, `navigate`
 found no route, and nothing else could swing at a block. The only fixture is
-[dripstone-stairs.yaml](../../scenarios/flat/pathfinder/dripstone-stairs.yaml),
+dripstone-stairs.yaml (now part of [cave-excavation-course.yaml](../../tests/minecraft/scenarios/pathfinder/cave-excavation-course.yaml)),
 which walks over tips and never gets stuck on one.
 
 ### Observe first
@@ -613,7 +613,7 @@ default and completes with `on_tool_loss: continue`, plus its last-tool
 
 Nothing in `src/` names `pointed_dripstone`. The block falls through the
 generic geometry classification, and the one fixture
-([dripstone-stairs.yaml](../../scenarios/flat/pathfinder/dripstone-stairs.yaml))
+(dripstone-stairs.yaml (now part of [cave-excavation-course.yaml](../../tests/minecraft/scenarios/pathfinder/cave-excavation-course.yaml)))
 only proves that a rising passage digs tips out rather than stepping on them.
 The mining process refuses to dig unless the body is on the ground or in
 water ([mine-process.ts](../../src/navigation/processes/mining/mine-process.ts),

@@ -87,8 +87,8 @@ bunx --bun mine-labs run scenarios/flat/pathfinder/cavern-ore-return.yaml --out 
 Representative test scenarios cover common physical challenges:
 
 - `cavern-ore-return.yaml`: Long underground journeys requiring partial route continuation.
-- `lateral-lava-tunnel.yaml`: Tunnelling through stone adjacent to flowing lava hazards.
-- `obstacle-course-parkour.yaml`: Two-block to four-block gap jumps over voids.
+- [`lava-containment.yaml`](../../tests/minecraft/scenarios/pathfinder/lava-containment.yaml): Tunnelling past lava held overhead and lava beside the route.
+- [`gauntlet-lava-parkour.yaml`](../../tests/minecraft/scenarios/pathfinder/gauntlet-lava-parkour.yaml): Maximum-reach gap jumps over lava, step-ups, a drop and a door.
 - `long-underwater-exit.yaml`: Swimming and surfacing through deep water columns.
 - `house-door-exit.yaml`: Doorway opening and obstacle clearance.
 
