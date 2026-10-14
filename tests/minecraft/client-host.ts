@@ -128,7 +128,11 @@ function foldMarkdown(markdown: string): string {
     .join("; ");
 }
 
-/** Runtime behavior stays the same; only explicitly requested evidence survives the trial. */
+/**
+ * Runtime behavior stays the same unless the host's environment asks
+ * otherwise; only explicitly requested evidence survives the trial. A fixture
+ * sets these through `client.env`, and a whole run through the shell.
+ */
 function runtimeOptions(session: NodeClientSession, artifacts: string | undefined, incidents: string): MinecraftRuntimeOptions {
   const worldId = session.scenario.name ?? "scenario";
   return {
@@ -139,6 +143,11 @@ function runtimeOptions(session: NodeClientSession, artifacts: string | undefine
       storage: artifacts ? { kind: "persistent", root: path.join(artifacts, "bot-data") } : { kind: "temporary" },
       identity: { worldId, scope: { kind: "bot", botId: session.username } },
     },
+    // Vanilla movement while an item is in use is opt-in at every host.
+    vanillaItemUseMovement: process.env.MINE_AI_SCENARIO_VANILLA_ITEM_USE === "1",
+    // Unrestricted JavaScript is for a fixture that must drive the body
+    // itself, such as holding a raised shield while walking.
+    debugExecuteJavaScript: process.env.MINE_AI_SCENARIO_DEBUG_JS === "1",
     onDisconnect: (reason) => session.log(`runtime disconnected: ${reason}`),
   };
 }

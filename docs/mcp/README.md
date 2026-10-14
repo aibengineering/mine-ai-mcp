@@ -54,6 +54,7 @@ The host accepts configuration flags for connection, storage, and debugging:
 | `--bot-data-persistence <mode>` | `persistent`          | Storage mode: `persistent` SQLite file or `temporary` in-memory database. |
 | `--bot-data-scope <scope>`      | `bot`                 | Database isolation: `bot` for one player UUID or `shared` for the world.  |
 | `--debug-execute-javascript`    | `false`               | Publishes unrestricted debug tools when set.                              |
+| `--vanilla-item-use-movement`   | `false`               | Moves at a fifth of the speed, without sprinting, while using an item.    |
 
 The host runs until stopped with `SIGINT` or `SIGTERM`. It disconnects cleanly
 and releases all database locks on exit.

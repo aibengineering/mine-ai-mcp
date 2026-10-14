@@ -1,0 +1,39 @@
+template: ../../templates/flat-single-action.yaml
+
+name: raised-shield-movement
+tags: [regression]
+description: >-
+  Walk and sprint east with and without a raised off-hand shield on a host that
+  asks for vanilla item-use movement. A raised shield must cut walking to a fifth
+  and stop sprinting, and lowering it must restore the full sprint.
+
+# Mineflayer's physics moved a bot behind its raised shield at full walking and
+# sprinting speed, five times faster than a player can; the server accepted
+# every step. The host opts into the vanilla rule here, and the driver holds the
+# controls itself because no action walks with the shield up on request.
+client:
+  command: bun
+  cwd: ../..
+  env:
+    MINE_AI_SCENARIO_VANILLA_ITEM_USE: "1"
+    MINE_AI_SCENARIO_DEBUG_JS: "1"
+  args:
+    - client-host.ts
+    - drivers/item-use-movement.ts
+
+reset:
+  - "fill -4 -60 -6 80 -50 6 air"
+  - "fill -4 -61 -6 80 -61 6 stone"
+
+players:
+  - name: Actor
+    pos: [0.5, -60, 0.5]
+    equipment:
+      offhand: shield
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: health, who: Actor, health: 20 }
+    - { kind: completion, who: Actor }

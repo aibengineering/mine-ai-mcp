@@ -53,6 +53,7 @@ function runtimeBot(controlStates: boolean[] = [], rejectedListener?: string): B
     username: "RuntimeBot",
     _client: new EventEmitter(),
     getControlState: () => false,
+    physics: { itemUseSlowdown: false },
     game: { dimension: "overworld" },
     entity: { id: 5, position: new Vec3(0, 64, 0), yaw: 0, pitch: 0, isInWater: false },
     health: 20,
@@ -559,6 +560,23 @@ test("adds unrestricted JavaScript execution only to an explicitly debug-enabled
     ["debug_set_pathfinder_telemetry", "debug_execute_javascript"],
   );
   await runtime.close();
+});
+
+test("slows item use as vanilla does only when asked, and restores the bot's physics on close", async () => {
+  for (const vanillaItemUseMovement of [undefined, false, true]) {
+    const bot = runtimeBot();
+    const runtime = await createMinecraftRuntime(bot, {
+      botData: {
+        storage: { kind: "temporary" },
+        identity: { worldId: "item-use-runtime-test", scope: { kind: "bot", botId: "item-use-runtime-bot" } },
+      },
+      ...(vanillaItemUseMovement !== undefined && { vanillaItemUseMovement }),
+      createCombatController: () => combatController,
+    });
+    assert.equal(bot.physics.itemUseSlowdown, vanillaItemUseMovement === true, String(vanillaItemUseMovement));
+    await runtime.close();
+    assert.equal(bot.physics.itemUseSlowdown, false, "the bot outlives its runtime and keeps its own setting");
+  }
 });
 
 test("recent calls are published with their own arguments and rationale, then their outcome", async (t) => {

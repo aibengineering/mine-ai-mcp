@@ -183,6 +183,7 @@ export async function startRuntimeHost(source: SourceIdentity, configuration: Ho
       highlighter,
       botData: botDataOptions,
       debugExecuteJavaScript: configuration.debugExecuteJavaScript,
+      vanillaItemUseMovement: configuration.vanillaItemUseMovement,
       onDisconnect: (reason) => connectionEnded(new Error(reason)),
       incidents: {
         retention: configuration.incidentRetention,

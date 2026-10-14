@@ -104,6 +104,7 @@ export function botFixture(options: BotFixtureOptions = {}, overrides: Record<st
     foodSaturation: 5,
     heldItem: null,
     usingHeldItem: false,
+    physics: { itemUseSlowdown: false },
     blockAt: read,
     findBlocks: () => [],
     world: {

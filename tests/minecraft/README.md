@@ -241,6 +241,20 @@ Mine Labs' run retention. This is a client-host option, not a scenario parameter
 or Mine Labs setting. For the dashboard, use the same variable with
 `bun run scenarios:spectator`; it applies to every trial in that launched session.
 
+Two more host switches change the runtime itself, again only for the exact
+value `1`:
+
+- `MINE_AI_SCENARIO_VANILLA_ITEM_USE` moves the bot as the vanilla client does
+  while an item is in use: a fifth of the speed and no sprinting behind a raised
+  shield, food or a drawn bow. The runtime option is `vanillaItemUseMovement`,
+  and the MCP host flag `--vanilla-item-use-movement`. Set it in the shell to
+  run a whole suite that way.
+- `MINE_AI_SCENARIO_DEBUG_JS` adds `debug_execute_javascript`, for a driver that
+  has to hold the body itself.
+
+A fixture that depends on either sets it under `client.env`, as
+`combat/raised-shield-movement.yaml` does for both.
+
 Use the single-action driver for expected success, partial progress, or refusal,
 with Mine Labs goals for inventory and world observations. Custom drivers are
 for sequences, timing checks, dynamic inputs, or action-specific evidence that
