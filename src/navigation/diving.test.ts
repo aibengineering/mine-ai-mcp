@@ -81,6 +81,43 @@ test("floating work with dry eyes keeps the existing surface-mining contract", (
   assert.equal(new Diving(bot, world).beforeWork(400), null);
 });
 
+// A 1-wide pocket of *flowing* water over a solid floor, with a solid lid above the head: the shape
+// run10 was sealed in. Every cell is loaded by hand, and `liquidSource: false` models water at a
+// level other than 0 (falling or flowing), which `openWaterSurface` refuses to follow.
+function floodedPocket() {
+  const world = new MemoryWorld();
+  world.load({ x: 0, y: 60, z: 0 }, { stateId: 1 }); // floor under the feet
+  for (const y of [61, 62]) world.load({ x: 0, y, z: 0 },
+    { stateId: 2, traits: { empty: true, liquid: "water", liquidSource: false } });
+  world.load({ x: 0, y: 63, z: 0 }, { stateId: 1 }); // solid lid above the head
+  const bot = Object.assign(new EventEmitter(), {
+    entity: { position: new Vec3(0.5, 61.2, 0.5), metadata: [300], onGround: false },
+    registry: { entitiesByName: { player: { metadataKeys: ["air_supply"] } } },
+    blockAt: (p: Vec3) => {
+      const cell = world.blockAt(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z));
+      return cell.kind === "loaded" ? { name: cell.traits.liquid ?? (cell.stateId === 0 ? "air" : "stone") } : null;
+    },
+    setControlState: () => {},
+  }) as unknown as Bot;
+  return { world, bot };
+}
+
+test("a body standing in a flooded pocket may dig its own way out", () => {
+  // Live run10: sealed in a pocket of flowing water (level != 0, so no source corridor) with every
+  // wall solid. Refusing the one escape deadlocked the bot, so a standing body may work while the
+  // dig fits the air it has; a long dig still waits for a proper dive.
+  const { world, bot } = floodedPocket();
+  const diving = new Diving(bot, world);
+  assert.equal(diving.beforeWork(40), null);
+  assert.match(diving.beforeWork(400) ?? "", /breath is too short/);
+});
+
+test("a floating body with no corridor is still refused", () => {
+  const { world, bot } = floodedPocket();
+  world.load({ x: 0, y: 60, z: 0 }, { stateId: 0 }); // no floor: treading water, not standing
+  assert.match(new Diving(bot, world).beforeWork(40) ?? "", /Underwater stance unavailable/);
+});
+
 test("quantity completion still returns a mining process to air, while takeover cancels refill without another tick", async () => {
   const { world, bot } = fixture();
   const diving = new Diving(bot, world);

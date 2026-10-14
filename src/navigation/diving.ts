@@ -7,6 +7,7 @@ import type { Navigate, NavigateOptions } from "./navigate.js";
 import type { MovementPolicy } from "./movements/policy.js";
 import type { WorldView } from "./world/world.js";
 import { DIVE_BACKSTOP_TICKS, DIVE_RESERVE_TICKS, openWaterSurface, swimTravelTicks } from "./world/swimming.js";
+import { isSafeSupport } from "./world/block-geometry.js";
 import type { RoutePlan } from "./movements/movement.js";
 
 const BREATHING_STOP = "Planned breathing stop";
@@ -57,6 +58,17 @@ export class Diving {
     if (this.bot.blockAt(this.bot.entity.position.offset(0, 1.62, 0))?.name !== "water") return null;
     const surface = openWaterSurface(this.#read, feet);
     const air = airSupplyTicks(this.bot);
+    // A body on safe support is standing in water, not diving: it can stop at any time, and its own
+    // dig is often the only way out of a flooded pocket. `openWaterSurface` only trusts source water,
+    // so flowing or falling water (level != 0) -- a drained pocket, a waterfall pool -- finds no
+    // corridor and every in-place dig was refused. Live run10 was sealed in exactly such a pocket
+    // (flowing water up to a grass lid, every wall solid) where digging was the one escape, so the
+    // guard deadlocked the bot it exists to protect. Allow the work while it fits the breath in
+    // hand; the dive path below is unchanged and still requires a declared corridor.
+    if (!surface && isSafeSupport(this.#read(feet.x, feet.y - 1, feet.z))) {
+      if (air !== null && ticks + DIVE_RESERVE_TICKS <= air) return null;
+      return `Underwater work needs ${ticks} ticks at ${feet}; the breath is too short with no ascent corridor`;
+    }
     if (!session?.owned || !surface || air === null || !this.bot.entity.onGround)
       return `Underwater stance unavailable at ${feet}: owned=${session?.owned === true}, escape=${!!surface}, air=${air}, grounded=${this.bot.entity.onGround}`;
     // A fresh dive must be able to finish this work, otherwise resurfacing would repeat forever.
