@@ -419,6 +419,20 @@ test("adds unrestricted JavaScript execution only to an explicitly debug-enabled
   await runtime.close();
 });
 
+test("slows item use as vanilla does only when asked, and restores the bot's physics on close", async () => {
+  for (const vanillaItemUseMovement of [undefined, false, true]) {
+    const bot = runtimeBot();
+    const runtime = await createMinecraftRuntime(bot, {
+      botData: temporaryStorage("item-use-runtime-test"),
+      ...(vanillaItemUseMovement !== undefined && { vanillaItemUseMovement }),
+      createCombatController: () => fakeCombat,
+    });
+    assert.equal(bot.physics.itemUseSlowdown, vanillaItemUseMovement === true, String(vanillaItemUseMovement));
+    await runtime.close();
+    assert.equal(bot.physics.itemUseSlowdown, false, "the bot outlives its runtime and keeps its own setting");
+  }
+});
+
 test("recent calls are published with their own arguments and rationale, then their outcome", async (t) => {
   const runtime = await createMinecraftRuntime(runtimeBot(), {
     createCombatController: () => fakeCombat,

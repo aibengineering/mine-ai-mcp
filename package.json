@@ -52,7 +52,7 @@
     "prismarine-item": "^1.18.0",
     "vec3": "^0.1.10",
     "zod": "^4.4.3",
-    "mineflayer": "github:aibengineering/mineflayer#9fa1140b90877a084efd988905df0c0eceaa78d0",
+    "mineflayer": "github:aibengineering/mineflayer#85136409eb7bc9080cd15ce7c5c0438a50ba94f9",
     "minecraft-data": "https://github.com/aibengineering/node-minecraft-data/releases/download/mine-ai-c932f743/minecraft-data-3.116.0.tgz"
   },
   "devDependencies": {
@@ -66,8 +66,8 @@
   },
   "overrides": {
     "minecraft-data": "https://github.com/aibengineering/node-minecraft-data/releases/download/mine-ai-c932f743/minecraft-data-3.116.0.tgz",
-    "prismarine-physics": "github:aibengineering/prismarine-physics#56a6794611069272653b14eb078a1454633f4eb3",
+    "prismarine-physics": "github:aibengineering/prismarine-physics#4e972f60d67eb782a35bf9c5359ca090b9f3794f",
     "prismarine-recipe": "github:aibengineering/prismarine-recipe#542f0600f5ddf07bb16df67fa1ac06e603bd28e0",
-    "mineflayer": "github:aibengineering/mineflayer#9fa1140b90877a084efd988905df0c0eceaa78d0"
+    "mineflayer": "github:aibengineering/mineflayer#85136409eb7bc9080cd15ce7c5c0438a50ba94f9"
   }
 }

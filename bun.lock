@@ -8,7 +8,7 @@
         "@aibengineering/minecraft-block-highlighter": "github:aibengineering/minecraft-block-highlighter#a15592231471d351550971d12d8edb1e9a647066",
         "@modelcontextprotocol/sdk": "^1.30.0",
         "minecraft-data": "https://github.com/aibengineering/node-minecraft-data/releases/download/mine-ai-c932f743/minecraft-data-3.116.0.tgz",
-        "mineflayer": "github:aibengineering/mineflayer#9fa1140b90877a084efd988905df0c0eceaa78d0",
+        "mineflayer": "github:aibengineering/mineflayer#85136409eb7bc9080cd15ce7c5c0438a50ba94f9",
         "prismarine-block": "^1.23.0",
         "prismarine-chat": "^1.13.0",
         "prismarine-item": "^1.18.0",
@@ -28,8 +28,8 @@
   },
   "overrides": {
     "minecraft-data": "https://github.com/aibengineering/node-minecraft-data/releases/download/mine-ai-c932f743/minecraft-data-3.116.0.tgz",
-    "mineflayer": "github:aibengineering/mineflayer#9fa1140b90877a084efd988905df0c0eceaa78d0",
-    "prismarine-physics": "github:aibengineering/prismarine-physics#56a6794611069272653b14eb078a1454633f4eb3",
+    "mineflayer": "github:aibengineering/mineflayer#85136409eb7bc9080cd15ce7c5c0438a50ba94f9",
+    "prismarine-physics": "github:aibengineering/prismarine-physics#4e972f60d67eb782a35bf9c5359ca090b9f3794f",
     "prismarine-recipe": "github:aibengineering/prismarine-recipe#542f0600f5ddf07bb16df67fa1ac06e603bd28e0",
   },
   "packages": {
@@ -297,7 +297,7 @@
 
     "minecraft-protocol": ["minecraft-protocol@1.68.0", "", { "dependencies": { "@types/node-rsa": "^1.1.4", "@types/readable-stream": "^4.0.0", "aes-js": "^3.1.2", "buffer-equal": "^1.0.0", "debug": "^4.3.2", "endian-toggle": "^0.0.0", "lodash.merge": "^4.3.0", "minecraft-data": "^3.109.0", "minecraft-folder-path": "^1.2.0", "node-fetch": "^2.6.1", "node-rsa": "^0.4.2", "prismarine-auth": "^3.1.1", "prismarine-chat": "^1.10.0", "prismarine-nbt": "^2.5.0", "prismarine-realms": "^1.2.0", "protodef": "^1.17.0", "readable-stream": "^4.1.0", "uuid-1345": "^1.0.1", "yggdrasil": "^1.4.0" } }, "sha512-atAGg/fhIVqyK6voWvED5QA+4ah65PNwpoDnkHawWhVzQbwFii77KcF6OpsU/Xlbi0o9GpihHiPdORSxXEA+Ug=="],
 
-    "mineflayer": ["mineflayer@github:aibengineering/mineflayer#9fa1140", { "dependencies": { "minecraft-data": "https://github.com/aibengineering/node-minecraft-data/releases/download/mine-ai-c932f743/minecraft-data-3.116.0.tgz", "minecraft-protocol": "^1.67.0", "mojangson": "^2.0.4", "prismarine-biome": "^1.1.1", "prismarine-block": "^1.22.0", "prismarine-chat": "^1.7.1", "prismarine-chunk": "^1.41.0", "prismarine-entity": "^2.5.0", "prismarine-item": "^1.17.0", "prismarine-nbt": "^2.0.0", "prismarine-physics": "github:aibengineering/prismarine-physics#56a6794611069272653b14eb078a1454633f4eb3", "prismarine-recipe": "github:aibengineering/prismarine-recipe#542f0600f5ddf07bb16df67fa1ac06e603bd28e0", "prismarine-registry": "^1.10.0", "prismarine-windows": "^2.9.0", "prismarine-world": "^3.6.0", "protodef": "^1.18.0", "typed-emitter": "^1.0.0", "uuid-1345": "^1.0.2", "vec3": "^0.1.7" } }, "aibengineering-mineflayer-9fa1140", "sha512-kfbPVthPHeebltatmtdOwoEa3fQamyY5Ym2m21BKa2fWwz9qTThNOGu0hPaYZcUdviZ3FQ5eZ2ds0Ci3xi1mdg=="],
+    "mineflayer": ["mineflayer@github:aibengineering/mineflayer#8513640", { "dependencies": { "minecraft-data": "https://github.com/aibengineering/node-minecraft-data/releases/download/mine-ai-c932f743/minecraft-data-3.116.0.tgz", "minecraft-protocol": "^1.67.0", "mojangson": "^2.0.4", "prismarine-biome": "^1.1.1", "prismarine-block": "^1.22.0", "prismarine-chat": "^1.7.1", "prismarine-chunk": "^1.41.0", "prismarine-entity": "^2.5.0", "prismarine-item": "^1.17.0", "prismarine-nbt": "^2.0.0", "prismarine-physics": "github:aibengineering/prismarine-physics#4e972f60d67eb782a35bf9c5359ca090b9f3794f", "prismarine-recipe": "github:aibengineering/prismarine-recipe#542f0600f5ddf07bb16df67fa1ac06e603bd28e0", "prismarine-registry": "^1.10.0", "prismarine-windows": "^2.9.0", "prismarine-world": "^3.6.0", "protodef": "^1.18.0", "typed-emitter": "^1.0.0", "uuid-1345": "^1.0.2", "vec3": "^0.1.7" } }, "aibengineering-mineflayer-8513640", "sha512-z4HjYCZkPgwPwZATYFvmT6W21/74NCVw6hOcKbxwWr9FxkRQnI7Mnh0tf0ldAs6+JLK3cjz6Xo5oH9uk2XNu4A=="],
 
     "mojangson": ["mojangson@2.1.0", "", { "dependencies": { "nearley": "^2.19.5" } }, "sha512-uz0PPHAc/kRO5tBOmEZIWxLlne3NRqO2PRyvIXbU0523tItgpvt0XG83IFZgH21EaKY1/B9c9ca074/eZlI59Q=="],
 
@@ -347,7 +347,7 @@
 
     "prismarine-nbt": ["prismarine-nbt@2.8.0", "", { "dependencies": { "protodef": "^1.18.0" } }, "sha512-5D6FUZq0PNtf3v/41ImDlwThVesOv5adyqCRMZLzmkUGEmRJNNh5C6AsnvrClBftXs+IF0yqPnZoj8kcNPiMGg=="],
 
-    "prismarine-physics": ["prismarine-physics@github:aibengineering/prismarine-physics#56a6794", { "dependencies": { "minecraft-data": "^3.0.0", "prismarine-nbt": "^2.0.0", "vec3": "^0.2.0" } }, "aibengineering-prismarine-physics-56a6794", "sha512-FUR2p09yuYY/FCEoD9l9+zKnBVZVOoBNq3bzQmjCrkmVUUhKg7ducm9TGRV49b1u76bzQrcYjd8Lm8GzLWAcew=="],
+    "prismarine-physics": ["prismarine-physics@github:aibengineering/prismarine-physics#4e972f6", { "dependencies": { "minecraft-data": "^3.0.0", "prismarine-nbt": "^2.0.0", "vec3": "^0.2.0" } }, "aibengineering-prismarine-physics-4e972f6", "sha512-Dx/DoAHTpIljjygmAjIlCreXX9nQxTPftrOCYG9pTuRYMsSiNvOPGkaCjj0lbFWMj1IqdDuo1IJt1CKP7wliWw=="],
 
     "prismarine-realms": ["prismarine-realms@1.6.0", "", { "dependencies": { "debug": "^4.3.3", "node-fetch": "^2.6.1" } }, "sha512-AwemW0vwxG9hQaFtg1twSV7eymB6QtYxGK0jjpxfdA2sdK15kU8jh8uD1o5XF0oxSMU+BbpzZMCmXtXq4QE6bw=="],
 
