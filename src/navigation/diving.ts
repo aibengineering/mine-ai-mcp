@@ -1,6 +1,6 @@
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { airSupplyTicks } from "../world/air-supply.js";
+import { airSupplyTicks, FULL_AIR_TICKS } from "../world/air-supply.js";
 import { waitForPhysicsTicks } from "../utils/physics-ticks.js";
 import { exactBlockGoal } from "./goals/index.js";
 import type { Navigate, NavigateOptions } from "./navigate.js";
@@ -32,13 +32,27 @@ export class Diving {
   cancel(reason: string): void { this.#session?.cancelled.abort(reason); }
   workCompleted(): void { if (this.#session) this.#session.completedWork++; }
 
+  /**
+   * The air level, in ticks, at which the breath reflex must take this dive over.
+   *
+   * `null` leaves the ordinary breath threshold in charge. Two postures are not a lost ascent
+   * corridor: a body standing on support in shallow water is not diving (see `beforeWork`), and a
+   * full bar has nothing to rescue -- `surface()` stops at `air_full` without moving, yet the
+   * owned-dive continuation still hands the running action back, so asking for a rescue at full
+   * air only cancels work.
+   */
   backstop(): number | null {
     const session = this.#session;
     if (!session?.owned) return null;
     if (this.bot.blockAt(this.bot.entity.position.offset(0, 1.62, 0))?.name === "air") return DIVE_BACKSTOP_TICKS;
     const feet = this.bot.entity.position.floored();
     const surface = openWaterSurface(this.#read, feet);
-    if (!surface) return 300; // The admission premise disappeared: request immediate rescue.
+    if (!surface) {
+      if (isSafeSupport(this.#read(feet.x, feet.y - 1, feet.z))) return null;
+      const air = airSupplyTicks(this.bot);
+      if (air !== null && air >= FULL_AIR_TICKS) return null;
+      return FULL_AIR_TICKS; // The admission premise disappeared: request immediate rescue.
+    }
     return swimTravelTicks(this.bot.entity.position, surface) + DIVE_BACKSTOP_TICKS;
   }
 
@@ -72,7 +86,7 @@ export class Diving {
     if (!session?.owned || !surface || air === null || !this.bot.entity.onGround)
       return `Underwater stance unavailable at ${feet}: owned=${session?.owned === true}, escape=${!!surface}, air=${air}, grounded=${this.bot.entity.onGround}`;
     // A fresh dive must be able to finish this work, otherwise resurfacing would repeat forever.
-    if (swimTravelTicks(surface, feet) + ticks + swimTravelTicks(feet, surface) + DIVE_RESERVE_TICKS > 300)
+    if (swimTravelTicks(surface, feet) + ticks + swimTravelTicks(feet, surface) + DIVE_RESERVE_TICKS > FULL_AIR_TICKS)
       return `Underwater work needs ${ticks} ticks at ${feet}; the full dive exceeds one breath`;
     if (ticks + swimTravelTicks(feet, surface) + DIVE_RESERVE_TICKS <= air) return null;
     session.stop.abort(BREATHING_STOP);
@@ -154,14 +168,14 @@ export class Diving {
         const returned = await navigate({ movements, goal: exactBlockGoal(surface), signal: options.signal,
           stopSignal: returnStop, timeoutMs: 15_000 });
         if (returned.status !== "completed") return returned;
-        for (let ticks = 0; (airSupplyTicks(this.bot) ?? 0) < 300 && ticks < 100; ticks++) {
+        for (let ticks = 0; (airSupplyTicks(this.bot) ?? 0) < FULL_AIR_TICKS && ticks < 100; ticks++) {
           options.signal?.throwIfAborted();
           if (returnStop?.aborted) return { status: "stopped" as const, reason: "Request stopped while breathing", elapsedMs: Date.now() - started };
           this.bot.setControlState("jump", true);
           await waitForPhysicsTicks(this.bot, 1, lifetime);
         }
         this.bot.setControlState("jump", false);
-        if (airSupplyTicks(this.bot) !== 300) return { status: "stopped" as const, reason: "Full air was not observed at the breathing stop", elapsedMs: Date.now() - started };
+        if (airSupplyTicks(this.bot) !== FULL_AIR_TICKS) return { status: "stopped" as const, reason: "Full air was not observed at the breathing stop", elapsedMs: Date.now() - started };
         session.returning = false;
         session.stop = new AbortController();
         this.report("resumed");

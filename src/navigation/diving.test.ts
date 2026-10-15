@@ -4,6 +4,8 @@ import { EventEmitter } from "node:events";
 import { Vec3 } from "vec3";
 import type { Bot } from "mineflayer";
 import { Diving } from "./diving.js";
+import { DIVE_BACKSTOP_TICKS } from "./world/swimming.js";
+import { FULL_AIR_TICKS } from "../world/air-supply.js";
 import { MemoryWorld } from "./world/memory-world.js";
 import { createMovementPolicy } from "./movements/policy.js";
 import { exactBlockGoal } from "./goals/index.js";
@@ -116,6 +118,49 @@ test("a floating body with no corridor is still refused", () => {
   const { world, bot } = floodedPocket();
   world.load({ x: 0, y: 60, z: 0 }, { stateId: 0 }); // no floor: treading water, not standing
   assert.match(new Diving(bot, world).beforeWork(40) ?? "", /Underwater stance unavailable/);
+});
+
+/** Drain the column that admitted the dive to flowing water, so no ascent corridor remains. */
+function closeTheCorridor(world: MemoryWorld) {
+  for (const y of [61, 62, 63]) world.load({ x: 0, y, z: 0 },
+    { stateId: 2, traits: { empty: true, liquid: "water", liquidSource: false } });
+}
+
+test("a full breath asks for no rescue when the corridor closes", async () => {
+  // Live run15: the bot crossed a pond of seagrass -- whose cells are not source water, so
+  // `openWaterSurface` finds no column -- and `backstop()` answered 300 against 300 ticks of air.
+  // The reflex's owned-dive continuation then handed the running action back without `surface()`
+  // ever moving, so every action in that water came back cancelled: 157 in a row, no progress.
+  const { world, bot } = fixture();
+  const diving = new Diving(bot, world);
+  const options = { movements: createMovementPolicy(), goal: exactBlockGoal({ x: 0, y: 61, z: 0 }) };
+  await assert.rejects(diving.run(options, async () => {
+    assert.equal(diving.owned, true);
+    assert.ok(diving.backstop()! > DIVE_BACKSTOP_TICKS);
+    closeTheCorridor(world);
+    assert.equal(diving.backstop(), null);
+    Reflect.set(bot.entity, "metadata", [200]);
+    assert.equal(diving.backstop(), FULL_AIR_TICKS); // with air actually spent the rescue is due
+    throw new Error("probe");
+  }), /probe/);
+  assert.equal(diving.owned, false);
+});
+
+test("a body standing where the corridor closed is never taken over", async () => {
+  // The run10 posture, once more: `openWaterSurface` trusts source water alone, so a supported
+  // body in a pocket it cannot read is standing -- not diving -- and the ordinary breath
+  // threshold governs it, whatever air is left.
+  const { world, bot } = fixture();
+  world.load({ x: 0, y: 60, z: 0 }, { stateId: 1 }); // solid floor under the feet
+  const diving = new Diving(bot, world);
+  const options = { movements: createMovementPolicy(), goal: exactBlockGoal({ x: 0, y: 61, z: 0 }) };
+  await assert.rejects(diving.run(options, async () => {
+    assert.equal(diving.owned, true);
+    closeTheCorridor(world);
+    Reflect.set(bot.entity, "metadata", [120]);
+    assert.equal(diving.backstop(), null);
+    throw new Error("probe");
+  }), /probe/);
 });
 
 test("quantity completion still returns a mining process to air, while takeover cancels refill without another tick", async () => {

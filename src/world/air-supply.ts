@@ -1,5 +1,8 @@
 import type { Bot } from "mineflayer";
 
+/** One full breath of server-owned air, in ticks. */
+export const FULL_AIR_TICKS = 300;
+
 /** Server-owned air in ticks. Missing metadata is unknown, never another entity's oxygenLevel. */
 export function airSupplyTicks(bot: Bot): number | null {
   const index = bot.registry.entitiesByName.player?.metadataKeys?.indexOf("air_supply") ?? -1;
