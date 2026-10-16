@@ -23,10 +23,10 @@ export function attachBreathReflex(bot: Bot, driver: ReflexDriver, diveBackstop:
       const roof = swimmingRoof(bot)?.name ?? null;
       const floor = diveBackstop();
       if (floor === null ? !needsBreathResponse(air, roof) : (airSupplyTicks(bot) ?? 0) > floor) return null;
-      return { kind: "observed", danger: { air, ownedDive: floor !== null }, evidence: { air, roof } };
+      return { kind: "observed", danger: { air, ownedDive: floor !== null, roof }, evidence: { air, roof } };
     },
-    decide: ({ air, ownedDive }) => {
-      const decision = decideBreathResponse(air);
+    decide: ({ air, ownedDive, roof }) => {
+      const decision = decideBreathResponse(air, roof);
       return decision.kind === "respond" ? { ...decision, response: { ...decision.response, ownedDive } } : decision;
     },
     facts: () => {
