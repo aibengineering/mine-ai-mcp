@@ -47,6 +47,18 @@ export const BREATH_ROOF_AIR = 18;
 /** Give up the claim after this long and let the action have the body back. */
 export const SURFACE_MAXIMUM_TICKS = 600;
 /**
+ * The open-water cap: rise with the breath in hand, then hand the body back.
+ *
+ * With no roof the response does one thing -- press jump until the bar refills -- so holding the
+ * body for a whole 600 ticks buys nothing when the body cannot rise (a sealed lid above the
+ * surface, a pocket with no corridor). The response fires at `BREATH_SURFACE_AIR` (twelve points,
+ * 180 ticks) and each failed attempt recalls its cell as answered, so a drifting body re-armed a
+ * fresh 30-second claim per cell and kept `ACTION_BUSY` between the agent and its own escape.
+ * Spend the breath instead: two hundred ticks cover a short lateral stroke and one stone dig,
+ * and the roofed case, where a thick lid can take several digs, keeps `SURFACE_MAXIMUM_TICKS`.
+ */
+export const SURFACE_OPEN_WATER_MAXIMUM_TICKS = 200;
+/**
  * Ordinary eating leaves room for a filling meal. A wounded bot also eats
  * when its hunger is below the eighteen required for natural regeneration.
  */
@@ -61,10 +73,13 @@ export interface SurfaceResponse {
   readonly maximumTicks: number;
 }
 
-export function decideBreathResponse(air: number): ResponseDecision<SurfaceResponse> {
+export function decideBreathResponse(air: number, roof: string | null): ResponseDecision<SurfaceResponse> {
   return {
     kind: "respond",
-    response: { airBefore: air, maximumTicks: SURFACE_MAXIMUM_TICKS },
+    response: {
+      airBefore: air,
+      maximumTicks: roof === null ? SURFACE_OPEN_WATER_MAXIMUM_TICKS : SURFACE_MAXIMUM_TICKS,
+    },
     name: "surface",
     reason: `[BREATH] surface at air ${air}.`,
   };
