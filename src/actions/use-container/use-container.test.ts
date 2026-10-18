@@ -507,6 +507,74 @@ test("organize rejects an order that does not name the observed items exactly on
   assert.equal(container.state.moves, 0);
 });
 
+test("a furnace opens for inspection and for taking the cooked output out", async (t) => {
+  // The smelting blocks are location-owned and openable, which is what lets a caller recover the
+  // cooked output a completed smelt left behind - the refusal that used to strand it in the slot.
+  const { use } = scene(t, {
+    block: "furnace",
+    contents: [
+      { slot: 0, name: "beef", count: 0 },
+      { slot: 1, name: "coal", count: 0 },
+      { slot: 2, name: "cooked_beef", count: 3 },
+    ],
+  });
+
+  const inspected = await use({ operation: "inspect", x: 1, y: 64, z: 1 });
+  assert.equal(inspected.status, "succeeded");
+  assert.deepEqual(
+    inspected.status === "succeeded" ? inspected.container.contents : [],
+    [
+      { slot: 0, item: "beef", count: 0 },
+      { slot: 1, item: "coal", count: 0 },
+      { slot: 2, item: "cooked_beef", count: 3 },
+    ],
+  );
+
+  const withdrawn = await use({
+    operation: "withdraw",
+    x: 1,
+    y: 64,
+    z: 1,
+    items: [{ itemName: "cooked_beef", count: 3 }],
+  });
+  assert.equal(withdrawn.status, "succeeded");
+});
+
+test("a furnace refuses deposit and organize, which belong to smelt_item", async (t) => {
+  // Its window is three fixed slots, not storage: putting anything in, or laying it out, has no
+  // meaningful reading, and the refusal names the action that does own the furnace.
+  const { use } = scene(t, { block: "furnace", contents: [{ slot: 2, name: "cooked_beef", count: 1 }] });
+
+  const deposited = await use({
+    operation: "deposit",
+    x: 1,
+    y: 64,
+    z: 1,
+    items: [{ itemName: "cobblestone", count: 1 }],
+  });
+  assert.equal(deposited.status, "failed");
+  assert.match(deposited.error, /CONTAINER_OPERATION_UNSUPPORTED/);
+  assert.match(deposited.error, /smelt_item/);
+
+  const organized = await use({
+    operation: "organize",
+    x: 1,
+    y: 64,
+    z: 1,
+    itemOrder: ["cooked_beef"],
+  });
+  assert.equal(organized.status, "failed");
+  assert.match(organized.error, /CONTAINER_OPERATION_UNSUPPORTED/);
+});
+
+test("the other smelting blocks are accepted the same way", async (t) => {
+  for (const block of ["blast_furnace", "smoker"]) {
+    const { use } = scene(t, { block, contents: 0 });
+    const inspected = await use({ operation: "inspect", x: 1, y: 64, z: 1 });
+    assert.equal(inspected.status, "succeeded", block);
+  }
+});
+
 test("a loaded non-container removes stale memory for that exact location", async (t) => {
   const { data, use } = scene(t, { block: "stone" });
   recordContainerObservation(data, {
