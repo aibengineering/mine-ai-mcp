@@ -95,6 +95,8 @@ const LAVA = { stateId: 10, collisionShapes: [], traits: { empty: true, liquid: 
 /** A carpet: full-width collision one sixteenth of a block tall. */
 const CARPET = { stateId: 9, collisionShapes: [{ minX: 0, minY: 0, minZ: 0, maxX: 1, maxY: 0.0625, maxZ: 1 }] };
 const FENCE = { stateId: 2, collisionShapes: [{ minX: 0, minY: 0, minZ: 0, maxX: 1, maxY: 1.5, maxZ: 1 }] };
+// An open trapdoor's slat: full height, but only a sliver of the cell's width.
+const TRAPDOOR = { stateId: 3, collisionShapes: [{ minX: 0.8125, minY: 0, minZ: 0, maxX: 1, maxY: 1, maxZ: 1 }] };
 
 /** The flat world with the named cells changed. */
 function flat(...edits: Array<[Cell, Parameters<MemoryWorld["load"]>[1]]>): MemoryWorld {
@@ -332,6 +334,7 @@ const OFFERS: readonly OfferRow[] = [
   // bot jumps at the fence for as long as its patience lasts. Baritone keeps
   // fences, walls, and gates out of `canWalkOn` for the same reason.
   { shape: "a fence east", world: () => flat([{ x: 1, y: 63, z: 0 }, FENCE]), lacks: ["step_up@1,*,*"] },
+  { shape: "an open trapdoor east", world: () => flat([{ x: 1, y: 63, z: 0 }, TRAPDOOR]), lacks: ["step_up@1,*,*"] },
   {
     shape: "a carpet east",
     world: () => flat([{ x: 1, y: 63, z: 0 }, CARPET]),
