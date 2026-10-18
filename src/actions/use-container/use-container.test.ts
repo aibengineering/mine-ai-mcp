@@ -29,6 +29,8 @@ interface TestContainer {
     cursor: TestStack | null;
     closed: boolean;
     moves: number;
+    /** Which opener the action reached for; see the furnace-opening test. */
+    opens: string[];
   };
 }
 
@@ -44,8 +46,19 @@ function testWindow(contents: readonly TestStack[] | number): TestContainer {
     cursor: null,
     closed: false,
     moves: 0,
+    // Which opener the action reached for: the storage opener refuses a furnace window outright,
+    // so the choice between the two is itself worth pinning.
+    opens: [] as string[],
   };
-  const window = {
+  // The furnace window hands over a whole slot at a time instead of exposing deposit/withdraw.
+const takeSlot = async (slot: number) => {
+  const index = state.contents.findIndex((item) => item.slot === slot);
+  if (index === -1) throw new Error(`slot ${slot} is empty`);
+  const [taken] = state.contents.splice(index, 1);
+  state.moves += 1;
+  return taken;
+};
+const window = {
     inventoryStart: 27,
     containerItems: () =>
       state.contents
@@ -64,6 +77,9 @@ function testWindow(contents: readonly TestStack[] | number): TestContainer {
     get selectedItem() {
       return state.cursor;
     },
+    takeOutput: async () => takeSlot(2),
+    takeInput: async () => takeSlot(0),
+    takeFuel: async () => takeSlot(1),
     deposit: async (itemType: number, _metadata: number | null, count: number) => {
       const itemName = registry.items[itemType]!.name;
       const existing = state.contents.find(({ name }) => name === itemName);
@@ -114,7 +130,14 @@ function testBot(
       inventory: { count: (itemType: number) => carried[registry.items[itemType]!.name] ?? 0 },
       blockAt: (cell: Vec3) =>
         cell.y === 65 ? { name: "air", position: cell, shapes: [], boundingBox: "empty" } : block,
-      openContainer: async () => container.window,
+      openContainer: async () => {
+        container.state.opens.push("openContainer");
+        return container.window;
+      },
+      openFurnace: async () => {
+        container.state.opens.push("openFurnace");
+        return container.window;
+      },
       clickWindow: async (slot: number) => {
         const slotIndex = container.state.contents.findIndex((item) => item.slot === slot);
         const slotItem = slotIndex === -1 ? null : container.state.contents[slotIndex]!;
@@ -505,6 +528,22 @@ test("organize rejects an order that does not name the observed items exactly on
   assert.equal(result.status, "failed");
   assert.match(result.error, /CONTAINER_ITEM_ORDER_MISMATCH/);
   assert.equal(container.state.moves, 0);
+});
+
+test("a furnace is opened with the smelting opener, not the storage one", async (t) => {
+  // `bot.openContainer` accepts only storage window types and refuses a furnace block before it
+  // opens anything ("containerToOpen is neither a block nor an entity"), which is what the live
+  // run answered. The smelting opener is the one that opens a block of this kind.
+  const { use, container } = scene(t, { block: "furnace", contents: 0 });
+  const result = await use({ operation: "inspect", x: 1, y: 64, z: 1 });
+  assert.equal(result.status, "succeeded");
+  assert.deepEqual(container.state.opens, ["openFurnace"]);
+});
+
+test("a chest still goes through the storage opener", async (t) => {
+  const { use, container } = scene(t, { block: "chest", contents: 0 });
+  await use({ operation: "inspect", x: 1, y: 64, z: 1 });
+  assert.deepEqual(container.state.opens, ["openContainer"]);
 });
 
 test("a furnace opens for inspection and for taking the cooked output out", async (t) => {
