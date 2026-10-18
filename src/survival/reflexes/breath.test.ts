@@ -3,6 +3,7 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import { waterFixture } from "../../test-support/water.js";
 import { type SurvivalTransition } from "../control/contract.js";
+import { SURFACE_MAXIMUM_TICKS, SURFACE_OPEN_WATER_MAXIMUM_TICKS } from "../policy/environment.js";
 import { attachBreathReflex } from "./breath.js";
 
 test("an owned dive uses its escape floor and preserves the failed budget after ownership transfers", async (t) => {
@@ -180,4 +181,43 @@ test("claims the body at half air and records the surfacing", async (t) => {
   );
 
   await control[Symbol.asyncDispose]();
+});
+
+test("open water spends one breath, a roof keeps the full surface budget", async (t) => {
+  const fixture = waterFixture(t);
+  Object.assign(fixture.entity, { position: new Vec3(0.5, -59, 0.5) });
+  Object.assign(fixture.bot, { oxygenLevel: 8, health: 20, username: "Diver", blockAt: () => null });
+  fixture.entity.isInWater = true;
+  const control = attachBreathReflex(fixture.bot, fixture.reflex);
+  for (let tick = 0; tick < 5; tick += 1) fixture.bot.emit("physicsTick");
+  await new Promise((resolve) => setImmediate(resolve));
+  const rise = fixture.reflex.budgets.snapshot().find((budget) => budget.name === "surface.rise");
+  assert.ok(rise, "the open-water rise opened its own budget");
+  assert.equal(rise.limit, SURFACE_OPEN_WATER_MAXIMUM_TICKS);
+  fixture.bot.oxygenLevel = 20;
+  fixture.bot.emit("physicsTick");
+  await new Promise((resolve) => setImmediate(resolve));
+  await control[Symbol.asyncDispose]();
+
+  const roof = { name: "stone", boundingBox: "block", diggable: true, shapes: [[0, 0, 0, 1, 1, 1]] };
+  const roofed = waterFixture(t);
+  Object.assign(roofed.entity, { position: new Vec3(0.5, -59, 0.5) });
+  Object.assign(roofed.bot, {
+    oxygenLevel: 8,
+    health: 20,
+    username: "Diver",
+    blockAt: () => roof,
+    dig: async () => {},
+  });
+  roofed.entity.isInWater = true;
+  const roofedControl = attachBreathReflex(roofed.bot, roofed.reflex);
+  for (let tick = 0; tick < 5; tick += 1) roofed.bot.emit("physicsTick");
+  await new Promise((resolve) => setImmediate(resolve));
+  const roofedRise = roofed.reflex.budgets.snapshot().find((budget) => budget.name === "surface.rise");
+  assert.ok(roofedRise, "the roofed rise opened its own budget");
+  assert.equal(roofedRise.limit, SURFACE_MAXIMUM_TICKS);
+  roofed.bot.oxygenLevel = 20;
+  roofed.bot.emit("physicsTick");
+  await new Promise((resolve) => setImmediate(resolve));
+  await roofedControl[Symbol.asyncDispose]();
 });

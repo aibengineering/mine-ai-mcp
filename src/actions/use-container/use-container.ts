@@ -27,6 +27,7 @@ import {
 const CONTAINER_REACH = 4.5;
 
 type ContainerWindow = Awaited<ReturnType<Bot["openContainer"]>>;
+type FurnaceWindow = Awaited<ReturnType<Bot["openFurnace"]>>;
 type ContainerBlock = NonNullable<ReturnType<Bot["blockAt"]>>;
 type ContainerStack = ReturnType<ContainerWindow["containerItems"]>[number];
 type ContainerOperationAttempt = { readonly kind: "completed" } | { readonly kind: "failed"; readonly cause: unknown };
@@ -83,10 +84,60 @@ function productionDependencies(navigate: Navigate): UseContainerDependencies {
   return { navigate, createMovements, now: () => new Date() };
 }
 
+/**
+ * Present a furnace window under the storage transfer interface the caller speaks.
+ *
+ * A `Chest`/`Dispenser` window exposes `deposit`/`withdraw`; a `Furnace` window exposes
+ * `takeInput`/`takeFuel`/`takeOutput` instead, and its slots mean something different (input,
+ * fuel, output - not storage). Depositing is refused for these blocks before any of this runs, so
+ * only the withdrawal side is bridged: it finds which of the three slots holds the requested item
+ * and takes that stack. A `take*` hands over a whole slot at once, which is what emptying a
+ * furnace means; what actually landed is still judged from the observed pack afterwards.
+ */
+function asTransferWindow(bot: Bot, furnace: FurnaceWindow): ContainerWindow {
+  const takeSlot = (slot: number): (() => Promise<unknown>) => {
+    switch (slot) {
+      case 0:
+        return () => furnace.takeInput();
+      case 1:
+        return () => furnace.takeFuel();
+      default:
+        return () => furnace.takeOutput();
+    }
+  };
+  return {
+    get inventoryStart() {
+      return furnace.inventoryStart;
+    },
+    items: () => furnace.items(),
+    containerItems: () => furnace.containerItems(),
+    get selectedItem() {
+      return furnace.selectedItem;
+    },
+    firstEmptyContainerSlot: () => furnace.firstEmptyContainerSlot(),
+    close: () => furnace.close(),
+    deposit: async () => {
+      throw new Error("A furnace window cannot be deposited into; smelt_item owns its input.");
+    },
+    withdraw: async (itemType: number, _metadata: number | null, _count: number | null) => {
+      const name = bot.registry.items[itemType]?.name;
+      const held = furnace.containerItems().find((item) => item.name === name);
+      if (!held) throw new Error(`The furnace does not hold ${name ?? itemType}.`);
+      await takeSlot(held.slot)();
+    },
+  } as unknown as ContainerWindow;
+}
+
 class OpenedContainer implements Disposable {
   static async open(bot: Bot, block: ContainerBlock): Promise<OpenedContainer> {
     try {
-      const window = await bot.openContainer(block);
+      // `bot.openContainer` only accepts the storage window types, and a furnace window is not
+      // one of them - it refuses the block before anything is opened ("containerToOpen is neither
+      // a block nor an entity"). The smelting blocks have their own opener, which opens the block
+      // and checks the window really is a furnace.
+      const window = isFurnaceFamily(block.name)
+        ? asTransferWindow(bot, await bot.openFurnace(block))
+        : await bot.openContainer(block);
       return new OpenedContainer(window, (slot) => bot.clickWindow(slot, 0, 0));
     } catch (cause) {
       throw new UseContainerActionError(useContainerOutcomes.openFailed(cause), { cause });
@@ -305,8 +356,18 @@ function isLocationOwnedContainer(blockName: string): boolean {
     blockName === "hopper" ||
     blockName === "dropper" ||
     blockName === "dispenser" ||
-    blockName.endsWith("_shulker_box")
+    blockName.endsWith("_shulker_box") ||
+    isFurnaceFamily(blockName)
   );
+}
+
+/**
+ * The smelting blocks. They are location-owned and openable, but their window is three fixed
+ * slots (input, fuel, output) rather than storage - so only inspection and withdrawal of the
+ * cooked output make sense here, while `smelt_item` owns putting anything in.
+ */
+function isFurnaceFamily(blockName: string): boolean {
+  return blockName === "furnace" || blockName === "blast_furnace" || blockName === "smoker";
 }
 
 function requestedItemNames(request: UseContainerRequest): readonly string[] {
@@ -487,6 +548,18 @@ export async function useContainer(
       return {
         status: "failed",
         error: useContainerOutcomes.unsupportedBlock(block.name),
+        target: targetValue,
+      };
+    }
+    // A furnace window is three fixed slots, not storage: only reading it and taking the cooked
+    // output out are meaningful here. Refusing the other two keeps a caller from ordering a
+    // furnace it cannot fill meaningfully, and says plainly which action owns that.
+    if (isFurnaceFamily(block.name) && request.operation !== "inspect"
+      && request.operation !== "withdraw") {
+      forgetContainerObservation(data, targetValue);
+      return {
+        status: "failed",
+        error: useContainerOutcomes.furnaceOperationRefused(block.name, request.operation),
         target: targetValue,
       };
     }
