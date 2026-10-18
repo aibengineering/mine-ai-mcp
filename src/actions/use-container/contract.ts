@@ -242,6 +242,8 @@ export const useContainerOutcomes = {
   blockUnloaded: "[CONTAINER_BLOCK_UNLOADED] The target block was not loaded after navigation; stored memory was retained.",
   unsupportedBlock: (blockName: string) =>
     `[CONTAINER_NOT_PRESENT] The loaded target block is ${blockName}, not a supported location-owned container.`,
+  furnaceOperationRefused: (blockName: string, operation: string) =>
+    `[CONTAINER_OPERATION_UNSUPPORTED] ${blockName} holds input, fuel and output slots rather than storage, so '${operation}' cannot be ordered against it; inspect it or withdraw the cooked output, and use smelt_item to cook.`,
   openFailed: (cause: unknown) =>
     `[CONTAINER_OPEN_FAILED] Mineflayer could not open the observed container: ${cause instanceof Error ? cause.message : String(cause)}`,
   transferFailed: (operation: "deposit" | "withdraw", cause: unknown) =>

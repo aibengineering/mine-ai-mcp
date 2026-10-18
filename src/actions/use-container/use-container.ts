@@ -305,8 +305,18 @@ function isLocationOwnedContainer(blockName: string): boolean {
     blockName === "hopper" ||
     blockName === "dropper" ||
     blockName === "dispenser" ||
-    blockName.endsWith("_shulker_box")
+    blockName.endsWith("_shulker_box") ||
+    isFurnaceFamily(blockName)
   );
+}
+
+/**
+ * The smelting blocks. They are location-owned and openable, but their window is three fixed
+ * slots (input, fuel, output) rather than storage - so only inspection and withdrawal of the
+ * cooked output make sense here, while `smelt_item` owns putting anything in.
+ */
+function isFurnaceFamily(blockName: string): boolean {
+  return blockName === "furnace" || blockName === "blast_furnace" || blockName === "smoker";
 }
 
 function requestedItemNames(request: UseContainerRequest): readonly string[] {
@@ -487,6 +497,18 @@ export async function useContainer(
       return {
         status: "failed",
         error: useContainerOutcomes.unsupportedBlock(block.name),
+        target: targetValue,
+      };
+    }
+    // A furnace window is three fixed slots, not storage: only reading it and taking the cooked
+    // output out are meaningful here. Refusing the other two keeps a caller from ordering a
+    // furnace it cannot fill meaningfully, and says plainly which action owns that.
+    if (isFurnaceFamily(block.name) && request.operation !== "inspect"
+      && request.operation !== "withdraw") {
+      forgetContainerObservation(data, targetValue);
+      return {
+        status: "failed",
+        error: useContainerOutcomes.furnaceOperationRefused(block.name, request.operation),
         target: targetValue,
       };
     }
