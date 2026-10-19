@@ -1,6 +1,5 @@
 template: ../../templates/flat-single-action.yaml
 
-name: raised-shield-movement
 tags: [regression]
 description: >-
   Walk and sprint east with and without a raised off-hand shield on a host that
