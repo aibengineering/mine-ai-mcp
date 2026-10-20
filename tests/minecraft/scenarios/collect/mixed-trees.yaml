@@ -5,7 +5,16 @@ description: >-
   Use the axe and carried dirt to reach the tall trunks and work through leaves
   where needed, including the fallen tree's leafy far end. All seven oak, seven
   birch, and nine spruce logs must reach inventory; stopping at easy exposed logs
-  cannot pass.
+  cannot pass. Then take a lone oak log seventy blocks out, loaded but beyond the
+  former 64-block scan, without exploring for it, and a named oak log 140 blocks
+  out. In a second pen, Climber takes six logs up an oak into its canopy and then
+  inspects a ground chest on the far side of its start: the handoff from the
+  canopy back to the ground must work and leave the chest in place.
+
+reset:
+  - "fill -16 -59 -16 20 -40 16 air"
+  - "fill 66 -60 -4 144 -50 4 air"
+  - "fill -16 -59 184 20 -40 216 air"
 
 geometry:
   - fill: { block: grass_block, from: [-12, -60, -12], to: [14, -60, 12] }
@@ -20,6 +29,17 @@ geometry:
   # embedded in it, and require all nine rather than only the exposed section.
   - fill: { block: spruce_leaves, from: [-10, -59, 5], to: [-6, -57, 8] }
   - fill: { block: "spruce_log[axis=z]", from: [-8, -59, -2], to: [-8, -59, 6] }
+  # Lone logs beyond the former scan radius (loaded-oak-outside-radius). The
+  # nearer is found by the general scan; the farther is named by coordinates.
+  - setblock: { block: oak_log, at: [70, -59, 0] }
+  - setblock: { block: oak_log, at: [140, -59, 0] }
+  # Climber's pen (tree-canopy-chest-handoff): a seven-log oak, and a chest
+  # on the ground four blocks the other side of the start.
+  - fill: { block: grass_block, from: [-12, -60, 188], to: [14, -60, 212] }
+  - fill: { block: oak_leaves, from: [4, -54, 198], to: [8, -52, 202] }
+  - fill: { block: oak_leaves, from: [5, -51, 199], to: [7, -51, 201] }
+  - fill: { block: oak_log, from: [6, -59, 200], to: [6, -53, 200] }
+  - setblock: { block: chest, at: [-4, -59, 200] }
 
 players:
   - name: Actor
@@ -27,19 +47,43 @@ players:
     inventory:
       - { item: iron_axe, count: 1 }
       - { item: dirt, count: 16 }
+  - name: Climber
+    pos: [0, -59, 200]
+    inventory:
+      - { item: iron_axe, count: 1 }
+      - { item: dirt, count: 16 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
 
 params:
-  action: collect_block
-  input:
-    block_name: logs
-    count: 23
-    scaffold: true
+  players:
+    Actor:
+      actions:
+        - { action: collect_block, input: { block_name: logs, count: 23, scaffold: true } }
+        - { action: collect_block, input: { block_name: oak_log, count: 1, scaffold: false } }
+        - { action: collect_block, input: { block_name: oak_log, x: 140, y: -59, z: 0, scaffold: false } }
+    Climber:
+      actions:
+        - { action: collect_block, input: { block_name: logs, count: 6, scaffold: true } }
+        - { action: use_container, input: { operation: inspect, x: -4, y: -59, z: 200 } }
+
+tick:
+  - "gamemode spectator @a[name=!Actor,name=!Climber,gamemode=!spectator]"
 
 goal:
   kind: all
-  timeout: 120
+  # The trees take about a minute and each lone log about fourteen seconds;
+  # exploring away from the loaded oak would not finish in this budget.
+  timeout: 150
   goals:
-    - { kind: hasItem, item: oak_log, count: 7 }
-    - { kind: hasItem, item: birch_log, count: 7 }
-    - { kind: hasItem, item: spruce_log, count: 9 }
-    - { kind: completion }
+    - { kind: hasItem, who: Actor, item: oak_log, count: 9 }
+    - { kind: hasItem, who: Actor, item: birch_log, count: 7 }
+    - { kind: hasItem, who: Actor, item: spruce_log, count: 9 }
+    - { kind: blocksAt, block: air, positions: [[70, -59, 0], [140, -59, 0]] }
+    - { kind: completion, who: Actor }
+    - { kind: hasItem, who: Climber, item: oak_log, count: 6 }
+    - { kind: blockAt, block: chest, pos: [-4, -59, 200] }
+    - { kind: completion, who: Climber }
