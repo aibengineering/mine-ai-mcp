@@ -24,6 +24,17 @@ function shelterFeet(bot: Bot): Vec3 {
   return new Vec3(cell.x, cell.y, cell.z);
 }
 
+/** The cells under the player's footprint at its feet height, nearest the centre first. */
+function footprintCells(bot: Bot): Vec3[] {
+  const { position } = bot.entity;
+  const feet = shelterFeet(bot);
+  const cells: Vec3[] = [];
+  for (let x = Math.floor(position.x - 0.3); x < position.x + 0.3; x++)
+    for (let z = Math.floor(position.z - 0.3); z < position.z + 0.3; z++) cells.push(new Vec3(x, feet.y, z));
+  const away = (cell: Vec3) => Math.hypot(cell.x + 0.5 - position.x, cell.z + 0.5 - position.z);
+  return cells.sort((a, b) => away(a) - away(b));
+}
+
 type Entity = Parameters<Bot["attack"]>[0];
 
 /** How far down the bot digs: three cells put its head below anything that walks, and out of a skeleton's line. */
@@ -288,6 +299,7 @@ export async function hideInPlace(bot: Bot, options: HideOptions): Promise<HideR
         Math.abs(bot.entity.position.z - origin.z - 0.5) + bot.entity.width / 2 > 0.5)) ||
     shelterIntruder(bot, threatContext) !== null;
 
+  let steppedOntoSupport = false;
   construction: while (!enclosed) {
     signal.throwIfAborted();
     const hazard = unsafe();
@@ -352,16 +364,27 @@ export async function hideInPlace(bot: Bot, options: HideOptions): Promise<HideR
     if (descended === 0) {
       // A body straddling a cell edge occupies the wall's destination. The
       // server refuses that block even though the target itself is air.
-      const floor = bot.blockAt(feet.offset(0, -1, 0));
-      const supportedCenter = floor?.shapes.some(
-        ([minX, , minZ, maxX, maxY, maxZ]) =>
-          minX <= 0.5 &&
-          maxX >= 0.5 &&
-          minZ <= 0.5 &&
-          maxZ >= 0.5 &&
-          Math.abs(feet.y - 1 + maxY - bot.entity.position.y) < 0.001,
-      );
-      if (blocks() > 0 && !supportedCenter) {
+      const supportedCenter = (cell: Vec3) =>
+        bot.blockAt(cell.offset(0, -1, 0))?.shapes.some(
+          ([minX, , minZ, maxX, maxY, maxZ]) =>
+            minX <= 0.5 &&
+            maxX >= 0.5 &&
+            minZ <= 0.5 &&
+            maxZ >= 0.5 &&
+            Math.abs(cell.y - 1 + maxY - bot.entity.position.y) < 0.001,
+        ) ?? false;
+      if (blocks() > 0 && !supportedCenter(feet)) {
+        // A walk can end with the body's centre over an edge, standing on the
+        // block beside it: a withdrawal on the basalt slope stopped at x
+        // 172.04 above air at x 172, held up by the floor at x 171. Shelter
+        // over the block that holds the body, not the air its centre is over.
+        const holding = footprintCells(bot).find(
+          (cell) => !cell.equals(feet) && supportedCenter(cell) && bot.blockAt(cell)?.boundingBox === "empty",
+        );
+        if (holding && !steppedOntoSupport) {
+          steppedOntoSupport = true;
+          if (await centerShelterCell(holding)) continue construction;
+        }
         return done({ kind: "failed", error: "The shelter cell has no solid floor to centre on" });
       }
       const centered = blocks() === 0 || (await centerShelterCell(feet));
