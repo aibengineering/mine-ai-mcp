@@ -50,6 +50,7 @@ import {
   crystalBlastCoverCell,
   crystalBlastEstimate,
   crystalMeleeAim,
+  crystalMeleeObstruction,
   crystalReturnGoal,
 } from "../../positioning/combat/crystal-melee.js";
 import { type SurvivalResources } from "../../state/resources.js";
@@ -91,6 +92,8 @@ export interface EndCombatResult {
 type EndMoveResult = { kind: "arrived" } | { kind: "changed" } | { kind: "failed"; reason: string };
 /** Health points held back beyond the blast estimate before an exposed swing. */
 const CRYSTAL_BLAST_MARGIN = 2;
+/** Blocks one melee request may dig off its attack line: a shelter's walls and cap are at most a few. */
+const CRYSTAL_LINE_DIGS = 6;
 
 // Vanilla ServerLevel sends explosion packets only when distance squared is
 // below 4096. Beyond this range a destroyed crystal can vanish without a receipt.
@@ -827,13 +830,22 @@ export class EndCombat {
     // The pillar approach is the exception: its route is the scaffolding, and
     // the descent digs back through it. The tower stays protected either way.
     const pillar = observation.approach === "pillar";
+    const protectedCells = () => new Set([packKey(pedestal.x, pedestal.y, pedestal.z),
+      ...(observation.staircase?.tower.map(p => packKey(p.x, p.y, p.z)) ?? []),
+      ...(observation.staircase?.cells.filter(cell => cell.blockName !== "air")
+        .map(({ position: p }) => packKey(p.x, p.y, p.z)) ?? [])]);
     const movements = () => createMovements(bot, {
       allowDigging: this.policy().combat.terrain.dig, scaffolding: pillar && this.policy().combat.terrain.place,
-      protectedCells: new Set([packKey(pedestal.x, pedestal.y, pedestal.z),
-        ...(observation.staircase?.tower.map(p => packKey(p.x, p.y, p.z)) ?? []),
-        ...(observation.staircase?.cells.filter(cell => cell.blockName !== "air")
-          .map(({ position: p }) => packKey(p.x, p.y, p.z)) ?? [])]),
+      protectedCells: protectedCells(),
     });
+    // What the bot itself may have left on the attack line: shelter walls and
+    // caps, or scaffold. The tower, its pedestal, its cage and the treads stay.
+    const placedByBot = (position: Vec3) => {
+      const block = bot.blockAt(position);
+      return block !== null && block.name !== "bedrock" && !protectedCells().has(packKey(position.x, position.y, position.z)) &&
+        (DRAGON_PROTECTION_BLOCKS.includes(block.name) || this.policy().navigation.scaffold_blocks.includes(block.name));
+    };
+    let lineDigs = 0;
     while (!observation.destroyed && !observation.shot) {
       signal.throwIfAborted();
       if (this.danger) {
@@ -866,6 +878,18 @@ export class EndCombat {
       const feet = bot.entity.position.clone();
       const aim = crystalMeleeAim(bot, crystal.position);
       if (!aim) {
+        // A dragon shelter raised on the stance leaves its walls and cap
+        // between the eye and the crystal; dig them out rather than refuse
+        // every retry from the same cell.
+        const obstruction = this.policy().combat.terrain.dig && lineDigs < CRYSTAL_LINE_DIGS
+          ? crystalMeleeObstruction(bot, crystal.position, feet.offset(0, observedEyeHeight(bot.entity), 0), placedByBot)
+          : null;
+        if (obstruction) {
+          lineDigs++;
+          const dug = await this.phase("approach", () =>
+            this.navigation.breakBlockInPlace({ position: obstruction, movements: movements(), signal }));
+          if (dug.status === "broken") continue;
+        }
         observation.fail("cage_uncleared");
         return this.crystalResult(observation, "stopped", "[CRYSTAL_ATTACK_CORNER_BLOCKED] The staircase is complete but the stance lacks a clear melee hit within reach. Inspect the cage opening before retrying.");
       }
