@@ -13,7 +13,9 @@ description: >-
   health is below the engagement minimum"), the evade ends with
   capability_limit ("navigation timeout") without safe separation, and the
   navigate comes back cancelled with [HOSTILE_CONTACT] at 9.1 health, short of
-  the marker. The full-health traverse passes in
+  the marker. On 2026-10-21 the navigate was cancelled the same way after
+  96 s, by a hide response to the angry enderman and both cubes. The
+  full-health traverse passes in
   scenarios/combat/basalt-crossfire-traverse.yaml.
 
 world:
@@ -85,12 +87,12 @@ players:
 client:
   command: bun
   cwd: ../..
-  args: [client-host.ts, drivers/creeper-rocky-crossfire.ts]
+  args: [client-host.ts, drivers/action-sequence.ts]
 params:
-  action: navigate
-  input: { x: 36, y: 101, z: 0, range: 1 }
   # The request is made once, when the body is free.
   idleWithinTicks: 400
+  actions:
+    - { action: navigate, input: { x: 36, y: 101, z: 0, range: 1 } }
 
 goal:
   kind: all
