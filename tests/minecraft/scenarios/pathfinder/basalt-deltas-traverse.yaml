@@ -1,0 +1,79 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Cross generated basalt-deltas terrain on seed 20260906 without touching lava
+  or magma. From the shelf, land beside the magma field the wounded pack
+  retreat once stepped onto, cross the basalt gap over a lava seam to the far
+  ledge, come back over it, and return to the shelf past a small magma cube
+  sitting five blocks below the route, without turning the journey into a hunt.
+  Regeneration is off, so any contact shows as lost health at a checkpoint.
+  Folds generated-basalt-gap, generated-basalt-magma-gap and
+  generated-basalt-lower_ledge.
+
+# Checkpoints re-surveyed against current generation on 2026-10-20: the
+# recorded gap start of 2026-09 still stands, but the recorded lower-ledge
+# cube cell (199, 44, -23) is now blackstone, so the cube sits in the open
+# pocket one block south.
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    keepInventory: false
+    randomTickSpeed: 0
+
+entities:
+  - { type: magma_cube, pos: [199.5, 44, -24.5], nbt: '{Size:0,NoAI:1b,PersistenceRequired:1b,Tags:["lower_ledge"]}' }
+
+schedule:
+  - { afterTicks: 20, run: "execute as @e[tag=lower_ledge] run data merge entity @s {NoAI:0b}" }
+  - when: "entity @a[name=BasaltTraveler] at @a[name=BasaltTraveler] if block ~ ~ ~ minecraft:lava"
+    run: 'summon minecraft:marker 185 55 -19 {Tags:["lava_contact"]}'
+  - when: "entity @a[name=BasaltTraveler] at @a[name=BasaltTraveler] if block ~ ~-0.2 ~ minecraft:magma_block"
+    run: 'summon minecraft:marker 185 55 -19 {Tags:["magma_contact"]}'
+
+players:
+  - name: BasaltTraveler
+    pos: [185.5, 49, -19.5]
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: iron_boots
+      offhand: shield
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  legs:
+    - { label: magma-gap landing, target: [199, 49, -18], range: 0 }
+    - { label: across the basalt gap, target: [203, 49, -17], range: 0 }
+    - { label: back to the gap's west lip, target: [199, 49, -16], range: 0 }
+    # The way back climbs basalt walls the way out dropped from. Like the
+    # legacy lower-ledge journey, it uses navigate's own defaults: carried
+    # blocks and digging are allowed.
+    - { label: shelf past the lower-ledge cube, target: [185, 49, -20], range: 1, dig: true, scaffold: true }
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: BasaltTraveler, pos: [185.5, 49, -19.5], radius: 2 }
+    - { kind: survive, who: BasaltTraveler, seconds: 1 }
+    - { kind: health, who: BasaltTraveler, health: 20 }
+    - { kind: entityCount, entity: magma_cube, tag: lower_ledge, min: 1 }
+    - { kind: entityCount, entity: marker, tag: lava_contact, max: 0 }
+    - { kind: entityCount, entity: marker, tag: magma_contact, max: 0 }
+    - { kind: completion, who: BasaltTraveler }

@@ -7,7 +7,7 @@ establish this behavior.
 Run the focused suite from the repository root:
 
 ```sh
-npm run scenarios -- scenarios/flat/combat-terrain scenarios/default/nether/hazards --repeat 1 --jobs 2
+npm run scenarios -- scenarios/flat/combat-terrain --repeat 1 --jobs 2
 ```
 
 Two concurrent disposable servers keep the additional Java process count small
@@ -37,12 +37,14 @@ prove exposure to a dangerous edge.
 
 ## Qualification
 
+The generated Nether cliff and canopy gap moved to
+[survival/nether-idle-survival](../tests/minecraft/scenarios/survival/nether-idle-survival.yaml)
+and [hunt/warped-forest-pearls](../tests/minecraft/scenarios/hunt/warped-forest-pearls.yaml).
+
 | Case                                                       | Terrain and required pressure                                                                                                        |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | [Lava shore](flat/combat-terrain/lava-shore.yaml)          | Constructed level lava shore; two native zombies attack from different angles. A hit or shield block must occur on the last dry row. |
 | [Side bridge](flat/combat-terrain/side-bridge.yaml)        | Constructed two-block-wide bridge above lava; a native skeleton shoots from a side platform. Contact must occur on the span.         |
-| [Wounded cliff](default/nether/hazards/wounded-cliff.yaml) | Generated Nether cliff; native angry pursuit begins at the lip, followed by real separation or independently verified closed cover.  |
-| [Canopy gap](default/nether/hazards/canopy-gap-hunt.yaml)  | Generated Nether canopy gap; select and engage the opposite-side enderman, then recover native loot without an unsafe fall.          |
 
 The first fixed shore/bridge batch ran three attempts per case. All six survived
 and reached their destinations without descending below the deck or entering

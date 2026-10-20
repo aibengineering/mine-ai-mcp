@@ -1,0 +1,83 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression, slow]
+description: >-
+  From beside the live run-14 upper spawner of seed -5335131384818472281, hunt
+  one native blaze rod under fire from two blazes in the spawner room and two
+  over the lower bridge, with a wither skeleton on the bridge between them,
+  then leave by the surveyed north exit onto the soul-sand slope and stay alive
+  there for five more seconds. The legacy kits carried no shield and are now
+  refused, so this one wears one. Folds fortress-rod-and-exit,
+  fortress-pair-rod-and-exit (spawner switched off; the live spawner is
+  stricter), fortress-bridge-rod-and-exit (its bridge blazes) and
+  fortress-sortie (its wither skeleton; the seed-20260906 stair room is
+  dropped); the stair room survives as scenarios/hunt/fortress-rod-and-exit.yaml.
+  Observed in four 2026-10-20 runs: two passed, the hunt taking 1.5 and 2.7
+  minutes. One was still hunting at five minutes, its shield broken by blaze
+  fire, without a rod. In one the hunt gave up after 1.8 minutes with
+  capability_blocked ("Ranged guard did not observe a finished volley", then no
+  path to the next blaze), sheltering 20 blocks below the room.
+
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: "-5335131384818472281"
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: false
+
+# The arranged mobs are loaded but held still until a second after the hunt
+# is requested; the live spawner adds blazes of its own.
+entities:
+  - { type: blaze, pos: [-30.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-25.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-32.5, 81, 357.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-40.5, 81, 357.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: wither_skeleton, pos: [-35.5, 79, 357.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+
+schedule:
+  - { afterTicks: 20, run: "execute as @e[tag=fortress_trial] run data merge entity @s {NoAI:0b}" }
+
+players:
+  - name: RodRunner
+    pos: [-27.5, 82, 356.5]
+    equipment:
+      head: diamond_helmet
+      chest: diamond_chestplate
+      legs: diamond_leggings
+      feet: diamond_boots
+      offhand: shield
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+      - { item: cooked_beef, count: 64 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/nether-expedition.ts]
+params:
+  idleWithinTicks: 400
+  actions:
+    - { action: collect_mob_drop, input: { mob_name: blaze, drop_name: blaze_rod, count: 1 } }
+    # The exit cell stands on the soul sand north of the spawner room.
+    - { action: navigate, input: { x: -28, y: 81, z: 350, range: 1 } }
+  # Five seconds with the reflexes still live, for fire already in flight.
+  holdTicks: 100
+
+goal:
+  kind: all
+  timeout: 540
+  goals:
+    - { kind: hasItem, who: RodRunner, item: blaze_rod, count: 1 }
+    - { kind: reach, who: RodRunner, pos: [-27.5, 81, 350.5], radius: 2 }
+    - { kind: survive, who: RodRunner, seconds: 1 }
+    - { kind: health, who: RodRunner, health: 1 }
+    - { kind: completion, who: RodRunner }

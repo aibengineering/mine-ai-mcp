@@ -1,0 +1,105 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression]
+description: >-
+  Cross the basalt-crossfire arena over lava at 11 health, without
+  regeneration, under two magma cubes, a ghast and an enderman angry at the bot
+  from its first tick, with a neutral enderman beside the route. Arrive at the
+  emerald marker alive, never touch the lava or the magma field, and leave the
+  neutral enderman alive. This is legacy basalt-crossfire-provoked, whose
+  driver went stale before it measured anything; the provocation is now
+  arranged in YAML instead of by the bot's gaze. Observed on 2026-10-20: a
+  second into the navigate the hostile reflex evades the small cube ("hurt:
+  health is below the engagement minimum"), the evade ends with
+  capability_limit ("navigation timeout") without safe separation, and the
+  navigate comes back cancelled with [HOSTILE_CONTACT] at 9.1 health, short of
+  the marker. The full-health traverse passes in
+  scenarios/combat/basalt-crossfire-traverse.yaml.
+
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules:
+    doMobSpawning: false
+    doDaylightCycle: false
+    naturalRegeneration: false
+    keepInventory: false
+    randomTickSpeed: 0
+
+# A carved basalt traverse over a lava bed: a start shelf, a gap, two ledges,
+# a magma field in the middle and an emerald marker at the far end. A northern
+# bypass stays intact beside the central gap.
+geometry:
+  - fill: { block: air, from: [-8, 90, -18], to: [46, 118, 22] }
+  - fill: { block: bedrock, from: [-7, 95, -17], to: [45, 95, 21] }
+  - fill: { block: lava, from: [-7, 96, -17], to: [45, 96, 21] }
+  - fill: { block: basalt, from: [-3, 96, -5], to: [8, 99, 5] }
+  - fill: { block: basalt, from: [9, 96, -5], to: [15, 100, 5] }
+  - fill: { block: basalt, from: [16, 96, -5], to: [24, 101, 5] }
+  - fill: { block: basalt, from: [25, 96, -5], to: [38, 100, 5] }
+  - fill: { block: air, from: [12, 97, -2], to: [13, 100, 5] }
+  - fill: { block: magma_block, from: [20, 101, -1], to: [22, 101, 1] }
+  - fill: { block: basalt, from: [28, 101, 2], to: [29, 104, 3] }
+  - setblock: { block: emerald_block, at: [36, 100, 0] }
+
+# Every mob arrives live a second after the navigate request is made, so the
+# reflex takes the body from a request in progress. Held mobs beside a wounded
+# start are already evaded before the trial begins. The provoked enderman
+# carries the traveller's offline UUID in AngryAt, so it hunts the bot from its
+# first tick; the neutral one only reacts if the bot strikes or stares at it.
+schedule:
+  - afterTicks: 20
+    run:
+      - 'summon minecraft:magma_cube 7.5 100 0.5 {Size:1,PersistenceRequired:1b}'
+      - 'summon minecraft:magma_cube 15.5 101 1.5 {Size:3,PersistenceRequired:1b}'
+      - 'summon minecraft:ghast 21.5 106 12.5 {PersistenceRequired:1b}'
+      - 'summon minecraft:enderman 6.5 100 2.5 {PersistenceRequired:1b,Tags:["neutral"]}'
+      - 'summon minecraft:enderman 4.5 100 -3.5 {PersistenceRequired:1b,AngerTime:2400,AngryAt:[I;242625046,-70699088,-1210963649,1827253800]}'
+  # Sentinels: any tick with the traveller's feet in lava, or standing on the
+  # magma field, leaves a marker that fails the goal below.
+  - when: "entity @a[name=BasaltTraveler] at @a[name=BasaltTraveler] if block ~ ~ ~ minecraft:lava"
+    run: 'summon minecraft:marker 0 110 0 {Tags:["lava_contact"]}'
+  - when: "entity @a[name=BasaltTraveler] at @a[name=BasaltTraveler] if block ~ ~-0.2 ~ minecraft:magma_block"
+    run: 'summon minecraft:marker 0 110 0 {Tags:["magma_contact"]}'
+
+players:
+  - name: BasaltTraveler
+    pos: [0.5, 100, 0.5]
+    health: 11
+    equipment:
+      head: diamond_helmet
+      chest: diamond_chestplate
+      legs: diamond_leggings
+      feet: diamond_boots
+      offhand: shield
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 48 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/creeper-rocky-crossfire.ts]
+params:
+  action: navigate
+  input: { x: 36, y: 101, z: 0, range: 1 }
+  # The request is made once, when the body is free.
+  idleWithinTicks: 400
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: BasaltTraveler, pos: [36.5, 101, 0.5], radius: 2 }
+    - { kind: survive, who: BasaltTraveler, seconds: 1 }
+    - { kind: health, who: BasaltTraveler, health: 1 }
+    - { kind: entityCount, entity: enderman, tag: neutral, min: 1 }
+    - { kind: entityCount, entity: marker, tag: lava_contact, max: 0 }
+    - { kind: entityCount, entity: marker, tag: magma_contact, max: 0 }
+    - { kind: completion, who: BasaltTraveler }
