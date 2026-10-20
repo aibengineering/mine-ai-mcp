@@ -34,6 +34,7 @@ import {
   PROTECTION_SIDES,
   findCombatPosition,
   findRoofPosition,
+  roofedHomes,
   type RoofOpening,
   type RoofPosition,
 } from "./planner.js";
@@ -231,6 +232,23 @@ export class CombatPosition {
       // Search the same finite set of positions without the inventory filter to
       // distinguish missing material from geometry. Existing roofs cost zero.
       const buildable = available > 0 ? findRoof(Infinity).plan : null;
+      // The local search covers six steps. A chase can carry the body further
+      // from a roof that still stands, and with the blocks spent on it the
+      // missing-material verdict would abandon the hunt beside its shelter.
+      const standing = findRoofPosition(
+        this.navigation.world,
+        this.cell,
+        this.target.position,
+        0,
+        this.canPlaceProtection,
+        opening,
+        roofedHomes(this.navigation.world, this.cell, COMBAT_APPROACH_RADIUS),
+      ).plan;
+      if (standing)
+        return {
+          kind: "unreachable",
+          reason: `No usable roof from ${this.cell}; the existing roof at ${standing.cell} must be reached first.`,
+        };
       if (available === 0 || buildable)
         return {
           kind: "materials_missing",

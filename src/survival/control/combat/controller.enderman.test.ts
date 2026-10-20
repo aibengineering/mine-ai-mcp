@@ -221,6 +221,27 @@ test("an explicitly pursued angry Enderman in reach is guarded and hit before se
   assert.ok(fixture.itemUse.includes(true), "guard before the exposed contact hit");
 });
 
+test("a hunt out of blocks returns to the roof it built instead of reporting missing material", () => {
+  // The 2026-10-20 ShelterPair pen: eleven cobblestone roofed cell 200,0;
+  // the first kill ended at 204.21,-2.19, seven steps from that roof, with the
+  // second enderman at 210,-5. The local six-step search found no roof, and
+  // with no blocks left the hunt stopped on [COMBAT_BUILD_MATERIALS_MISSING]
+  // although the roof still stood and its gaze to the quarry was clear.
+  const { bot, target, navigation, world } = blazePreflightFixture(["diamond_sword", "shield"]);
+  target.name = "enderman";
+  target.height = 2.9;
+  target.position.set(10.5, 64, -4.5);
+  bot.entity.position.set(4.21, 64, -2.19);
+  for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) world.load({ x, y: 66, z }, { stateId: 1 });
+  assert.equal(combatResourceRefusal(bot, navigation, target), null);
+  const planned = new CombatPosition(bot, navigation, target, new Set()).planRoof({
+    kind: "provoke",
+    targetEye: target.position.offset(0, 2.55, 0),
+    eyeHeight: 1.62,
+  });
+  assert.equal(planned.kind, "unreachable", "the standing roof is a destination, not missing material");
+});
+
 test("a roof preparation failure stays local when knockback changes the occupied cell", () => {
   const { bot, target, navigation } = protectedEndermanFixture();
   const position = new CombatPosition(bot, navigation, target, new Set());

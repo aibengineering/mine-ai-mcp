@@ -61,6 +61,12 @@ function homes(world: WorldView, origin: Vec3, steps: number): Vec3[] {
   return [...found.values()];
 }
 
+/** Supported cells within `steps` that already have a ceiling over the head:
+ * the only cells an existing roof can protect at no material cost. */
+export function roofedHomes(world: WorldView, origin: Vec3, steps: number): Vec3[] {
+  return homes(world, origin, steps).filter((cell) => missingProtection(world, [cell.offset(0, 2, 0)])?.length === 0);
+}
+
 export type RoofOpening =
   | { readonly kind: "protection" }
   | { readonly kind: "provoke"; readonly targetEye: Vec3; readonly eyeHeight: number }
