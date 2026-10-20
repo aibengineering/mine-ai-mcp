@@ -678,3 +678,51 @@ test("an explosion announced during the fight is counted, so a vanished creeper 
   assert.equal(outcome.kind, "target_lost");
   assert.equal(outcome.explosions, 1);
 });
+
+test("two creepers chasing a sprint clear release it once both have unwound, before either gives up the chase", async () => {
+  // Recorded in combat-base 19-32-58-176Z at the knockback swing: the target
+  // creeper three blocks off, the second 5.7 blocks off on the other side.
+  // The bot sprinted 0.26 blocks a tick and both creepers followed at 0.13;
+  // a creeper follows a player only within its sixteen-block follow range.
+  const fixture = creeperFixture();
+  fixture.bot.entity.position = new Vec3(3.4, 64, 0.5);
+  fixture.target.position = new Vec3(6.1, 64, 1.9);
+  const second = { id: 8, name: "creeper", isValid: true, height: 1.7, width: 0.6, position: new Vec3(8.7, 64, -1.5) } as Entity;
+  fixture.bot.entities[second.id] = second;
+  const creepers = [fixture.target, second];
+  const gaveUp = new Set<number>();
+  fixture.script.onAttack = () => {
+    fixture.target.position = fixture.target.position.offset(1, 0, 0);
+  };
+  fixture.script.onWait = () => {
+    const bot = fixture.bot.entity.position;
+    if (fixture.activeControls.has("forward")) {
+      const heading = fixture.headings.at(-1);
+      if (heading) fixture.bot.entity.position = bot.plus(new Vec3(heading.x, 0, heading.z).normalize().scaled(0.26));
+    }
+    for (const creeper of creepers) {
+      const toBot = fixture.bot.entity.position.minus(creeper.position);
+      if (toBot.norm() > 16) gaveUp.add(creeper.id);
+      if (gaveUp.has(creeper.id) || toBot.norm() <= 2) continue;
+      creeper.position = creeper.position.plus(new Vec3(toBot.x, 0, toBot.z).normalize().scaled(0.13));
+    }
+  };
+  const ended: { separations: number[] | null } = { separations: null };
+  const navigation = {
+    ...navigationFixture(),
+    cancel: () => undefined,
+    navigate: async () => {
+      // The re-approach marks the end of the sprint clear.
+      ended.separations ??= creepers.map((creeper) => creeper.position.distanceTo(fixture.bot.entity.position));
+      fixture.bot.emit("entityGone", fixture.target);
+      return { status: "completed", elapsedMs: 1 };
+    },
+  } as unknown as NavigationRuntime;
+
+  await createCombatController(fixture.bot, navigation).engage(7, new AbortController().signal, "pursue");
+
+  const { separations } = ended;
+  assert.ok(separations !== null, "the sprint clear ended in a re-approach");
+  assert.deepEqual([...gaveUp], [], `no creeper fell out of its follow range: ${separations}`);
+  assert.ok(separations.every((distance) => distance > 8), `both creepers unwound: ${separations}`);
+});

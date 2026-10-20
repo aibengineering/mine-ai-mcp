@@ -1,4 +1,4 @@
-import { decideCombatTactic, type CombatTacticalFacts, type CombatTactic } from "../../policy/combat/tactics.js";
+import { creeperEscapeAdmits, decideCombatTactic, type CombatTacticalFacts, type CombatTactic } from "../../policy/combat/tactics.js";
 import { creeperRetreatHeading } from "../../positioning/combat/creeper-retreat.js";
 import type { FightScene } from "../../responses/fight/scene.js";
 import type { FightWeapons } from "../../responses/fight/weapons.js";
@@ -54,7 +54,7 @@ export class CombatTactics {
         impactInTicks: projectile.projectiles[0]?.impactInTicks ?? projectile.windupForecasts[0]?.impactInTicks ?? null } : null,
     };
     const decision = decideCombatTactic(facts);
-    if (decision.kind === "escape") perception.creeperClearance.require(creepers.filter(threat => decision.threatIds.includes(threat.id)));
+    if (decision.kind === "escape") perception.creeperClearance.require(creepers.filter(threat => creeperEscapeAdmits(decision).includes(threat.id)));
     if (["counter_blast", "blast_barrier", "brace_blast"].includes(decision.kind)) perception.creeperClearance.require(creepers.filter(threat => threat.distance <= 8));
     const key = JSON.stringify([decision, facts.creepers.map(threat => [threat.id, threat.swelling]), facts.clearancePending]);
     if (key !== this.#key) {

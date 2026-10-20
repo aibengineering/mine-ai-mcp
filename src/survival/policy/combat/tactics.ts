@@ -59,3 +59,18 @@ export function creeperEscape(facts: Pick<CombatTacticalFacts, "creepers" | "sta
   const reason = fuses.length ? "active_fuse" : closing.length ? "close_exposure" : facts.clearancePending ? "unfinished_clearance" : null;
   return reason ? { kind: "escape", reason, threatIds: (fuses.length ? fuses : closing.length ? closing : facts.creepers).map(threat => threat.id) } : null;
 }
+
+/**
+ * The creepers an escape adds to the clearance obligation. A live fuse or a
+ * close exposure admits the creepers causing it. An unfinished clearance
+ * admits none: its obligation already exists, and admitting every creeper in
+ * sixteen blocks re-armed each one that clearance had just released. Two
+ * creepers chasing a sprint then restarted each other's thirty ticks, and the
+ * sprint ran on until one fell beyond a creeper's sixteen-block follow range
+ * and gave up the chase. In combat-base 19-32-58-176Z both creepers were past
+ * eight blocks twenty ticks into the sprint, which still ran 99 ticks and 22
+ * blocks; a creeper left behind that way outlived the fight.
+ */
+export function creeperEscapeAdmits(escape: Extract<CombatTactic, { kind: "escape" }>): readonly number[] {
+  return escape.reason === "unfinished_clearance" ? [] : escape.threatIds;
+}

@@ -18,6 +18,52 @@ import {
 } from "./response-result.js";
 import { responseScope } from "./scopes/response.js";
 import { creeperEscape } from "../../policy/combat/tactics.js";
+import { needsCombatRecovery } from "../../policy/combat/health.js";
+import { HOSTILE_CONTACT_RANGE, isThreat } from "../../perception/combat/threats.js";
+
+type Entity = Parameters<Bot["attack"]>[0];
+/**
+ * The next member of the fought group that this fight still owes, if any.
+ *
+ * The group is the directive's threats that were in contact, or had attacked
+ * the bot, when the decision answered them. Killing the target does not
+ * resolve the rest: a creeper retreat can carry the bot past the
+ * sixteen-block observation horizon, and a creeper that has lost the bot
+ * there stops coming back, so no fresh decision ever sees it again. In
+ * combat-diag2 19-57-59-928Z the second creeper of a pair ended 21.8 blocks
+ * off and outlived the window. Ordinary melee mobs come back into reach on
+ * their own and are left to the next decision; mobs fought where they stand
+ * - shooters, creepers, endermen - are taken in turn while they are still a
+ * threat and the bot is still fit to fight. Under defend_only the fight was
+ * never a pursuit, so it ends with its target as before.
+ */
+function nextGroupTarget(
+  bot: Bot,
+  request: Extract<HostileDirective, { kind: "fight" }>,
+  context: ResponseContext,
+  fought: ReadonlySet<number>,
+): Entity | null {
+  const policy = contextPolicy(context)().combat;
+  if (policy.engagement === "defend_only" || needsCombatRecovery(bot.health, policy.engage_min_health)) return null;
+  return (
+    request.threats
+      .filter((threat) => threat.distance <= HOSTILE_CONTACT_RANGE || context.attackerIds.has(threat.id))
+      .map((threat) => bot.entities[threat.id])
+      .filter(
+        (entity): entity is Entity =>
+          entity !== undefined &&
+          !fought.has(entity.id) &&
+          !defendsOnContact(entity) &&
+          isThreat(bot, entity, context) &&
+          entity.position.distanceTo(bot.entity.position) < policy.evade_safe_range,
+      )
+      .sort(
+        (left, right) =>
+          left.position.distanceTo(bot.entity.position) - right.position.distanceTo(bot.entity.position),
+      )[0] ?? null
+  );
+}
+
 async function fight(
   bot: Bot,
   controller: CombatController,
@@ -35,7 +81,9 @@ async function fight(
   const weapons = new Set<string>();
   let targetId = request.targetId;
   let settled: FightResponseResult["result"];
+  const fought = new Set<number>();
   for (;;) {
+    fought.add(targetId);
     const contactEnded = new AbortController();
     const target = bot.entities[targetId];
     // Ending here lowers the shield, and a later fight raises it five ticks
@@ -85,8 +133,10 @@ async function fight(
     // The next of this response's attackers is already in reach: fight it
     // within the same response. Handing the body back between them lowers
     // the guard for the resumed request, and the partner swings into that gap.
+    // Otherwise the rest of the group it answered, wherever it now stands.
     const next = settled.kind === "died" && !signal.aborted
-      ? request.threats.find(({ id }) => !killedTargetIds.includes(id) && contact(bot.entities[id]))
+      ? (request.threats.find(({ id }) => !fought.has(id) && contact(bot.entities[id])) ??
+        nextGroupTarget(bot, request, context, fought))
       : undefined;
     if (!next) break;
     targetId = next.id;

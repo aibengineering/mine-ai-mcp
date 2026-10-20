@@ -1118,3 +1118,31 @@ for (const inUse of [false, true]) {
     assert.equal(fixture.bot.usingHeldItem, inUse);
   });
 }
+
+for (const engagement of ["respond_to_threats", "defend_only"] as const) {
+  test(`a fight ${engagement === "defend_only" ? "under defend_only ends with its target" : "carries on to the rest of the group it answered"} after the bot was carried out of contact`, async () => {
+    // combat-diag2 19-57-59-928Z: a bow fight killed one creeper of a pair
+    // after a retreat that left the other 21.8 blocks off, past the sixteen-
+    // block observation horizon. Having lost the bot, that creeper never came
+    // back, and no later decision saw it. Blazes stand in for the pair here:
+    // like creepers, they are fought where they are rather than awaited.
+    const engaged: number[] = [];
+    await using fixture = reflexFixture(async (targetId) => {
+      engaged.push(targetId);
+      for (const entity of Object.values(fixture.bot.entities))
+        if (entity.id !== targetId && entity.name === "blaze") entity.position = new Vec3(21.8, 64, 0);
+      fixture.bot.entities[targetId]!.isValid = false;
+      return died(targetId);
+    });
+    if (engagement === "defend_only") await fixture.editPolicy({ combat: { engagement } });
+    fixture.bot.entities[7] = hostile(7, "blaze", engagement === "defend_only" ? 2 : 5);
+    fixture.bot.entities[8] = hostile(8, "blaze", 6);
+    fixture.tick();
+    assert.ok(await until(() => fixture.recorded().length > 0));
+
+    const group = engagement === "defend_only" ? [7] : [7, 8];
+    assert.deepEqual(engaged, group);
+    assert.deepEqual(fixture.recorded(), ["fight -> target_died"]);
+    assert.deepEqual(fixture.outcomes()[0].killedTargetIds, group);
+  });
+}

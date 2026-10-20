@@ -93,3 +93,48 @@ test("a hostile stepping into the committed escape line turns the retreat around
     assert.ok(heading.dot(away) >= -1e-9, `heading ${heading} turns toward the fuse`);
   }
 });
+
+test("the sprint clear holds once every creeper is past clearance, so a lagging creeper keeps its chase", async () => {
+  // Recorded in combat-diag2 19-54-43-579Z as the sprint began: the target
+  // creeper 4.1 blocks east closing at 0.124 blocks a tick, the other 2.2
+  // blocks off with its fuse lit for another eleven ticks and then standing
+  // where it was. The bot sprinted 0.27 blocks a tick. A creeper chases a
+  // player only within its sixteen-block follow range.
+  const bot = botFixture();
+  bot.entity.position.set(2.3, 64, 0.5);
+  const swell = bot.registry.entitiesByName.creeper!.metadataKeys!.indexOf("swell_dir");
+  const lit: unknown[] = [];
+  lit[swell] = 1;
+  const closing = { id: 15, name: "creeper", width: 0.6, height: 1.7, isValid: true, position: new Vec3(6.2, 64, -0.9), metadata: [] } as unknown as typeof bot.entity;
+  const lagging = { id: 16, name: "creeper", width: 0.6, height: 1.7, isValid: true, position: new Vec3(4.3, 64, 1.5), metadata: lit } as unknown as typeof bot.entity;
+  bot.entities[15] = closing;
+  bot.entities[16] = lagging;
+  bot.blockAt = (position => ({ name: position.y < 64 ? "stone" : "air", boundingBox: position.y < 64 ? "block" : "empty" })) as typeof bot.blockAt;
+  const controls = new Map<string, boolean>();
+  bot.setControlState = (control, value) => { controls.set(control, value); };
+  let heading = new Vec3(-1, 0, 0);
+  bot.lookAt = async (point) => {
+    const toward = point.minus(bot.entity.position);
+    heading = new Vec3(toward.x, 0, toward.z).normalize();
+  };
+  let ticks = 0;
+  let farthest = 0;
+  const clearance = new CreeperClearance(bot);
+  let outcome: string;
+  {
+    using _physics = physicsEveryMillisecond(bot, () => {
+      ticks++;
+      if (controls.get("forward")) bot.entity.position = bot.entity.position.plus(heading.scaled(0.27));
+      const toBot = bot.entity.position.minus(closing.position);
+      closing.position = closing.position.plus(new Vec3(toBot.x, 0, toBot.z).normalize().scaled(0.124));
+      if (ticks === 11) Reflect.set(lagging.metadata, swell, -1);
+      farthest = Math.max(farthest, lagging.position.distanceTo(bot.entity.position));
+    });
+    outcome = await retreatFromCreepers(bot, new AbortController().signal, () => false,
+      { clearance, tick: () => ticks, dead: new Set() });
+  }
+
+  assert.equal(outcome, "finished");
+  assert.ok(farthest < 16, `the lagging creeper ended ${farthest.toFixed(1)} blocks off`);
+  assert.ok(closing.position.distanceTo(bot.entity.position) > 8);
+});

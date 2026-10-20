@@ -44,6 +44,7 @@ const NOON_TICKS = 6_000;
 /** The 1.21.4 enderman metadata layout, as minecraft-data reports it. */
 const ENDERMAN_METADATA_KEYS = registry.entitiesByName.enderman!.metadataKeys!;
 const CREEPY = ENDERMAN_METADATA_KEYS.indexOf("creepy");
+const STARED_AT = ENDERMAN_METADATA_KEYS.indexOf("stared_at");
 const PIGLIN_METADATA_KEYS = registry.entitiesByName.piglin!.metadataKeys!;
 
 /** Piglin metadata carrying `mob_flags` and, when given, `baby`, at their 1.21.4 indices. */
@@ -786,6 +787,7 @@ test("angry head attention starts defense before a hit, not body orientation or 
   for (const health of [20, 11, 4]) {
     const metadata: unknown[] = [];
     metadata[CREEPY] = true;
+    metadata[STARED_AT] = true;
     const bot = botWith({ health, mobs: [{ id: 7, name: "enderman", x: 6, metadata }] });
     const mob = bot.entities[7]!;
     mob.yaw = -Math.PI / 2; // Body away, head toward this bot.
@@ -806,4 +808,27 @@ test("angry head attention starts defense before a hit, not body orientation or 
     metadata[CREEPY] = false;
     assert.equal(isThreat(bot, mob, context()), false, "calm eye contact");
   }
+});
+
+test("an Enderman angry at a mob glancing at the bot is not a pre-hit cue", () => {
+  // Recorded in combat-base 19-33-40-191Z, one second in: an enderman angry
+  // at a held pig (creepy set, stared_at never raised) turned its head onto
+  // the bot between attacks. Its look-at-player goal does that to any player
+  // within eight blocks; only the player-targeting goal raises stared_at.
+  const metadata: unknown[] = [];
+  metadata[CREEPY] = true;
+  const bot = botWith({
+    position: new Vec3(0.5, -60, 0.5),
+    mobs: [{ id: 97, name: "enderman", x: 3.5, metadata }],
+  });
+  const mob = bot.entities[97]!;
+  mob.position = new Vec3(3.5, -60, -1.5);
+  mob.yaw = Math.PI;
+  Reflect.set(mob, "headYaw", 2.1598449493429825);
+  mob.pitch = -0.24543692606170264;
+
+  assert.equal(isThreat(bot, mob, context()), false);
+  assert.deepEqual(observeHostileResponse(bot), { kind: "none" });
+  metadata[STARED_AT] = true;
+  assert.equal(isThreat(bot, mob, context()), true, "the same look once its anger is at a player");
 });
