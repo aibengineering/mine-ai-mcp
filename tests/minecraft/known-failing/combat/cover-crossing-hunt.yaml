@@ -1,0 +1,78 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [known-failing, regression]
+description: >-
+  An unarmoured bot with a sword and shield hunts a pinned blaze thirty-two
+  blocks across open ground and walks into two sword-armed wither skeletons on
+  the way, which give no windup before they swing. It must collect the blaze's
+  rod and survive with eight health, with no regeneration, so a guard raised
+  only after the first hit shows as damage. Observed failing in three of
+  four runs on 2026-10-20 (in combat/cover-fights, standalone, and in this
+  file; one run passed in 15 s): the bot kills both wither skeletons and is
+  left at ten health, then never takes the rod. Either it alternates between
+  approaching the blaze and a hostile-reflex "safe separation" evade every
+  thirteen seconds until the trial times out, or the hunt returns after
+  110 s with "Collection outcome: interrupted" by a fight response for the
+  blaze. The legacy fixture (blaze-crossfire-first-hit-shield) measured only
+  the first exchange and passed. This is the crossing pen of
+  combat/cover-fights, split out until a hunt below its fight bar reports
+  that it cannot continue instead of looping.
+
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -18 -60 -6 18 -55 36 air"
+
+geometry:
+  # Open ground with nothing to break a line of sight.
+  - fill: { block: stone, from: [-18, -61, -6], to: [18, -61, 36] }
+
+entities:
+  # The errand, pinned so its own charge never raises the guard, and far
+  # enough out that reaching it is a committed crossing. It holds a rod with a
+  # drop chance above one, so a kill always yields one.
+  - type: blaze
+    pos: [0.5, -58, 32.5]
+    nbt: '{NoAI:1b,NoGravity:1b,PersistenceRequired:1b,HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  # What the bot walks into: the stone sword a fortress skeleton carries, so
+  # neither is a shooter and neither shows a windup on the wire.
+  - type: wither_skeleton
+    pos: [-1.5, -60, 13.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}]}'
+  - type: wither_skeleton
+    pos: [2.5, -60, 14.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}]}'
+
+players:
+  - name: Crossing
+    pos: [0.5, -60, 0.5]
+    equipment: { offhand: shield }
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+params:
+  action: collect_mob_drop
+  input: { mob_name: blaze, drop_name: blaze_rod, count: 1 }
+
+tick:
+  - "gamemode spectator @a[name=!Crossing,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: kill, target: blaze }
+    - { kind: hasItem, who: Crossing, item: blaze_rod, count: 1 }
+    - { kind: health, who: Crossing, health: 8 }
+    - { kind: survive, who: Crossing, seconds: 1 }
+    - { kind: completion, who: Crossing }

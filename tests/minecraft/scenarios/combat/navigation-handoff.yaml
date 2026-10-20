@@ -1,0 +1,233 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Navigation meets hostiles on the road and must hand the body to the hostile
+  reflex and get it back, then still arrive. Seven roads, one pen each: a lone
+  zombie (Lone), an abreast pair against an armoured bot (Pack), a creeper pair
+  against a bow (Creepers), a zombie pair and then a bow skeleton holding the
+  road (Gauntlet), a one-wide lane blocked by four pinned zombies that can only
+  be passed by fighting (Lane), a provoked enderman frozen on the road that
+  comes back beside the bot ten seconds into the journey (Patient), and two
+  zombies already on the bot at the last dry row of a lava shore (Shore),
+  whose route is asked for once the reflex lets go of the body. The two-request pens ask
+  again after arriving, which proves the body was released. Every pen must
+  arrive and survive; Shore must also keep its health, which with no
+  regeneration also rules out a step into the lava. The bridge over lava
+  under a skeleton's fire is known-failing/combat/navigation-side-bridge.
+
+# Roads run east along x, a hundred and sixty blocks apart, so no mob follows
+# into another pen. A pen that has arrived idles with no reflexes until the
+# trial ends, so two seconds after a bot reaches its destination the hostiles
+# left in its pen are removed: by then its request has returned, and its
+# arrival and survival are already decided.
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -8 -60 -8 48 -50 8 air"
+  - "fill 152 -60 -8 208 -50 8 air"
+  - "fill 312 -60 -8 368 -50 8 air"
+  - "fill 472 -60 -8 548 -50 8 air"
+  - "fill 632 -60 -8 692 -50 8 air"
+  - "fill 792 -60 -8 888 -50 8 air"
+  - "fill 946 -60 -8 976 -50 14 air"
+
+setup:
+  - "scoreboard objectives add pens dummy"
+  - "scoreboard players set #lone pens 0"
+  - "scoreboard players set #pack pens 0"
+  - "scoreboard players set #creepers pens 0"
+  - "scoreboard players set #gauntlet pens 0"
+  - "scoreboard players set #patient pens 0"
+  - "scoreboard players set #shore pens 0"
+
+geometry:
+  # Lane: one block wide and three high from x 638 to 687, closed at both
+  # ends, so the only way east is through the four zombies standing in it.
+  - fill: { block: stone, from: [637, -60, -1], to: [688, -58, -1] }
+  - fill: { block: stone, from: [637, -60, 1], to: [688, -58, 1] }
+  - fill: { block: stone, from: [637, -60, 0], to: [637, -58, 0] }
+  - fill: { block: stone, from: [688, -60, 0], to: [688, -58, 0] }
+  # Shore: lava south of the start, the bot on the last dry row.
+  - fill: { block: lava, from: [950, -61, 1], to: [970, -61, 12] }
+
+entities:
+  - { type: zombie, pos: [24.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["lone"]}' }
+  # Abreast, so both are inside the observation window at contact.
+  - { type: zombie, pos: [184.5, -60, -0.5], nbt: '{PersistenceRequired:1b,Tags:["pack"]}' }
+  - { type: zombie, pos: [184.5, -60, 1.5], nbt: '{PersistenceRequired:1b,Tags:["pack"]}' }
+  # The pair a live bot walked into on its way home from a mine.
+  - { type: creeper, pos: [344.5, -60, -1.5], nbt: '{PersistenceRequired:1b,Tags:["creepers"]}' }
+  - { type: creeper, pos: [344.5, -60, 2.5], nbt: '{PersistenceRequired:1b,Tags:["creepers"]}' }
+  - { type: zombie, pos: [500.5, -60, -1.5], nbt: '{PersistenceRequired:1b,Tags:["gauntlet"]}' }
+  - { type: zombie, pos: [500.5, -60, 1.5], nbt: '{PersistenceRequired:1b,Tags:["gauntlet"]}' }
+  # Far enough down the road to play no part in the zombie fight.
+  - { type: skeleton, pos: [526.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["gauntlet"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  # Pinned, one hit each: nothing to fear, everything in the way. Twelve
+  # blocks on, beyond contact range, so the route meets them.
+  - { type: zombie, pos: [652.5, -60, 0.5], nbt: '{NoAI:1b,Health:1.0f,PersistenceRequired:1b,Tags:["lane"]}' }
+  - { type: zombie, pos: [653.5, -60, 0.5], nbt: '{NoAI:1b,Health:1.0f,PersistenceRequired:1b,Tags:["lane"]}' }
+  - { type: zombie, pos: [654.5, -60, 0.5], nbt: '{NoAI:1b,Health:1.0f,PersistenceRequired:1b,Tags:["lane"]}' }
+  - { type: zombie, pos: [655.5, -60, 0.5], nbt: '{NoAI:1b,Health:1.0f,PersistenceRequired:1b,Tags:["lane"]}' }
+  - { type: enderman, pos: [806.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["patient"]}' }
+  # Both attack at once from the dry side.
+  - { type: zombie, pos: [959.5, -60, -0.5], nbt: '{PersistenceRequired:1b,Tags:["shore"]}' }
+  - { type: zombie, pos: [961.5, -60, -0.5], nbt: '{PersistenceRequired:1b,Tags:["shore"]}' }
+
+players:
+  - name: Lone
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  # Armoured: two zombies at once cost an unarmoured bot ten to twelve health
+  # for one kill, which would make the pair a coin flip.
+  - name: Pack
+    pos: [160.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  # A bow: without one the policy evades a pair, and this road is to be
+  # cleared rather than fled.
+  - name: Creepers
+    pos: [320.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: iron_sword, count: 1 }
+  - name: Gauntlet
+    pos: [480.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: Lane
+    pos: [640.5, -60, 0.5]
+    inventory:
+      - { item: iron_axe, count: 1 }
+  - name: Patient
+    pos: [800.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+  # The armour is carried, not worn, as the shore fixture had it.
+  - name: Shore
+    pos: [960.5, -60, 0.5]
+    inventory:
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+
+# policy-sequence is action-sequence plus a wait for an idle body: Shore's
+# zombies start in reach, so its reflex owns the body before any request.
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/policy-sequence.ts]
+
+params:
+  players:
+    Lone:
+      actions:
+        - { action: navigate, input: { x: 40, y: -60, z: 0, range: 1 } }
+        - { action: navigate, input: { x: 38, y: -60, z: 0, range: 1 } }
+    Pack:
+      actions:
+        - { action: navigate, input: { x: 200, y: -60, z: 0, range: 1 } }
+        - { action: navigate, input: { x: 198, y: -60, z: 0, range: 1 } }
+    Creepers:
+      actions:
+        - { action: navigate, input: { x: 360, y: -60, z: 0, range: 1 } }
+        - { action: navigate, input: { x: 358, y: -60, z: 0, range: 1 } }
+    Gauntlet:
+      actions:
+        - { action: navigate, input: { x: 540, y: -60, z: 0, range: 1 } }
+    Lane:
+      actions:
+        - { action: navigate, input: { x: 685, y: -60, z: 0, range: 0, dig: false, scaffold: false } }
+    Patient:
+      actions:
+        - { action: navigate, input: { x: 880, y: -60, z: 0 } }
+    Shore:
+      idleWithinTicks: 600
+      actions:
+        - { action: navigate, input: { x: 948, y: -60, z: -4, range: 1 } }
+
+tick:
+  - "gamemode spectator @a[name=!Lone,name=!Pack,name=!Creepers,name=!Gauntlet,name=!Lane,name=!Patient,name=!Shore,gamemode=!spectator]"
+  # Ticks each bot has spent at its destination.
+  - "execute if entity @a[name=Lone,x=36,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #lone pens 1"
+  - "execute if entity @a[name=Pack,x=196,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #pack pens 1"
+  - "execute if entity @a[name=Creepers,x=356,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #creepers pens 1"
+  - "execute if entity @a[name=Gauntlet,x=537,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #gauntlet pens 1"
+  - "execute if entity @a[name=Patient,x=877,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #patient pens 1"
+  - "execute if entity @a[name=Shore,x=945,y=-61,z=-7,dx=6,dy=3,dz=6] run scoreboard players add #shore pens 1"
+
+schedule:
+  # The enderman is provoked by the bot, frozen in its path ten blocks on,
+  # then let loose beside the bot ten seconds later wherever the bot has got
+  # to. Its walking speed stays at zero, as in the original arrangement, so it
+  # returns by teleporting.
+  - afterTicks: 0
+    run:
+      - "attribute @e[type=enderman,tag=patient,limit=1] minecraft:movement_speed base set 0"
+      - "damage @e[type=enderman,tag=patient,limit=1] 1 minecraft:player_attack by Patient"
+      - "data merge entity @e[type=enderman,tag=patient,limit=1] {NoAI:1b}"
+      - "tp @e[type=enderman,tag=patient,limit=1] 810.5 -60 0.5"
+  - afterTicks: 200
+    run:
+      - "data merge entity @e[type=enderman,tag=patient,limit=1] {NoAI:0b}"
+      - "execute at Patient run tp @e[type=enderman,tag=patient,limit=1] ~1.5 ~ ~"
+  - { when: "score #lone pens matches 40..", run: "kill @e[tag=lone]" }
+  - { when: "score #pack pens matches 40..", run: "kill @e[tag=pack]" }
+  - { when: "score #creepers pens matches 40..", run: "kill @e[tag=creepers]" }
+  - { when: "score #gauntlet pens matches 40..", run: "kill @e[tag=gauntlet]" }
+  - { when: "score #patient pens matches 40..", run: "kill @e[tag=patient]" }
+  - { when: "score #shore pens matches 40..", run: "kill @e[tag=shore]" }
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: reach, who: Lone, pos: [38.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: Lone, seconds: 1 }
+    - { kind: completion, who: Lone }
+    - { kind: reach, who: Pack, pos: [198.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: Pack, seconds: 1 }
+    - { kind: completion, who: Pack }
+    - { kind: reach, who: Creepers, pos: [358.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: Creepers, seconds: 1 }
+    - { kind: completion, who: Creepers }
+    - { kind: reach, who: Gauntlet, pos: [540.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: Gauntlet, seconds: 1 }
+    - { kind: completion, who: Gauntlet }
+    - { kind: reach, who: Lane, pos: [685.5, -60, 0.5], radius: 1 }
+    - { kind: survive, who: Lane, seconds: 1 }
+    - { kind: completion, who: Lane }
+    - { kind: reach, who: Patient, pos: [880.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: Patient, seconds: 1 }
+    - { kind: completion, who: Patient }
+    - { kind: reach, who: Shore, pos: [948.5, -60, -3.5], radius: 2 }
+    - { kind: health, who: Shore, health: 10 }
+    - { kind: survive, who: Shore, seconds: 1 }
+    - { kind: completion, who: Shore }

@@ -85,7 +85,7 @@ a missing survival summary fails the catalog.
 | [Nylium pearls](../../scenarios/default/nether/enderman-six-pearls-rate.yaml)      | Three repetitions, each six native pearls at at least one per minute and an observed return home alive                                     |
 | [Slope pearls](../../scenarios/default/nether/enderman-six-pearls-slope-rate.yaml) | The same three-repetition count, rate, and return requirement on generated slopes, within 480 seconds                                      |
 | [Full End fight](../../scenarios/default/end/ender-dragon.yaml)                    | All crystals destroyed, native dragon death, and survival; report damage separately from navigation progress                               |
-| [Full night](../../scenarios/flat/combat/full-night-request.yaml)                  | Reach dawn alive while preserving one pending request; one final handoff; no repeated successful shelter claims                            |
+| [Full night](../../tests/minecraft/known-failing/combat/full-night-request.yaml)   | Reach dawn alive while preserving one pending request; one final handoff; no repeated successful shelter claims                            |
 
 Declare repetitions and thresholds before running. Retain failed attempts and
 timeouts alongside successes. A later successful run does not erase an earlier
