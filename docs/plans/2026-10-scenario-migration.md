@@ -12,6 +12,162 @@ mechanisms; drivers request actions and never choose policy for the runtime. The
 controller or driving navigation directly cannot be ported as it is. It either becomes a black-box
 request with world goals, or its incident moves to a unit test, or it goes.
 
+## Outcome
+
+The migration finished on 2026-10-20 and 21. Every row below is resolved,
+`scenarios/` and `scenario-templates/` are gone, and the legacy-only unit tests
+went with them. The tables further down are the plan as triage made it; this
+section records what was built and where it differs.
+
+**The suite now:**
+- `tests/minecraft/scenarios/` holds **112 fixtures**, up from 35. 103 of them
+  form the fast tier. The 9 tagged `slow` form the rest of the full tier: the
+  End fights, the long Nether pearl hunt, and the two multi-location generated
+  worlds, which expand into 12 trials.
+- `tests/minecraft/known-failing/` holds **24 fixtures** for behaviour that
+  fails today, described as observed. Neither tier runs them.
+- Most consolidated fixtures place one bot per walled pen, each with its own
+  request and `who`-scoped goals. Each is either shown to fail when a pen is
+  made impossible or a goal tightened, or carries a stated reason why its goals
+  catch a regression. The category commits list both.
+
+**Measured runtime, one trial at a time at below-normal priority:**
+
+| Run | Trials | Time | Result |
+| --- | ---: | ---: | --- |
+| Fast tier (`scenarios:once`), first run | 103 | 81 min | 100 passed. The three failing fixtures each had pens that later failed again in reruns; those pens moved to known-failing |
+| Fast tier, confirming run at b2e79c1 | 103 | 81 min | 99 passed. The four failures were each a pen that passed in the other run: a two-netherrack disposal miscount, an unreachable magma cream, an unsafe handoff after a fortress rod, and CliffBot slain by an enderman |
+| Slow tag (`--tag slow`) | 13 | 40 min | 11 passed. `end-crystals-staircase` then failed two of three reruns and moved to known-failing; `end-crystals-every-method` passed twice on an idle machine |
+| Known-failing (`scenarios:known-failing`) | 24 | 100 min | 19 failed as described. The five intermittent ones passed this time, among them the first-entry fight. `basalt-crossfire-wounded` errored on a stale driver path, since fixed; it fails as described |
+
+The full tier is the fast and slow runs together, about two hours one trial at
+a time. Each fast-tier run fails a few percent of its trials, and the failing
+fixtures differ from run to run. Every one of them is a runtime behaviour
+that usually holds: none is a fixture error. A single fast-tier run is
+therefore rarely all green.
+
+**Harness changes the migration needed:**
+- **Mine Labs** gained six features: `schedule:` one-shot commands,
+  `players[].food`/`saturation`, `tag` and `near` on `kill`/`entityCount`, item
+  components in inventory and equipment, `hasItem.max`, and `--tag`/`--skip-tag`
+  on `run` (616a8af). It now runs below normal CPU priority by default
+  (cdca91c).
+- **ScenarioContext** carries the session's `username`, so each pen finds its
+  own request under `params.players.<name>`.
+- **Shared drivers:**
+  - `idle.ts` waits.
+  - `action-sequence.ts` takes per-step `expect`, a leading `waitTicks`,
+    `idleWithinTicks` (wait for no reflex to own the body, then ask once), a
+    trailing `holdTicks`, `forbidResponses`, and fills in the survival policy
+    revision.
+  - `pathfinder-course.ts` replaced `navigate-route.ts` for every route course.
+  - Scenario-specific drivers remain where a fixture needs logic beyond a
+    sequence: End fights, the Nether rate hunt, the workshop and storage
+    checks, and a few others.
+- **Player preparation** reads item-component stacks by their base id.
+
+**Fates changed during implementation** (the category commits give the details):
+- `ocean-sand-shaft` and `hide-close-intruder` pass now and are green, not
+  known-failing.
+- **Split into known-failing.** These rows were planned for green scenarios,
+  but their behaviour failed at least twice or flaked:
+  - `vine-column-handoff`;
+  - `lava-advances-during-dig`;
+  - the waterfall-oak live stall;
+  - the tunnel disposal hole;
+  - one cast-obsidian location;
+  - the bed exit after waking;
+  - three lava escapes;
+  - `busy-smelt-interrupted`;
+  - the crossfire hunt in cover-fights;
+  - side-bridge;
+  - the skeleton arena;
+  - `full-night-request`;
+  - the enderman beside another mob's fight;
+  - the bow-armed creeper pair;
+  - two wounded-under-blaze shelters;
+  - the alcove and short-of-blocks enderman hunts;
+  - the wounded basalt crossing;
+  - the magma-cream islands;
+  - the run-14 fortress rod hunt;
+  - the spawner rod rate;
+  - the first-entry dragon fight;
+  - the bow-only dragon kill;
+  - the staircase-only and pillar-then-staircase crystal fights.
+- **`fortress-sortie`** stays its own green hunt, because the run-14 room it was
+  to fold into fails.
+- **`end-crystals-staircase`** was added beside `end-crystals-every-method`. It
+  later flaked and moved to known-failing.
+- **`underwater-current`** became a pen of `pathfinder/water-course`.
+- **`wounded-pocket`** moved to `combat/wounded-navigation`.
+- **Two moves between combat fixtures:** `low-health-night-survival` went to
+  `combat/evade`, and `fight-yields-when-hurt` to `combat/wounded-hide`.
+- **Legacy driver checks recast as world goals:**
+  - the brute corridor's closest-approach check is now a tick-command latch;
+  - knockback-ledge's position limit is now a below-the-perch marker;
+  - `bed-lifecycle` keeps its two respawn points in separate pens.
+- **The magma-cream sword carries Looting III.** Legacy killed 31 cubes for no
+  cream, so the failure was the pickup, not drop luck.
+- **`nether-gravel-overhang`** accepts either taking the ore safely or refusing
+  it. Its health and survive goals judge the safety.
+
+**Not migrated as scenarios, deliberately:**
+- the fake-velocity bucket falls and `swim-physics`;
+- the diagnostic probes: `arrow-position-freshness`, `dripstone-wedged-raw`,
+  `parkour-pillar`, and the `manual/runtime` hang probes, whose incidents
+  `runtime-supervisor.test.ts` pins;
+- the 79 unit-test rows, each pinned by the named test.
+
+The vine-column-handoff fix an agent wrote is saved as a patch for its fix
+session. It is not applied: it makes the lateral step complete, but the next
+climb still fails.
+
+### Known-failing and proposed fix sessions
+
+| Fixture | Observed failure | Fix session |
+| --- | --- | --- |
+| `collect/cast-obsidian-spawn-column` | The route to the obsidian dives and runs out of its breath budget; the breath reflex cancels the collection | Dive breath budgets on collection routes |
+| `collect/waterfall-oak-live-stall` | Five of six logs, then the bot wanders off exploring for the sixth until the timeout (intermittent) | Collection staying with a partly cut tree |
+| `combat/basalt-crossfire-wounded` | At 11 health, an evade or hide response cancels the navigate short of the marker | Wounded navigation under reflex claims |
+| `combat/busy-smelt-interrupted` | `smelt_item` returns cancelled by `[HOSTILE_CONTACT]` instead of resuming the cook | Resuming foreground work after a fight |
+| `combat/cover-crossing-hunt` | Below its fight bar, a blaze hunt loops between approach and evade until the timeout (intermittent) | Hunts that cannot continue should return |
+| `combat/creeper-pair-bow` | One creeper of a pair is left alive after hit-and-run carries the bot out of range (intermittent) | Re-engaging a threat after retreat |
+| `combat/end-crystals-pillar-then-staircase`, `combat/end-crystals-staircase` | The staircase to the caged crystal at -33.5,83,-24.5 stalls, or the bot dies partway (intermittent) | Crystal staircase routing |
+| `combat/ender-dragon-bow` | `shoot_dragon` is mostly `[DRAGON_SHOT_BLOCKED]`; the dragon lives 30 minutes | Bow dragon intercepts |
+| `combat/ender-dragon-first-entry` | The recorded loadout runs short of end stone for the staircase or fails to step out of it; passed once in 34 min (intermittent) | Crystal staircase routing |
+| `combat/enderman-hunt-short-of-blocks` | The hunt returns `capability_blocked` with `[COMBAT_BUILD_MATERIALS_MISSING]` once its blocks run out (intermittent) | Enderman hunts without blocks |
+| `combat/enderman-other-target` | The reflex fights an enderman angry at another mob after it turns its head toward the bot (intermittent) | Enderman threat attribution |
+| `combat/full-night-request` | A hide response ends a pending hunt's observation window about 90 s into the night | Resuming foreground work after a fight |
+| `combat/navigation-side-bridge` | The navigate never finishes the bridge crossing under skeleton fire | Navigation under ranged fire |
+| `combat/skeleton-arena-crossfire` | The bot arrives but has been hit (intermittent) | Navigation under ranged fire |
+| `combat/wounded-ranged-shelter-flaky` | A wounded bot under blazes burns to death or recovers short of 18 (intermittent) | Wounded shelter under blaze fire |
+| `drop/disposal-hole-tunnel` | The hole holds one or two more cobblestone than the receipt reports | Disposal accounting |
+| `hunt/basalt-magma-cream-islands` | The island hunt touches lava, stands on magma, and runs on for minutes | Magma-cube hunts on basalt |
+| `hunt/fortress-rod-and-exit-run14` | The rod hunt stalls on a broken shield or `capability_blocked` (intermittent) | Fortress blaze hunts |
+| `hunt/fortress-spawner-rods` | A fire takeover or worn-out shields leave rods under one per minute | Fortress blaze hunts |
+| `pathfinder/flowing-lava-dig-release` | Lava released on landing burns the bot to death after the fire reflex interrupts the route | Lava and fire escapes |
+| `pathfinder/vine-column-handoff` | A lateral step onto a lower vine column never arrives; the body slides into lava (a partial patch is saved) | Vine column handoff |
+| `sleep/bed-exit-after-waking` | After waking, navigate finds no path off the bed | Pathing off a bed |
+| `survival/lava-escapes` | Bots leave the lava, then burn to death or end at 1 health | Lava and fire escapes |
+
+### Runtime findings without a fixture
+
+- **`collect_block` counts other players' broken blocks.** It counted blocks
+  another player broke 95 blocks away against its own break budget, so pens
+  doing the same block work stand 200 apart.
+- **`collect_block` doesn't refuse a missing block.** Asked for a block absent
+  from the world, it ran until the trial timed out.
+- **Reflexes take the body before the first request.** The runtime's reflexes
+  are live before a trial starts, so a hostile within 8 blocks of a start takes
+  the body first and the first request is refused `[ACTION_BUSY]`. Fixtures
+  either start bots further away or use `idleWithinTicks`.
+- **Two unit tests flake under load:**
+  - "cancelling while a second ceiling still pins the body releases the
+    observation wait";
+  - "a target oscillating between two cells…" in `navigation-run.test.ts`.
+- **`end-crystals-every-method` failed once under load,** at the staircase to
+  the caged tower, and passed twice on an idle machine.
+
 ## Method
 
 1. **Run.** Each legacy fixture ran once, headless, at `fadab1b` on 2026-10-19, using Mine Labs
@@ -103,7 +259,11 @@ ledger's notes column.
 
 None of these legacy failures was being reported, because nothing ran the catalogue.
 
-### Decision needed
+### Decision needed (resolved)
+
+Resolved on 2026-10-20: failing behaviour went to `tests/minecraft/known-failing/`
+(option 2), and each confirmed failure got a proposed fix session. The original
+question follows.
 
 Seventeen planned scenarios absorb at least one fixture that failed on behaviour or timed out (the
 planned-scenario tables mark them). Two of them are End fights: `combat/ender-dragon-fight` is built
