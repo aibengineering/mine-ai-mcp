@@ -1,0 +1,114 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Five idle bots, one per pen and 100 blocks apart, each meet a ranged or
+  airborne threat and request nothing. The reflex kills a bow skeleton seven
+  blocks out with a bow of its own and no damage taken, and with only a sword
+  and shield; it kills a skeleton holding at twelve blocks, outside the
+  eight-block contact boundary, which only its arrows can bring into contact
+  (damage recognised as contact); it kills a zombie and a bow skeleton arriving
+  together; and it kills a phantom, a flier typed as an ordinary mob that no
+  ground route reaches (both were blind spots). Health floors are per pen.
+
+# Pens on a 100-block grid of open superflat ground. The phantom has the corner
+# farthest from the others, and no pen has a roof.
+#   x:    0              100              200
+#   z 0:  SkeletonBow    SkeletonShield   SkeletonRange
+#   z100: Mixed                           Phantom
+entities:
+  - type: skeleton
+    pos: [7.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_bow"]}'
+  # Inside the contact boundary: the controller's ranged-opponent mechanics,
+  # not hostile admission, are what this pen measures.
+  - type: skeleton
+    pos: [107.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_shield"]}'
+  # Where a skeleton holds in real survival, shooting from outside contact.
+  # Nothing stands between the two, so the arrows have a line.
+  - type: skeleton
+    pos: [212.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_range"]}'
+  # The zombie closes while the skeleton draws; both must die, in one
+  # engagement or several.
+  - type: zombie
+    pos: [6.5, -60, 98.5]
+    nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_mixed"]}'
+  - type: skeleton
+    pos: [7.5, -60, 102.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_mixed"]}'
+  - type: phantom
+    pos: [200.5, -46, 100.5]
+    nbt: '{PersistenceRequired:1b,Tags:["pen_phantom"]}'
+
+players:
+  - name: SkeletonBow
+    pos: [0.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  # The same loadout without the bow.
+  - name: SkeletonShield
+    pos: [100.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: SkeletonRange
+    pos: [200.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: MixedBot
+    pos: [0.5, -60, 100.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: PhantomBot
+    pos: [200.5, -60, 100.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+params:
+  # Every kill landed within 25 seconds in the first passing run.
+  waitTicks: 1200
+
+tick:
+  - "gamemode spectator @a[name=!SkeletonBow,name=!SkeletonShield,name=!SkeletonRange,name=!MixedBot,name=!PhantomBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: kill, who: SkeletonBow, target: skeleton, tag: pen_bow }
+    - { kind: health, who: SkeletonBow, health: 20 }
+    - { kind: survive, who: SkeletonBow, seconds: 1 }
+    - { kind: completion, who: SkeletonBow }
+
+    - { kind: kill, who: SkeletonShield, target: skeleton, tag: pen_shield }
+    - { kind: health, who: SkeletonShield, health: 10 }
+    - { kind: survive, who: SkeletonShield, seconds: 1 }
+    - { kind: completion, who: SkeletonShield }
+
+    - { kind: kill, who: SkeletonRange, target: skeleton, tag: pen_range }
+    - { kind: health, who: SkeletonRange, health: 10 }
+    - { kind: survive, who: SkeletonRange, seconds: 1 }
+    - { kind: completion, who: SkeletonRange }
+
+    - { kind: kill, who: MixedBot, target: zombie, tag: pen_mixed }
+    - { kind: kill, who: MixedBot, target: skeleton, tag: pen_mixed }
+    - { kind: survive, who: MixedBot, seconds: 1 }
+    - { kind: completion, who: MixedBot }
+
+    - { kind: kill, who: PhantomBot, target: phantom, tag: pen_phantom }
+    - { kind: health, who: PhantomBot, health: 10 }
+    - { kind: survive, who: PhantomBot, seconds: 1 }
+    - { kind: completion, who: PhantomBot }

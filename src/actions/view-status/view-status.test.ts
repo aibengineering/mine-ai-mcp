@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
+import { createRequire } from "node:module";
 import test from "node:test";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
@@ -7,6 +9,9 @@ import { createViewStatusAction, formatViewStatusResult, observeLiveSituation } 
 import { botFixture, registry } from "../../test-support/bot.js";
 import { temporaryBotData } from "../../test-support/bot-data.js";
 import { recordEvent } from "../../bot-data/index.js";
+
+/** The forked Mineflayer's entity tracking, which owns the bot's own metadata. */
+const injectEntities = createRequire(import.meta.url)("mineflayer/lib/plugins/entities.js") as (bot: Bot) => void;
 
 const idleActivity = () => ({ owner: "idle" as const, activeAction: null });
 
@@ -531,4 +536,32 @@ test("every 1.21.4 entity in a mob category has a published mob kind", () => {
     .filter((entity) => !(MOB_KINDS as readonly string[]).includes(entity.type))
     .map((entity) => `${entity.name} (${entity.category}/${entity.type})`);
   assert.deepEqual(unpublished, []);
+});
+
+/**
+ * respawn-metadata: a death in lava left the dead body's burning flag on the
+ * respawned bot, so status said it was burning in a fresh life. The respawn
+ * packet says whether entity data survives; a death respawn does not keep it.
+ */
+test("a death respawn clears the own burning flag, and a respawn that keeps entity data keeps it", (t) => {
+  const bot = liveBot();
+  const data = temporaryBotData({ botId: "TestBot", closeAfter: t });
+  const client = new EventEmitter();
+  Object.assign(bot, { _client: client, version: "1.21.4", supportFeature: registry.supportFeature });
+  injectEntities(bot);
+  // The plugin tracks the bot's own entity under its id, as after login.
+  bot.entities[bot.entity.id] = bot.entity;
+  const flags = registry.entitiesByName.player!.metadataKeys!.indexOf("shared_flags");
+  const burning = () => observeLiveSituation(bot, data, idleActivity).vitals.burning;
+
+  client.emit("entity_metadata", { entityId: bot.entity.id, metadata: [{ key: flags, type: "byte", value: 1 }] });
+  assert.equal(burning(), true);
+  // Changing dimension keeps attributes and entity data (bits 0 and 1).
+  client.emit("respawn", { copyMetadata: 3 });
+  assert.equal(burning(), true);
+  // A death respawn keeps neither: the new life has not been observed yet.
+  client.emit("respawn", { copyMetadata: 0 });
+  assert.equal(burning(), null);
+  client.emit("entity_metadata", { entityId: bot.entity.id, metadata: [{ key: flags, type: "byte", value: 0 }] });
+  assert.equal(burning(), false);
 });
