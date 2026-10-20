@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { collectBlockInputSchema, formatCollectBlockResult, parseCollectBlockRequest } from "./index.js";
-import { botFixture } from "../../test-support/bot.js";
-import { inventoryStop, pursuedInventoryStop, settle } from "./collect-block.js";
+import type { Navigate, NavigationRuntime } from "../../navigation/index.js";
+import { blockReader } from "../../navigation/mineflayer/world.js";
+import { botFixture, type FakeStack } from "../../test-support/bot.js";
+import { blockNamed } from "../../test-support/world.js";
+import { collectBlock, inventoryStop, pursuedInventoryStop, settle } from "./collect-block.js";
 
 test("capacity admission allows a clearing break with free space or a compatible partial stack", () => {
   let empty = 4;
@@ -140,5 +143,65 @@ test("exact collection accepts one or omitted count and rejects larger counts at
       path: ["count"],
       message: "Exact coordinates select one block. Omit count or set it to 1. To collect multiple blocks, omit x, y, and z.",
     }]);
+  }
+});
+
+/**
+ * The tool-loss-policy fixture's three cases, at the collection boundary: a
+ * diamond pickaxe one use from breaking (`damage=1560`) breaks on the first
+ * stone, and the bot carries a stone pickaxe, or nothing else. The tier rule
+ * itself lives in tool-loss.test.ts; this pins that collection selects its
+ * tools through the observer and lets `on_tool_loss` choose between stopping
+ * the route and finishing with what remains.
+ */
+test("collection stops on the selected pickaxe's tier loss unless on_tool_loss continues", async () => {
+  for (const { onToolLoss, backup } of [
+    { onToolLoss: "stop", backup: true },
+    { onToolLoss: "continue", backup: true },
+    { onToolLoss: "stop", backup: false },
+  ] as const) {
+    const target = new Vec3(8, 64, 0);
+    let targetBlock = "stone";
+    // Real Prismarine blocks: break rules read what Mineflayer reports, such as `diggable`.
+    const nameAt = (cell: Vec3) => (cell.equals(target) ? targetBlock : cell.y <= 63 ? "stone" : "air");
+    const items: FakeStack[] = [{ name: "diamond_pickaxe", count: 1, slot: 36, maxDurability: 1561, durabilityUsed: 1560 }];
+    if (backup) items.push({ name: "stone_pickaxe", count: 1, slot: 9, maxDurability: 131, durabilityUsed: 0 });
+    const bot = botFixture({ items, blocks: (cell) => blockNamed(nameAt(cell.floored()), cell.floored()) as never });
+    let stopped: boolean | null = null;
+    const route: Navigate = async ({ stopSignal, onToolSelected }) => {
+      // The route swings the diamond pickaxe at the stone and it breaks.
+      onToolSelected?.(bot.registry.itemsByName.diamond_pickaxe!.id);
+      items.splice(0, 1);
+      bot.inventory.emit("updateSlot", 36, null);
+      await Promise.resolve();
+      stopped = stopSignal?.aborted ?? false;
+      if (stopped) return { status: "stopped", reason: String(stopSignal!.reason), elapsedMs: 1 };
+      // Continuing, the remaining pickaxe finishes the block and the drop is picked up.
+      targetBlock = "air";
+      items.push({ name: "cobblestone", count: 1, slot: 10 });
+      bot.entity.position.set(8.5, 64, 0.5);
+      return { status: "completed", elapsedMs: 1 };
+    };
+    const navigation = {
+      navigate: route,
+      breakBlockInPlace: async () => ({ status: "broken" }),
+      world: { blockAt: blockReader(bot), revision: 0, onChange: () => () => undefined },
+      cancel: () => undefined,
+    } as unknown as NavigationRuntime;
+    const request = parseCollectBlockRequest({
+      block_name: "stone", x: target.x, y: target.y, z: target.z, scaffold: false, on_tool_loss: onToolLoss,
+    });
+    const result = await collectBlock(bot, navigation, request, {});
+    const label = `${onToolLoss} with${backup ? "" : "out"} a stone pickaxe: ${JSON.stringify(result)}`;
+    if (onToolLoss === "continue") {
+      assert.equal(stopped, false, label);
+      assert.equal(result.status, "succeeded", label);
+      assert.equal(result.collected.gained, 1, label);
+    } else {
+      assert.equal(stopped, true, label);
+      assert.notEqual(result.status, "succeeded", label);
+      const remains = backup ? /diamond_pickaxe was lost.*stone pickaxe remains/ : /diamond_pickaxe was lost.*no pickaxe remains/;
+      assert.match("error" in result ? result.error : "", new RegExp(`TOOL_TIER_LOST.*${remains.source}`), label);
+    }
   }
 });
