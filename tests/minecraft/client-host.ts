@@ -13,6 +13,7 @@ import {
   type MinecraftRuntime,
   type MinecraftRuntimeOptions,
 } from "@aibengineering/mine-ai-mcp";
+import { waitForClientTicks } from "./client-ticks.ts";
 import { createScenarioBot, prepareScenarioBot, closeScenarioBot } from "./scenario-bot.ts";
 import { openScenarioHighlighter } from "./scenario-highlighter.ts";
 import type { ScenarioContext, ScenarioRun, ScenarioCall } from "./scenario.ts";
@@ -56,10 +57,7 @@ async function runWithRuntime(driver: ScenarioRun, bot: Bot, session: NodeClient
   const context: ScenarioContext = {
     scenario: session.scenario,
     username: session.username,
-    waitForTicks: async (ticks) => {
-      await bot.waitForTicks(ticks);
-      session.signal.throwIfAborted();
-    },
+    waitForTicks: (ticks) => waitForClientTicks(bot, ticks, session.signal),
     call: (action, input) => callScenarioAction(runtime, session, action, input),
   };
 
