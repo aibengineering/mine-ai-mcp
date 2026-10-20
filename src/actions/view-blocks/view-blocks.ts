@@ -4,14 +4,16 @@
  * Three quarters of the debug JavaScript the bots ran after `view_status`
  * landed was one of two shapes: find the nearest blocks by name, or read the
  * cells in a small box or a short list. This is those two shapes as one typed
- * read. The find is the mine process's loaded-column scan with no radius, so
- * finding and mining agree about what is loaded; the box is drawn as one grid
+ * read. The find counts every named kind in one cooperative pass over the
+ * mine process's loaded-column scan, so finding and mining agree about what
+ * is loaded, eight names cost one pass instead of eight, and seconds of
+ * reading never starve the runtime heartbeat; the box is drawn as one grid
  * per layer with a legend, because a picture of nine by nine cells reads in
  * a glance where a list of eighty-one does not.
  */
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { findLoadedBlockPositions, isLiquid } from "../../world/index.js";
+import { findLoadedBlocksByName, isLiquid } from "../../world/index.js";
 import { defineAction } from "../action.js";
 import { blockMatchesSelector } from "../collect-block/collection-facts.js";
 import {
@@ -60,25 +62,30 @@ function selectedStateIds(bot: Bot, name: string): Set<number> {
   return stateIds;
 }
 
-function find(
+async function find(
   bot: Bot,
   feet: Vec3,
   request: NonNullable<ViewBlocksRequest["find"]>,
-): { found: NonNullable<ViewBlocksReport["find"]> } | { unknown: string } {
-  const found: NonNullable<ViewBlocksReport["find"]> = [];
+): Promise<{ found: NonNullable<ViewBlocksReport["find"]> } | { unknown: string }> {
+  const wanted: { name: string; stateIds: Set<number> }[] = [];
   for (const name of request.blockNames) {
     const stateIds = selectedStateIds(bot, name);
     if (stateIds.size === 0) return { unknown: name };
-    // The scan is nearest first and cheap: it reads packed state IDs, so the
-    // count of everything loaded costs no more than the few that are listed.
-    const positions = findLoadedBlockPositions(bot, { center: feet, stateIds, limit: Number.POSITIVE_INFINITY });
-    const listed: FoundBlock[] = positions.slice(0, request.limit).map((position) => ({
+    wanted.push({ name, stateIds });
+  }
+  // One cooperative pass counts every kind and keeps each name's nearest cells:
+  // the count of everything loaded costs one traversal of the loaded columns,
+  // whatever the number of names, and yields run between loaded sections.
+  const matches = await findLoadedBlocksByName(bot, { center: feet, limit: request.limit, names: wanted });
+  const found: NonNullable<ViewBlocksReport["find"]> = [];
+  for (const { name, found: loaded, positions } of matches) {
+    const listed: FoundBlock[] = positions.map((position) => ({
       ...observe(bot, position),
       distance: Math.round(position.distanceTo(feet) * 10) / 10,
       above: nameAt(bot, position.offset(0, 1, 0)),
       below: nameAt(bot, position.offset(0, -1, 0)),
     }));
-    found.push({ name, found: positions.length, listed });
+    found.push({ name, found: loaded, listed });
   }
   return { found };
 }
@@ -104,7 +111,7 @@ function box(bot: Bot, request: NonNullable<ViewBlocksRequest["box"]>): NonNulla
   };
 }
 
-export function viewBlocks(bot: Bot, request: ViewBlocksRequest): ViewBlocksResult {
+export async function viewBlocks(bot: Bot, request: ViewBlocksRequest): Promise<ViewBlocksResult> {
   const feet = bot.entity.position.floored();
   const report: ViewBlocksReport = {
     dimension: bot.game.dimension,
@@ -115,7 +122,7 @@ export function viewBlocks(bot: Bot, request: ViewBlocksRequest): ViewBlocksResu
     cells: request.cells.map((cell) => observe(bot, new Vec3(cell.x, cell.y, cell.z))),
   };
   if (request.find) {
-    const result = find(bot, feet, request.find);
+    const result = await find(bot, feet, request.find);
     if ("unknown" in result) {
       return { status: "failed", error: viewBlocksOutcomes.unknownBlock(result.unknown), blocks: report };
     }
@@ -207,6 +214,6 @@ export function createViewBlocksAction(bot: Bot) {
     execution: { kind: "information" },
     annotations: viewBlocksAnnotations,
     parse: parseViewBlocksRequest,
-    execute: async (request) => viewBlocks(bot, request),
+    execute: (request) => viewBlocks(bot, request),
   });
 }
