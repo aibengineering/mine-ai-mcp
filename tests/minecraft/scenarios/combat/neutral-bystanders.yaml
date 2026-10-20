@@ -6,14 +6,15 @@ description: >-
   their enemies, or that they provoked; nothing is requested. At 7 health a bot
   leaves a spider standing in full sky light alone and keeps its cobblestone
   (2026-09-04: it hid all morning from a sunlit spider). A pumpkin-headed bot
-  neither strikes nor is hurt by an enderman angry at a pig beside it, for the
-  absorbed fixture's 80 ticks, and a gold-booted bot beside a piglin attacking
-  a hoglin is not hurt either. A calm enderman five blocks off is left alone at
-  full health (treating it as a threat cost a mining trip its iron). A wounded
-  bot whose shelter wall is filled by a neutral piglin never strikes it to
-  clear the cell. An enderman the bot itself provoked, and a piglin it provoked
-  while standing in fire (aggression overlapping source-less fire damage), are
-  survived.
+  neither strikes nor is hurt by an enderman angry at a pig beside it for the
+  whole minute (until 2026-10-21 the reflex fought it whenever the enderman's
+  idle look-at-player goal turned its head onto the bot), and a gold-booted
+  bot beside a piglin attacking a hoglin is not hurt either. A calm enderman
+  five blocks off is left alone at full health (treating it as a threat cost a
+  mining trip its iron). A wounded bot whose shelter wall is filled by a
+  neutral piglin never strikes it to clear the cell. An enderman the bot itself
+  provoked, and a piglin it provoked while standing in fire (aggression
+  overlapping source-less fire damage), are survived.
 
 # Noon, so the spider's cell is in full sky light. The enderman and skeleton
 # pens are roofed four blocks up: endermen would teleport out of the sun, and
@@ -80,11 +81,6 @@ schedule:
   # from its 40 health is a blow from the bot, recorded as a marker block.
   - when: "entity @e[type=enderman,tag=pen_other,nbt=!{Health:40.0f}]"
     run: "setblock 100 -50 20 minecraft:red_wool"
-  # The absorbed fixture watched this pair for 80 ticks; then the enderman
-  # goes. Given longer, the reflex fights it: that is
-  # known-failing/combat/enderman-other-target.
-  - afterTicks: 100
-    run: "kill @e[type=enderman,tag=pen_other]"
   # The bots' own provocations, dealt in their names.
   - { afterTicks: 1, run: "damage @e[type=enderman,tag=pen_angry,limit=1] 1 minecraft:player_attack by EnderAngry" }
   - afterTicks: 1
@@ -168,6 +164,7 @@ goal:
 
     - { kind: health, who: EnderOther, health: 20 }
     - { kind: blockAt, who: EnderOther, pos: [100, -50, 20], block: air }
+    - { kind: entityCount, who: EnderOther, entity: enderman, tag: pen_other, min: 1 }
     - { kind: survive, who: EnderOther, seconds: 1 }
     - { kind: completion, who: EnderOther }
 
