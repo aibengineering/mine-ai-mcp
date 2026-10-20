@@ -482,6 +482,25 @@ each bot client to below-normal CPU priority before starting. A dedicated
 machine can opt out by appending `--jobs N` for parallel workers or
 `--normal-priority`, for example `bun run scenarios:once --jobs 2`.
 
+### Runtime and flake rate
+
+Measured on 2026-10-20 and 21, one trial at a time:
+
+| Run | Trials | Time |
+| --- | ---: | ---: |
+| Fast tier | 103 | 81 minutes |
+| Slow-tagged fixtures | 13 | 40 minutes |
+| Full tier (fast and slow) | 116 | about two hours |
+
+Expect a fast-tier run to fail a few trials: 3 and 4 of 103 in the two
+measured runs. A different fixture failed each time, and each passed on the
+other run. Every one of those failures was a runtime behaviour that usually
+holds, not a fixture error, so the fixtures stay in the tier as regressions to
+fix, not to quarantine. Before treating a fast-tier failure as new, rerun that
+fixture alone, and compare it with the list in the
+[migration ledger](../../docs/plans/2026-10-scenario-migration.md#outcome).
+A fixture that fails reliably belongs in `known-failing/`.
+
 `known-failing/<category>/` holds faithful fixtures for behaviour that fails
 today. Neither tier discovers them, because both point at `scenarios/`. Each
 carries the tags `known-failing` and `regression`, and its `description` states

@@ -46,6 +46,25 @@ fixtures differ from run to run. Every one of them is a runtime behaviour
 that usually holds: none is a fixture error. A single fast-tier run is
 therefore rarely all green.
 
+Decided on 2026-10-21: intermittent fixtures stay in the fast tier with their
+flake rate documented, and are not quarantined. A fixture that fails reliably
+goes to known-failing. The seven fixtures seen failing in the two fast-tier
+runs:
+
+| Fixture | Pen that failed | Failure | Runs |
+| --- | --- | --- | --- |
+| `combat/creeper-reflex` | PairBow | A creeper of the pair left alive after hit-and-run | Failed 3 of 3; the pen moved to known-failing |
+| `combat/enderman-hunt` | Alcove, ShelterPair | `[COMBAT_BUILD_MATERIALS_MISSING]`: an enderman left alive | 2 of 4; the pens moved to known-failing |
+| `combat/wounded-ranged-shelter` | Burning, BlazeShelter | Burned to death, or recovered only to 15.7 | 2 of 3; the pens moved to known-failing |
+| `drop/disposal-holes` | Full | 2046 of 2048 netherrack, the legacy miscount | 1 of 2 tier runs; stays |
+| `hunt/basalt-magma-cream` | CreamHunter | `targets_unreachable`, no cream | 1 of 2 tier runs; stays |
+| `hunt/fortress-rod-and-exit` | FortressBot | Rod taken, then an unsafe handoff with no shelter floor; never reached the exit | 1 of 2 tier runs; stays |
+| `survival/nether-idle-survival` | CliffBot | Slain by the enderman angry at it | 1 of 2 tier runs; stays |
+
+The first three were split before this decision, because their pens failed
+again in reruns. The last four stay in the fast tier as they are, and their
+behaviours have proposed fix sessions.
+
 **Harness changes the migration needed:**
 - **Mine Labs** gained six features: `schedule:` one-shot commands,
   `players[].food`/`saturation`, `tag` and `near` on `kill`/`entityCount`, item
