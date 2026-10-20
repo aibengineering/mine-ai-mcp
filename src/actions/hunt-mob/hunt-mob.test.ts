@@ -231,6 +231,44 @@ for (const { reflexGain, dropName } of [
   });
 }
 
+test("a hunt resumed with its drop in hand succeeds although its shield broke meanwhile", async () => {
+  // .mine-labs/hunts-run14b 2026-10-20T22-05-26-941Z-t00001: the rod was
+  // taken, a reflex fight broke the shield, and the resumed hunt's shield gate
+  // refused the next approach and returned shield_required, rod in hand.
+  const inventory = { count: 0 };
+  const bot = huntBot([], inventory);
+  const shield = { name: "shield" } as unknown as ReturnType<typeof bot.inventory.items>[number];
+  bot.inventory.items = () => [shield];
+  const combat = { ...fakeCombat, policy: new SurvivalPolicyState(bot) };
+  let entered!: () => void;
+  const firstRun = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const pursue: HuntMobDependencies["pursue"] = async (pursuit) => {
+    inventory.count += 1;
+    entered();
+    await new Promise<void>((resolve) => pursuit.signal!.addEventListener("abort", () => resolve(), { once: true }));
+    return { status: "stopped", reason: "reflex" };
+  };
+  const action = createCollectMobDropAction(bot, fakeNavigation, combat, createDiscardedItems(), {
+    ...dependencies(bot, inventory, []),
+    pursue,
+  });
+  const runner = new ActionRunner();
+  const pending = runner.run(
+    { ...action, execution: { kind: "resumable_task" } },
+    { mob_name: "skeleton", drop_name: "white_wool", count: 1 },
+  );
+  await firstRun;
+  const claim = runner.claim("hostile_reflex", "fight", async () => {
+    bot.inventory.items = () => [];
+    return { value: null, continuation: { kind: "resume" as const } };
+  });
+  assert.equal(claim.kind, "claimed");
+  const output = await pending;
+  assert.equal(output.result.status, "succeeded");
+});
+
 test("a terminal reflex interruption returns the hunt's uncollected drop sightings", async () => {
   const inventory = { count: 0 };
   const bot = huntBot([], inventory);

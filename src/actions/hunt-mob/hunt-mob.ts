@@ -685,6 +685,11 @@ function beginHuntMob(
     if (!drop) return stoppedResult(huntMobOutcomes.unknownDrop(request.dropName), observation, "invalid_request");
     // Check admission, every target approach, and contact after drop collection.
     // One pursuit can fight several loaded targets before this function returns.
+    const quarry: HuntDrop = { name: request.dropName, id: drop.id };
+    const settled = () => settleInventory(bot, quarry, observation);
+    // A resumed attempt may already carry what was asked for. The shield gate
+    // guards the next approach; it is no verdict on a hunt that needs none.
+    if (settled()) return { status: "succeeded", hunt: huntEvidence(observation), termination: "quantity_collected" };
     let shieldRequired: string | null = null;
     const checkShield = () => (shieldRequired = shieldRefusal(bot, request, dependencies));
     const unshielded = checkShield();
@@ -692,9 +697,7 @@ function beginHuntMob(
     const missingSpawner = camp?.unavailable();
     if (missingSpawner) return stoppedResult(missingSpawner.reason, observation, missingSpawner.termination);
 
-    const quarry: HuntDrop = { name: request.dropName, id: drop.id };
     const fight: HuntEngagement = { bot, request, drop: quarry, observation, dependencies, context, ground };
-    const settled = () => settleInventory(bot, quarry, observation);
     const inventoryStop = () =>
       hasInventorySpaceFor(bot.inventory, new Set([quarry.name]))
         ? null
