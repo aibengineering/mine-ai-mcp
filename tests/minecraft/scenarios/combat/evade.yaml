@@ -1,0 +1,163 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Six wounded idle bots, one per pen and 100 blocks apart, each survive a
+  threat they must not stand and fight; nothing is requested. At 8 health with
+  a sword and shield, two zombies walking in from 24 blocks. At 11 health in
+  iron, two sword wither skeletons released at arm's length. At 11 health with
+  only a shield, a bedrock corridor with a blaze at each end, so the escape
+  meets a new contact on its route. At 11 health in diamond, native magma cubes
+  in a walled basalt passage beside a held enderman, which must not be killed;
+  and magma cubes on a basalt shelf bordered by lava, escaped without losing a
+  single point of health. At 7 health with only 64 cobblestone, a ring of eight
+  zombies and a spider. Every hazard lasts as long as its absorbed fixture
+  watched it, then the fixture removes it.
+
+# Pens on a 100-block grid. Regeneration is off throughout, as in the absorbed
+# fixtures, so a health goal is the damage taken.
+#   x:    0              100            200
+#   z 0:  HurtEvade      WitherEvade    CubeEvade
+#   z100: NightSurvivor  Confined
+#   z120:                               BlazeCorridor
+geometry:
+  # WitherEvade: a nether-brick floor.
+  - fill: { block: nether_bricks, from: [70, -61, -30], to: [130, -61, 30] }
+  # Confined: a basalt passage walled in bedrock, closed at the west end, with
+  # a two-cell gap in the floor east of the bot (the occupied landing).
+  - fill: { block: bedrock, from: [93, -62, 98], to: [160, -61, 102] }
+  - fill: { block: basalt, from: [94, -60, 99], to: [160, -60, 101] }
+  - fill: { block: bedrock, from: [93, -60, 98], to: [110, -54, 98] }
+  - fill: { block: bedrock, from: [93, -60, 102], to: [110, -54, 102] }
+  - fill: { block: bedrock, from: [93, -60, 98], to: [93, -54, 102] }
+  - fill: { block: air, from: [101, -60, 99], to: [102, -60, 101] }
+  # CubeEvade: a basalt shelf in a lava lake, closed at the west end, so both
+  # the short escape and its detour go east past a cube.
+  - fill: { block: lava, from: [186, -61, -10], to: [265, -60, 10] }
+  - fill: { block: basalt, from: [190, -61, -5], to: [260, -60, 5] }
+  - fill: { block: bedrock, from: [189, -60, -6], to: [189, -53, 6] }
+  # NightSurvivor: a stone floor under the ring.
+  - fill: { block: stone, from: [-16, -60, 84], to: [16, -60, 116] }
+  # BlazeCorridor: bedrock walls keep the second blaze on the escape route;
+  # with hostile route costs, open ground let the bot avoid its range entirely.
+  - fill: { block: bedrock, from: [110, -61, 117], to: [210, -61, 123] }
+  - fill: { block: bedrock, from: [188, -60, 117], to: [210, -54, 117] }
+  - fill: { block: bedrock, from: [188, -60, 123], to: [210, -54, 123] }
+  - fill: { block: bedrock, from: [210, -60, 117], to: [210, -54, 123] }
+
+entities:
+  - { type: zombie, pos: [24.5, -60, -0.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_hurt"]}' }
+  - { type: zombie, pos: [24.5, -60, 1.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_hurt"]}' }
+  - type: wither_skeleton
+    pos: [101.5, -60, 0]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}],Tags:["pen_wither"]}'
+  - type: wither_skeleton
+    pos: [101.5, -60, 1]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}],Tags:["pen_wither"]}'
+  - { type: magma_cube, pos: [95.5, -59, 100.5], nbt: '{Size:3,PersistenceRequired:1b,Tags:["pen_confined"]}' }
+  - { type: magma_cube, pos: [103.5, -59, 100.5], nbt: '{Size:1,PersistenceRequired:1b,Tags:["pen_confined"]}' }
+  # The bystander, held still beside the bot.
+  - { type: enderman, pos: [101.5, -59, 101.3], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_confined"]}' }
+  - { type: magma_cube, pos: [194.5, -59, 0.5], nbt: '{Size:3,PersistenceRequired:1b,Tags:["pen_cubes"]}' }
+  - { type: magma_cube, pos: [204.5, -59, 0.5], nbt: '{Size:1,PersistenceRequired:1b,Tags:["pen_cubes"]}' }
+  - { type: zombie, pos: [8.5, -59, 100.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_night"]}' }
+  - { type: zombie, pos: [6.5, -59, 106.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_night"]}' }
+  - { type: zombie, pos: [0.5, -59, 108.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_night"]}' }
+  - { type: zombie, pos: [-5.5, -59, 106.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_night"]}' }
+  - { type: zombie, pos: [-7.5, -59, 100.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_night"]}' }
+  - { type: zombie, pos: [-5.5, -59, 94.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_night"]}' }
+  - { type: zombie, pos: [0.5, -59, 92.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_night"]}' }
+  - { type: zombie, pos: [6.5, -59, 94.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_night"]}' }
+  - { type: spider, pos: [3.5, -59, 107.5], nbt: '{PersistenceRequired:1b,Tags:["pen_night"]}' }
+  - { type: blaze, pos: [204.5, -60, 120.5], nbt: '{PersistenceRequired:1b,Tags:["pen_corridor"]}' }
+  - { type: blaze, pos: [173.5, -60, 120.5], nbt: '{PersistenceRequired:1b,Tags:["pen_corridor"]}' }
+
+# The absorbed fixtures watched these hazards for 17 to 20 seconds. Cubes go
+# into the void rather than being killed, which would split them.
+schedule:
+  - afterTicks: 340
+    run:
+      - "execute as @e[type=magma_cube,tag=pen_confined] at @s run tp @s ~ -200 ~"
+      - "execute as @e[type=magma_cube,tag=pen_cubes] at @s run tp @s ~ -200 ~"
+  - afterTicks: 400
+    run:
+      - "kill @e[type=wither_skeleton,tag=pen_wither]"
+      - "kill @e[type=blaze,tag=pen_corridor]"
+      - "kill @e[tag=pen_night]"
+
+players:
+  # Armed, and carrying exactly what the fight path needs: only the health
+  # bar separates it from a bot that should fight the pair.
+  - name: HurtEvade
+    pos: [0.5, -60, 0.5]
+    health: 8
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: WitherEvade
+    pos: [100.5, -60, 0.5]
+    health: 11
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 32 }
+      - { item: bread, count: 16 }
+  - name: Confined
+    pos: [100.5, -59, 100.5]
+    health: 11
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+  # Armour and nothing else.
+  - name: CubeEvade
+    pos: [200.5, -59, 0.5]
+    health: 11
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+  - name: NightSurvivor
+    pos: [0.5, -59, 100.5]
+    health: 7
+    inventory:
+      - { item: cobblestone, count: 64 }
+  # Hurt ranged contact without a shield selects shelter first; with one, the
+  # evade is admitted and the far blaze joins it as a new contact.
+  - name: BlazeCorridor
+    pos: [200.5, -60, 120.5]
+    health: 11
+    inventory:
+      - { item: shield, count: 1 }
+
+params:
+  # The two zombies' walk and the fight that follows; the shorter hazards
+  # above are gone by then.
+  waitTicks: 960
+
+tick:
+  - "gamemode spectator @a[name=!HurtEvade,name=!WitherEvade,name=!Confined,name=!CubeEvade,name=!NightSurvivor,name=!BlazeCorridor,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: survive, who: HurtEvade, seconds: 1 }
+    - { kind: completion, who: HurtEvade }
+
+    - { kind: survive, who: WitherEvade, seconds: 1 }
+    - { kind: completion, who: WitherEvade }
+
+    # The bystander rule itself is pinned in hide.test.ts; this is the backstop.
+    - { kind: entityCount, who: Confined, entity: enderman, tag: pen_confined, min: 1 }
+    - { kind: survive, who: Confined, seconds: 1 }
+    - { kind: completion, who: Confined }
+
+    # No damage and no lava contact.
+    - { kind: health, who: CubeEvade, health: 11 }
+    - { kind: survive, who: CubeEvade, seconds: 1 }
+    - { kind: completion, who: CubeEvade }
+
+    - { kind: survive, who: NightSurvivor, seconds: 20 }
+    - { kind: completion, who: NightSurvivor }
+
+    - { kind: survive, who: BlazeCorridor, seconds: 1 }
+    - { kind: completion, who: BlazeCorridor }

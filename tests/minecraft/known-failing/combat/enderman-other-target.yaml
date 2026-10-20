@@ -1,0 +1,66 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [known-failing, regression]
+description: >-
+  A pumpkin-headed idle bot stands beside an enderman that stays angry at a
+  held pig for the whole minute, and must neither strike it nor be hurt. It
+  fails intermittently. Observed on 2026-10-20: inside the neutral-bystanders
+  pens the hostile reflex answered "fight response for enderman" at five to
+  six blocks 10 to 25 seconds in, in all three minute-long runs (zombie and pig
+  victims; one run killed the enderman); this fixture alone failed once in
+  four (07-42-04-715Z: struck and killed). The angry enderman's head turns
+  toward the nearby player, and threats.ts treats an angry enderman looking at
+  the bot as an attacker (attention "inferred_head_gaze") though its anger is
+  at the pig. The absorbed fixture, enderman-other-target, watched only 80
+  ticks; the neutral-bystanders pen keeps that window.
+
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+# Roofed four blocks up, so the enderman does not teleport out of the sun.
+geometry:
+  - fill: { block: stone, from: [-12, -56, -12], to: [12, -56, 12] }
+
+entities:
+  - type: pig
+    pos: [6, -60, -2]
+    nbt: '{NoAI:1b,UUID:[I;7,7,7,7],PersistenceRequired:1b,Health:1024f,attributes:[{id:"minecraft:max_health",base:1024.0}],Tags:["pen_other"]}'
+  - { type: enderman, pos: [3, -60, -2], nbt: '{PersistenceRequired:1b,AngerTime:2400,AngryAt:[I;7,7,7,7],Tags:["pen_other"]}' }
+
+schedule:
+  # The pig cannot hurt the enderman, so any loss from its 40 health is a blow
+  # from the bot, recorded as a marker block.
+  - when: "entity @e[type=enderman,tag=pen_other,nbt=!{Health:40.0f}]"
+    run: "setblock 0 -50 20 minecraft:red_wool"
+
+players:
+  - name: EnderOther
+    pos: [0.5, -60, 0.5]
+    equipment: { head: carved_pumpkin, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 64 }
+
+params:
+  waitTicks: 1200
+
+tick:
+  - "gamemode spectator @a[name=!EnderOther,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: blockAt, who: EnderOther, pos: [0, -50, 20], block: air }
+    - { kind: entityCount, who: EnderOther, entity: enderman, tag: pen_other, min: 1 }
+    - { kind: health, who: EnderOther, health: 20 }
+    - { kind: survive, who: EnderOther, seconds: 1 }
+    - { kind: completion, who: EnderOther }

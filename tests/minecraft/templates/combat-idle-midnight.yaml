@@ -1,0 +1,36 @@
+# Idle-reflex combat pens: the flat arena at midnight with natural
+# regeneration off, normal difficulty, and the idle driver. Nothing is
+# requested; the runtime's reflexes own every body and the fixture's
+# who-scoped goals carry the verdict. Hostiles need the night (zombies and
+# skeletons burn at noon, spiders turn neutral, endermen teleport out of the
+# sun), and with regeneration off a health goal measures damage the reflex
+# avoided rather than damage it healed back.
+#
+# A fixture still declares its own players, entities, `tick` spectator rule
+# (naming its own pens) and `params`. Mine Labs replaces whole fields, so a
+# fixture that needs regeneration or noon declares its whole `world`, and one
+# that mixes idle and requesting pens declares its own `client`.
+template: ./flat-single-action-no-regen.yaml
+
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+# Every pen's blocks come back from the arena snapshot; the reset only has to
+# exist for Mine Labs to reuse a server, and clears what the pens summoned.
+reset:
+  - "kill @e[type=!minecraft:player]"
+
+client:
+  command: bun
+  cwd: ../..
+  args:
+    - client-host.ts
+    - drivers/idle.ts

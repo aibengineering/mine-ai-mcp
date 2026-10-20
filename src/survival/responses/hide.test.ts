@@ -451,3 +451,54 @@ test("a sealed-in bot with nothing to eat and hunger below the regeneration bar 
   assert.equal(result.ate, null);
   assert.match(result.error ?? "", /no food, and hunger 13 is below the regeneration bar/);
 });
+
+/**
+ * A cliff edge: ground for x <= 0, and east of the bot a drop of four cells.
+ * Blocks placed by the hide become solid where they land, and each placement
+ * spends one from the carried stack, as the server's slot update does.
+ */
+function botBesideDrop(blocks: number): { bot: Bot; placed: Vec3[] } {
+  const placed: Vec3[] = [];
+  const bot = botIn({
+    health: 7,
+    items: [{ name: "cobblestone", count: blocks }],
+    blockAt: (position) => {
+      if (placed.some((cell) => cell.equals(position))) return { ...(stone() as object), name: "cobblestone", position };
+      const ground = position.x <= 0 ? position.y < 64 : position.y < 60;
+      return ground ? { ...(stone() as object), position } : { ...(air() as object), position };
+    },
+  });
+  bot.placeBlock = async (support, face) => {
+    placed.push(support.position.plus(face));
+    const items = bot.inventory.items();
+    items[0]!.count -= 1;
+    if (items[0]!.count === 0) items.pop();
+  };
+  return { bot, placed };
+}
+
+/**
+ * Walling in over a drop costs eleven blocks: the floor extension the east
+ * wall stands on, the eight wall cells, the eave and the cap. The recorded
+ * wall-in-cliff fixture, carrying ten, spent every block inside its own box
+ * and reported the open shelter rather than stepping somewhere else or
+ * building beyond the cells around it.
+ */
+test("ten blocks beside a drop are spent on the shelter's own cells, and the open shelter is a failure", async () => {
+  const { bot, placed } = botBesideDrop(10);
+  const start = bot.entity.position.clone();
+
+  const result = await hide(bot);
+
+  assert.equal(result.kind, "failed");
+  assert.match(result.error ?? "", /still open/);
+  assert.equal(countCapBlocks(bot), 0, "every carried block was spent");
+  assert.equal(placed.length, 10);
+  for (const cell of placed) {
+    assert.ok(
+      Math.abs(cell.x) <= 1 && Math.abs(cell.z) <= 1 && cell.y >= 63 && cell.y <= 66,
+      `${cell} lies outside the shelter's own cells`,
+    );
+  }
+  assert.deepEqual(bot.entity.position, start, "the bot stayed in its cell");
+});
