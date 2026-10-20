@@ -116,6 +116,20 @@ export function hasMeleeKnockbackRoom(world: WorldView, position: Position3, att
   return hasSupportedCorridor(world, position, { x: (dx / distance) * 3, y: 0, z: (dz / distance) * 3 });
 }
 
+/** Lava within a knockback's reach of this position, at its feet or the step below. */
+export function atLavaShore(world: WorldView, position: Position3): boolean {
+  const x = Math.floor(position.x);
+  const y = Math.floor(position.y);
+  const z = Math.floor(position.z);
+  for (let dx = -3; dx <= 3; dx++)
+    for (let dz = -3; dz <= 3; dz++)
+      for (const dy of [-1, 0]) {
+        const block = world.blockAt(x + dx, y + dy, z + dz);
+        if (block.kind === "loaded" && block.traits.liquid === "lava") return true;
+      }
+  return false;
+}
+
 /** Keep a non-sweeping tool available instead of equipping a sword whose swing must be withheld. */
 export function combatItemsForTarget(bot: Bot, target: Entity) {
   const carried = readCombatItems(bot);

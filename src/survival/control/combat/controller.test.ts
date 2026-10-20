@@ -455,6 +455,42 @@ test("a kill hands the guard over raised while the partner is closing", async ()
   }
 });
 
+for (const botAtShore of [false, true])
+  test(`a pursued cube at a lava shore below ${botAtShore ? "is still approached from that shore" : "is not followed off the shelf"}`, async () => {
+    // The 2026-10-20 basalt hunt: a cube bounced off the shelf, the approach
+    // followed it from y 47 to the shore at y 33, and a pack's knockback there
+    // put the bot in the lava (hunts-basalt 2026-10-20T20-32-02-466Z-t00008).
+    const fixture = combatFixture(["iron_sword", "shield"], { targetDistance: 9 });
+    const { bot, target } = fixture;
+    const world = new GoalTestWorld();
+    for (let x = -4; x <= 12; x++)
+      for (let z = -4; z <= 4; z++) {
+        world.load({ x, y: 57, z }, { stateId: 1 });
+        for (let y = 58; y <= 70; y++) world.load({ x, y, z }, { stateId: 0 });
+        if (x <= 2) for (let y = 58; y <= 63; y++) world.load({ x, y, z }, { stateId: 1 });
+      }
+    const lava = botAtShore ? { x: 1, z: 2 } : { x: 9, z: 2 };
+    world.load({ x: lava.x, y: botAtShore ? 63 : 57, z: lava.z }, { stateId: 102, collisionShapes: [], traits: { liquid: "lava", empty: true } });
+    Object.assign(target, { name: "magma_cube", kind: "Hostile mobs", height: 2.08, width: 2.08, metadata: [] });
+    target.position.set(9.5, 58, 0.5);
+    bot.entity.position.set(0.5, 64, 0.5);
+    let routed = false;
+    const navigation = {
+      ...navigationFixture(),
+      world,
+      navigate: async () => {
+        routed = true;
+        return { status: "stopped", reason: "test route" } as Awaited<ReturnType<NavigationRuntime["navigate"]>>;
+      },
+    } as NavigationRuntime;
+    const result = await createCombatController(bot, navigation).engage(target.id, new AbortController().signal, "pursue");
+    assert.equal(routed, botAtShore);
+    if (!botAtShore) {
+      assert.equal(result.kind, "unreachable");
+      assert.match("observation" in result ? result.observation : "", /lava shore/);
+    }
+  });
+
 test("a shielded swing keeps both sides of a nearby pack inside the guard", async () => {
   const fixture = combatFixture(["iron_sword", "shield"], { targetDistance: 2 });
   const other = { ...fixture.target, id: 8, kind: "Hostile mobs", position: new Vec3(0, 64, 2) } as Entity;

@@ -7,6 +7,7 @@ import { isCreeper } from "../../perception/combat/creepers.js";
 import { facing } from "../../weapons/aim.js";
 import { MELEE_RANGE, type CombatLoadout } from "../../weapons/equipment.js";
 import {
+  atLavaShore,
   canMeleeTarget,
   hasMeleeKnockbackRoom,
   hasSweepBystander,
@@ -23,6 +24,22 @@ import type { FightWeapons } from "./weapons.js";
 /** Any hostile in reach whose next action is a hit, not only the selected quarry. */
 const meleeThreatInReach = (scene: FightScene): boolean =>
   scene.perception.read().some((threat) => threat.meleeImminent);
+
+const QUARRY_AT_LAVA_SHORE = "the quarry went down to a lava shore; a pursuit does not follow it off higher ground";
+/**
+ * A hunted cube bounced off the basalt shelf at y 47 and the approach followed
+ * it, drop by drop, to the lava shore at y 33. A pack's knockback there put
+ * the bot in the lava, and the cubes on the islands beyond were out of reach.
+ * A bot already fighting at a shore is not leaving higher ground.
+ */
+function followsQuarryDownToLava(scene: FightScene): boolean {
+  return (
+    scene.movement === "pursue" &&
+    scene.target.position.y < scene.bot.entity.position.y - 1 &&
+    atLavaShore(scene.navigation.world, scene.target.position) &&
+    !atLavaShore(scene.navigation.world, scene.bot.entity.position)
+  );
+}
 
 export async function runMeleeTurn(
   scene: FightScene,
@@ -63,9 +80,15 @@ export async function runMeleeTurn(
     // shield it is not told to keep. A mob already in reach of the bot - the
     // quarry or the one beside it - is answered before the step, not after
     // its first swing.
+    if (followsQuarryDownToLava(scene))
+      return { ...scene.result("unreachable"), observation: QUARRY_AT_LAVA_SHORE };
+    const volley = guarded && isRangedAttacker(scene.target) ? locomotion.volleyStop : null;
     const stopped = await locomotion.approach(
       guarded && (weapons.projectileDefence() !== null || weapons.volleyActive() || meleeThreatInReach(scene)),
-      guarded && isRangedAttacker(scene.target) ? locomotion.volleyStop : null,
+      {
+        get reason() { return volley?.when() ? volley.reason : QUARRY_AT_LAVA_SHORE; },
+        when: () => (volley?.when() ?? false) || followsQuarryDownToLava(scene),
+      },
     );
     // A route also stops when its target dies mid-way, which is not a
     // reachability verdict: the next iteration reports what settled it.
