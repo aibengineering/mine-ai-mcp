@@ -93,7 +93,7 @@ players:
 client:
   command: bun
   cwd: ../..
-  args: [client-host.ts, drivers/policy-sequence.ts]
+  args: [client-host.ts, drivers/action-sequence.ts]
 
 params:
   players:

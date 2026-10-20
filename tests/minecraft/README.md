@@ -114,7 +114,14 @@ optional leading `waitTicks` delays the first request, for a request made once
 an arranged fight is under way. An optional trailing `holdTicks` keeps the
 session, and so the runtime's reflexes, on the body after the last step, while
 a hazard that outlives the request plays out; the host closes the runtime when
-the driver returns:
+the driver returns. A request made into a fight already under way sets
+`idleWithinTicks`: the first step waits, observing with `view_status`, until no
+reflex owns the body, and fails the trial if that takes longer, so the request
+is made once rather than refused and repeated. A `set_survival_policy` step
+that leaves out `expected_revision` is sent with the revision from the latest
+reply, as a model would. `forbidResponses: [hide]` reads the recorded
+hostile-reflex outcomes after the steps and fails on any response a policy step
+prohibited:
 
 ```yaml
 params:
@@ -221,7 +228,8 @@ finds its own request by name:
   arenas and 200 for hunts. Cover every pen with `reset`, which on the flat
   template means overriding its small reset region.
 - **One request per pen.** `params.players.<username>` holds each pen's request.
-  `drivers/action-sequence.ts` reads `{ waitTicks?, actions?, holdTicks? }` from it; a pen
+  `drivers/action-sequence.ts` reads `{ waitTicks?, idleWithinTicks?, actions?, holdTicks?,
+  forbidResponses? }` from it; a pen
   with only `waitTicks` idles, so idle and requesting pens can share a fixture.
   `drivers/single-action.ts` reads `{ action, input, expect? }`, and
   `drivers/idle.ts` reads `{ waitTicks }`. Once `params.players` is present,

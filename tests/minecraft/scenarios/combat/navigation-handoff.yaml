@@ -138,12 +138,12 @@ players:
       - { item: cooked_beef, count: 16 }
       - { item: cobblestone, count: 64 }
 
-# policy-sequence is action-sequence plus a wait for an idle body: Shore's
+# Each request waits for an idle body (idleWithinTicks): Shore's
 # zombies start in reach, so its reflex owns the body before any request.
 client:
   command: bun
   cwd: ../..
-  args: [client-host.ts, drivers/policy-sequence.ts]
+  args: [client-host.ts, drivers/action-sequence.ts]
 
 params:
   players:

@@ -173,13 +173,13 @@ players:
       - { item: bow, count: 1 }
       - { item: arrow, count: 16 }
 
-# The policy step needs the live policy revision, which policy-sequence reads
+# The policy step needs the live policy revision, which action-sequence reads
 # from a reply; every other pen is one hunt. Each request waits until no
 # reflex holds the body, and is then made once.
 client:
   command: bun
   cwd: ../..
-  args: [client-host.ts, drivers/policy-sequence.ts]
+  args: [client-host.ts, drivers/action-sequence.ts]
 
 params:
   players:
