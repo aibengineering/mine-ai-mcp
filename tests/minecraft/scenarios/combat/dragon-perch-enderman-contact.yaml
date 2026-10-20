@@ -1,0 +1,72 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression, slow]
+description: >-
+  An angry enderman reaches the bot while attack_dragon_perch waits for a
+  perch. The dragon is held hovering high over the fountain, so only the
+  enderman needs defending. The perch request must record a hostile-contact
+  interruption, the bot must kill the enderman and live, and once the dragon is
+  released to land the same request must go on to settle its perch window.
+  Guards the handoff that once stranded a pending perch request without
+  defending (legacy perch-enderman).
+
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+
+players:
+  - name: DragonFighter
+    # The island surface east of the fountain, as surveyed on this seed.
+    pos: [12.5, 64, 0.5]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: diamond_sword }
+      - { item: diamond_pickaxe }
+      - { item: shield }
+      - { item: cooked_beef, count: 64 }
+      - { item: cobblestone, count: 64 }
+
+# Three blocks south of the bot, inert until it is angered.
+entities:
+  - type: enderman
+    pos: [12.5, 64, 3.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["perch_intruder"]}'
+
+schedule:
+  # Hold the native dragon hovering high over the fountain, so the perch waits.
+  - when: "entity @e[type=ender_dragon]"
+    run:
+      - "kill @e[type=enderman,tag=!perch_intruder]"
+      - "data merge entity @e[type=ender_dragon,limit=1] {DragonPhase:10,Pos:[0.0d,120.0d,0.0d],Motion:[0.0d,0.0d,0.0d]}"
+  # After the perch request is admitted (tick 20), anger the enderman at the bot.
+  # AngryAt is DragonFighter's offline-mode UUID.
+  - afterTicks: 40
+    run: "data merge entity @e[type=enderman,tag=perch_intruder,limit=1] {NoAI:0b,AngerTime:600,AngryAt:[I;-1028945634,-948029367,-2028457463,1359060194]}"
+  # Once the enderman is dead, send the dragon in to land so the waiting perch can settle.
+  - afterTicks: 60
+    when: "entity @a[name=DragonFighter] unless entity @e[type=enderman,tag=perch_intruder]"
+    run: "data merge entity @e[type=ender_dragon,limit=1] {DragonPhase:2}"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/end-fight.ts]
+params:
+  arranged:
+    crystals: 10
+    dragonPhases: [hovering]
+    mobs: [enderman]
+  dragon:
+    attack: perch_once
+    expect: { status: succeeded, interruptionContains: "[HOSTILE_CONTACT]" }
+
+goal:
+  kind: all
+  timeout: 300
+  goals:
+    - { kind: kill, target: enderman, tag: perch_intruder }
+    - { kind: survive, who: DragonFighter, seconds: 1 }
+    - { kind: completion, who: DragonFighter }

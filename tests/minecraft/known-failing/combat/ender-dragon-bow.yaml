@@ -1,0 +1,53 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression, slow]
+description: >-
+  With every crystal removed at the start, repeated shoot_dragon requests
+  (hitbox margin 0.5) should kill the flying dragon on seed 8675309 while the
+  bot lives; when a shot is blocked away from the start, the caller walks back
+  to it. Fails today, as the legacy dragon-bow fixture did (alive after 20
+  minutes): on 2026-10-20 the dragon still had 148.75 and then 121.25 of 200
+  health after 30 minutes. Most shot requests return [DRAGON_SHOT_BLOCKED]
+  (no clear intercept from the footing, motion outside the inset body
+  estimates, or beyond the 64-block range) and each perch refuses with
+  [DRAGON_PERCHED]; about one request in four lands an arrow.
+
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+
+players:
+  - name: DragonFighter
+    pos: [12.5, 64, 0.5]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: diamond_sword }
+      - { item: diamond_pickaxe }
+      - { item: bow }
+      - { item: arrow, count: 128 }
+      - { item: cooked_beef, count: 64 }
+      - { item: end_stone, count: 256 }
+      - { item: water_bucket }
+
+# The zero-crystal start; native crystals never respawn in this fight.
+schedule:
+  - { when: "entity @e[type=end_crystal]", run: "kill @e[type=end_crystal]" }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/end-fight.ts]
+params:
+  arranged: { crystals: 0 }
+  dragon: { attack: bow, hitboxMargin: 0.5 }
+
+goal:
+  kind: all
+  timeout: 1800
+  goals:
+    - { kind: kill, target: ender_dragon }
+    - { kind: survive, who: DragonFighter, seconds: 1 }
+    - { kind: completion, who: DragonFighter }
