@@ -176,7 +176,8 @@ export function describeBlockGeometry(traits: BlockTraits, shapes: readonly Coll
   // when the leaf resets flat above it five seconds later. Observed live on
   // 2026-09-12 in a lush cave, where a hunt walked onto the leaf over a
   // one-deep pool, fell in, and was held under the reset leaf for the rest
-  // of the request; `scenarios/flat/hunt/dripleaf-pool-trap.yaml` is the
+  // of the request; the dripleaf pens of
+  // `tests/minecraft/scenarios/hunt/awkward-quarry.yaml` are the
   // fixture. The trait comes from the block name, as `damaging` does, because
   // no box says that it will move.
   const standableTop =

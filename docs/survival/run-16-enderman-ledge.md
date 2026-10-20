@@ -1,5 +1,11 @@
 # Run 16: enderman knockback after a failed fighting stance
 
+This postmortem was written beside the legacy `combat-terrain` fixtures. Their
+four shelves and bridges are now the pens of
+[combat/knockback-ledge](../../tests/minecraft/scenarios/combat/knockback-ledge.yaml),
+arranged in YAML rather than by a driver; the measurements below are from the
+legacy runs.
+
 The retained death incident establishes an enderman hit, followed by knockback
 while the bot was idle. It does not show combat walking forward off the ledge.
 The run remains a death and zero carried Eyes of Ender; no live play was resumed
@@ -40,21 +46,21 @@ contradicted by both the damage and velocity packets.
 
 ## Where the behavior is owned
 
-- [Combat controller](../../../src/survival/control/combat/controller.ts): pursuit requires
+- [Combat controller](../../src/survival/control/combat/controller.ts): pursuit requires
   `hasMeleeKnockbackRoom`. After an approach fails, defending the current stance
   is allowed only when `guarded` and grounded. With no shield, this fight returns
   `unreachable`, then neutralises item use and stops its footing hold.
-- [Hostile policy](../../../src/survival/perception/combat/threats.ts): `canDefendHere` treats
+- [Hostile policy](../../src/survival/perception/combat/threats.ts): `canDefendHere` treats
   healthy, exposed contact as fightable even after an unreachable result. This
   does not require the shield or safe stance that the controller needs.
-- [Hostile contact](../../../src/survival/reflexes/hostile.ts): a failed response
+- [Hostile contact](../../src/survival/reflexes/hostile.ts): a failed response
   imposes a one-second cooldown on the same response kind. The original hit
   landed inside that idle interval. New damage does not bypass this check.
-- [Supported position controller](../../../src/navigation/execution/supported-position-controller.ts):
+- [Supported position controller](../../src/navigation/execution/supported-position-controller.ts):
   a new hold constructed while airborne has no remembered support. Its advance
   fails until grounded, so the re-engaged combat cannot steer toward the old
   shelf. This is a lifetime limitation, not a failed search for a lava exit.
-- [Fire escape](../../../src/survival/positioning/fire-escape.ts): searches offsets ±4 in
+- [Fire escape](../../src/survival/positioning/fire-escape.ts): searches offsets ±4 in
   x/z and ±1 in y for water or dry footing with a clear corridor. Without a
   candidate it returns `blocked` before setting movement or jump. It has no
   general swim-to-surface fallback. The original records contain seven completed
@@ -70,11 +76,11 @@ stance refusal and the lava escape limitation remain separate concerns.
 
 ## Footing recovery repair
 
-[Footing recovery](../../../src/survival/positioning/footing.ts) now remembers the
+[Footing recovery](../../src/survival/positioning/footing.ts) now remembers the
 last observed safe support for the lifetime of the connected bot. A native
 velocity packet whose projected landing leaves safe ground arms recovery.
 Observation does not write controls. Active combat enters `recover_footing`;
-the [footing reflex](../../../src/survival/reflexes/footing.ts) claims an idle or
+the [footing reflex](../../src/survival/reflexes/footing.ts) claims an idle or
 non-combat body through the existing runner. Combat recovery pauses ordinary
 footing control and resumes the fight after restoring its weapon and cooldown.
 
@@ -100,9 +106,9 @@ free flight under normal gravity; this work does not qualify special movement
 effects or lava swimming.
 
 All four current fixtures provide 64 cobblestone, a sword and armor. The
-[skeleton bridge](skeleton-knockback-bridge.yaml) is one block wide with a
+skeleton bridge is one block wide with a
 bow-equipped native skeleton to its west. The
-[magma cube platform](magma-cube-knockback-platform.yaml) uses a large native
+magma cube platform uses a large native
 cube on the west side of the 3×3 shelf. Every fixture requires native pressure
 at the edge, survival without lava contact or descent below y47, and a grounded
 finish. Zero-pressure trials fail as unexercised, even if the bot remains safe.
@@ -143,11 +149,11 @@ ordinary combat resumed on safe ground.
 Run from this package:
 
 ```sh
-bunx --bun mine-labs run scenarios/flat/combat-terrain/enderman-idle-ledge.yaml scenarios/flat/combat-terrain/enderman-shield-ledge.yaml --spectator --repeat forever --jobs 1 --out .mine-labs/enderman-west-watch
+bunx --bun mine-labs run tests/minecraft/scenarios/combat/knockback-ledge.yaml --spectator
 ```
 
-The [no-shield fixture](enderman-idle-ledge.yaml) and
-[shield fixture](enderman-shield-ledge.yaml) use the same 3×3-block shelf at y47
+The no-shield fixture and
+shield fixture use the same 3×3-block shelf at y47
 above a y22–31 lava pool. The bot starts at the recorded run-16 position
 `(-128.53437787507164,47,197.61474899858322)`, near the east edge at x=-128.
 The enderman arrives on the west side at `(-129.7,47,197.61474899858322)`.
@@ -156,7 +162,7 @@ Both carry diamond armor, golden boots, a diamond sword and 64 cobblestone.
 The original failing baseline carried no building material. The shield variant
 also equips a shield in the off-hand before the encounter starts.
 
-The shared [driver](enderman-idle-ledge.ts) installs the production runtime and
+The legacy driver installed the production runtime and
 evidence listeners before summoning a frozen enderman on a distant raised perch
 at `(-128.5,57,240.5)`. After observing that spawn and waiting one second, it
 checks that the bot is still at the edge. One scripted teleport then places the
@@ -287,7 +293,7 @@ live in that file, not a queryable SQL table. The host has no HTTP download rout
 for historical incident files. `read_recent_events` returns encounter
 summaries and advances the unread cursor; it is not the detailed combat trace.
 
-The [incident observer](../../../src/diagnostics/incident-observer.ts) records
+The [incident observer](../../src/diagnostics/incident-observer.ts) records
 physics, controls, combat phases/decisions, nearby collision cells/entities,
 navigation, health and native packets into a rolling 20-second, 8-MiB history.
 Death and environmental damage automatically save captures, as do disconnect

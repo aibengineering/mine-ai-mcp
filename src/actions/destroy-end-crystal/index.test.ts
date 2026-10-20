@@ -7,7 +7,7 @@ import { botFixture } from "../../test-support/bot.js";
 import type { CrystalObservation } from "../../survival/perception/combat/crystal.js";
 import { createDestroyEndCrystalAction } from "./index.js";
 
-// The legacy End caller (scenarios/src/ender-dragon.ts) moved on to the next
+// The legacy End caller (a scenario driver since retired) moved on to the next
 // tower when a crystal request failed its walk back but its evidence had
 // observed the destruction: a failed descent does not resurrect the crystal.
 test("a destroyed crystal stays observed when the walk back to the ground fails", async (t) => {

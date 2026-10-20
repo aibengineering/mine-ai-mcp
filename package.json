@@ -23,7 +23,6 @@
   "files": [
     "src",
     "docs",
-    "scenarios",
     "tests",
     "README.md"
   ],
@@ -31,9 +30,8 @@
     "clean": "bun -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "bun run clean && bunx --bun tsc -p tsconfig.build.json && bun -e \"require('node:fs').copyFileSync('src/bot-data/bot-data.sql', 'dist/bot-data/bot-data.sql')\"",
     "typecheck": "bun check -p tsconfig.check.json",
-    "typecheck:scenarios": "bun check -p scenarios/tsconfig.json",
     "typecheck:tests": "bun check -p tests/tsconfig.json",
-    "test": "bun run typecheck && bun run typecheck:scenarios && bun run typecheck:tests && bun test --parallel ./src ./scenarios/src ./tests",
+    "test": "bun run typecheck && bun run typecheck:tests && bun test --parallel ./src ./tests",
     "evidence:capture": "bunx --bun mine-labs run tools/action-evidence/action-catalog.yaml --repeat 1",
     "evidence:render": "bun tools/action-evidence/page.ts",
     "scenarios": "bunx --bun mine-labs run tests/minecraft/scenarios --skip-tag slow --repeat forever",

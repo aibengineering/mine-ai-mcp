@@ -1,5 +1,9 @@
 # Reliability and parity plan — 2026-09-13
 
+> The legacy `scenarios/` catalogue this plan names was retired in October 2026.
+> [The migration ledger](2026-10-scenario-migration.md) records where each named
+> fixture went in `tests/minecraft/`.
+
 Work queued after the last survival run. Nothing here is implemented yet. Each
 item follows the same shape: **observe** the current behaviour in a real world
 before touching code, **change** the smallest set of files, **prove** it with a

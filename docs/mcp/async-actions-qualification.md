@@ -58,9 +58,9 @@ run passed all 1,281 tests across 178 files in 85.23 seconds.
 
 ```powershell
 bun run typecheck
-bun run typecheck:scenarios
 bun run build
-bun test src scenarios/src
+bun run typecheck:tests
+bun test --parallel ./src ./tests
 ```
 
 Reproduce the tracked catalogue tour with:

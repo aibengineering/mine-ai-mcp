@@ -78,15 +78,15 @@ Examine the logged telemetry events in chronological order:
 
 ### 3. Reproduce in an isolated scenario
 
-Reproduce and verify problematic routes using dedicated Mine Labs scenarios in [scenarios/flat/pathfinder/](../../scenarios/flat/pathfinder/):
+Reproduce and verify problematic routes using the Mine Labs courses in [tests/minecraft/scenarios/pathfinder/](../../tests/minecraft/scenarios/pathfinder/):
 
 ```bash
-bunx --bun mine-labs run scenarios/flat/pathfinder/cavern-ore-return.yaml --out .mine-labs/debug --repeat 1
+bunx --bun mine-labs run tests/minecraft/scenarios/collect/ore-return-deposit.yaml --out .mine-labs/debug --repeat 1
 ```
 
 Representative test scenarios cover common physical challenges:
 
-- `cavern-ore-return.yaml`: Long underground journeys requiring partial route continuation.
+- [`ore-return-deposit.yaml`](../../tests/minecraft/scenarios/collect/ore-return-deposit.yaml): Long underground journeys to a cavern seam and a deep shaft, then home, requiring partial route continuation.
 - [`lava-containment.yaml`](../../tests/minecraft/scenarios/pathfinder/lava-containment.yaml): Tunnelling past lava held overhead and lava beside the route.
 - [`gauntlet-lava-parkour.yaml`](../../tests/minecraft/scenarios/pathfinder/gauntlet-lava-parkour.yaml): Maximum-reach gap jumps over lava, step-ups, a drop and a door.
 - `long-underwater-exit.yaml`: Swimming and surfacing through deep water columns.

@@ -33,25 +33,25 @@ Run a named fixture or directory with the installed Mine Labs runner. For exampl
 from the package root:
 
 ```sh
-bunx --bun mine-labs run scenarios/flat/combat --out .mine-labs/combat --repeat 1 --jobs 2 --isolated
+bunx --bun mine-labs run tests/minecraft/scenarios/combat --out .mine-labs/combat --repeat 1 --isolated
 ```
 
-Default to two workers total and run groups sequentially; overlapping runner
+Run one trial at a time, the default, and run groups sequentially; overlapping runner
 commands multiply the Java servers and can overload the host. Use distinct output
 directories for each qualification. Set
 `--keep-runs` to retain every declared repetition before starting a qualification
 larger than the runner's retention default. Never restart a persistent live bot
 to test this rewrite.
 
-| Group                                                                                                                 | Physical contract                                                                                                    |
-| --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [Flat combat](../../scenarios/flat/combat)                                                                            | Idle contact, shield readiness, bows, packs, fuses, protection, body handoff, and pending request continuation       |
-| [Hunt](../../scenarios/flat/hunt)                                                                                     | Requested quarry, moving bystanders, incidental kills, dropped items, capacity, and safe quantity handoff            |
-| [Survival](../../scenarios/flat/survival)                                                                             | Fire, lava, air, hunger, shelter, and cancellation                                                                   |
-| [Combat terrain](../../scenarios/flat/combat-terrain) and [generated Nether terrain](../../tests/minecraft/scenarios/pathfinder/basalt-deltas-traverse.yaml) | Supported attack positions, native knockback, slopes, lowered floors, gaps, and lava edges                           |
-| [End](../../scenarios/default/end)                                                                                    | Crystal bow/melee/cage paths, dragon breath and body escape, safe gaze, one perch window, and mixed Enderman contact |
-| [Portal](../../scenarios/flat/portal)                                                                                 | Portal activation and expected dimension transfer retain their own completion contract                               |
-| [Evidence catalog](../../scenarios/flat/evidence/action-catalog.yaml)                                                 | Every published tool's real MCP schema, response, and survival status                                                |
+| Group                                                                                   | Physical contract                                                                                                    |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [Combat](../../tests/minecraft/scenarios/combat)                                        | Idle contact, shield readiness, bows, packs, fuses, protection, knockback beside lava, body handoff, and pending request continuation |
+| [Hunt](../../tests/minecraft/scenarios/hunt)                                            | Requested quarry, moving bystanders, incidental kills, dropped items, capacity, and safe quantity handoff            |
+| [Survival](../../tests/minecraft/scenarios/survival)                                    | Fire, lava, air, hunger, falls, death recovery, and idle survival in the Nether and the End                          |
+| [Generated Nether terrain](../../tests/minecraft/scenarios/pathfinder/basalt-deltas-traverse.yaml) | Supported attack positions, slopes, lowered floors, gaps, and lava edges                                    |
+| [End fights](../../tests/minecraft/scenarios/combat) (`end-crystals-*`, `ender-dragon-*`, `dragon-perch-enderman-contact`) | Crystal bow/melee/cage paths, dragon breath and body escape, one perch window, and mixed Enderman contact |
+| [Portal](../../tests/minecraft/scenarios/portal)                                        | Portal activation and expected dimension transfer retain their own completion contract                               |
+| [Evidence catalog](../../tools/action-evidence/action-catalog.yaml)                     | Every published tool's real MCP schema, response, and survival status; a documentation tour, not a tier fixture      |
 
 Each YAML owns its seed, geometry, mobs, gamerules, kit, and independent goal.
 Gameplay scenarios specify a problem and observable success, not a required
@@ -59,12 +59,12 @@ combat state or sequence of tactics. A safe detour, shield preparation or shelte
 may be a valid solution. Use state and ownership traces to explain outcomes;
 keep exact transitions and cleanup invariants in component tests.
 
-Additional gameplay coverage includes `wounded-supply-return` (bring eight iron
+Additional gameplay coverage includes the supply pen of `combat/wounded-navigation` (bring eight iron
 ingots home alive from a wounded, hungry start with native enemies),
-and `skeleton-bones-limited-ammo` (acquire three native bones with one starting
+and the bone pen of `hunt/skeleton-hunts` (acquire three native bones with one starting
 arrow). These do not require healing, changing weapons or hiding: any strategy
 that meets the declared goal is valid. Mixed-creeper travel is covered by the
-desert and cave navigation scenarios described below.
+cave and mixed pens of `combat/creeper-navigation`.
 
 Focused damage tests may disable regeneration; recovery and collection tests
 require native regeneration. Some fixtures freeze time; the full-night fixture
@@ -83,7 +83,7 @@ a missing survival summary fails the catalog.
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | [Fortress spawner rods](../../tests/minecraft/known-failing/hunt/fortress-spawner-rods.yaml) (known-failing) | One pending camp; twelve native rods at at least one per minute, then twelve eyes of ender; survival; original generated spawner and ordinary loot |
 | [Warped-forest pearls](../../tests/minecraft/scenarios/hunt/warped-forest-pearls.yaml) | One pearl across a canopy gap, then five native pearls below a generated slope at at least one per minute, and an observed return uphill alive |
-| [Full End fight](../../scenarios/default/end/ender-dragon.yaml)                    | All crystals destroyed, native dragon death, and survival; report damage separately from navigation progress                               |
+| [Full End fight](../../tests/minecraft/scenarios/combat/ender-dragon-fight.yaml)  | All crystals destroyed, native dragon death, and survival; report damage separately from navigation progress                               |
 | [Full night](../../tests/minecraft/known-failing/combat/full-night-request.yaml)   | Reach dawn alive while preserving one pending request; one final handoff; no repeated successful shelter claims                            |
 
 Declare repetitions and thresholds before running. Retain failed attempts and
@@ -149,8 +149,8 @@ collecting a raised drop while another Enderman occupies the direct construction
 position. The generated Nether six-pearl expeditions remain the broader check
 for target selection, repeated encounters, collection, survival and returning home.
 
-`nether-vegetation-shelter` checks native wall construction through warped roots,
+The vegetation pen of `combat/wounded-hide` checks native wall construction through warped roots,
 crimson roots and Nether sprouts. These are replaceable plants; recovery must
 not reject an otherwise usable wall because the local plant list omitted them.
 
-Water-bucket qualification uses `scenarios/flat/survival/bucket-fall-*.yaml` and `scenarios/flat/pathfinder/bucket-drop-route.yaml`. The fall drivers remove one supported platform after runtime admission and observe minimum health, actual airborne/grounded positions, source creation/removal, and bucket inventory. Impulse cases explicitly inject deterministic client velocity packets; the recorded End launch packet is not a native dragon replay. `scenarios/default/end/bucket-native-knockback.yaml` adds a real TNT blast in End geometry and requires survival, no native fall-damage packet, and recovered water. These fixtures do not claim that water prevents dragon magic damage or qualifies an entire dragon fight.
+Water-bucket qualification uses `survival/bucket-fall-saves` and `pathfinder/bucket-drop-route`. The falls remove each pen's supporting block at the start, with the runtime already admitted, and require the floor, full health and the water bucket back in hand. The recorded impulse launches are unit cases in `water-landing.test.ts`. `survival/end-knockback-water-landing` adds a real TNT blast in End geometry and requires the floor, no fall damage beyond the blast, and recovered water. These fixtures do not claim that water prevents dragon magic damage or qualifies an entire dragon fight.

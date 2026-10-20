@@ -49,10 +49,10 @@ from the tests that described the old code.
 ## How is the unit layer arranged?
 
 Unit tests are colocated `*.test.ts` files run by `bun run test` using Bun and the `node:test` API;
-the same command typechecks the package and the scenario drivers first, with
+the same command typechecks the package and the test and scenario code first, with
 `bun check` (Bun 1.4.3 or newer; the build still emits with `tsc`). The tests
 run with `--parallel`, so each file gets its own worker and fresh globals. The
-test command names `./src`, `./scenarios/src`, and `./tests` as explicit directories:
+test command names `./src` and `./tests` as explicit directories:
 bare names are Bun path filters and can also select ignored private experiments.
 Four rules keep the suite small and quick:
 
@@ -131,20 +131,24 @@ is also a distinct goal from acquiring its random loot.
 
 ## What scenario groups exist in the repository?
 
-There are two catalogues:
+[tests/minecraft/scenarios/](../../tests/minecraft/scenarios/) is the suite the
+package scripts run. Its fixtures are grouped by behavior (`barter`, `bucket`,
+`build`, `collect`, `combat`, `craft`, `drop`, `explore`, `hunt`, `pathfinder`,
+`portal`, `progression`, `sleep`, `storage` and `survival`), and flat,
+generated, Nether and End worlds appear side by side within a group. Each
+fixture declares its purpose and tags, and every one runs through the runtime
+host in `tests/minecraft/`. Most consolidate several related behaviors into one
+world, often with one bot per walled pen, so a regression in any of them fails
+the fixture. Its [README](../../tests/minecraft/README.md) describes the
+templates, drivers, pens, tags and evidence options.
 
-- [tests/minecraft/scenarios/](../../tests/minecraft/scenarios/) is the suite the
-  package scripts run. Its fixtures are grouped by behavior (`barter`, `bucket`,
-  `build`, `collect`, `combat`, `craft`, `drop`, `explore`, `hunt` and
-  `pathfinder`), each declares its purpose and tags, and every one runs through
-  the runtime host in `tests/minecraft/`. Its
-  [README](../../tests/minecraft/README.md) describes the templates, drivers and
-  evidence options.
-- [scenarios/](../../scenarios/) is the wider catalogue, organised by world shape
-  (`flat/`, `default/`) and run directly with Mine Labs. Its
-  [README](../../scenarios/README.md) lists every folder, the question it asks
-  and the bot module that drives it. The `verification/` manifests there run with
-  `mine-labs verify`.
+[tests/minecraft/known-failing/](../../tests/minecraft/known-failing/) holds
+faithful fixtures for behavior that fails today, outside both tiers. A fixture
+moves into `scenarios/` when its behavior is fixed.
+
+The legacy catalogue that used to live in `scenarios/` was retired in October
+2026; [the migration ledger](../plans/2026-10-scenario-migration.md) records
+where each of its fixtures went.
 
 ## What package scripts run scenarios?
 
@@ -211,8 +215,9 @@ The scripts use Mine Labs' local output defaults: `.mine-labs` for headless
 runs and `.mine-labs/open` for the client. Pass `--out <directory>` to change
 the location. Stop a soak with Ctrl+C.
 
-The separate shared-world verification mode remains available directly:
-`bunx --bun mine-labs verify scenarios/verification --jobs 2`.
+A fixture can list surveyed spawn locations under `verification.locations`;
+`mine-labs run` expands them into one isolated trial per location, as
+`progression/progression-to-diamond` and `collect/cast-obsidian` do.
 
 ## How do live playtests differ from scenarios?
 
