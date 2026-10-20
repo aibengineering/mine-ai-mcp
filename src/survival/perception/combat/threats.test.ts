@@ -832,3 +832,27 @@ test("an Enderman angry at a mob glancing at the bot is not a pre-hit cue", () =
   metadata[STARED_AT] = true;
   assert.equal(isThreat(bot, mob, context()), true, "the same look once its anger is at a player");
 });
+
+test("a wounded bot with a shield and no shelter holds against an enderman rather than running from it", () => {
+  // Recorded in combat-diag2 19-52-26-113Z, 1.34 s in: CliffBot at 6.94
+  // health, no food and so no shelter to recover in, with the enderman that
+  // had just struck it 1.6 blocks off and a block above. An enderman
+  // teleports to its target; the evade this used to choose was caught in
+  // every run and ended in death in four of five.
+  const metadata: unknown[] = [];
+  metadata[CREEPY] = true;
+  metadata[STARED_AT] = true;
+  for (const items of [["iron_sword", "shield"], ["iron_sword"]]) {
+    const bot = botWith({
+      health: 6.94,
+      items,
+      position: new Vec3(71.5, 65, -19.5),
+      mobs: [{ id: 7, name: "enderman", x: 71.4, metadata }],
+    });
+    bot.entities[7]!.position = new Vec3(71.4, 66, -18.3);
+    bot.food = 17; // Below the regeneration threshold, as the fixture holds it.
+    const directive = observeHostileResponse(bot, context({ attackers: [7] }));
+    if (items.includes("shield")) assert.deepEqual(directive.kind === "fight" ? directive.targetId : directive, 7);
+    else assert.equal(directive.kind, "evade", "without a shield, running is still the only answer");
+  }
+});
