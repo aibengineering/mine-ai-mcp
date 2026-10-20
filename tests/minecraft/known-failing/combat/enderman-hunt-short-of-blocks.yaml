@@ -1,0 +1,106 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [known-failing, regression]
+description: >-
+  Two enderman hunts with too few blocks to roof over every fight. Alcove
+  carries nothing to build with and starts beside a narrow two-high stone
+  nook; it must kill its enderman and pick up the pearl the enderman is made
+  to carry. ShelterPair faces two endermen with eleven cobblestone, one
+  shelter's worth; it is asked for three pearls, more than the pair can drop,
+  so the hunt has to clear both and then report the shortfall. Both must
+  survive. Observed failing intermittently on 2026-10-20 (each pen passed in
+  most runs of combat/enderman-hunt, and failed under the fast tier's two
+  workers): the hunt stops early with "Collection outcome:
+  capability_blocked" and "[COMBAT_BUILD_MATERIALS_MISSING] No usable
+  building blocks remain for defensive construction, and no usable existing
+  roof was found", leaving the enderman alive. Alcove stopped after one
+  attack with no kill; ShelterPair stopped after its first kill, its blocks
+  spent, with the second enderman eight blocks off. Split out of
+  combat/enderman-hunt until a hunt without roofing material fights on, uses
+  the cover at hand, or keeps a shelter's worth for the next enderman.
+
+# Pens two hundred blocks apart along x, beyond entity tracking, so neither
+# hunt sees the other's endermen.
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -10 -60 -8 14 -50 7 air"
+  - "fill 190 -60 -8 214 -50 7 air"
+
+geometry:
+  # Alcove: a two-high stone nook west of the bot, open to the east.
+  - fill: { block: stone, from: [-1, -60, -1], to: [1, -59, 1] }
+  - fill: { block: air, from: [0, -60, 0], to: [1, -59, 0] }
+  - fill: { block: stone, from: [0, -58, 0], to: [1, -58, 0] }
+
+entities:
+  # Alcove's quarry holds a pearl with a drop chance above one, so its kill
+  # always yields one and the hunt can only finish by killing.
+  - type: enderman
+    pos: [7.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,Tags:["alcove"],HandItems:[{id:"minecraft:ender_pearl",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  # The pair carries only its own loot, at most one pearl each.
+  - type: enderman
+    pos: [206.5, -60, -2.5]
+    nbt: '{PersistenceRequired:1b,Tags:["shelterpair"]}'
+  - type: enderman
+    pos: [206.5, -60, 2.5]
+    nbt: '{PersistenceRequired:1b,Tags:["shelterpair"]}'
+
+players:
+  - name: Alcove
+    pos: [2.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: ShelterPair
+    pos: [200.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 11 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  players:
+    Alcove:
+      idleWithinTicks: 400
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: enderman, drop_name: ender_pearl, count: 1 } }
+    ShelterPair:
+      idleWithinTicks: 400
+      actions:
+        - action: collect_mob_drop
+          input: { mob_name: enderman, drop_name: ender_pearl, count: 3 }
+          expect: { status: [partial, failed] }
+
+tick:
+  - "gamemode spectator @a[name=!Alcove,name=!ShelterPair,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: kill, target: enderman, tag: alcove }
+    - { kind: hasItem, who: Alcove, item: ender_pearl, count: 1 }
+    - { kind: survive, who: Alcove, seconds: 1 }
+    - { kind: completion, who: Alcove }
+    - { kind: kill, target: enderman, tag: shelterpair }
+    - { kind: survive, who: ShelterPair, seconds: 1 }
+    - { kind: completion, who: ShelterPair }
