@@ -546,3 +546,25 @@ test("a shelter shaft is not dug beside lava that would run into it", async () =
   assert.equal(digs, 0);
   assert.equal(result.kind, "failed");
 });
+
+test("a shelter shaft that would take seconds per block is not dug under fire", async () => {
+  // Recorded in hunts-regress2 2026-10-20T22-39-36-467Z: the Cave pen at 9
+  // health in a stone tunnel at (204.44, -60, -1.6), carrying an iron sword
+  // and no pickaxe, swung at the stone floor for seven seconds with its
+  // shield down while a skeleton shot it three times. Breaking stone without
+  // a pickaxe takes 7.5 s.
+  const bot = botIn({
+    health: 9,
+    items: [{ name: "iron_sword", count: 1 }],
+    blockAt: (position) => (position.y >= -60 ? air() : { ...(stone() as object), position, digTime: () => 7500 }),
+  });
+  bot.entity.position = new Vec3(204.44, -60, -1.6);
+  bot.game = { gameMode: "survival" } as Bot["game"];
+  let digs = 0;
+  bot.dig = async () => {
+    digs++;
+  };
+  const result = await hide(bot);
+  assert.equal(digs, 0);
+  assert.equal(result.kind, "failed");
+});

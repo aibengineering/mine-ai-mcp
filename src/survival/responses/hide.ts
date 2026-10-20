@@ -1,7 +1,7 @@
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { centerOnCell, steeringPortFor } from "../../navigation/index.js";
-import { selectHarvestTool } from "../../navigation/mineflayer/movement-policy.js";
+import { dryGroundedDigTime, selectHarvestTool } from "../../navigation/mineflayer/movement-policy.js";
 import { navigationFeet } from "../../navigation/world/block-geometry.js";
 import { cellIntersectsBody } from "../../utils/geometry.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
@@ -113,6 +113,16 @@ function diggable(block: WorldBlock | null): block is WorldBlock {
  * (combat-diag cube1 2026-10-20T22-58-31-012Z t00001 and t00002: 11 to 3.3
  * health, and death).
  */
+/**
+ * The longest one shaft block may take to break. The shield is down while
+ * the bot digs, and a bow skeleton looses an arrow every two seconds or so:
+ * the Cave pen of combat/creeper-navigation, at 9 health with only an iron
+ * sword, spent seven seconds swinging at the stone floor of its tunnel and
+ * was shot three times, to death (hunts-regress2 2026-10-20T22-39-36-467Z).
+ * A wooden pickaxe breaks stone in 1.15 s, bare hands dirt in 0.75 s.
+ */
+export const SHAFT_DIG_LIMIT_MS = 1500;
+
 function openToLiquid(bot: Bot, cell: Vec3): boolean {
   return PROTECTION_SIDES.some((side) => {
     const name = bot.blockAt(cell.plus(side))?.name;
@@ -353,6 +363,7 @@ export async function hideInPlace(bot: Bot, options: HideOptions): Promise<HideR
       if (shelterIntruder(bot, threatContext)) continue construction;
       if (!centered) return done({ kind: "failed", error: "The bot could not centre over the shelter shaft" });
       const tool = selectHarvestTool(bot, below);
+      if (dryGroundedDigTime(bot, below, tool) > SHAFT_DIG_LIMIT_MS) break;
       itemUse.lowerShield();
       if (tool && bot.heldItem?.name !== tool.name) await bot.equip(tool, "hand");
       signal.throwIfAborted();

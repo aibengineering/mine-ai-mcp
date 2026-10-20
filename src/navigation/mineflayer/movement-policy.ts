@@ -125,7 +125,8 @@ function opensIntoLiquid(world: WorldView, x: number, y: number, z: number): boo
   return false;
 }
 
-function dryGroundedDigTime(bot: Bot, block: WorldBlock, item: InventoryItem | null): number {
+/** Milliseconds to break `block` with `item` (bare hands when null), standing dry on the ground. */
+export function dryGroundedDigTime(bot: Bot, block: WorldBlock, item: InventoryItem | null): number {
   return block.digTime(
     item?.type ?? null,
     bot.game.gameMode === "creative",

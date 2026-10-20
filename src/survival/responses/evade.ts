@@ -129,6 +129,12 @@ export async function evade(
                 movements: createMovements(bot, {
                   allowParkour: false,
                   allowDigging: context.policy?.terrain.dig,
+                  // A break the carried tools cannot harvest is the slow one:
+                  // stone by hand takes 7.5 s. The Cave pen of
+                  // creeper-navigation, cornered at a tunnel's end with only a
+                  // sword, routed through the wall and was blown up while
+                  // swinging at it (combat-proof6 2026-10-20T23-08-08-401Z).
+                  requireHarvestTool: true,
                   scaffolding: context.policy?.terrain.place,
                 }),
                 goal: { resolve: (observation) => goal.resolve(observation) },

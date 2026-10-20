@@ -23,6 +23,8 @@ import { executeHostileResponse } from "../control/combat/respond.js";
 import { completeResponse, encounterReceipt } from "../control/combat/settlement.js";
 import { CombatPerception } from "../perception/combat/observations.js";
 import { attachHostileReflex } from "./hostile.js";
+import { blockClass, observeMineflayerBlock } from "../../navigation/mineflayer/world.js";
+import { flatWorld } from "../../test-support/navigation.js";
 
 type Entity = Parameters<Bot["attack"]>[0];
 
@@ -1146,3 +1148,29 @@ for (const engagement of ["respond_to_threats", "defend_only"] as const) {
     assert.deepEqual(fixture.outcomes()[0].killedTargetIds, group);
   });
 }
+
+test("an emergency retreat does not route through blocks its carried tools cannot harvest", async () => {
+  // combat-proof6 2026-10-20T23-08-08-401Z: the Cave pen of
+  // creeper-navigation, at 9 health with only a sword and cornered at its
+  // tunnel's end, routed its escape through the stone wall and was blown up
+  // while swinging at it. Stone without a pickaxe takes 7.5 s to break.
+  let refused: string | null = null;
+  await using fixture = reflexFixture(
+    async (targetId) => died(targetId),
+    async ({ movements }) => {
+      const stone = observeMineflayerBlock(
+        blockClass(fixture.bot).fromStateId(fixture.bot.registry.blocksByName.stone!.defaultState, 0),
+      );
+      refused = movements.evaluateBreak(stone, { x: 1, y: 63, z: 1 }, flatWorld()).decision.kind;
+      fixture.bot.entity.position.x = -40;
+      return { status: "completed", elapsedMs: 0 };
+    },
+  );
+  fixture.bot.health = 11;
+  fixture.bot.entities[7] = hostile(7, "zombie", 3);
+  const directive = observeHostileResponse(fixture.bot, fixture.observer.threats);
+  assert.equal(directive.kind, "evade");
+  await respondDirectly(fixture, directive);
+  assert.notEqual(refused, null);
+  assert.notEqual(refused, "penalized", "a hand break of stone is not an escape route");
+});
