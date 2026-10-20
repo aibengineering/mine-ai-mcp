@@ -4,16 +4,22 @@ tags: [known-failing, regression]
 description: >-
   LavaPoolBot is put in the middle of a 13x13 lava pool with nothing but
   cobblestone and no bank within the fire reflex's reach, so it has to place
-  a step and climb out; regeneration is off. It does place the step and climb
-  out, in about twelve ticks, but this pen cannot pass as written: lava hits
-  for four on contact and again ten ticks later, and leaving it sets a
-  fifteen-second burn, fifteen health, that only water ends, and the pool has
-  none. The best possible ending is one health, after a single lava hit, and
-  the health floor of two can never be met. In twelve 2026-10-21 trials it
-  ended at exactly one health five times and burned to death after a second
-  lava hit seven times. It needs a decision on the goal rather than a runtime
-  fix. The pocket and dig pens that were split out with it are fixed and back
-  in survival/fire-reflex.
+  a step and climb out; regeneration is off. As the legacy lava-escape-step
+  required, it must come out alive, out of the lava and no longer burning.
+  The migration had added a health floor of two, which no escape can meet:
+  lava hits for four on contact, and leaving it sets a fifteen-second burn,
+  fifteen health, that only water ends. One hit leaves at most one health.
+  Fails today, though not from a runtime defect: a second lava hit lands ten
+  ticks after the first, and that kills. The bot reacts in one to three
+  ticks, swims the 0.2 blocks to the step's face in six (lava caps the swim
+  at 0.039 blocks a tick) and climbs out in two or three more, so only the
+  fastest reactions get out in time. In 2026-10-21 trials it survived five
+  of twelve, then none of eight under heavier load. Early steering while
+  the step was placed did not move the contact earlier and was reverted. To
+  pass reliably the arrangement must change, for instance natural
+  regeneration as the Nether pool pen in survival/nether-idle-survival has.
+  The pocket and dig pens that were split out with it are back in
+  survival/fire-reflex.
 
 # The idle bot waits on a dry bank and is teleported into the lava once the
 # runtime is up; a tag set the first tick its body burns proves the lava
@@ -62,18 +68,23 @@ schedule:
     run:
       # A tag a reused player kept from an earlier trial must not count.
       - "tag @a remove ml_burned_LavaPoolBot"
+      - "tag @a remove ml_cool_LavaPoolBot"
       - "tp LavaPoolBot 100.5 -60 0.5"
   - { afterTicks: 1, when: "entity @a[name=LavaPoolBot,scores={ml_fire=1..}]", run: "tag LavaPoolBot add ml_burned_LavaPoolBot" }
 
 tick:
   - "gamemode spectator @a[name=!LavaPoolBot,gamemode=!spectator]"
   - "execute as @a store result score @s ml_fire run data get entity @s Fire"
+  # Lava sets the burn again every tick, so a burned bot whose Fire has run
+  # out is out of the lava and no longer burning.
+  - "tag @a[name=LavaPoolBot,scores={ml_fire=1..}] remove ml_cool_LavaPoolBot"
+  - "tag @a[name=LavaPoolBot,tag=ml_burned_LavaPoolBot,scores={ml_fire=..0}] add ml_cool_LavaPoolBot"
 
 goal:
   kind: all
   timeout: 75
   goals:
     - { kind: entityCount, entity: player, tag: ml_burned_LavaPoolBot, min: 1 }
-    - { kind: health, who: LavaPoolBot, health: 2 }
+    - { kind: entityCount, entity: player, tag: ml_cool_LavaPoolBot, min: 1 }
     - { kind: survive, who: LavaPoolBot, seconds: 1 }
     - { kind: completion, who: LavaPoolBot }
