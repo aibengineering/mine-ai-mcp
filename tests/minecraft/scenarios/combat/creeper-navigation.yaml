@@ -1,0 +1,169 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Navigate past creepers, three pens. Blocked: a one-wide passage with a
+  creeper in the bot's own cell, a zombie concealed in a stone nook nearby and
+  a climbable step behind; once the reflex lets go of the body, the route to
+  the far end must still be walked (EnderSeeker's 2026-09-11 blocked-retreat
+  handoff, where an unreachable creeper became an answered fight and then a
+  stand-down). Cave: a low stone tunnel with side chambers holding two
+  skeletons, a zombie and a creeper. Mixed: a walled arena with two creepers
+  and three zombies starting outside contact range, crossed with hiding
+  forbidden by the model; no hide may be recorded. Every pen must arrive and
+  survive; Cave and Mixed must keep twelve health with no regeneration.
+
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+# Pens two hundred and fifty blocks apart. Two seconds after a bot reaches its
+# destination its request has returned; the hostiles left in its pen are then
+# removed rather than left beside a body with no reflexes.
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -8 -60 -6 14 -55 6 air"
+  - "fill 203 -60 -19 297 -57 19 air"
+  - "fill 453 -60 -19 547 -55 19 air"
+
+setup:
+  - "scoreboard objectives add pens dummy"
+  - "scoreboard players set #blocked pens 0"
+  - "scoreboard players set #cave pens 0"
+  - "scoreboard players set #mixed pens 0"
+
+geometry:
+  # Blocked: a stone floor, a one-wide passage walled at z -1 and z 1, a step
+  # behind the bot and one ahead, and a sealed nook holding the zombie.
+  - fill: { block: stone, from: [-8, -61, -6], to: [14, -61, 6] }
+  - fill: { block: stone, from: [-1, -60, -1], to: [8, -58, -1] }
+  - fill: { block: stone, from: [-1, -60, 1], to: [8, -58, 1] }
+  - setblock: { block: stone, at: [-1, -60, 0] }
+  - setblock: { block: stone, at: [1, -60, 0] }
+  - fill: { block: stone, from: [2, -60, 3], to: [4, -57, 5] }
+  - fill: { block: air, from: [3, -60, 4], to: [3, -59, 4] }
+  # Cave: solid stone with a three-high tunnel along x and a side chamber.
+  - fill: { block: stone, from: [203, -61, -19], to: [297, -57, 19] }
+  - fill: { block: air, from: [204, -60, -3], to: [296, -58, 3] }
+  - fill: { block: air, from: [242, -60, -8], to: [258, -58, 8] }
+  # Mixed: a 95 x 39 sea-lantern floor inside six-high bedrock walls.
+  - fill: { block: bedrock, from: [452, -64, -20], to: [548, -64, 20] }
+  - fill: { block: dirt, from: [452, -63, -20], to: [548, -62, 20] }
+  - fill: { block: sea_lantern, from: [452, -61, -20], to: [548, -61, 20] }
+  - fill: { block: bedrock, from: [452, -63, -20], to: [452, -55, 20] }
+  - fill: { block: bedrock, from: [548, -63, -20], to: [548, -55, 20] }
+  - fill: { block: bedrock, from: [453, -63, -20], to: [547, -55, -20] }
+  - fill: { block: bedrock, from: [453, -63, 20], to: [547, -55, 20] }
+
+entities:
+  - { type: creeper, pos: [0.7, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["blocked"]}' }
+  - { type: zombie, pos: [3.5, -60, 4.5], nbt: '{PersistenceRequired:1b,Tags:["blocked"]}' }
+  # The zombie starts contact while the creeper closes from further back; the
+  # two shooters keep the encounter mixed as targets die.
+  - { type: skeleton, pos: [233.5, -60, -2.5], nbt: '{PersistenceRequired:1b,Tags:["cave"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [237.5, -60, 2.5], nbt: '{PersistenceRequired:1b,Tags:["cave"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: zombie, pos: [233.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["cave"]}' }
+  - { type: creeper, pos: [237.5, -60, -0.5], nbt: '{PersistenceRequired:1b,Tags:["cave"]}' }
+  - { type: creeper, pos: [500.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["mixed"]}' }
+  - { type: creeper, pos: [506.5, -60, -2.5], nbt: '{PersistenceRequired:1b,Tags:["mixed"]}' }
+  - { type: zombie, pos: [503.5, -60, 3.5], nbt: '{PersistenceRequired:1b,Tags:["mixed"]}' }
+  - { type: zombie, pos: [509.5, -60, -4.5], nbt: '{PersistenceRequired:1b,Tags:["mixed"]}' }
+  - { type: zombie, pos: [512.5, -60, 4.5], nbt: '{PersistenceRequired:1b,Tags:["mixed"]}' }
+
+players:
+  - name: Blocked
+    pos: [0.5, -60, 0.5]
+    equipment:
+      head: diamond_helmet
+      chest: diamond_chestplate
+      legs: diamond_leggings
+      feet: diamond_boots
+      offhand: shield
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+  # Cave and Mixed carry their armour, as their fixtures had it.
+  - name: Cave
+    pos: [227.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+  - name: Mixed
+    pos: [457.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: shield, count: 1 }
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: iron_boots, count: 1 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/policy-sequence.ts]
+
+params:
+  players:
+    # The creeper starts in reach, so the reflex owns the body first; the
+    # route is asked for once, when it lets go.
+    Blocked:
+      idleWithinTicks: 600
+      actions:
+        - { action: navigate, input: { x: 11, y: -60, z: 0, range: 1 } }
+    Cave:
+      idleWithinTicks: 600
+      actions:
+        - { action: navigate, input: { x: 272, y: -60, z: 0, range: 1 } }
+    Mixed:
+      forbidResponses: [hide]
+      actions:
+        - action: set_survival_policy
+          input:
+            operation: set
+            changes: { combat: { hide: never } }
+            lifetime: { kind: session }
+            reason: Manage these creepers without hiding.
+        - { action: navigate, input: { x: 542, y: -60, z: 0, range: 1 } }
+
+tick:
+  - "gamemode spectator @a[name=!Blocked,name=!Cave,name=!Mixed,gamemode=!spectator]"
+  - "execute if entity @a[name=Blocked,x=9,y=-61,z=-1,dx=4,dy=3,dz=2] run scoreboard players add #blocked pens 1"
+  - "execute if entity @a[name=Cave,x=269,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #cave pens 1"
+  - "execute if entity @a[name=Mixed,x=539,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #mixed pens 1"
+
+schedule:
+  - { when: "score #blocked pens matches 40..", run: "kill @e[tag=blocked]" }
+  - { when: "score #cave pens matches 40..", run: "kill @e[tag=cave]" }
+  - { when: "score #mixed pens matches 40..", run: "kill @e[tag=mixed]" }
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: reach, who: Blocked, pos: [11.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: Blocked, seconds: 1 }
+    - { kind: completion, who: Blocked }
+    - { kind: reach, who: Cave, pos: [272.5, -60, 0.5], radius: 2 }
+    - { kind: health, who: Cave, health: 12 }
+    - { kind: survive, who: Cave, seconds: 1 }
+    - { kind: completion, who: Cave }
+    - { kind: reach, who: Mixed, pos: [542.5, -60, 0.5], radius: 2 }
+    - { kind: health, who: Mixed, health: 12 }
+    - { kind: survive, who: Mixed, seconds: 1 }
+    - { kind: completion, who: Mixed }

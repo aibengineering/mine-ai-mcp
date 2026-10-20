@@ -1,0 +1,88 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance]
+description: >-
+  Navigate past bow skeletons without taking an arrow. FirstShot walks past
+  two skeletons that start twelve blocks off the road, outside contact range,
+  so the guard must be up before the first shot rather than after the first
+  hit. Elevated walks between a skeleton on the ground and one on a stone
+  platform three blocks up. Each pen carries a sword and shield only, asks for
+  one route with no digging or building, and must arrive at full health with
+  no regeneration. The walled arena with three shooters is
+  known-failing/combat/skeleton-arena-crossfire.
+
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+# Pens two hundred blocks apart. Two seconds after a bot reaches its
+# destination its request has returned; the skeletons left in its pen are
+# then removed rather than left to shoot a body with no reflexes.
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -8 -60 -12 52 -50 12 air"
+  - "fill 192 -60 -12 252 -50 12 air"
+
+setup:
+  - "scoreboard objectives add pens dummy"
+  - "scoreboard players set #first pens 0"
+  - "scoreboard players set #elevated pens 0"
+
+geometry:
+  - fill: { block: stone, from: [208, -60, 6], to: [212, -58, 10] }
+
+entities:
+  - { type: skeleton, pos: [12.5, -60, 10.5], nbt: '{PersistenceRequired:1b,Tags:["first"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [28.5, -60, 10.5], nbt: '{PersistenceRequired:1b,Tags:["first"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [210.5, -57, 8.5], nbt: '{PersistenceRequired:1b,Tags:["elevated"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [212.5, -60, -8.5], nbt: '{PersistenceRequired:1b,Tags:["elevated"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+
+players:
+  - name: FirstShot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: Elevated
+    pos: [200.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+params:
+  players:
+    FirstShot:
+      action: navigate
+      input: { x: 44, y: -60, z: 0, range: 1, dig: false, scaffold: false }
+    Elevated:
+      action: navigate
+      input: { x: 244, y: -60, z: 0, range: 1, dig: false, scaffold: false }
+
+tick:
+  - "gamemode spectator @a[name=!FirstShot,name=!Elevated,gamemode=!spectator]"
+  - "execute if entity @a[name=FirstShot,x=41,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #first pens 1"
+  - "execute if entity @a[name=Elevated,x=241,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #elevated pens 1"
+
+schedule:
+  - { when: "score #first pens matches 40..", run: "kill @e[tag=first]" }
+  - { when: "score #elevated pens matches 40..", run: "kill @e[tag=elevated]" }
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: reach, who: FirstShot, pos: [44.5, -60, 0.5], radius: 2 }
+    - { kind: health, who: FirstShot, health: 20 }
+    - { kind: survive, who: FirstShot, seconds: 1 }
+    - { kind: completion, who: FirstShot }
+    - { kind: reach, who: Elevated, pos: [244.5, -60, 0.5], radius: 2 }
+    - { kind: health, who: Elevated, health: 20 }
+    - { kind: survive, who: Elevated, seconds: 1 }
+    - { kind: completion, who: Elevated }

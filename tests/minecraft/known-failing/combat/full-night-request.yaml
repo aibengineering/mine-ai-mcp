@@ -1,0 +1,81 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [known-failing, regression, slow]
+description: >-
+  Survive a whole native night at seven health inside a ring of eight zombies
+  and a spider, with nothing but 64 cobblestone, while one request stays
+  pending: a hunt for cows that are not there, observing for 550 seconds, which
+  must return once, when its window runs out, and not be cancelled. Observed
+  failing on 2026-10-20: about ninety seconds into the night the hunt returns
+  with "Collection outcome: interrupted" by a hostile-reflex hide response,
+  so the request is not kept for the night (the legacy run of 2026-10-19
+  failed differently: the bot died during the night). Remove the
+  known-failing tag once a wounded bot keeps a night-long request pending
+  through its own hide and lives to dawn.
+
+# The clock runs, from dusk: 550 seconds is the 11,000 ticks to dawn. Dawn
+# itself is not asserted; the observation window bounds the trial.
+world:
+  type: flat
+  time: 13000
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: true
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -16 -59 -16 16 -40 16 air"
+
+geometry:
+  - fill: { block: stone, from: [-16, -60, -16], to: [16, -60, 16] }
+
+players:
+  - name: NightSurvivor
+    pos: [0.5, -59, 0.5]
+    health: 7
+    inventory:
+      - { item: cobblestone, count: 64 }
+
+# The request is made first, while nothing is near; the ring of eight zombies
+# and a spider arrives two seconds later around the bot, as it did originally.
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/policy-sequence.ts]
+
+params:
+  idleWithinTicks: 200
+  actions:
+    - action: collect_mob_drop
+      # No cows anywhere: the window runs out and the hunt reports it.
+      # Returning early for any other reason is the request not being kept.
+      expect: { status: failed, errorContains: "[HUNT_OBSERVATION_EXHAUSTED]" }
+      input: { mob_name: cow, drop_name: leather, count: 1, observe_for_ms: 550000 }
+
+schedule:
+  - afterTicks: 40
+    run:
+      - "summon minecraft:zombie 8.5 -59 0.5 {PersistenceRequired:1b,IsBaby:0b}"
+      - "summon minecraft:zombie 6.5 -59 6.5 {PersistenceRequired:1b,IsBaby:0b}"
+      - "summon minecraft:zombie 0.5 -59 8.5 {PersistenceRequired:1b,IsBaby:0b}"
+      - "summon minecraft:zombie -5.5 -59 6.5 {PersistenceRequired:1b,IsBaby:0b}"
+      - "summon minecraft:zombie -7.5 -59 0.5 {PersistenceRequired:1b,IsBaby:0b}"
+      - "summon minecraft:zombie -5.5 -59 -5.5 {PersistenceRequired:1b,IsBaby:0b}"
+      - "summon minecraft:zombie 0.5 -59 -7.5 {PersistenceRequired:1b,IsBaby:0b}"
+      - "summon minecraft:zombie 6.5 -59 -5.5 {PersistenceRequired:1b,IsBaby:0b}"
+      - "summon minecraft:spider 3.5 -59 7.5 {PersistenceRequired:1b}"
+
+tick:
+  - "gamemode spectator @a[name=!NightSurvivor,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 660
+  goals:
+    # Server-observed deaths: a respawn cannot pass.
+    - { kind: survive, who: NightSurvivor, seconds: 550 }
+    - { kind: completion, who: NightSurvivor }

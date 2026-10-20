@@ -1,0 +1,152 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Fights around existing cover, three pens. Passage: two blazes hunted from a
+  prebuilt two-cell firing passage in diamond armour with a bow, then a walk
+  to the exit behind it. Transit: the same passage with a blaze just beyond
+  its mouth, hunted with sword and shield and no armour, so moving out of
+  cover under fire shows as damage (the 2026-09-08 spawner death, where the
+  guard dropped on the step out). Mixed: a skeleton and a
+  zombie come at the passage and are hunted from it, fire is set in the
+  passage entrance while the bot holds the inner cell, and the bot then walks
+  to the exit without digging. Every pen must
+  survive and finish its errand; Transit must keep its health with no
+  regeneration, and Mixed must leave the passage clear of fire. The open-ground
+  crossing past wither skeletons is known-failing/combat/cover-crossing-hunt.
+
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    # Off, so a lost guard shows as damage rather than being healed back.
+    naturalRegeneration: false
+    # Off, so fire set in the passage stays until the bot puts it out.
+    doFireTick: false
+    randomTickSpeed: 0
+
+# Pens two hundred blocks apart, beyond entity tracking and a blaze's follow
+# range.
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -8 -60 -8 12 -55 14 air"
+  - "fill 192 -60 -8 208 -55 10 air"
+  - "fill 592 -60 -8 612 -55 14 air"
+
+# The passage: a stone block with two air cells along x at z 0, two high,
+# open to +z at x 1 and closed everywhere else.
+geometry:
+  - fill: { block: stone, from: [-1, -60, -1], to: [2, -58, 0] }
+  - fill: { block: air, from: [0, -60, 0], to: [1, -59, 0] }
+  - fill: { block: stone, from: [0, -60, 1], to: [0, -59, 1] }
+  - fill: { block: stone, from: [199, -60, -1], to: [202, -58, 0] }
+  - fill: { block: air, from: [200, -60, 0], to: [201, -59, 0] }
+  - fill: { block: stone, from: [200, -60, 1], to: [200, -59, 1] }
+  - fill: { block: stone, from: [599, -60, -1], to: [602, -58, 0] }
+  - fill: { block: air, from: [600, -60, 0], to: [601, -59, 0] }
+  - fill: { block: stone, from: [600, -60, 1], to: [600, -59, 1] }
+
+# Every blaze holds a rod with a drop chance above one, so each kill yields
+# one and a hunt can finish on its own terms.
+entities:
+  - { type: blaze, pos: [1.5, -60, 10.5], nbt: '{PersistenceRequired:1b,Tags:["passage"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: blaze, pos: [5.5, -60, 10.5], nbt: '{PersistenceRequired:1b,Tags:["passage"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  # Four blocks past the passage mouth, so leaving cover is leaving it under fire.
+  - { type: blaze, pos: [201.5, -60, 4.5], nbt: '{PersistenceRequired:1b,Tags:["transit"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  # Each carries its drop in the off hand with a drop chance above one.
+  - { type: skeleton, pos: [601.5, -60, 10.5], nbt: '{PersistenceRequired:1b,Tags:["mixed"],HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.0f,2.0f]}' }
+  - { type: zombie, pos: [605.5, -60, 10.5], nbt: '{PersistenceRequired:1b,Tags:["mixed"],HandItems:[{},{id:"minecraft:rotten_flesh",count:1}],HandDropChances:[0.0f,2.0f]}' }
+
+players:
+  - name: Passage
+    pos: [0.5, -60, 0.5]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+      - { item: shield, count: 1 }
+      - { item: cooked_beef, count: 16 }
+  - name: Transit
+    pos: [200.5, -60, 0.5]
+    equipment: { offhand: shield }
+    inventory:
+      - { item: iron_sword, count: 1 }
+  - name: Mixed
+    pos: [600.5, -60, 0.5]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+      - { item: cooked_beef, count: 16 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/policy-sequence.ts]
+
+params:
+  players:
+    Passage:
+      idleWithinTicks: 400
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: blaze, drop_name: blaze_rod, count: 2 } }
+        - { action: navigate, input: { x: 0, y: -60, z: -4, range: 0, dig: false, scaffold: false } }
+    # The blaze starts four blocks from the passage mouth, so the reflex may
+    # hold the body first; each request waits for it to let go.
+    Transit:
+      idleWithinTicks: 400
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: blaze, drop_name: blaze_rod, count: 1 } }
+    # The original kit has no shield, so the hunts accept unblocked hits.
+    Mixed:
+      idleWithinTicks: 400
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: skeleton, drop_name: bone, count: 1, allow_without_shield: true } }
+        # The zombie often joins the first fight and dies in it; a hunt that
+        # then finds none says so truthfully. The kill goals judge both.
+        - action: collect_mob_drop
+          input: { mob_name: zombie, drop_name: rotten_flesh, count: 1, allow_without_shield: true }
+          expect: { status: [succeeded, partial, failed] }
+        - { action: navigate, input: { x: 600, y: -60, z: -4, range: 0, dig: false, scaffold: false } }
+
+tick:
+  - "gamemode spectator @a[name=!Passage,name=!Transit,name=!Mixed,gamemode=!spectator]"
+
+schedule:
+  # Fire in the passage entrance while the bot holds the inner cell, as a
+  # blaze impact would set it, twice.
+  - afterTicks: 100
+    when: "entity @a[name=Mixed,x=600,y=-60,z=0,dx=0,dy=1,dz=0]"
+    run: "setblock 601 -60 0 minecraft:fire keep"
+  - afterTicks: 300
+    when: "entity @a[name=Mixed,x=600,y=-60,z=0,dx=0,dy=1,dz=0]"
+    run: "setblock 601 -60 0 minecraft:fire keep"
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: kill, target: blaze, tag: passage }
+    - { kind: hasItem, who: Passage, item: blaze_rod, count: 2 }
+    - { kind: reach, who: Passage, pos: [0.5, -60, -3.5], radius: 1 }
+    - { kind: survive, who: Passage, seconds: 1 }
+    - { kind: completion, who: Passage }
+
+    - { kind: kill, target: blaze, tag: transit }
+    - { kind: hasItem, who: Transit, item: blaze_rod, count: 1 }
+    # One unblocked fireball costs five health and a burn.
+    - { kind: health, who: Transit, health: 16 }
+    - { kind: survive, who: Transit, seconds: 1 }
+    - { kind: completion, who: Transit }
+
+    - { kind: kill, target: skeleton, tag: mixed }
+    - { kind: kill, target: zombie, tag: mixed }
+    - { kind: blocksAt, block: air, positions: [[600, -60, 0], [601, -60, 0]] }
+    - { kind: reach, who: Mixed, pos: [600.5, -60, -3.5], radius: 1 }
+    - { kind: survive, who: Mixed, seconds: 1 }
+    - { kind: completion, who: Mixed }

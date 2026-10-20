@@ -1,0 +1,78 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [known-failing, regression]
+description: >-
+  Cross a two-wide stone bridge twenty blocks above lava while a bow skeleton
+  fires from a fenced platform beside the middle of it, and reach the far
+  bank alive. Observed failing in two of three runs on 2026-10-20 (one
+  passed in 32 s): the navigate never returned within 150 s and the bot,
+  alive, never reached the far bank, as in the legacy run of 2026-10-19,
+  which timed out the same way at 125 s. This is the hazardous
+  leg of combat/navigation-handoff, split out until the handoff on a narrow
+  bridge resumes the route.
+
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -12 -60 -6 44 -39 14 air"
+
+geometry:
+  - fill: { block: air, from: [-1, -60, -6], to: [33, -41, 14] }
+  - fill: { block: lava, from: [-1, -60, -6], to: [33, -60, 14] }
+  # The two banks, twenty blocks high, and the bridge between them.
+  - fill: { block: stone, from: [-12, -60, -4], to: [-1, -40, 5] }
+  - fill: { block: stone, from: [33, -60, -4], to: [44, -40, 5] }
+  - fill: { block: stone, from: [0, -40, 0], to: [32, -40, 1] }
+  # The skeleton's fenced platform beside the middle of the bridge.
+  - fill: { block: stone, from: [13, -40, 4], to: [19, -40, 10] }
+  - fill: { block: oak_fence, from: [13, -39, 4], to: [19, -39, 4] }
+  - fill: { block: oak_fence, from: [13, -39, 10], to: [19, -39, 10] }
+  - fill: { block: oak_fence, from: [13, -39, 5], to: [13, -39, 9] }
+  - fill: { block: oak_fence, from: [19, -39, 5], to: [19, -39, 9] }
+
+entities:
+  - type: skeleton
+    pos: [16.5, -39, 6.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}'
+
+players:
+  - name: BridgeBot
+    pos: [-8.5, -39, 0.5]
+    # Armour carried, not worn, as the original fixture had it.
+    inventory:
+      - { item: iron_helmet, count: 1 }
+      - { item: iron_chestplate, count: 1 }
+      - { item: iron_leggings, count: 1 }
+      - { item: golden_boots, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+
+params:
+  action: navigate
+  input: { x: 38, y: -39, z: 0, range: 1 }
+
+tick:
+  - "gamemode spectator @a[name=!BridgeBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: BridgeBot, pos: [38.5, -39, 0.5], radius: 2 }
+    - { kind: survive, who: BridgeBot, seconds: 1 }
+    - { kind: completion, who: BridgeBot }
