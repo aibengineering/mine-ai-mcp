@@ -680,3 +680,81 @@ test("a mob entering the scaffold cell while aiming prevents the placement packe
   assert.equal(effect.issued, false);
   assert.equal(packets, 0);
 });
+
+test("a step-up handed sideways momentum cancels it on the tread before jumping toward a lava stream", async () => {
+  // Request 205, run 17, 04:04:17.229Z, translated to y=63: the bot landed on
+  // the tread at 0.4934,63,0.6615 carrying 0.118 blocks a tick south, toward a
+  // falling lava stream in the cell at z=1, and the next step rose west. A
+  // jump removes ground friction, and the uncorrected body brushed the stream
+  // on its first airborne tick.
+  const recorded = { x: 0.012719493221936773, y: -0.024424088213685025, z: 0.11810073899198414 };
+  const position = { x: 0.4934031949601, y: 63, z: 0.6615179657788 };
+  const velocity = { x: 0.011574738831951432, y: 0, z: 0.10747167248269794 };
+  const yaw = -2.974041151924596;
+  const held = new Set<string>();
+  const pressed: { control: string; atZ: number }[] = [];
+  let reachedZ = position.z + 0.3;
+  const listeners = new Set<() => void>();
+  // Vanilla ground walking, enough for the correction: the input adds 0.1 a
+  // tick along the body's axes (normalised when two are held), the body moves,
+  // and ground friction keeps 0.546 of the speed for the next tick.
+  const physicsTick = () => {
+    const forward = (held.has("forward") ? 1 : 0) - (held.has("back") ? 1 : 0);
+    const right = (held.has("right") ? 1 : 0) - (held.has("left") ? 1 : 0);
+    const scale = forward !== 0 && right !== 0 ? 0.1 / Math.SQRT2 : 0.1;
+    velocity.x += scale * (forward * -Math.sin(yaw) + right * Math.cos(yaw));
+    velocity.z += scale * (forward * -Math.cos(yaw) - right * Math.sin(yaw));
+    position.x += velocity.x;
+    position.z += velocity.z;
+    reachedZ = Math.max(reachedZ, position.z + 0.3);
+    velocity.x *= 0.546;
+    velocity.z *= 0.546;
+  };
+  const bot = surface({
+    entity: { position, velocity, onGround: true, isInWater: false, yaw },
+    setControlState: (control, state) => {
+      if (state && !held.has(control)) pressed.push({ control, atZ: position.z });
+      if (state) held.add(control);
+      else held.delete(control);
+    },
+    on: ((event: string, listener: () => void) => {
+      if (event !== "physicsTick") return;
+      listeners.add(listener);
+      queueMicrotask(() => {
+        if (!listeners.has(listener)) return;
+        physicsTick();
+        // The route samples the body once per physics tick, as it does live.
+        current = actuator.movementSnapshot();
+        listener();
+      });
+    }) as MineflayerBotSurface["on"],
+    off: ((event: string, listener: () => void) => {
+      if (event === "physicsTick") listeners.delete(listener);
+    }) as MineflayerBotSurface["off"],
+  });
+  const actuator = new MineflayerBot(bot, { revision: 1 });
+  const step = movementStep("step_up", { x: 0, y: 63, z: 0 }, { x: -1, y: 64, z: 0 }, { id: "recorded-west-step" });
+  // The handoff's sample is the recorded displacement, not a fresh zero.
+  let current = { ...actuator.movementSnapshot(), velocity: recorded };
+  const snapshot = () => current;
+  const preparation = await actuator.prepareMovement(
+    step,
+    { runId: "replay", planId: "recorded", stepId: step.id, attempt: 1 },
+    new AbortController().signal,
+    { end: "continuous" },
+    snapshot,
+  );
+
+  assert.equal(preparation.kind, "ready");
+  const [correction] = pressed;
+  assert.ok(correction, "the drift toward the stream was not corrected");
+  const pushesNorth =
+    (correction.control === "forward" && -Math.cos(yaw) < 0) ||
+    (correction.control === "back" && Math.cos(yaw) < 0) ||
+    (correction.control === "right" && -Math.sin(yaw) < 0) ||
+    (correction.control === "left" && Math.sin(yaw) < 0);
+  assert.ok(pushesNorth, `the first correction (${correction.control}) must oppose the southward drift`);
+  assert.equal(pressed.some(({ control }) => control === "jump"), false, "no jump before the drift is spent");
+  assert.ok(reachedZ < 1, `the body reached z=${reachedZ.toFixed(3)}, into the stream's cell`);
+  assert.ok(Math.hypot(velocity.x, velocity.z) <= 0.03, "the step-up is handed a body at rest on its tread");
+});

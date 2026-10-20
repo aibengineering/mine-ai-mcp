@@ -69,6 +69,36 @@ geometry:
   - setblock: { block: "ladder[facing=east]", at: [ 60, -58, 0 ] }
   - setblock: { block: "ladder[facing=east]", at: [ 60, -57, 0 ] }
   - setblock: { block: "ladder[facing=east]", at: [ 60, -56, 0 ] }
+  # North annex, outside the corridor's north wall and over open void, entered
+  # by a gap in the wall at x=28 and left by another at x=50.
+  - fill: { block: air, from: [ 28, -60, -4 ], to: [ 28, -59, -4 ] }
+  - fill: { block: air, from: [ 50, -60, -4 ], to: [ 50, -59, -4 ] }
+  - fill: { block: andesite, from: [ 28, -61, -9 ], to: [ 28, -61, -5 ] }
+  - setblock: { block: andesite, at: [ 29, -60, -9 ] }
+  # 3a. Exact arrival (jump-exact-arrival, translated 31 east and 9 north): a
+  # sprint along a sandstone strip, a two-block drop, a turn and a one-block
+  # jump gap. The driver checks the settled position ten ticks after arrival,
+  # so a coast that carries the body out of the target cell fails the leg.
+  - fill: { block: sandstone, from: [ 30, -59, -9 ], to: [ 33, -59, -9 ] }
+  - fill: { block: sandstone, from: [ 34, -61, -9 ], to: [ 34, -61, -7 ] }
+  - fill: { block: sandstone, from: [ 36, -61, -7 ], to: [ 38, -61, -7 ] }
+  # The low walkway east, past the canopy and back through the wall at x=50.
+  - fill: { block: andesite, from: [ 39, -61, -7 ], to: [ 52, -61, -7 ] }
+  - fill: { block: andesite, from: [ 50, -61, -6 ], to: [ 50, -61, -5 ] }
+  # 3b. Leaf-hemmed ascent (leaf-hemmed-diagonal-ascent, translated 52 east and
+  # 8 north): one leaf step, then a diagonal rise onto a dirt tread whose two
+  # upper corner cells are leaves. The player's head sweeps them while rising,
+  # so that edge bonks; the live canopy looped on it. A longer cardinal stair
+  # to the east reaches the same tread. A bonk drops the bot into the void.
+  - setblock: { block: "oak_leaves[persistent=true]", at: [ 52, -61, -8 ] }
+  - setblock: { block: "oak_leaves[persistent=true]", at: [ 51, -60, -8 ] }
+  - setblock: { block: dirt, at: [ 52, -59, -9 ] }
+  - setblock: { block: "oak_leaves[persistent=true]", at: [ 51, -57, -9 ] }
+  - setblock: { block: "oak_leaves[persistent=true]", at: [ 52, -57, -8 ] }
+  - fill: { block: blue_concrete, from: [ 53, -61, -8 ], to: [ 54, -61, -8 ] }
+  - fill: { block: blue_concrete, from: [ 54, -61, -10 ], to: [ 54, -61, -9 ] }
+  - setblock: { block: gold_block, at: [ 53, -60, -10 ] }
+  - setblock: { block: emerald_block, at: [ 52, -59, -10 ] }
   # 4. Preserve the original unsupported diagonal treads and enclosing shaft.
   - fill: { block: "bedrock", from: [ 72, -63, -2 ], to: [ 84, -63, 10 ] }
   # The shaft walls follow the same pattern; the treads inside stay bedrock.
@@ -101,7 +131,7 @@ players:
 client:
   command: bun
   cwd: ../..
-  args: [ client-host.ts, drivers/navigate-route.ts ]
+  args: [ client-host.ts, drivers/pathfinder-course.ts ]
 params:
   legs:
     - { target: [ 0, -60, -8 ], range: 0, label: "Constrained descent: original death17 staircase" }
@@ -118,6 +148,9 @@ params:
     - { target: [ 63, -60, 0 ], range: 0, label: "Climbing: down the ladder" }
     - { target: [ 58, -55, 0 ], range: 0, label: "Climbing: up the ladder" }
     - { target: [ 53, -60, 0 ], range: 0, label: "Climbing: down the vines" }
+    - { target: [ 31, -58, -9 ], range: 0, label: "Exact arrival: climb onto the sandstone strip" }
+    - { target: [ 36, -60, -7 ], range: 0, label: "Exact arrival: sprint, drop, turn, short jump" }
+    - { target: [ 52, -58, -9 ], range: 0, label: "Canopy: reach the hemmed tread by the stair" }
     - { target: [ 74, -60, 0 ], range: 0, label: "Diagonal ascent: enter at the bottom tread" }
     - { target: [ 81, -55, 5 ], range: 0, label: "Diagonal ascent: reach the finish shelf" }
 goal:

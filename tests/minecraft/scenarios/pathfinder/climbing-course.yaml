@@ -1,0 +1,120 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Climb five kinds of hanging and wall-backed vine without leaving the column: twisting vines
+  (plant and tip) up to a side landing, weeping vines down from a side ledge, a free-hanging
+  vine under a leaf canopy up to a side landing, a sprint into a ten-high north-backed column
+  over a six-deep pit and onto its top, and a run off a ledge into the vine column hanging
+  past its lip, ridden fifteen blocks down. Every column is tall enough that leaving it is a
+  damaging fall, so full health at each arrival is the verdict. Guards incidents 6e8aea78
+  (drift out of a sprint-entered column) and 97c795ac (crossing through a column off a ledge),
+  2026-09-13.
+
+# One pen per climb, 100 blocks apart, each running one navigate leg with
+# digging and scaffolding off. The legacy drivers failed any climb step that
+# failed, because a fall-and-retry could still arrive; here a fall from any
+# column costs health, and regeneration is off.
+reset:
+  - "fill -4 -61 -4 8 -48 4 air"
+  - "fill 96 -61 -4 108 -48 4 air"
+  - "fill 196 -61 -4 208 -48 4 air"
+  - "fill 292 -61 -4 308 -42 4 air"
+  - "fill 388 -61 -12 414 -36 12 air"
+
+geometry:
+  # Twisting: a nine-block plant column with its tip, and a netherrack landing
+  # beside it eight blocks up.
+  - fill: { block: netherrack, from: [-4, -61, -4], to: [8, -61, 4] }
+  - fill: { block: twisting_vines_plant, from: [2, -60, 0], to: [2, -52, 0] }
+  - setblock: { block: twisting_vines, at: [2, -51, 0] }
+  - fill: { block: netherrack, from: [3, -53, 0], to: [5, -53, 0] }
+
+  # Weeping: vines hang from a netherrack ceiling down to the floor; the bot
+  # starts on a side ledge under the ceiling and descends eight blocks.
+  - fill: { block: netherrack, from: [96, -61, -4], to: [108, -61, 4] }
+  - fill: { block: netherrack, from: [99, -50, -1], to: [103, -50, 1] }
+  - fill: { block: netherrack, from: [99, -53, 0], to: [101, -53, 0] }
+  - fill: { block: weeping_vines_plant, from: [102, -59, 0], to: [102, -51, 0] }
+  - setblock: { block: weeping_vines, at: [102, -60, 0] }
+
+  # Free-hanging: a vine attached only to the leaf canopy above it, with a
+  # stone landing beside it seven blocks up. Placed top down: a hanging vine is
+  # held by the one above it.
+  - fill: { block: andesite, from: [196, -61, -4], to: [208, -61, 4] }
+  - fill: { block: "oak_leaves[persistent=true]", from: [201, -50, -1], to: [203, -50, 1] }
+  - fill: { block: stone, from: [203, -54, 0], to: [205, -54, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -51, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -52, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -53, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -54, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -55, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -56, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -57, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -58, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -59, 0] }
+  - setblock: { block: "vine[up=true]", at: [202, -60, 0] }
+
+  # Sprint entry: a stone runway six above a pit floor leads west into an
+  # eleven-vine column backed by a stone wall on its north side. Drifting out
+  # of the open south side falls into the pit.
+  - fill: { block: andesite, from: [292, -61, -4], to: [308, -61, 4] }
+  - fill: { block: stone, from: [301, -60, -1], to: [303, -44, -1] }
+  - setblock: { block: stone, at: [302, -55, 0] }
+  - fill: { block: stone, from: [303, -55, 0], to: [308, -55, 1] }
+  - fill: { block: "vine[north=true]", from: [302, -54, 0], to: [302, -44, 0] }
+
+  # Ledge entry: a ledge fifteen up with a north-backed vine column hanging
+  # past its lip and nothing else below it.
+  - fill: { block: andesite, from: [388, -61, -12], to: [414, -61, 12] }
+  - fill: { block: stone, from: [392, -46, -2], to: [401, -46, 2] }
+  - fill: { block: stone, from: [402, -60, -1], to: [402, -37, -1] }
+  - fill: { block: "vine[north=true]", from: [402, -60, 0], to: [402, -45, 0] }
+
+players:
+  - { name: Twisting, pos: [0.5, -60, 0.5] }
+  - { name: Weeping, pos: [100.5, -52, 0.5] }
+  - { name: FreeVine, pos: [200.5, -60, 0.5] }
+  - { name: SprintVine, pos: [307.5, -54, 0.5] }
+  - { name: LedgeVine, pos: [392.5, -45, 0.5] }
+
+tick:
+  - "gamemode spectator @a[name=!Twisting,name=!Weeping,name=!FreeVine,name=!SprintVine,name=!LedgeVine,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  players:
+    Twisting:
+      legs: [{ target: [4, -52, 0], range: 0.75, label: "Climb twisting vines onto the side landing" }]
+    Weeping:
+      legs: [{ target: [104, -60, 0], range: 1, label: "Descend weeping vines from the side ledge" }]
+    FreeVine:
+      legs: [{ target: [204, -53, 0], range: 0.75, label: "Climb the free-hanging vine onto the side landing" }]
+    SprintVine:
+      legs: [{ target: [302, -43, -1], range: 0, label: "Sprint into the north-backed column and climb onto its top" }]
+    LedgeVine:
+      legs: [{ target: [407, -60, 0], range: 1, label: "Run off the ledge into the hanging column and ride it down" }]
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: reach, who: Twisting, pos: [4.5, -52, 0.5], radius: 1 }
+    - { kind: health, who: Twisting, health: 20 }
+    - { kind: completion, who: Twisting }
+    - { kind: reach, who: Weeping, pos: [104.5, -60, 0.5], radius: 1.5 }
+    - { kind: health, who: Weeping, health: 20 }
+    - { kind: completion, who: Weeping }
+    - { kind: reach, who: FreeVine, pos: [204.5, -53, 0.5], radius: 1 }
+    - { kind: health, who: FreeVine, health: 20 }
+    - { kind: completion, who: FreeVine }
+    - { kind: reach, who: SprintVine, pos: [302.5, -43, -0.5], radius: 1 }
+    - { kind: health, who: SprintVine, health: 20 }
+    - { kind: completion, who: SprintVine }
+    - { kind: reach, who: LedgeVine, pos: [407.5, -60, 0.5], radius: 1.5 }
+    - { kind: health, who: LedgeVine, health: 20 }
+    - { kind: completion, who: LedgeVine }
+    - { kind: survive, seconds: 1 }

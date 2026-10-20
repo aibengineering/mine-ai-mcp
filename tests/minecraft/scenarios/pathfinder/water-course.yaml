@@ -1,0 +1,167 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Cross surface water at full health without digging. Seven pens: a shallow current channel
+  downstream, upstream and out onto a dry ledge; a sideways current crossed and recrossed in
+  a walled corridor; a two-deep passage with a corner and an exit ledge; a two-deep falling
+  current left through its narrow sideways ledge twice (seed 20260904's obsidian pickup
+  holes); a falling column entered and then left beneath a two-block exit ceiling
+  (EnderSeeker's stalled westward swim at -862,-54,-472); a diagonal current crossed under a
+  two-block ceiling; and a rise from a two-deep flowing pickup hole. Each original failure was
+  a stall, a drift out of the corridor or a failure to surface.
+
+# Every arrival is checked ten ticks after it settles, at the requested cell
+# (ranges of 0.1 to 0.5), and at full health: regeneration is off, so drowning,
+# suffocation or a fall shows as lost health. A stall fails the leg or times
+# out the trial. Pens are 100 blocks apart, each a sealed stone chamber, so no
+# water reaches another pen.
+reset:
+  - "fill -5 -59 -5 10 -40 5 air"
+  - "fill 97 -59 -5 109 -40 5 air"
+  - "fill 198 -60 -2 210 -40 10 air"
+  - "fill 302 -60 2 308 -40 9 air"
+  - "fill 396 -61 -3 404 -40 3 air"
+  - "fill 492 -58 -8 512 -40 8 air"
+  - "fill 595 -57 -5 606 -40 5 air"
+
+geometry:
+  # Channel (water-current-channel): a one-deep channel flowing east from its
+  # source, with a dry ledge at the upstream end.
+  - fill: { block: stone, from: [-2, -60, -1], to: [7, -60, 1] }
+  - fill: { block: stone, from: [-2, -59, -1], to: [7, -58, -1] }
+  - fill: { block: stone, from: [-2, -59, 1], to: [7, -58, 1] }
+  - fill: { block: stone, from: [-2, -59, 0], to: [-1, -59, 0] }
+  - setblock: { block: stone, at: [7, -59, 0] }
+  - setblock: { block: water, at: [0, -59, 0] }
+
+  # CrossCurrent (water-cross-current): a walled corridor whose source sits in
+  # one side, so the current runs across the route.
+  - fill: { block: stone, from: [99, -60, -3], to: [107, -60, 3] }
+  - fill: { block: stone, from: [99, -59, -3], to: [107, -58, -3] }
+  - fill: { block: stone, from: [99, -59, 3], to: [107, -58, 3] }
+  - fill: { block: stone, from: [99, -59, -2], to: [99, -58, 2] }
+  - fill: { block: stone, from: [107, -59, -2], to: [107, -58, 2] }
+  - setblock: { block: water, at: [103, -59, -2] }
+
+  # DeepCorner (water-deep-corner): a two-deep passage east, a corner, a
+  # passage south and a stone exit step at its end.
+  - fill: { block: stone, from: [200, -61, -1], to: [209, -58, 9] }
+  - fill: { block: air, from: [201, -60, 0], to: [208, -58, 0] }
+  - fill: { block: air, from: [208, -60, 0], to: [208, -58, 8] }
+  - fill: { block: water, from: [201, -60, 0], to: [208, -59, 0] }
+  - fill: { block: water, from: [208, -60, 0], to: [208, -59, 7] }
+  - setblock: { block: stone, at: [208, -60, 8] }
+
+  # FallingCorner (water-falling-corner): pickup holes filled by a waterfall
+  # that pushes the body toward a stone corner; the way out is a narrow ledge.
+  - fill: { block: stone, from: [303, -62, 3], to: [307, -55, 8] }
+  - fill: { block: air, from: [304, -60, 4], to: [305, -58, 6] }
+  - fill: { block: air, from: [305, -60, 7], to: [305, -58, 7] }
+  - setblock: { block: air, at: [304, -61, 6] }
+  - fill: { block: air, from: [306, -59, 4], to: [306, -56, 5] }
+  - fill: { block: stone, from: [306, -57, 5], to: [306, -56, 5] }
+  - setblock: { block: water, at: [306, -56, 4] }
+
+  # LowCeiling (water-falling-low-ceiling): a falling column fed from the east,
+  # whose westward exit tunnel is only two blocks high.
+  - fill: { block: stone, from: [397, -62, -2], to: [403, -56, 2] }
+  - fill: { block: air, from: [398, -59, 0], to: [400, -58, 0] }
+  - fill: { block: air, from: [400, -57, 0], to: [401, -57, 0] }
+  - setblock: { block: water, at: [401, -58, 0] }
+
+  # DiagonalFlow (water-cross-current-low-ceiling): a source against a wall
+  # spreads a diagonal current under a two-block ceiling.
+  - fill: { block: stone, from: [492, -61, -8], to: [512, -59, 8] }
+  - fill: { block: stone, from: [501, -56, -2], to: [504, -56, 2] }
+  - fill: { block: stone, from: [505, -59, -3], to: [505, -56, 3] }
+  - setblock: { block: water, at: [504, -58, 0] }
+
+  # PickupHole (shallow-water-surface): a two-deep hole with a source on its
+  # rim, so the column flows.
+  - fill: { block: stone, from: [600, -61, -1], to: [603, -58, 1] }
+  - fill: { block: air, from: [601, -60, 0], to: [602, -58, 0] }
+  - setblock: { block: stone, at: [602, -60, 0] }
+  - setblock: { block: water, at: [602, -59, 0] }
+  # A step out on the west rim, one block above the water, to rest on.
+  - setblock: { block: air, at: [600, -58, 0] }
+
+players:
+  - { name: Channel, pos: [1.5, -59, 0.5] }
+  - { name: CrossCurrent, pos: [100.5, -59, 0.5] }
+  - { name: DeepCorner, pos: [201.5, -60, 0.5] }
+  - { name: FallingCorner, pos: [305.5, -60, 6.5] }
+  # Starts in the exit tunnel; the first leg enters the falling column.
+  - { name: LowCeiling, pos: [398.5, -59, 0.5] }
+  - { name: DiagonalFlow, pos: [502.35, -58, -0.55] }
+  - { name: PickupHole, pos: [601.5, -60, 0.5] }
+
+tick:
+  - "gamemode spectator @a[name=!Channel,name=!CrossCurrent,name=!DeepCorner,name=!FallingCorner,name=!LowCeiling,name=!DiagonalFlow,name=!PickupHole,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  players:
+    Channel:
+      legs:
+        - { target: [5, -59, 0], range: 0.1, label: "Channel: downstream" }
+        - { target: [1, -59, 0], range: 0.1, label: "Channel: upstream" }
+        - { target: [-1, -58, 0], range: 0.1, label: "Channel: onto the dry ledge" }
+    CrossCurrent:
+      legs:
+        - { target: [106, -59, 0], range: 0.1, label: "Cross current: across" }
+        - { target: [100, -59, 0], range: 0.1, label: "Cross current: back" }
+    DeepCorner:
+      legs:
+        - { target: [208, -59, 7], range: 0.1, label: "Deep passage: round the corner" }
+        - { target: [201, -59, 0], range: 0.1, label: "Deep passage: return" }
+        - { target: [208, -59, 8], range: 0.1, label: "Deep passage: onto the exit step" }
+    FallingCorner:
+      legs:
+        - { target: [306, -59, 5], range: 0.1, label: "Falling current: out by the ledge" }
+        - { target: [305, -60, 6], range: 0.1, label: "Falling current: back into the current" }
+        - { target: [306, -59, 5], range: 0.1, label: "Falling current: out again" }
+    LowCeiling:
+      legs:
+        - { target: [400, -58, 0], range: 0.5, label: "Low ceiling: into the falling column" }
+        - { target: [398, -59, 0], range: 0.1, label: "Low ceiling: out under the two-block ceiling" }
+    DiagonalFlow:
+      legs:
+        - { target: [502, -58, 0], range: 0.1, label: "Diagonal current under the ceiling" }
+    PickupHole:
+      legs:
+        # The swim reports arrival while still rising, so the settled body is
+        # allowed up to the hole's mouth; sinking back or drifting out fails.
+        - { target: [601, -59, 0], range: 0.1, tolerance: 1.5, label: "Pickup hole: rise and hold the flowing column" }
+        # The runtime and its breath reflex close when the driver returns, and
+        # an idle body sinks back to the bottom of the hole and drowns.
+        - { target: [600, -58, 0], range: 0.1, label: "Pickup hole: out onto the rim step" }
+
+# A final reach goal is kept only where the bot can hold its place once the
+# runtime closes; in a current or at a wet exit the idle body drifts, so those
+# pens rely on the driver's checkpoints.
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: reach, who: Channel, pos: [-0.5, -58, 0.5], radius: 0.75 }
+    - { kind: health, who: Channel, health: 20 }
+    - { kind: completion, who: Channel }
+    - { kind: health, who: CrossCurrent, health: 20 }
+    - { kind: completion, who: CrossCurrent }
+    - { kind: health, who: DeepCorner, health: 20 }
+    - { kind: completion, who: DeepCorner }
+    - { kind: reach, who: FallingCorner, pos: [306.5, -59, 5.5], radius: 0.75 }
+    - { kind: health, who: FallingCorner, health: 20 }
+    - { kind: completion, who: FallingCorner }
+    - { kind: reach, who: LowCeiling, pos: [398.5, -59, 0.5], radius: 0.4 }
+    - { kind: health, who: LowCeiling, health: 20 }
+    - { kind: completion, who: LowCeiling }
+    - { kind: health, who: DiagonalFlow, health: 20 }
+    - { kind: completion, who: DiagonalFlow }
+    - { kind: health, who: PickupHole, health: 20 }
+    - { kind: completion, who: PickupHole }
+    - { kind: survive, seconds: 1 }

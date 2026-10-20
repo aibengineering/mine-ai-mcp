@@ -165,4 +165,4 @@ client:
   cwd: ../..
   args:
     - client-host.ts
-    - drivers/navigate-route.ts
+    - drivers/pathfinder-course.ts

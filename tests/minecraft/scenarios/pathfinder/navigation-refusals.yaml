@@ -1,0 +1,163 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance]
+description: >-
+  Refuse what navigation cannot do safely, truthfully and without damage, and still do what
+  it can. Six pens: inside a roofed cave, an omitted height is refused, then an explicit
+  height digs and climbs onto the roof; beside canopy, overhang and bedrock-roof columns,
+  each omitted height and an adjacent mid-air height are refused, then an explicit floor is
+  reached; a corridor blocked only by a spawner is refused with digging allowed; a sealed
+  cobblestone hut is not dug out of with digging forbidden; a drop excavation through warped
+  nylium that would let lava beside the head cell into the landing is refused; and an
+  unsupported eight-block descent from a floating platform stops with the bot still on it.
+
+# Every refusal must be the expected status, and must leave the bot at full
+# health ten ticks later; regeneration is off. Block goals show that nothing
+# protected was broken on the way to a refusal. A refusal that became an
+# attempt changes the leg's status and tends to break the protected block or
+# burn the bot; an over-eager refusal fails the cave or column arrival legs.
+reset:
+  - "fill -10 -60 -10 10 -45 10 air"
+  - "fill 97 -60 -3 116 -45 3 air"
+  - "fill 199 -61 -1 201 -57 5 air"
+  - "fill 294 -61 -6 306 -55 6 air"
+  - "fill 395 -62 -4 403 -53 4 air"
+  - "fill 484 -64 -16 524 -40 16 air"
+
+geometry:
+  # Cave (surface-from-cave): a sealed stone cave whose roof is the only
+  # surface at x=3.
+  - fill: { block: stone, from: [-8, -60, -8], to: [8, -55, 8] }
+  - fill: { block: air, from: [-5, -59, -5], to: [5, -58, 5] }
+
+  # Columns (ground-column-choice): leaves, a stone overhang and a bedrock
+  # roof, each above open floor, so omitting y names two floors.
+  - fill: { block: stone, from: [97, -61, -3], to: [116, -61, 3] }
+  - setblock: { block: "oak_leaves[persistent=true]", at: [104, -54, 0] }
+  - setblock: { block: stone, at: [108, -54, 0] }
+  - setblock: { block: bedrock, at: [112, -54, 0] }
+
+  # Spawner (preserve-spawner): a one-wide bedrock corridor whose only way
+  # through is the spawner.
+  - fill: { block: bedrock, from: [199, -61, -1], to: [201, -57, 5] }
+  - fill: { block: air, from: [200, -60, 0], to: [200, -59, 4] }
+  - setblock: { block: spawner, at: [200, -60, 2] }
+
+  # Sealed hut (no-dig-camp's sealed half): the cobblestone camp with its door
+  # bricked up.
+  - fill: { block: stone, from: [294, -61, -6], to: [306, -61, 6] }
+  - fill: { block: cobblestone, from: [298, -60, -2], to: [302, -58, 2] }
+  - fill: { block: air, from: [299, -60, -1], to: [301, -59, 1] }
+
+  # Nylium (lava-above-excavation): the landing below is warped nylium with
+  # sprouts; lava beside the cell above drains south now, and would drain east
+  # into the landing once the nylium is dug.
+  - fill: { block: bedrock, from: [396, -61, -3], to: [402, -54, 3] }
+  - fill: { block: air, from: [400, -58, -1], to: [400, -57, 0] }
+  - setblock: { block: warped_nylium, at: [400, -59, 0] }
+  - setblock: { block: nether_sprouts, at: [400, -58, 0] }
+  - fill: { block: air, from: [399, -60, 1], to: [399, -58, 1] }
+  - setblock: { block: air, at: [399, -58, 0] }
+  - setblock: { block: lava, at: [398, -58, 0] }
+
+  # Stranded (stranded-platform-descent): a one-block-thick platform eight
+  # above the ground, with nothing beneath it.
+  - fill: { block: stone, from: [484, -61, -16], to: [524, -60, 16] }
+  - fill: { block: stone, from: [500, -52, 0], to: [504, -52, 4] }
+  - setblock: { block: emerald_block, at: [516, -60, 2] }
+
+players:
+  - name: CaveWalker
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+  - name: ColumnBot
+    pos: [100.5, -60, 0.5]
+    inventory: [{ item: dirt, count: 16 }]
+  - name: SpawnerBot
+    pos: [200.5, -60, 0.5]
+    inventory: [{ item: diamond_pickaxe, count: 1 }]
+  - name: SealedBot
+    pos: [300.5, -60, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+  - name: LavaExcavator
+    pos: [400.5, -58, -0.5]
+    inventory: [{ item: diamond_pickaxe, count: 1 }]
+  # Materials and a pickaxe on purpose: having them does not make the
+  # eight-block drop a supported descent.
+  - name: Stranded
+    pos: [502.5, -51, 2.5]
+    inventory:
+      - { item: cobblestone, count: 64 }
+      - { item: iron_pickaxe, count: 1 }
+
+tick:
+  - "gamemode spectator @a[name=!CaveWalker,name=!ColumnBot,name=!SpawnerBot,name=!SealedBot,name=!LavaExcavator,name=!Stranded,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  players:
+    CaveWalker:
+      dig: true
+      scaffold: true
+      legs:
+        - { target: [3, 0], range: 0, label: "Cave: refuse an omitted height", expect: { status: failed, errorContains: "[NAVIGATION_HEIGHT_REQUIRED]" } }
+        - { target: [3, -54, 0], range: 0, label: "Cave: dig and climb onto the roof" }
+    ColumnBot:
+      legs:
+        - { target: [104, 0], range: 1, label: "Columns: refuse an omitted height under leaves", expect: { status: failed, errorContains: "[NAVIGATION_HEIGHT_REQUIRED]" } }
+        - { target: [108, 0], range: 1, label: "Columns: refuse an omitted height under an overhang", expect: { status: failed, errorContains: "[NAVIGATION_HEIGHT_REQUIRED]" } }
+        - { target: [112, 0], range: 1, label: "Columns: refuse an omitted height under bedrock", expect: { status: failed, errorContains: "[NAVIGATION_HEIGHT_REQUIRED]" } }
+        - { target: [101, -58, 0], range: 0, dig: true, scaffold: true, label: "Columns: refuse an adjacent mid-air height", expect: { status: failed, errorContains: "[NAVIGATION_TARGET_UNSUPPORTED]" } }
+        - { target: [112, -60, 0], range: 0, label: "Columns: reach the floor under the bedrock roof" }
+    SpawnerBot:
+      legs:
+        - { target: [200, -60, 4], range: 0, dig: true, label: "Spawner: refuse to dig through it", expect: { status: failed } }
+    SealedBot:
+      legs:
+        - { target: [300, -60, -4], range: 0, label: "Sealed hut: refuse with digging forbidden", expect: { status: failed, errorContains: "no path" } }
+    LavaExcavator:
+      # Let both initial lava flow steps settle before asking.
+      waitTicks: 80
+      dig: true
+      legs:
+        - { target: [400, -59, 0], range: 0, label: "Nylium: refuse an excavation that floods the landing", expect: { status: failed } }
+    Stranded:
+      dig: true
+      scaffold: true
+      legs:
+        - { target: [516, -59, 2], range: 1.5, label: "Stranded: stop above an unsupported descent", expect: { status: failed, errorContains: "[NAVIGATION_STOPPED]" } }
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: CaveWalker, pos: [3.5, -54, 0.5], radius: 0.7 }
+    - { kind: health, who: CaveWalker, health: 20 }
+    - { kind: completion, who: CaveWalker }
+    - { kind: reach, who: ColumnBot, pos: [112.5, -60, 0.5], radius: 0.7 }
+    # The mid-air refusal spent no scaffold.
+    - { kind: hasItem, who: ColumnBot, item: dirt, count: 16 }
+    - { kind: health, who: ColumnBot, health: 20 }
+    - { kind: completion, who: ColumnBot }
+    - { kind: blockAt, pos: [200, -60, 2], block: spawner }
+    - { kind: health, who: SpawnerBot, health: 20 }
+    - { kind: completion, who: SpawnerBot }
+    - { kind: blocksAt, block: cobblestone, positions: [[298, -60, 0], [298, -59, 0], [300, -60, -2], [300, -59, -2], [300, -60, 2], [302, -60, 0], [300, -58, 0]] }
+    - { kind: health, who: SealedBot, health: 20 }
+    - { kind: completion, who: SealedBot }
+    - { kind: blockAt, pos: [400, -59, 0], block: warped_nylium }
+    - { kind: health, who: LavaExcavator, health: 20 }
+    - { kind: completion, who: LavaExcavator }
+    # Still up at the platform's height: on it, or on blocks it bridged out
+    # towards the target. The ground is nine blocks below this sphere's centre.
+    - { kind: reach, who: Stranded, pos: [508.5, -51, 2.5], radius: 8.5 }
+    - { kind: health, who: Stranded, health: 20 }
+    - { kind: completion, who: Stranded }
+    - { kind: survive, seconds: 1 }

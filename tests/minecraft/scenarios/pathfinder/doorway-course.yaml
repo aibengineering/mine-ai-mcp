@@ -1,0 +1,126 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Leave buildings by their doors and leave every passage as it was found. Four pens: from
+  inside a closed plank house to a point behind its back wall, with digging allowed; from a
+  cramped stance beside a chest in a furnished camp, out through a closed birch door; out of
+  a cobblestone camp by its door with digging forbidden; and along a corridor through an
+  already-open door, a closed door and a fence gate, then back through the closed door from
+  right beside it. Doors and gates that were closed are closed again, the open one stays
+  open, and no wall is broken.
+
+# Each pen asks for what its legacy fixture asked, including the dig setting:
+# the house and the corridor allow digging, so the intact-wall and door-state
+# goals show the route went through the doorway and did not break its way out.
+# Mine Labs checks block state with `execute if block`, so the goals name the
+# door's open state.
+reset:
+  - "fill -8 -61 -10 8 -50 10 air"
+  - "fill 95 -61 -5 106 -55 5 air"
+  - "fill 194 -61 -6 206 -55 6 air"
+  - "fill 297 -61 -2 318 -56 2 air"
+
+geometry:
+  # House (house-door-exit): a closed 7x7 oak-plank house with a roof and one
+  # south door; the target is behind the north wall.
+  - fill: { block: smooth_stone, from: [-8, -61, -10], to: [8, -61, 10] }
+  - fill: { block: oak_planks, from: [-3, -61, -3], to: [3, -61, 3] }
+  - fill: { block: oak_planks, from: [-3, -60, -3], to: [3, -58, 3] }
+  - fill: { block: air, from: [-2, -60, -2], to: [2, -58, 2] }
+  - fill: { block: oak_planks, from: [-3, -57, -3], to: [3, -57, 3] }
+  - fill: { block: air, from: [0, -60, 3], to: [0, -59, 3] }
+  - setblock: { block: "oak_door[facing=south,half=lower,hinge=left,open=false,powered=false]", at: [0, -60, 3] }
+  - setblock: { block: "oak_door[facing=south,half=upper,hinge=left,open=false,powered=false]", at: [0, -59, 3] }
+  - setblock: { block: gold_block, at: [0, -61, -6] }
+
+  # Camp (camp-door-replan): a plank wall with a birch door, two chests beside
+  # the door, a furnace and a table.
+  - fill: { block: andesite, from: [95, -61, -5], to: [106, -61, 5] }
+  - fill: { block: oak_planks, from: [100, -60, -2], to: [100, -58, 2] }
+  - setblock: { block: "birch_door[facing=east,half=lower,hinge=left,open=false,powered=false]", at: [100, -60, 0] }
+  - setblock: { block: "birch_door[facing=east,half=upper,hinge=left,open=false,powered=false]", at: [100, -59, 0] }
+  - setblock: { block: chest, at: [102, -60, 0] }
+  - setblock: { block: chest, at: [103, -60, 0] }
+  - setblock: { block: furnace, at: [102, -60, 2] }
+  - setblock: { block: crafting_table, at: [101, -60, 2] }
+
+  # Cobble camp (no-dig-camp): a roofed cobblestone hut with a west door.
+  - fill: { block: stone, from: [194, -61, -6], to: [206, -61, 6] }
+  - fill: { block: cobblestone, from: [198, -60, -2], to: [202, -58, 2] }
+  - fill: { block: air, from: [199, -60, -1], to: [201, -59, 1] }
+  - setblock: { block: "oak_door[facing=west,half=lower,hinge=left,open=false,powered=false]", at: [198, -60, 0] }
+  - setblock: { block: "oak_door[facing=west,half=upper,hinge=left,open=false,powered=false]", at: [198, -59, 0] }
+
+  # Corridor (passage-restoration): a bedrock corridor with an open door, a
+  # closed west-facing door and a closed fence gate.
+  - fill: { block: stone, from: [297, -61, -2], to: [318, -61, 2] }
+  - fill: { block: bedrock, from: [298, -60, -1], to: [317, -57, 1] }
+  - fill: { block: air, from: [299, -60, 0], to: [316, -58, 0] }
+  - setblock: { block: "oak_door[facing=east,half=lower,hinge=left,open=true,powered=false]", at: [303, -60, 0] }
+  - setblock: { block: "oak_door[facing=east,half=upper,hinge=left,open=true,powered=false]", at: [303, -59, 0] }
+  - setblock: { block: "oak_door[facing=west,half=lower,hinge=left,open=false,powered=false]", at: [307, -60, 0] }
+  - setblock: { block: "oak_door[facing=west,half=upper,hinge=left,open=false,powered=false]", at: [307, -59, 0] }
+  - setblock: { block: "oak_fence_gate[facing=east,open=false,powered=false]", at: [311, -60, 0] }
+
+players:
+  - name: House
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_axe, count: 1 }
+  # The cramped stance between the chests and the table, beside the door.
+  - { name: Camp, pos: [102.31, -60, 1.59] }
+  - name: CobbleCamp
+    pos: [200.5, -60, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+  - { name: Corridor, pos: [299.5, -60, 0.5] }
+
+tick:
+  - "gamemode spectator @a[name=!House,name=!Camp,name=!CobbleCamp,name=!Corridor,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  players:
+    House:
+      dig: true
+      legs: [{ target: [0, -60, -6], range: 0, label: "House: out by the front door to behind the back wall" }]
+    Camp:
+      legs: [{ target: [99, -60, 0], range: 0, label: "Camp: turn round the chest and out by the birch door" }]
+    CobbleCamp:
+      legs: [{ target: [200, -60, -4], range: 0, label: "Cobble camp: out by the door without digging" }]
+    Corridor:
+      dig: true
+      legs:
+        - { target: [315, -60, 0], range: 0, label: "Corridor: through the open door, the closed door and the gate" }
+        - { target: [308, -60, 0], range: 0, label: "Corridor: back through the gate to the closed door" }
+        - { target: [306, -60, 0], range: 0, dig: false, label: "Corridor: through the closed door from right beside it" }
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: reach, who: House, pos: [0.5, -60, -5.5], radius: 1.5 }
+    - { kind: blocksAt, block: oak_planks, positions: [[0, -60, -3], [0, -59, -3], [-1, -60, -3], [1, -60, -3]] }
+    - { kind: blocksAt, block: "oak_door[open=false]", positions: [[0, -60, 3], [0, -59, 3]] }
+    - { kind: health, who: House, health: 20 }
+    - { kind: completion, who: House }
+    - { kind: reach, who: Camp, pos: [99.5, -60, 0.5], radius: 0.8 }
+    - { kind: blocksAt, block: "birch_door[open=false]", positions: [[100, -60, 0], [100, -59, 0]] }
+    - { kind: health, who: Camp, health: 20 }
+    - { kind: completion, who: Camp }
+    - { kind: blocksAt, block: cobblestone, positions: [[200, -60, -2], [200, -59, -2], [200, -60, 2], [200, -59, 2], [202, -60, 0]] }
+    - { kind: blocksAt, block: "oak_door[open=false]", positions: [[198, -60, 0], [198, -59, 0]] }
+    - { kind: health, who: CobbleCamp, health: 20 }
+    - { kind: completion, who: CobbleCamp }
+    - { kind: blocksAt, block: "oak_door[open=true]", positions: [[303, -60, 0], [303, -59, 0]] }
+    - { kind: blocksAt, block: "oak_door[open=false]", positions: [[307, -60, 0], [307, -59, 0]] }
+    - { kind: blockAt, pos: [311, -60, 0], block: "oak_fence_gate[open=false]" }
+    - { kind: health, who: Corridor, health: 20 }
+    - { kind: completion, who: Corridor }
+    - { kind: survive, seconds: 1 }
