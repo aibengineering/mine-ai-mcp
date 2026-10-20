@@ -2,27 +2,105 @@ template: ../../templates/flat-single-action-no-regen.yaml
 
 tags: [regression]
 description: >-
-  Collect the six logs of an oak standing beside a waterfall, at two copies of the live
-  incident's bank two hundred blocks apart, with regeneration off. Approach starts on the north
+  Collect the six logs of an oak standing beside a waterfall, at three copies of the live
+  incident's bank two hundred blocks apart, with regeneration off. LiveCollector starts where
+  the live bot stood, carrying dirt, and must take all six within two minutes; it used to take
+  five and then walk off exploring. The waterfall reached the stance from which the route broke
+  the last log, the body floated off its grass floor, and a dig priced at three seconds took
+  fifteen and outlived its confirmation four times, so the log was given up; a body afloat over
+  its stance's floor now lands on it before digging. Approach starts on the north
   bank of a copy whose falling column runs down the cliff to the bank, giving the live
   level-four flow at the trunk, and must isolate it with carried dirt and take all six within two
   minutes: the incident was a multi-minute stall at this tree. NoMaterial starts where the live
   bot stood and carries nothing, so it may take only the dry logs and must then report the
   missing isolation material as a partial result near the tree, rather than flooding or searching
-  on. Both stay at full health. The live start with dirt carried loses its sixth log today and
-  lives in known-failing/collect/waterfall-oak-live-stall.
+  on. All three stay at full health.
 
-# The bank geometry was read from the live site; (56,64,27) maps to (0,-58,0)
-# translated 200 and 400 blocks east. The waterfall's source is the water block
+# The bank geometry was read from the live site; (56,64,27) maps to (0,-58,0),
+# and is copied 200 and 400 blocks east. The waterfall's source is the water block
 # at the top of the cliff. As the legacy fixtures' preparation did, the flow
 # settles for 100 ticks and each bot is then put back at its start, standing
 # in the settled current, before it is asked.
 
 reset:
+  - "fill -12 -60 -12 12 -42 12 air"
   - "fill 188 -60 -12 212 -42 12 air"
   - "fill 388 -60 -12 412 -42 12 air"
 
 geometry:
+  # LiveCollector's site: the live bank.
+  - fill: { block: stone, from: [-12, -61, -12], to: [12, -61, 12] }
+  - fill: { block: stone, from: [5, -60, -5], to: [10, -54, 5] }
+  - setblock: { block: stone, at: [4, -54, -4] }
+  - setblock: { block: stone, at: [4, -54, -3] }
+  - setblock: { block: stone, at: [4, -54, -2] }
+  - setblock: { block: grass_block, at: [3, -54, 2] }
+  - setblock: { block: dirt, at: [4, -54, 2] }
+  - setblock: { block: grass_block, at: [1, -54, 3] }
+  - fill: { block: dirt, from: [2, -54, 3], to: [4, -54, 3] }
+  - fill: { block: dirt, from: [-1, -54, 4], to: [4, -54, 4] }
+  - fill: { block: dirt, from: [3, -55, 2], to: [4, -55, 2] }
+  - fill: { block: dirt, from: [1, -55, 3], to: [4, -55, 3] }
+  - setblock: { block: copper_ore, at: [-1, -55, 4] }
+  - fill: { block: dirt, from: [0, -55, 4], to: [4, -55, 4] }
+  - fill: { block: dirt, from: [3, -56, 2], to: [4, -56, 2] }
+  - fill: { block: dirt, from: [1, -56, 3], to: [2, -56, 3] }
+  - fill: { block: stone, from: [3, -56, 3], to: [4, -56, 3] }
+  - setblock: { block: stone, at: [-1, -56, 4] }
+  - setblock: { block: dirt, at: [0, -56, 4] }
+  - fill: { block: gravel, from: [1, -56, 4], to: [3, -56, 4] }
+  - setblock: { block: stone, at: [4, -56, 4] }
+  - setblock: { block: dirt, at: [3, -57, 2] }
+  - setblock: { block: stone, at: [4, -57, 2] }
+  - setblock: { block: grass_block, at: [0, -57, 3] }
+  - setblock: { block: dirt, at: [1, -57, 3] }
+  - fill: { block: stone, from: [2, -57, 3], to: [4, -57, 3] }
+  - fill: { block: stone, from: [-2, -57, 4], to: [4, -57, 4] }
+  - setblock: { block: grass_block, at: [0, -58, 1] }
+  - setblock: { block: grass_block, at: [2, -58, 2] }
+  - fill: { block: stone, from: [3, -58, 2], to: [4, -58, 2] }
+  - setblock: { block: dirt, at: [0, -58, 3] }
+  - fill: { block: stone, from: [1, -58, 3], to: [4, -58, 3] }
+  - fill: { block: stone, from: [-2, -58, 4], to: [4, -58, 4] }
+  - fill: { block: grass_block, from: [3, -59, -4], to: [4, -59, -4] }
+  - fill: { block: grass_block, from: [3, -59, -3], to: [4, -59, -3] }
+  - fill: { block: grass_block, from: [2, -59, -2], to: [4, -59, -2] }
+  - fill: { block: grass_block, from: [2, -59, -1], to: [4, -59, -1] }
+  - fill: { block: grass_block, from: [1, -59, 0], to: [3, -59, 0] }
+  - setblock: { block: dirt, at: [4, -59, 0] }
+  - fill: { block: grass_block, from: [1, -59, 1], to: [4, -59, 1] }
+  - setblock: { block: grass_block, at: [1, -59, 2] }
+  - setblock: { block: dirt, at: [2, -59, 2] }
+  - fill: { block: stone, from: [3, -59, 2], to: [4, -59, 2] }
+  - fill: { block: grass_block, from: [-3, -59, 3], to: [-1, -59, 3] }
+  - setblock: { block: dirt, at: [0, -59, 3] }
+  - fill: { block: stone, from: [1, -59, 3], to: [4, -59, 3] }
+  - fill: { block: grass_block, from: [-4, -59, 4], to: [-3, -59, 4] }
+  - fill: { block: stone, from: [-2, -59, 4], to: [4, -59, 4] }
+  - fill: { block: grass_block, from: [0, -60, -4], to: [2, -60, -4] }
+  - fill: { block: dirt, from: [3, -60, -4], to: [4, -60, -4] }
+  - fill: { block: grass_block, from: [0, -60, -3], to: [2, -60, -3] }
+  - fill: { block: dirt, from: [3, -60, -3], to: [4, -60, -3] }
+  - fill: { block: grass_block, from: [0, -60, -2], to: [1, -60, -2] }
+  - fill: { block: dirt, from: [2, -60, -2], to: [4, -60, -2] }
+  - setblock: { block: grass_block, at: [-1, -60, -1] }
+  - fill: { block: dirt, from: [0, -60, -1], to: [4, -60, -1] }
+  - fill: { block: grass_block, from: [-2, -60, 0], to: [-1, -60, 0] }
+  - fill: { block: dirt, from: [0, -60, 0], to: [4, -60, 0] }
+  - fill: { block: grass_block, from: [-3, -60, 1], to: [-1, -60, 1] }
+  - fill: { block: dirt, from: [0, -60, 1], to: [4, -60, 1] }
+  - fill: { block: grass_block, from: [-4, -60, 2], to: [-1, -60, 2] }
+  - fill: { block: dirt, from: [1, -60, 2], to: [2, -60, 2] }
+  - fill: { block: stone, from: [3, -60, 2], to: [4, -60, 2] }
+  - setblock: { block: grass_block, at: [-4, -60, 3] }
+  - fill: { block: dirt, from: [-3, -60, 3], to: [0, -60, 3] }
+  - fill: { block: stone, from: [1, -60, 3], to: [4, -60, 3] }
+  - fill: { block: dirt, from: [-4, -60, 4], to: [-3, -60, 4] }
+  - fill: { block: stone, from: [-2, -60, 4], to: [4, -60, 4] }
+  - fill: { block: oak_leaves, from: [-2, -56, -1], to: [2, -54, 3] }
+  - fill: { block: oak_leaves, from: [-1, -53, 0], to: [1, -53, 2] }
+  - fill: { block: oak_log, from: [0, -59, 1], to: [0, -54, 1] }
+  - setblock: { block: water, at: [4, -54, 0] }
   # NoMaterial's site: the live bank.
   - fill: { block: stone, from: [188, -61, -12], to: [212, -61, 12] }
   - fill: { block: stone, from: [205, -60, -5], to: [210, -54, 5] }
@@ -180,10 +258,14 @@ setup:
 schedule:
   - afterTicks: 100
     run:
+      - "tp LiveCollector 0.36 -58 0.48"
       - "tp NoMaterial 200.36 -58 0.48"
       - "tp Approach 400.36 -59 -2.5"
 
 players:
+  - name: LiveCollector
+    pos: [0.36, -58, 0.48]
+    inventory: [{ item: dirt, count: 24 }]
   - name: NoMaterial
     pos: [200.36, -58, 0.48]
   - name: Approach
@@ -197,6 +279,10 @@ client:
 
 params:
   players:
+    LiveCollector:
+      waitTicks: 110
+      actions:
+        - { action: collect_block, input: { block_name: logs, count: 6, scaffold: true } }
     NoMaterial:
       waitTicks: 110
       actions:
@@ -209,13 +295,16 @@ params:
         - { action: collect_block, input: { block_name: logs, count: 6, scaffold: true } }
 
 tick:
-  - "gamemode spectator @a[name=!NoMaterial,name=!Approach,gamemode=!spectator]"
+  - "gamemode spectator @a[name=!LiveCollector,name=!NoMaterial,name=!Approach,gamemode=!spectator]"
 
 goal:
   kind: all
   # Six barehand logs need tens of seconds; two minutes exposes the reported stall.
   timeout: 120
   goals:
+    - { kind: hasItem, who: LiveCollector, item: oak_log, count: 6 }
+    - { kind: health, who: LiveCollector, health: 20 }
+    - { kind: completion, who: LiveCollector }
     - { kind: hasItem, who: Approach, item: oak_log, count: 6 }
     - { kind: health, who: Approach, health: 20 }
     - { kind: completion, who: Approach }

@@ -146,7 +146,6 @@ climb still fails.
 | Fixture | Observed failure | Fix session |
 | --- | --- | --- |
 | `collect/cast-obsidian-spawn-column` | The route to the obsidian dives and runs out of its breath budget; the breath reflex cancels the collection | Dive breath budgets on collection routes |
-| `collect/waterfall-oak-live-stall` | Five of six logs, then the bot wanders off exploring for the sixth until the timeout (intermittent) | Collection staying with a partly cut tree |
 | `combat/basalt-crossfire-wounded` | At 11 health, an evade or hide response cancels the navigate short of the marker | Wounded navigation under reflex claims |
 | `combat/busy-smelt-interrupted` | `smelt_item` returns cancelled by `[HOSTILE_CONTACT]` instead of resuming the cook | Resuming foreground work after a fight |
 | `combat/cover-crossing-hunt` | Below its fight bar, a blaze hunt loops between approach and evade until the timeout (intermittent) | Hunts that cannot continue should return |

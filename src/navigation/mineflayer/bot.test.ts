@@ -215,6 +215,44 @@ test("a dig at the edge of reach centres on the stance search judged it from bef
   assert.equal(dug, 1);
 });
 
+test("a body afloat just above its stance's floor lands on it before swinging", async () => {
+  // collect/waterfall-oak, LiveCollector: the step into the trunk cell broke the last log
+  // from a stance whose floor is grass, as search priced it, but the waterfall
+  // had reached the stance and the body floated 0.27 above that floor. Vanilla
+  // digs five times slower with no ground underfoot and Mineflayer fixes the
+  // dig's duration as the swing starts, so a 3-second hand dig took 15 and
+  // outlived its confirmation deadline four times; the log was given up.
+  const entity = { position: { x: -0.7369, y: -58.733, z: 1.548 }, velocity: { x: 0, y: 0, z: 0 }, onGround: false, isInWater: true, yaw: 0 };
+  const controls = new Map<string, boolean>();
+  let groundedAtSwing: boolean | null = null;
+  const bot = surface({
+    entity,
+    setControlState: (control, state) => {
+      controls.set(control, state);
+    },
+    blockAt: (position) =>
+      position.y <= -60 ? { name: "grass_block", boundingBox: "block" } : position.x === 0 ? { name: "oak_log", boundingBox: "block" } : { name: "water", boundingBox: "empty" },
+    // In still or flowing water without a jump the body sinks: recorded
+    // descents of 0.08 to 0.1 blocks a tick onto the trunk's grass floor.
+    waitForTicks: async () => {
+      assert.notEqual(controls.get("jump"), true, "settling must not swim up");
+      entity.position = { ...entity.position, y: Math.max(-59, entity.position.y - 0.09) };
+      entity.onGround = entity.position.y === -59;
+    },
+    dig: async () => {
+      groundedAtSwing = entity.onGround;
+    },
+  });
+  const actuator = new MineflayerBot(bot, { revision: 1 });
+  const effect = actuator.startEffect(
+    { kind: "break", position: { x: 0, y: -58, z: 1 }, expectedStateId: 1, toolType: null, brings: [] },
+    { runId: "run", planId: "plan", stepId: "trunk", attempt: 1 },
+    new AbortController().signal,
+  );
+  assert.deepEqual(await effect.completion, { kind: "accepted" });
+  assert.equal(groundedAtSwing, true);
+});
+
 test("stationary water controls release after a failed dig and when the search releases its hold", async () => {
   const entity = { position: { x: 0.5, y: 63, z: 0.5 }, onGround: true, isInWater: true, yaw: 0 };
   const controls = new Map<string, boolean>();
