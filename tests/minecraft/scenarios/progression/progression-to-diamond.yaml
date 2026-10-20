@@ -1,0 +1,85 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance, regression, slow]
+description: >-
+  From an empty inventory on seed 8675309's generated terrain, progress to a
+  diamond at each of three separated surface locations: collect eight logs and
+  craft a crafting table with a wooden pickaxe, axe and sword in one batch,
+  then a wooden shovel; carry the table on; collect dirt and stone, craft stone
+  tools and a furnace; collect coal and iron, smelt the iron in a temporary
+  furnace, craft an iron pickaxe and mine a diamond, ending at full health.
+  Guards the seventh playthrough's failure, where the batch that begins with a
+  crafting table straight after a log collection reported nothing crafted.
+# Migrated from verification/progression/progression-to-diamond and absorbs
+# default/progression/craft-after-collect: its collect-then-batch shape opens
+# the progression, and the three verified locations replace its three rounds.
+# `mine-labs run` expands verification.locations into three isolated trials.
+# Workstation cells are the actions' own choice: the legacy driver's placement
+# search and alcove digging are gone.
+verification:
+  radius: 256
+  locations:
+    - [8.5, 64, -19.5]
+    - [-807.5, 105, 800.5]
+    - [1608.5, 75, 1600.5]
+world:
+  type: default
+  seed: 8675309
+  time: noon
+  difficulty: peaceful
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+players:
+  # Each verification location replaces this position.
+  - name: Progressor
+    pos: [8.5, 64, -19.5]
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  actions:
+    - { action: collect_block, input: { block_name: logs, count: 8, scaffold: false } }
+    - action: craft_item
+      input:
+        items:
+          - { item_name: crafting_table, count: 1 }
+          - { item_name: wooden_pickaxe, count: 1 }
+          - { item_name: wooden_axe, count: 1 }
+          - { item_name: wooden_sword, count: 1 }
+    - { action: craft_item, input: { items: [{ item_name: wooden_shovel, count: 1 }] } }
+    # The batch placed the table beside the bot; take it along.
+    - { action: collect_block, input: { block_name: crafting_table, count: 1, scaffold: false } }
+    - { action: collect_block, input: { block_name: dirt, count: 16, scaffold: false } }
+    - { action: collect_block, input: { block_name: stone, count: 12, scaffold: false } }
+    - action: craft_item
+      input:
+        temporary_workstation: true
+        items:
+          - { item_name: stone_pickaxe, count: 1 }
+          - { item_name: stone_shovel, count: 1 }
+          - { item_name: furnace, count: 1 }
+    - { action: collect_block, input: { block_name: coal_ore, count: 4, scaffold: false } }
+    - { action: collect_block, input: { block_name: iron_ore, count: 3, scaffold: false } }
+    - { action: smelt_item, input: { temporary_workstation: true, item_name: raw_iron, count: 3, fuel_item_name: coal } }
+    - { action: craft_item, input: { temporary_workstation: true, items: [{ item_name: iron_pickaxe, count: 1 }] } }
+    - { action: collect_block, input: { block_name: diamond_ore, count: 1, scaffold: false } }
+goal:
+  kind: all
+  timeout: 3600
+  goals:
+    - { kind: hasItem, who: Progressor, item: wooden_pickaxe, count: 1 }
+    - { kind: hasItem, who: Progressor, item: wooden_shovel, count: 1 }
+    - { kind: hasItem, who: Progressor, item: stone_pickaxe, count: 1 }
+    - { kind: hasItem, who: Progressor, item: stone_shovel, count: 1 }
+    - { kind: hasItem, who: Progressor, item: iron_pickaxe, count: 1 }
+    - { kind: hasItem, who: Progressor, item: dirt, count: 2 }
+    - { kind: hasItem, who: Progressor, item: coal, count: 3 }
+    - { kind: hasItem, who: Progressor, item: diamond, count: 1 }
+    - { kind: health, who: Progressor, health: 20 }
+    - { kind: completion, who: Progressor }

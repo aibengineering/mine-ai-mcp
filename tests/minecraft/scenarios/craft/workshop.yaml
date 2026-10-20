@@ -8,12 +8,17 @@ description: >-
   then recover the floating furnace. Use that furnace for a temporary nine-item
   batch at sixteen TPS, crossing a coal capacity boundary and the old premature
   smelting deadline. Verify exact outputs, zero leftover raw iron, and furnace
-  recovery. Guards crafting synchronization, unsupported furnace reclamation,
-  and slow-server smelting in one workshop lifecycle.
+  recovery. Then a temporary table crafts a stone pickaxe, a stone axe and a
+  second table, and a failed temporary diamond-pickaxe plan still recovers its
+  table, while the workshop's own table and furnace stay where they were.
+  Guards crafting synchronization, unsupported furnace reclamation, slow-server
+  smelting, and temporary workstation recovery in one workshop lifecycle.
 # Origins: mine_ai e1242f42 (nine-log crafting) and the 2026-09-04
 # progression failures previously covered by floating-furnace.
 # Also preserves smelt-batch-lag and smelt-temporary-furnace; the nine-item
 # slow batch clearly exceeds the old count * 10s + 5s recovery deadline.
+# Also absorbs flat/storage/temporary-workstations: a temporary batch that
+# includes a table, a failed plan's recovery, and pre-placed stations intact.
 world:
   type: flat
   time: noon
@@ -22,6 +27,9 @@ reset: ["fill -4 -59 -4 8 -52 4 air"]
 setup: ["tick rate 16"]
 geometry:
   - fill: { block: andesite, from: [-4, -60, -4], to: [8, -60, 4] }
+  # The workshop's own stations, which no temporary workstation may disturb.
+  - setblock: { at: [7, -59, 3], block: crafting_table }
+  - setblock: { at: [7, -59, -3], block: furnace }
 players:
   - name: Crafter
     pos: [0.5, -59, 0.5]
@@ -32,6 +40,7 @@ players:
       - { item: iron_axe, count: 1 }
       - { item: raw_iron, count: 11 }
       - { item: coal, count: 3 }
+      - { item: cobblestone, count: 6 }
 client:
   command: bun
   cwd: ../..
@@ -41,12 +50,18 @@ params:
   furnace: { x: 2, y: -58, z: 0 }
 goal:
   kind: all
-  timeout: 240
+  timeout: 300
   goals:
-    - { kind: hasItem, who: Crafter, item: oak_planks, count: 26 }
+    # 32 planks, less six for the doors, two for four sticks and four for the second table.
+    - { kind: hasItem, who: Crafter, item: oak_planks, count: 20 }
     - { kind: hasItem, who: Crafter, item: oak_door, count: 3 }
-    - { kind: hasItem, who: Crafter, item: crafting_table, count: 1 }
+    - { kind: hasItem, who: Crafter, item: crafting_table, count: 2, max: 2 }
+    - { kind: hasItem, who: Crafter, item: stone_pickaxe, count: 2, max: 2 }
+    - { kind: hasItem, who: Crafter, item: stone_axe, count: 1, max: 1 }
+    - { kind: hasItem, who: Crafter, item: cobblestone, count: 0, max: 0 }
     - { kind: hasItem, who: Crafter, item: furnace, count: 1 }
     - { kind: hasItem, who: Crafter, item: iron_ingot, count: 11 }
     - { kind: blocksAt, block: air, positions: [[2, -59, 0], [2, -58, 0]] }
+    - { kind: blockAt, pos: [7, -59, 3], block: crafting_table }
+    - { kind: blockAt, pos: [7, -59, -3], block: furnace }
     - { kind: completion, who: Crafter }

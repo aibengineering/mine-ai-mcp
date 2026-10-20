@@ -1,0 +1,46 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression]
+description: >-
+  Collect the sand directly below the bot while it swims above an ocean
+  stronghold, on the live seed and coordinates of 11 September 2026: one
+  ordinary request from the water, without waiting for dry footing. It must
+  gain the sand at full health within 90 seconds. Guards the surface bobbing
+  that restarted the search at every changed start cell and never committed
+  a route.
+# Migrated from default/terrain/ocean-sand-shaft. Mob spawning and
+# regeneration are off to isolate collection; the inventory keeps the live
+# bot's tools and building materials but not its armour or enchantments.
+# Start-cell churn is unit-pinned in src/navigation/orchestration/navigation-run.test.ts.
+world:
+  type: default
+  seed: "-06163879"
+  structures: true
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+players:
+  - name: OceanMiner
+    pos: [1414.536, 62.3, -90.464]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: ender_eye, count: 13 }
+      - { item: bread, count: 33 }
+      - { item: netherrack, count: 8 }
+      - { item: nether_bricks, count: 13 }
+      - { item: acacia_log, count: 13 }
+params:
+  action: collect_block
+  input: { block_name: sand, count: 1, x: 1414, y: 59, z: -91, scaffold: true, allow_full_inventory: true }
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: hasItem, who: OceanMiner, item: sand, count: 1 }
+    - { kind: health, who: OceanMiner, health: 20 }
+    - { kind: completion, who: OceanMiner }

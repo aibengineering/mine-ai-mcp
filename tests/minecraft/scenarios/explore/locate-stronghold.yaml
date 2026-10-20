@@ -1,0 +1,57 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  With sixteen real Eyes of Ender on seed 8674349, estimate a generated
+  stronghold's position from thrown eyes, refuse the locate phase while the
+  recommended dragon-fight supplies are missing, then, told to continue
+  without them, travel, refine with one more throw and confirm a native portal
+  frame. Surviving surface eyes must be picked back up: no more than the three
+  thrown may be lost.
+# Migrated from default/stronghold/locate-resume. Its two mid-flight
+# cancellations across a SQLite reopen are not black-box; they are pinned by
+# src/actions/locate-stronghold/locate-stronghold.test.ts (reopen, cancelled
+# wait, saved bearings) and recover-eye.test.ts. This ocean seed gets a dry
+# survey surface; the stronghold's portal room at y=-22 is untouched, and the
+# eyes choose their target without hints.
+world:
+  type: default
+  seed: 8674349
+  structures: true
+  difficulty: peaceful
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+geometry:
+  - fill: { block: stone, from: [200, 63, -1660], to: [420, 63, -1480] }
+  - fill: { block: air, from: [200, 64, -1660], to: [420, 67, -1480] }
+players:
+  - name: StrongholdFinder
+    pos: [336.5, 64, -1550.5]
+    inventory:
+      - { item: ender_eye, count: 16 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cooked_beef, count: 64 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  actions:
+    - { action: locate_stronghold, input: { search_id: resume } }
+    - action: locate_stronghold
+      input: { search_id: resume, phase: locate }
+      expect: { status: partial, errorContains: "STRONGHOLD_MISSING_SUPPLIES" }
+    - action: locate_stronghold
+      input: { search_id: resume, phase: locate, continue_without_recommended_items: true }
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: blockAt, pos: [269, -22, -1595], block: end_portal_frame }
+    - { kind: reach, who: StrongholdFinder, pos: [271, 64, -1596], radius: 190 }
+    - { kind: hasItem, who: StrongholdFinder, item: ender_eye, count: 13 }
+    - { kind: completion, who: StrongholdFinder }

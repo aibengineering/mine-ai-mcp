@@ -1,0 +1,82 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression]
+description: >-
+  Dispose of items into a dug hole in two pens. On open dirt, from a stance
+  off the block centre, toss twelve rotten flesh and all seventy cobblestone
+  into the nearer western hole while keeping the footing. With all 36 slots
+  full of netherrack, a wool pickup is refused as a full
+  inventory, disposing of 192 netherrack makes room, the pickup then
+  succeeds, and walking back past the pit recovers none of the netherrack.
+  After five seconds every discard must still lie at its hole's bottom and the
+  carried counts must be exact. Guards the off-centre aim, discards picked
+  back up (2026-10-19: two netherrack went missing after the full-inventory
+  disposal), and lost footing.
+# Absorbs flat/drop/disposal-hole-offset and full-inventory-disposal; the
+# centred disposal-hole is subsumed by the off-centre pen. The tunnel case
+# (disposal-hole-underground) fails today and lives in
+# known-failing/drop/disposal-hole-tunnel. drop/disposal-hole-bedrock keeps
+# the refusal.
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0, naturalRegeneration: false }
+geometry:
+  # Offset: open dirt.
+  - fill: { block: dirt, from: [-8, -63, -8], to: [8, -61, 8] }
+  # Full inventory: a one-wide stone tunnel.
+  - fill: { block: stone, from: [192, -63, -8], to: [208, -54, 8] }
+  - fill: { block: air, from: [200, -60, -6], to: [200, -59, 6] }
+entities:
+  # Four blocks from the full inventory's start, out of pickup range until it walks there.
+  - type: item
+    pos: [200.5, -60, -3.5]
+    nbt: '{Item:{id:"minecraft:white_wool",count:1},PickupDelay:0s}'
+players:
+  - name: Offset
+    pos: [0.35, -60, 0.5]
+    inventory:
+      - { item: iron_shovel, count: 1 }
+      - { item: rotten_flesh, count: 16 }
+      - { item: cobblestone, count: 70 }
+  - name: Full
+    pos: [200.5, -60, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: netherrack, count: 2240 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/disposal-holes.ts]
+params:
+  players:
+    Offset:
+      actions:
+        - action: drop_item
+          input: { items: [{ item_name: rotten_flesh, count: 12 }, { item_name: cobblestone }], in_a_hole: true }
+    Full:
+      actions:
+        - action: collect_mob_drop
+          input: { mob_name: sheep, drop_name: white_wool, count: 1 }
+          expect: { status: failed, errorContains: "INVENTORY_FULL" }
+        - action: drop_item
+          input: { items: [{ item_name: netherrack, count: 192 }], in_a_hole: true }
+        - action: collect_mob_drop
+          input: { mob_name: sheep, drop_name: white_wool, count: 1 }
+        # Walk back past the pit.
+        - action: navigate
+          input: { x: 200, y: -60, z: 2, range: 0, dig: false, scaffold: false }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, who: Offset, item: rotten_flesh, count: 4, max: 4 }
+    - { kind: hasItem, who: Offset, item: cobblestone, count: 0, max: 0 }
+    - { kind: blockAt, pos: [0, -61, 0], block: dirt }
+    - { kind: blockAt, pos: [-1, -62, 0], block: air }
+    - { kind: health, who: Offset, health: 20 }
+    - { kind: completion, who: Offset }
+    - { kind: hasItem, who: Full, item: white_wool, count: 1 }
+    - { kind: hasItem, who: Full, item: netherrack, count: 2048, max: 2048 }
+    - { kind: health, who: Full, health: 20 }
+    - { kind: completion, who: Full }

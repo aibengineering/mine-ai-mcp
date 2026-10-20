@@ -1,0 +1,52 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression]
+description: >-
+  Sleep through the night on a bed placed from inventory on a small andesite
+  island, then walk off the bed, over a raised step and down a staircase forty
+  blocks west to a standing bed, and use it by day. Fails today: after waking
+  the bot stands on top of the bed, and navigate from there finds no path,
+  having visited a single node, the bed cell itself.
+# Split from sleep/bed-lifecycle, which keeps the carried-bed night and the
+# daytime standing bed in separate pens. The island leaves exactly one flat
+# bed footprint within the bed search's radius; the step and the staircase
+# change height at every block so they add none.
+# Failing runs: 2026-10-20T07-16-25-421Z and 2026-10-20T07-16-43-489Z (.mine-labs/other):
+# "no path found after 1 ms compute; visited 1 nodes, generated 1; closest node was 3,-59,0".
+world:
+  type: flat
+  time: 13000
+  difficulty: peaceful
+  gamerules: { doDaylightCycle: true, doMobSpawning: false, doWeatherCycle: false, keepInventory: true }
+geometry:
+  - fill: { block: air, from: [-5, -64, -5], to: [5, -54, 5] }
+  - setblock: { at: [0, -60, 0], block: polished_andesite }
+  - fill: { block: polished_andesite, from: [2, -60, 0], to: [3, -60, 0] }
+  # A raised step between the bed footprint and the start.
+  - fill: { block: polished_andesite, from: [1, -60, 0], to: [1, -59, 0] }
+  # A staircase west: every step changes height, so no two neighbours are level.
+  - fill: { block: polished_andesite, from: [-5, -60, 0], to: [-1, -60, 0] }
+  - setblock: { at: [-2, -59, 0], block: polished_andesite }
+  - setblock: { at: [-4, -59, 0], block: polished_andesite }
+  - setblock: { at: [-40, -60, 0], block: "red_bed[facing=west,part=foot,occupied=false]" }
+  - setblock: { at: [-41, -60, 0], block: "red_bed[facing=west,part=head,occupied=false]" }
+schedule:
+  - { when: "data entity Sleeper {SpawnX:-41,SpawnY:-60,SpawnZ:0}", run: "setblock -40 -50 12 gold_block" }
+players:
+  - name: Sleeper
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: cyan_bed, count: 1 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/bed-lifecycle.ts]
+params:
+  case: night
+  thenWalkTo: { x: -38, y: -60, z: 0 }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: blockAt, pos: [-40, -50, 12], block: gold_block }
+    - { kind: completion, who: Sleeper }

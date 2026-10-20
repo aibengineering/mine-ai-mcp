@@ -5,7 +5,12 @@ description: >-
   Guard against spending gold on piglin trades when the requested pearls are
   already on the ground nearby. With a live adult piglin in front, gold armour
   and three spendable ingots, collect the pearl beyond the low wall without
-  offering or spending any gold.
+  offering or spending any gold. In a second pen, a native one-gold exchange
+  with the bartering loot sequence reset must yield blackstone for exactly one
+  gold: spent, offered and observed.
+# The second pen absorbs flat/barter/seeded-reward. The reset loot sequence
+# makes its first exchange blackstone; the takeover and resumption cases of
+# flat/barter are pinned in src/actions/barter/barter.test.ts.
 world:
   type: flat
   time: noon
@@ -15,6 +20,8 @@ world:
     doDaylightCycle: false
 geometry:
   - fill: { block: stone, from: [3, -60, -1], to: [3, -60, 1] }
+setup:
+  - "random reset minecraft:gameplay/piglin_bartering 0 false false"
 entities:
   - type: piglin
     pos: [2, -60, 0.5]
@@ -22,9 +29,18 @@ entities:
   - type: item
     pos: [5, -60, 0.5]
     nbt: '{Item:{id:"minecraft:ender_pearl",count:1},PickupDelay:0s}'
+  - type: piglin
+    pos: [102, -60, 0.5]
+    nbt: '{IsBaby:0b,IsImmuneToZombification:1b,PersistenceRequired:1b}'
 players:
   - name: Barterer
     pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: gold_ingot, count: 3 }
+    equipment:
+      head: golden_helmet
+  - name: Trader
+    pos: [100.5, -60, 0.5]
     inventory:
       - { item: gold_ingot, count: 3 }
     equipment:
@@ -33,10 +49,17 @@ client:
   command: bun
   cwd: ../..
   args: [client-host.ts, drivers/ground-first-barter.ts]
-params: { item_name: ender_pearl, count: 1, gold_budget: 3 }
+params:
+  players:
+    Barterer: { item_name: ender_pearl, count: 1, gold_budget: 3, gold_spent: 0 }
+    Trader: { item_name: blackstone, count: 1, gold_budget: 1, gold_spent: 1 }
 goal:
   kind: all
-  timeout: 40
+  timeout: 60
   goals:
     - { kind: hasItem, who: Barterer, item: ender_pearl, count: 1 }
+    - { kind: hasItem, who: Barterer, item: gold_ingot, count: 3, max: 3 }
     - { kind: completion, who: Barterer }
+    - { kind: hasItem, who: Trader, item: blackstone, count: 1 }
+    - { kind: hasItem, who: Trader, item: gold_ingot, count: 2, max: 2 }
+    - { kind: completion, who: Trader }

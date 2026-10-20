@@ -1,0 +1,53 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance, regression]
+description: >-
+  On seed 8675309's generated terrain at noon, with mob spawning on, the
+  loaded-mob summary must be nonempty, nearest first, of published kinds and
+  listed in the Markdown. Hunt the nearest loaded cow, sheep, pig or chicken
+  for the drop it always yields, and name where it was. Then eat a bread,
+  place a cobblestone without coordinates and craft four sticks: each receipt
+  must report the exact count change, confirmed by the server. Guards the
+  loaded rabbit sixty-five blocks off that the hunt would not walk to, and
+  receipts that reported a count before the server's slot update arrived.
+# Absorbs default/hunt/wild-animal-hunt-8675309, default/observation/loaded-mobs-8675309
+# and default/receipts/settled-counts-8675309; the other two seeds of each are
+# deleted. The registry-kind coverage check is a unit test in
+# src/actions/view-status/view-status.test.ts. Starting hunger replaces the
+# legacy driver's hunger effect.
+world:
+  type: default
+  seed: 8675309
+  time: noon
+  # Peaceful would delete every animal; easy is the lowest that keeps them.
+  difficulty: easy
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: true
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+players:
+  # The surface column the terrain fixtures on this seed record: grass at y63.
+  - name: WildHunter
+    pos: [8.5, 64, -19.5]
+    food: 16
+    saturation: 0
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bread, count: 3 }
+      - { item: cobblestone, count: 16 }
+      - { item: oak_planks, count: 16 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/wild-animal-and-receipts.ts]
+params: {}
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: hasItem, who: WildHunter, item: stick, count: 4 }
+    - { kind: hasItem, who: WildHunter, item: bread, count: 2, max: 2 }
+    - { kind: completion, who: WildHunter }
