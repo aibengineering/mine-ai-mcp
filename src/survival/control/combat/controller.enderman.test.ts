@@ -409,6 +409,38 @@ test("an angry enderman behind a wall keeps its protected return wait", async ()
   assert.ok(fixture.clock.tick >= 300 && fixture.clock.tick < 330);
 });
 
+test("a quarry stalled behind the roof's own wall is baited out around it", async () => {
+  // The 2026-10-20 Alcove pen: the bot held its nook at 0.46,0.51 and the
+  // enderman, pathing to the bot's cell, stopped behind the nook's north wall
+  // at 0.57,-1.6: from the bot's cell that node ties with the open mouth. No
+  // footing was nearer the quarry, so no bait was walked, the 300-tick roof
+  // wait ran out, and with no blocks for another roof the hunt gave up.
+  const fixture = protectedEndermanFixture();
+  const { bot, target } = fixture;
+  const world = openArena(new MemoryWorld(), 6, 68);
+  for (let x = -1; x <= 1; x++)
+    for (let z = -1; z <= 1; z++)
+      for (const y of [64, 65]) if (z !== 0 || x < 0) world.load({ x, y, z }, { stateId: 1 });
+  for (const x of [0, 1]) world.load({ x, y: 66, z: 0 }, { stateId: 1 });
+  const navigation = { ...fixture.navigation, world };
+  target.position.set(0.57, 64, -1.6);
+  bot.world.raycast = (() =>
+    bot.entity.position.x < 2 ? { x: 0, y: 65, z: -1, face: 3, intersect: new Vec3(0.5, 65, 0) } : null) as Bot["world"]["raycast"];
+  const stopped = new AbortController();
+  const baits: unknown[] = [];
+  const controller = controllerAfterObservedHit(bot, navigation);
+  controller.onDecision((event) => {
+    if (event.kind !== "response") return;
+    const evidence = event.evidence as { boundary?: unknown; stage?: unknown; path?: unknown };
+    if (evidence.boundary !== "enderman_roof_bait" || evidence.stage !== "out") return;
+    baits.push(evidence.path);
+    stopped.abort();
+  });
+  await controller.engage(7, stopped.signal, "pursue");
+  assert.deepEqual(baits, [[{ x: 0, y: 64, z: 0 }, { x: 1, y: 64, z: 0 }, { x: 2, y: 64, z: 0 }]]);
+  assert.ok(fixture.clock.tick < 300, "the bait comes before the roof wait runs out");
+});
+
 test("unconfirmed swings and other attackers' damage cannot keep a protected fight alive", async () => {
   const fixture = protectedEndermanFixture();
   fixture.target.position.set(2, 64, 0.5);

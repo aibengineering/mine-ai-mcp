@@ -126,6 +126,31 @@ export function roofLurePath(world: WorldView, cell: Vec3, target: Vec3, placeme
   return best;
 }
 
+/** The shortest level walk from under a roof to ground open to the sky, where
+ * a quarry three blocks tall can stand beside the bot. A tall mob pathing to a
+ * bot under a low roof stops at the reachable node nearest the bot's cell; a
+ * cell behind the roof's own wall can tie with its mouth, and from there no
+ * footing is nearer, so the walk toward it finds nothing. */
+export function roofExitPath(world: WorldView, cell: Vec3, steps = 4): Vec3[] {
+  if (isPassable(world.blockAt(cell.x, cell.y + 2, cell.z))) return [];
+  const visited = new Set([cell.toString()]);
+  let frontier: Vec3[][] = [[cell]];
+  for (let depth = 0; depth < steps; depth++) {
+    const next: Vec3[][] = [];
+    for (const path of frontier)
+      for (const side of PROTECTION_SIDES) {
+        const at = path.at(-1)!.plus(side);
+        if (visited.has(at.toString()) || !standingCell(world, at)) continue;
+        visited.add(at.toString());
+        const extended = [...path, at];
+        if (isPassable(world.blockAt(at.x, at.y + 2, at.z))) return extended;
+        next.push(extended);
+      }
+    frontier = next;
+  }
+  return [];
+}
+
 /** A fighting shelter needs either a swing or a reversible bait path to a swing.
  * A roof above the quarry or a sealed recovery box protects without providing either. */
 export function roofEngagementAvailable(world: WorldView, cell: Vec3, target: PositionThreat, eyeHeight: number, placements: readonly Vec3[] = []): boolean {
