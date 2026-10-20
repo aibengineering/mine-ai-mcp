@@ -1,0 +1,69 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression, slow]
+description: >-
+  Replays the seed-64510673 idle death: the dragon curves in to land on the
+  fountain beside a fresh breath cloud while the bot stands idle just south of
+  it. A linear escape forecast once declared the cells under the arriving wings
+  safe and the bot died to landing contact. The idle runtime must keep clear of
+  the landing and the cloud, end alive with at least 12 health, and the dragon
+  must be seen to settle on the fountain.
+
+world:
+  type: default
+  dimension: the_end
+  seed: "64510673"
+  difficulty: normal
+  # Regeneration off, so the final health is the lowest the escape allowed.
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+
+players:
+  - name: LandingBot
+    # The recorded death position, to the precision it was recorded at.
+    pos: [-1.5005339895, 65, 3.5410921273]
+    health: 20
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: stone_pickaxe }
+      - { item: diamond_sword }
+      - { item: cooked_beef, count: 10 }
+      - { item: water_bucket }
+      - { item: cobbled_deepslate, count: 107 }
+      - { item: end_stone, count: 6 }
+      - { item: obsidian, count: 4 }
+      - { item: shield }
+
+# Once the native dragon exists: keep only the two recorded crystals, put the
+# dragon in its recorded landing pose and motion, and summon the recorded
+# breath cloud. Staging and release are the same tick.
+schedule:
+  - when: "entity @e[type=ender_dragon]"
+    run:
+      - "kill @e[type=enderman]"
+      - "execute as @e[type=end_crystal] unless entity @s[x=33.5,y=80,z=-24.5,distance=..1] unless entity @s[x=-33.5,y=83,z=-24.5,distance=..1] run kill @s"
+      - "data merge entity @e[type=ender_dragon,limit=1] {DragonPhase:3,Pos:[6.3562760472d,77.4175431549d,-3.9749171007d],Motion:[-0.0435d,-0.146d,0.010875d],Rotation:[-95.625f,0f]}"
+      - 'summon area_effect_cloud -0.7701180636 65 11.637067192 {Radius:4.0f,Duration:600,WaitTime:20,RadiusPerTick:0.006666667f,Particle:{type:"minecraft:dragon_breath"},effects:[{id:"minecraft:instant_damage",amplifier:1b,duration:1}]}'
+
+# Idle: the driver only reads view_status, to confirm the staged landing and
+# that the dragon settles, while the reflexes own the body for 400 ticks.
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/end-fight.ts]
+params:
+  waitTicks: 5
+  arranged:
+    crystals: 2
+    clouds: 1
+    dragonPhases: [landing, sitting_flaming, sitting_scanning, sitting_attacking]
+  watch:
+    ticks: 395
+    phases: [sitting_flaming, sitting_scanning, sitting_attacking]
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: health, who: LandingBot, health: 12 }
+    - { kind: survive, who: LandingBot, seconds: 1 }
+    - { kind: completion, who: LandingBot }

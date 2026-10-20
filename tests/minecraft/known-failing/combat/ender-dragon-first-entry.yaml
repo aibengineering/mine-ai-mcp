@@ -1,0 +1,131 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression, slow]
+description: >-
+  Claude's first End fight, 2026-09-13, on seed 81360492 with the recorded
+  loadout: forty slots with their durability, spare kit and junk, and no
+  arrows. The recorded caller sets a defend-only policy, drops its junk in a
+  hole, melees every crystal from the staircase, topping end stone up to 64
+  and walking back to the fountain before each tower, then prepares and
+  attacks perches until the dragon dies. Mob spawning is on, so endermen
+  wander in. The bot must kill the dragon and live. When a staircase is
+  refused for want of end stone, the caller gathers the number it names.
+  Fails today, as the legacy first-entry fixtures did (alive after 40
+  minutes): on 2026-10-20 neither run reached the dragon. Run 1 stopped at the
+  tower at -33.5,101,-24.5, refused three times with
+  [CRYSTAL_STAIRCASE_SHORTFALL] (70 end stone needed, 64 carried; the caller
+  then kept only 64). Run 2, with the caller gathering what the refusal named,
+  stopped at -33.5,95,24.5: after a fall saved by water mid-climb the
+  staircase returned [CRYSTAL_STAIRCASE_INCOMPLETE] with 9 cells left, the
+  route search timing out at its 2000 ms compute limit, then twice could not
+  step out of the structure.
+
+world:
+  type: default
+  dimension: the_end
+  seed: "81360492"
+  difficulty: normal
+  gamerules: { doMobSpawning: true }
+
+players:
+  - name: DragonFighter
+    # Surface beside the native fountain. The recorded inspection was inside a
+    # previously excavated tunnel, which does not exist in a fresh world.
+    pos: [14.5, 61, 12.5]
+    health: 20
+    # Recorded 2026-09-13T16:59:59.088Z. Window slots 5-8 and 45 are worn.
+    # Enchantments and XP were not exposed by that inspection: unenchanted kit.
+    equipment:
+      head: "diamond_helmet[damage=77]"
+      chest: "diamond_chestplate[damage=5]"
+      legs: "diamond_leggings[damage=77]"
+      feet: "diamond_boots[damage=29]"
+      offhand: shield
+    # Given in recorded slot order: the hotbar (window slots 36-44), then the
+    # main inventory (9-35). Damaged and unstackable items each take their own slot.
+    inventory:
+      - { item: water_bucket }
+      - { item: "stone_pickaxe[damage=15]" }
+      - { item: "stone_pickaxe[damage=2]" }
+      - { item: end_stone, count: 9 }
+      - { item: "stone_pickaxe[damage=3]" }
+      - { item: "stone_pickaxe[damage=3]" }
+      - { item: "stone_pickaxe[damage=102]" }
+      - { item: cooked_porkchop, count: 5 }
+      - { item: "stone_pickaxe[damage=1]" }
+      - { item: oak_log, count: 4 }
+      - { item: blaze_powder, count: 3 }
+      - { item: coal, count: 9 }
+      - { item: string, count: 2 }
+      - { item: "diamond_sword[damage=458]" }
+      - { item: "flint_and_steel[damage=1]" }
+      - { item: "bow[damage=65]" }
+      - { item: torch, count: 10 }
+      - { item: obsidian, count: 4 }
+      - { item: porkchop, count: 3 }
+      - { item: stick, count: 13 }
+      - { item: gunpowder }
+      - { item: leather, count: 10 }
+      - { item: granite, count: 28 }
+      - { item: "bow[damage=374]" }
+      - { item: gravel, count: 4 }
+      - { item: mossy_stone_bricks }
+      - { item: furnace }
+      - { item: "shield[damage=260]" }
+      - { item: shield }
+      - { item: crafting_table }
+      - { item: smooth_stone_slab }
+      - { item: stone_button, count: 3 }
+      - { item: cooked_beef, count: 10 }
+      - { item: "diamond_sword[damage=20]" }
+      - { item: "diamond_chestplate[damage=75]" }
+      - { item: stone_bricks, count: 6 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/end-fight.ts]
+params:
+  arranged:
+    crystals: 10
+    damaged:
+      - { item: diamond_helmet, damage: 77 }
+      - { item: diamond_boots, damage: 29 }
+      - { item: diamond_sword, damage: 458 }
+      - { item: stone_pickaxe, damage: 102 }
+      - { item: bow, damage: 374 }
+      - { item: shield, damage: 260 }
+  gapTicks: 0
+  # The recorded caller's own policy: the subject is that first fight.
+  policy:
+    changes: { combat: { engagement: defend_only, hide: never } }
+    reason: "Reproduce Claude's first End fight: defend against endermen without pursuing or hiding."
+  before:
+    - action: drop_item
+      input:
+        in_a_hole: true
+        items:
+          - { item_name: leather }
+          - { item_name: coal }
+          - { item_name: gravel }
+          - { item_name: oak_log }
+          - { item_name: porkchop }
+          - { item_name: stone_button }
+          - { item_name: mossy_stone_bricks }
+          - { item_name: smooth_stone_slab }
+          - { item_name: string }
+          - { item_name: gunpowder }
+          - { item_name: furnace }
+          - { item_name: blaze_powder }
+  crystals:
+    plan: melee
+    resupply: { block: end_stone, keep: 64, batch: 32 }
+  dragon: { attack: perch }
+
+goal:
+  kind: all
+  timeout: 2400
+  goals:
+    - { kind: kill, target: ender_dragon }
+    - { kind: survive, who: DragonFighter, seconds: 1 }
+    - { kind: completion, who: DragonFighter }
