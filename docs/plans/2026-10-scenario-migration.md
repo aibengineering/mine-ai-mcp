@@ -146,7 +146,6 @@ climb still fails.
 | Fixture | Observed failure | Fix session |
 | --- | --- | --- |
 | `collect/cast-obsidian-spawn-column` | The route to the obsidian dives and runs out of its breath budget; the breath reflex cancels the collection | Dive breath budgets on collection routes |
-| `collect/waterfall-oak-live-stall` | Five of six logs, then the bot wanders off exploring for the sixth until the timeout (intermittent) | Collection staying with a partly cut tree |
 | `combat/basalt-crossfire-wounded` | At 11 health, an evade or hide response cancels the navigate short of the marker | Wounded navigation under reflex claims |
 | `combat/busy-smelt-interrupted` | `smelt_item` returns cancelled by `[HOSTILE_CONTACT]` instead of resuming the cook | Resuming foreground work after a fight |
 | `combat/cover-crossing-hunt` | Below its fight bar, a blaze hunt loops between approach and evade until the timeout (intermittent) | Hunts that cannot continue should return |
@@ -167,7 +166,7 @@ climb still fails.
 | `pathfinder/flowing-lava-dig-release` | Lava released on landing burns the bot to death after the fire reflex interrupts the route | Lava and fire escapes |
 | `pathfinder/vine-column-handoff` | A lateral step onto a lower vine column never arrives; the body slides into lava (a partial patch is saved) | Vine column handoff |
 | `sleep/bed-exit-after-waking` | After waking, navigate finds no path off the bed | Pathing off a bed |
-| `survival/lava-escapes` | Bots leave the lava, then burn to death or end at 1 health | Lava and fire escapes |
+| `survival/lava-escapes` | The pool bot climbs out but, with no water, ends at 1 health at best, below the goal's 2; the pocket and dig pens are fixed and back in `survival/fire-reflex` | Lava and fire escapes |
 
 ### Runtime findings without a fixture
 

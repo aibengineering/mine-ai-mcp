@@ -97,6 +97,8 @@ export function createNavigator(dependencies: {
   readonly catalogue?: MovementCatalogue;
   readonly telemetry?: TelemetrySink;
   readonly createId?: () => string;
+  /** The clock searches measure their compute slices by; `performance.now` when absent. */
+  readonly now?: () => number;
 }): Navigator {
   let activeRun: NavigationRun | undefined;
   let activeControl: AbortController | undefined;
@@ -131,6 +133,7 @@ export function createNavigator(dependencies: {
         // and gets whatever is registered - which is itself null until the
         // session registers one.
         stepField: request.stepField === null ? null : stepFieldProvider,
+        ...(dependencies.now && { now: dependencies.now }),
       };
       const run = new NavigationRun({
         context,

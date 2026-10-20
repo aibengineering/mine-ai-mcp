@@ -80,3 +80,25 @@ test("a lava escape retains its departure while the body is airborne above the p
     assert.equal(clearFireEscape(bot, world, target, departure), false, `${hazard} invalidates the destination`);
   }
 });
+
+test("a lava pocket is left by the bank beside water, not an equally near dry one", () => {
+  // The lava-escapes PocketBot: teleported to the centre of a one-cell lava
+  // pocket in a stone shelf, water two cells east with stone between. Every
+  // orthogonal bank is 1.41 blocks away. Leaving lava leaves a fifteen-second
+  // burn, fifteen health; only the east bank has water within a step, and
+  // from the west bank the pocket itself lies across the way to the water.
+  const bot = botFixture({ blocks: { "0,64,0": "lava", "2,64,0": "water" }, groundY: 64 });
+  Reflect.set(bot.entity, "isInLava", true);
+  const world = new MemoryWorld();
+  for (let x = -5; x <= 5; x++)
+    for (let z = -5; z <= 5; z++)
+      for (let y = 62; y <= 67; y++) {
+        const at = new Vec3(x, y, z);
+        world.load(at, observeMineflayerBlock(bot.blockAt(at)!));
+      }
+  assert.deepEqual(nearbyFireEscape(bot, world), new Vec3(1.5, 65, 0.5));
+
+  bot.entity.position.set(-0.65, 65, 0.5);
+  Reflect.set(bot.entity, "isInLava", false);
+  assert.equal(nearbyFireEscape(bot, world), null, "the west bank has no straight way to the water");
+});

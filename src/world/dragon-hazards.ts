@@ -44,6 +44,17 @@ export function readDragonCloudHazards(bot: Bot): DragonCloud[] {
   }));
 }
 
+/**
+ * Native breath lying on the floor beside the feet: within a step of their
+ * height and reaching the neighbouring cells. Navigation refuses every step
+ * that enters it, yet a body standing a block above its floor is not exposed,
+ * so no escape runs and only the breath's going reopens the routes.
+ */
+export function breathBesideFeet(bot: Bot, feet: Position3): DragonCloud[] {
+  return readDragonCloudHazards(bot).filter((cloud) =>
+    Math.abs(cloud.y - feet.y) <= 2 && Math.hypot(feet.x - cloud.x, feet.z - cloud.z) < cloud.radius + 1.3);
+}
+
 /** Native roar (phase 7) precedes flaming (5); the cloud spawns ten ticks
  * into flaming and waits twenty more before damage. Keep the warning through
  * flaming so there is no safe-looking gap before its entity arrives.

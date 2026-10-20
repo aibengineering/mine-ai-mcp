@@ -29,6 +29,12 @@ const phaseSchema = z.enum(DRAGON_PHASE_NAMES);
 const fightSchema = z.strictObject({
   /** Ticks for the scheduled arrangement to land before it is checked. */
   waitTicks: ticksSchema.default(20),
+  /**
+   * The longest the arrangement may take to be observed after that. Entities
+   * reach the client with their chunks: four servers at once left the two
+   * west towers' crystals unsent 1.5 seconds after preparation.
+   */
+  arrangedWithinTicks: ticksSchema.default(200),
   /** What view_status must show before the first request. */
   arranged: z.strictObject({
     crystals: z.number().int().nonnegative(),
@@ -102,7 +108,7 @@ export async function run(context: ScenarioContext): Promise<ClientCompletion> {
   const caller = new Caller(context, fight.gapTicks, fight.idleWithinTicks);
   try {
     await context.waitForTicks(fight.waitTicks);
-    await caller.checkArrangement(fight.arranged);
+    await caller.checkArrangement(fight.arranged, fight.arrangedWithinTicks);
     if (fight.policy) await caller.setPolicy(fight.policy);
     for (const step of fight.before ?? []) {
       const output = await caller.request(step.action, step.input);
@@ -197,7 +203,17 @@ class Caller {
     return output;
   }
 
-  async checkArrangement(arranged: Fight["arranged"]): Promise<void> {
+  /** Observe until the arrangement is all there, or fail once `withinTicks` have passed without it. */
+  async checkArrangement(arranged: Fight["arranged"], withinTicks: number): Promise<void> {
+    for (let waited = 0; ; waited += 5) {
+      const problems = await this.arrangementProblems(arranged);
+      if (problems.length === 0) return;
+      if (waited >= withinTicks) throw new Failure(`the arranged End fight was not observed within ${withinTicks} ticks: ${problems.join(", ")}`);
+      await this.#context.waitForTicks(5);
+    }
+  }
+
+  async arrangementProblems(arranged: Fight["arranged"]): Promise<string[]> {
     const { endFight, nearby, inventory } = await this.observe();
     const dragon = endFight.dragons[0];
     const problems = [
@@ -213,8 +229,8 @@ class Caller {
         name === item && durability !== null && durability.maximum - durability.remaining === damage))
         .map(({ item, damage }) => `no ${item} at damage ${damage}`),
     ].filter((problem): problem is string => typeof problem === "string");
-    if (problems.length > 0) throw new Failure(`the arranged End fight was not observed: ${problems.join(", ")}`);
-    this.note(`arranged: ${endFight.crystals.length} crystals, dragon ${dragon!.phaseName} at ${dragon!.health} health`);
+    if (problems.length === 0) this.note(`arranged: ${endFight.crystals.length} crystals, dragon ${dragon!.phaseName} at ${dragon!.health} health`);
+    return problems;
   }
 
   async setPolicy({ changes, reason }: NonNullable<Fight["policy"]>): Promise<void> {

@@ -72,27 +72,35 @@ async function fight(
   healthBefore: number,
   signal: AbortSignal,
 ): Promise<FightResponseResult> {
-  const contactEnded = new AbortController();
   const policyRevision = controller.policy.snapshot().revision;
-  let target = bot.entities[request.targetId];
-  const observeContact = () => {
-    const { perception } = context;
-    const creepers = perception.creeperClearance.observe(perception.tick, perception.resolvedIds);
-    if (creeperEscape({ creepers, clearancePending: perception.creeperClearance.pending, stationaryCommitment: false })) return;
-    if (target?.isValid && defendsOnContact(target) && !inDefensiveContact(bot, target))
-      contactEnded.abort("Melee target left defensive reach.");
-  };
-  const fought = new Set<number>();
-  const killed: number[] = [];
+  const contact = (entity: (typeof bot.entities)[number] | undefined) =>
+    entity !== undefined && entity.isValid && defendsOnContact(entity) && inDefensiveContact(bot, entity);
+  const killedTargetIds: number[] = [];
   const totals = { attacks: 0, shieldRaisedSwings: 0, projectileGuards: 0, explosions: 0 };
   const styles = new Set<CombatOutcome["stylesUsed"][number]>();
   const weapons = new Set<string>();
-  bot.on("physicsTick", observeContact);
-  let result: CombatOutcome;
-  try {
-    let targetId = request.targetId;
-    for (;;) {
-      fought.add(targetId);
+  let targetId = request.targetId;
+  let settled: FightResponseResult["result"];
+  const fought = new Set<number>();
+  for (;;) {
+    fought.add(targetId);
+    const contactEnded = new AbortController();
+    const target = bot.entities[targetId];
+    // Ending here lowers the shield, and a later fight raises it five ticks
+    // before it blocks. With another attacker of this response still in
+    // reach that gap is a hit; the controller defends it inside this engagement.
+    const otherContactRemains = () =>
+      request.threats.some(({ id }) => id !== targetId && contact(bot.entities[id]));
+    const observeContact = () => {
+      const { perception } = context;
+      const creepers = perception.creeperClearance.observe(perception.tick, perception.resolvedIds);
+      if (creeperEscape({ creepers, clearancePending: perception.creeperClearance.pending, stationaryCommitment: false })) return;
+      if (target?.isValid && defendsOnContact(target) && !inDefensiveContact(bot, target) && !otherContactRemains())
+        contactEnded.abort("Melee target left defensive reach.");
+    };
+    bot.on("physicsTick", observeContact);
+    let result: CombatOutcome;
+    try {
       const pending = controller.engage(
         targetId,
         AbortSignal.any([signal, contactEnded.signal]),
@@ -104,26 +112,36 @@ async function fight(
       );
       observeContact();
       result = await pending;
-      totals.attacks += result.attacks;
-      totals.shieldRaisedSwings += result.shieldRaisedSwings;
-      totals.projectileGuards += result.projectileGuards;
-      totals.explosions += result.explosions;
-      for (const style of result.stylesUsed) styles.add(style);
-      for (const weapon of result.weaponsUsed) weapons.add(weapon);
-      if (result.kind !== "died") break;
-      killed.push(result.targetId);
-      if (signal.aborted) break;
-      const next = nextGroupTarget(bot, request, context, fought);
-      if (!next) break;
-      target = next;
-      targetId = next.id;
+    } finally {
+      bot.off("physicsTick", observeContact);
     }
-  } finally {
-    bot.off("physicsTick", observeContact);
+    // A settled controller still owns useful statistics after cancellation.
+    // The claim owner classifies cancellation/death without discarding them.
+    totals.attacks += result.attacks;
+    totals.shieldRaisedSwings += result.shieldRaisedSwings;
+    totals.projectileGuards += result.projectileGuards;
+    totals.explosions += result.explosions;
+    for (const style of result.stylesUsed) styles.add(style);
+    for (const weapon of result.weaponsUsed) weapons.add(weapon);
+    if (result.kind === "died") killedTargetIds.push(result.targetId);
+    settled =
+      result.kind === "cancelled" && contactEnded.signal.aborted && !signal.aborted
+        ? { kind: "contact_ended" }
+        : result.kind === "cancelled" && !signal.aborted && controller.policy.snapshot().revision === policyRevision
+          ? { ...result, kind: "failed", observation: "Combat was cancelled without an aborted session signal." }
+          : result;
+    // The next of this response's attackers is already in reach: fight it
+    // within the same response. Handing the body back between them lowers
+    // the guard for the resumed request, and the partner swings into that gap.
+    // Otherwise the rest of the group it answered, wherever it now stands.
+    const next = settled.kind === "died" && !signal.aborted
+      ? (request.threats.find(({ id }) => !fought.has(id) && contact(bot.entities[id])) ??
+        nextGroupTarget(bot, request, context, fought))
+      : undefined;
+    if (!next) break;
+    targetId = next.id;
   }
-  // A settled controller still owns useful statistics after cancellation.
-  // The claim owner classifies cancellation/death without discarding them.
-  const common = {
+  return {
     ...encounterBaseline(bot, request, healthBefore),
     attacks: totals.attacks,
     combatStyles: [...styles],
@@ -131,17 +149,9 @@ async function fight(
     shieldRaisedSwings: totals.shieldRaisedSwings,
     projectileGuards: totals.projectileGuards,
     explosions: totals.explosions,
-  };
-  return {
-    ...common,
     response: "fight",
-    killedTargetIds: killed,
-    result:
-      result.kind === "cancelled" && contactEnded.signal.aborted && !signal.aborted
-        ? { kind: "contact_ended" }
-        : result.kind === "cancelled" && !signal.aborted && controller.policy.snapshot().revision === policyRevision
-          ? { ...result, kind: "failed", observation: "Combat was cancelled without an aborted session signal." }
-          : result,
+    killedTargetIds,
+    result: settled,
   };
 }
 

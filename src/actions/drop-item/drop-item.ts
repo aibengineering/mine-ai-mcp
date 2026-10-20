@@ -286,8 +286,9 @@ async function closeDisposalHole(
   hole: Vec3,
   dependencies: DropItemDependencies,
   context: ActionContext,
+  discarding: ReadonlySet<string>,
 ): Promise<HoleClosure> {
-  const seal = await sealDisposalHole(bot, hole, dependencies.placeInto, context);
+  const seal = await sealDisposalHole(bot, hole, dependencies.placeInto, context, discarding);
   const retreat = await stepAwayFromHole(bot, hole, dependencies, context);
   const errors = [seal.error, retreat.error].filter((error): error is string => error !== undefined);
   return {
@@ -393,7 +394,7 @@ export async function dropItem(
     context.signal?.throwIfAborted();
     // Whether or not the toss was seen at the bottom, an open pit beside the
     // bot is the hazard the next route walks into, so close it either way.
-    holeClosure = await closeDisposalHole(bot, hole, dependencies, context);
+    holeClosure = await closeDisposalHole(bot, hole, dependencies, context, new Set(request.items.map((item) => item.itemName)));
   }
 
   const evidence: DropItemEvidence = {

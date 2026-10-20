@@ -139,7 +139,9 @@ test("cancelling while a second ceiling still pins the body releases the observa
   world.load({ x: 1, y: 64, z: 0 }, { stateId: 8, collisionShapes: LEAF_SHAPE, traits: { empty: false, safeToBreak: true } });
   const bot = new HeldBot(world);
   bot.current = { ...bot.current, position: { x: 0.9, y: 63, z: 0.5 } };
-  const navigator = createNavigator({ world, bot });
+  // One turn reaches the observation wait only if the search is not split
+  // over its 8 ms slice, which a loaded machine's wall clock did.
+  const navigator = createNavigator({ world, bot, now: () => 0 });
   const admission = navigator.startRun({ goal: exactBlockGoal({ x: 2, y: 63, z: 0 }), policy: createMovementPolicy() });
   if (admission.kind !== "started") assert.fail("busy");
   await nextTurn();

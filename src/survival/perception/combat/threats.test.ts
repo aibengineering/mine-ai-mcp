@@ -22,7 +22,8 @@ interface Mob {
 }
 
 test("waiting for contact is distinct from a response constrained by policy", () => {
-  const waiting = botWith({ health: 20, mobs: [{ id: 7, name: "zombie", x: 5 }] });
+  // Beyond reach and the guard's closing allowance: nothing to answer yet.
+  const waiting = botWith({ health: 20, mobs: [{ id: 7, name: "zombie", x: 6 }] });
   assert.equal(observeHostileResponse(waiting).kind, "none");
   const contact = botWith({ health: 20, mobs: [{ id: 7, name: "zombie", x: 2 }] });
   const result = observeHostileResponse(contact, context(), {

@@ -16,6 +16,7 @@ import { CLIMBABLES } from "../../../navigation/mineflayer/world.js";
 import type { MovementPolicy } from "../../../navigation/movements/policy.js";
 import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
 import {
+  breathBesideFeet,
   cloudExposure,
   dragonDanger,
   dragonExposure,
@@ -24,6 +25,7 @@ import {
   observeDragonEscape,
   perchedDragonContact,
   readDragonBreathHazards,
+  readDragonCloudHazards,
 } from "../../../world/dragon-hazards.js";
 import { entityHealth, dragonPhase, isDragonLanding, isDragonPerched, observedDragonLandingCenter, perchAttackCell, perchedDragonHead, perchedDragonBodyParts } from "../../../world/end-fight.js";
 import { nearestBodyPoint } from "../../../world/entity-geometry.js";
@@ -50,6 +52,7 @@ import {
   crystalBlastCoverCell,
   crystalBlastEstimate,
   crystalMeleeAim,
+  crystalMeleeObstruction,
   crystalReturnGoal,
 } from "../../positioning/combat/crystal-melee.js";
 import { type SurvivalResources } from "../../state/resources.js";
@@ -91,6 +94,10 @@ export interface EndCombatResult {
 type EndMoveResult = { kind: "arrived" } | { kind: "changed" } | { kind: "failed"; reason: string };
 /** Health points held back beyond the blast estimate before an exposed swing. */
 const CRYSTAL_BLAST_MARGIN = 2;
+/** Blocks one melee request may dig off its attack line: a shelter's walls and cap are at most a few. */
+const CRYSTAL_LINE_DIGS = 6;
+/** A perched cloud lives ten seconds of server time; a loaded server stretches that. */
+const CRYSTAL_BREATH_WAIT_MS = 30_000;
 
 // Vanilla ServerLevel sends explosion packets only when distance squared is
 // below 4096. Beyond this range a destroyed crystal can vanish without a receipt.
@@ -827,13 +834,22 @@ export class EndCombat {
     // The pillar approach is the exception: its route is the scaffolding, and
     // the descent digs back through it. The tower stays protected either way.
     const pillar = observation.approach === "pillar";
+    const protectedCells = () => new Set([packKey(pedestal.x, pedestal.y, pedestal.z),
+      ...(observation.staircase?.tower.map(p => packKey(p.x, p.y, p.z)) ?? []),
+      ...(observation.staircase?.cells.filter(cell => cell.blockName !== "air")
+        .map(({ position: p }) => packKey(p.x, p.y, p.z)) ?? [])]);
     const movements = () => createMovements(bot, {
       allowDigging: this.policy().combat.terrain.dig, scaffolding: pillar && this.policy().combat.terrain.place,
-      protectedCells: new Set([packKey(pedestal.x, pedestal.y, pedestal.z),
-        ...(observation.staircase?.tower.map(p => packKey(p.x, p.y, p.z)) ?? []),
-        ...(observation.staircase?.cells.filter(cell => cell.blockName !== "air")
-          .map(({ position: p }) => packKey(p.x, p.y, p.z)) ?? [])]),
+      protectedCells: protectedCells(),
     });
+    // What the bot itself may have left on the attack line: shelter walls and
+    // caps, or scaffold. The tower, its pedestal, its cage and the treads stay.
+    const placedByBot = (position: Vec3) => {
+      const block = bot.blockAt(position);
+      return block !== null && block.name !== "bedrock" && !protectedCells().has(packKey(position.x, position.y, position.z)) &&
+        (DRAGON_PROTECTION_BLOCKS.includes(block.name) || this.policy().navigation.scaffold_blocks.includes(block.name));
+    };
+    let lineDigs = 0;
     while (!observation.destroyed && !observation.shot) {
       signal.throwIfAborted();
       if (this.danger) {
@@ -853,7 +869,10 @@ export class EndCombat {
       } else {
         const built = await this.buildCrystalApproach(observation, signal);
         if (built.kind === "changed") continue;
-        if (built.kind === "failed") return this.crystalResult(observation, "stopped", built.reason);
+        if (built.kind === "failed") {
+          if (await this.breathPassed(signal)) continue;
+          return this.crystalResult(observation, "stopped", built.reason);
+        }
       }
       const moved = await this.move(exactBlockGoal(observation.staircase.stance), signal,
         () => this.danger || !crystal.isValid, movements());
@@ -866,6 +885,18 @@ export class EndCombat {
       const feet = bot.entity.position.clone();
       const aim = crystalMeleeAim(bot, crystal.position);
       if (!aim) {
+        // A dragon shelter raised on the stance leaves its walls and cap
+        // between the eye and the crystal; dig them out rather than refuse
+        // every retry from the same cell.
+        const obstruction = this.policy().combat.terrain.dig && lineDigs < CRYSTAL_LINE_DIGS
+          ? crystalMeleeObstruction(bot, crystal.position, feet.offset(0, observedEyeHeight(bot.entity), 0), placedByBot)
+          : null;
+        if (obstruction) {
+          lineDigs++;
+          const dug = await this.phase("approach", () =>
+            this.navigation.breakBlockInPlace({ position: obstruction, movements: movements(), signal }));
+          if (dug.status === "broken") continue;
+        }
         observation.fail("cage_uncleared");
         return this.crystalResult(observation, "stopped", "[CRYSTAL_ATTACK_CORNER_BLOCKED] The staircase is complete but the stance lacks a clear melee hit within reach. Inspect the cage opening before retrying.");
       }
@@ -921,6 +952,25 @@ export class EndCombat {
         ? this.crystalResult(observation, "crystal_destroyed")
         : this.crystalResult(observation, "stopped", `Crystal destroyed; return route failed: ${descended.reason}`);
     }
+  }
+
+  /**
+   * A perched dragon's breath settled on the floor beside the raised cell the
+   * bot stood on: not exposed, so no escape ran, but navigation refuses every
+   * step into the breath, and the staircase read its closed routes as
+   * unreachable treads. Wait for that breath to go, then build again.
+   */
+  private async breathPassed(signal: AbortSignal): Promise<boolean> {
+    const beside = breathBesideFeet(this.bot, this.bot.entity.position).map(cloud => cloud.id);
+    if (beside.length === 0) return false;
+    for (const deadline = Date.now() + CRYSTAL_BREATH_WAIT_MS; Date.now() < deadline;) {
+      // Danger or lost footing is a changed scene the approach loop answers itself.
+      if (this.danger || this.footing.needed) return true;
+      const present = new Set(readDragonCloudHazards(this.bot).map(cloud => cloud.id));
+      if (beside.every(id => !present.has(id))) return true;
+      await waitForPhysicsTicks(this.bot, 5, signal);
+    }
+    return false;
   }
 
   private async buildCrystalApproach(observation: CrystalObservation, signal: AbortSignal): Promise<EndMoveResult> {

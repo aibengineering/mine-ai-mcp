@@ -50,7 +50,8 @@ import {
   type Navigate,
   type NavigationResult,
 } from "../../index.js";
-import type { Position3 } from "../../world/world.js";
+import { navigationFeet } from "../../world/block-geometry.js";
+import { samePosition, type Position3 } from "../../world/world.js";
 
 /**
  * How far a cell may be from the feet to be worked without moving, measured
@@ -352,6 +353,29 @@ class BuildTargeting {
     );
   }
 
+  /**
+   * Any stance whose feet and head the structure leaves open is a way out of
+   * a cell it needs. A live staircase put that bot on a support 25 blocks up,
+   * where the corner beyond the bounds at its height was only air.
+   */
+  clearOfStructureGoal(): Goal {
+    const needed = new Set(
+      this.request.cells
+        .filter((cell) => cell.blockName !== "air" && this.stateOf(cell).kind !== "correct")
+        .map((cell) => keyOf(cell.position)),
+    );
+    const revision = `clear-of-structure:${[...needed].join("|")}`;
+    return {
+      resolve: () => ({
+        kind: "active",
+        revision,
+        heuristic: () => 0,
+        isSatisfied: ({ feet }) =>
+          !needed.has(packKey(feet.x, feet.y, feet.z)) && !needed.has(packKey(feet.x, feet.y + 1, feet.z)),
+      }),
+    };
+  }
+
   /** Any cell beside the structure but outside its bounds is a way out. */
   outsideGoal(): Goal {
     const feet = feetOf(this.bot);
@@ -364,16 +388,23 @@ class BuildTargeting {
       resolve: (observation) => {
         const spatial = approach.resolve(observation);
         if (spatial.kind === "invalid" || this.stateOf(target).kind !== "diggable") return spatial;
+        // The cell the body stands in is judged from the body, as the work in
+        // reach judges it; any other from its centre, where a route settles.
+        // A live End staircase stood 0.12 blocks off a centre that saw its
+        // dig: judged from the centre, the bot had arrived, and from the body
+        // there was nothing to work, so no pass or retry ever moved it.
+        const here = navigationFeet(observation.position, observation.stance === "supported");
         return {
           ...spatial,
           revision: `visible-dig:${spatial.revision}`,
           isSatisfied: (node, world) =>
             spatial.isSatisfied(node, world) &&
-            this.canWorkFrom(target, {
-              x: node.feet.x + 0.5,
-              y: node.feet.y,
-              z: node.feet.z + 0.5,
-            }),
+            this.canWorkFrom(
+              target,
+              samePosition(node.feet, here)
+                ? observation.position
+                : { x: node.feet.x + 0.5, y: node.feet.y, z: node.feet.z + 0.5 },
+            ),
         };
       },
     };
@@ -479,7 +510,8 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
     // would either be refused or wall the bot into a pit, so step out first;
     // likewise when every remaining placement would seal the bot in.
     if (targeting.standingInStructure() || targeting.onlyEnclosing()) {
-      const exit = await request.route({ movements, goal: targeting.outsideGoal(), signal: request.signal, stopSignal: request.stopSignal });
+      const goal = targeting.standingInStructure() ? targeting.clearOfStructureGoal() : targeting.outsideGoal();
+      const exit = await request.route({ movements, goal, signal: request.signal, stopSignal: request.stopSignal });
       if (exit.status === "stopped") {
         return targeting.result("stopped", `could not step out of the structure: ${exit.reason}`);
       }

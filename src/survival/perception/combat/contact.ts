@@ -1,6 +1,7 @@
 import type { Bot } from "mineflayer";
 import { MELEE_RANGE } from "../../weapons/equipment.js";
 import { meleeDistance, waitingForDescendingCube } from "../../weapons/melee.js";
+import { meleeImminent } from "./observations.js";
 
 type Entity = Parameters<Bot["attack"]>[0];
 
@@ -37,5 +38,9 @@ export function inDefensiveContact(bot: Bot, entity: Entity): boolean {
   // reach. Reuse the controller's airborne test: handing a journey the body
   // under that cube let it jump before the descending hit. Supported mobs on
   // another ledge still do not acquire an indefinite warning-margin hold.
-  return meleeDistance(bot, entity) <= MELEE_RANGE || waitingForDescendingCube(bot, entity);
+  // Reach alone admits the fight too late for its guard: an attacker and a
+  // bot walking into it close the last block and a half to the swing in
+  // fewer ticks than a raised shield takes to block. Imminence carries that
+  // allowance, so the guard is up when the first swing lands.
+  return meleeDistance(bot, entity) <= MELEE_RANGE || waitingForDescendingCube(bot, entity) || meleeImminent(bot, entity);
 }

@@ -57,6 +57,8 @@ const NETHER_VINES = new Set(["weeping_vines", "weeping_vines_plant", "twisting_
 // physicsTick observers therefore see this value and carry it into the next move.
 const NETHER_VINE_CLIMB_VELOCITY = (0.2 - 0.08) * 0.98;
 const NETHER_VINE_HORIZONTAL_VELOCITY = 0.15 * 0.91;
+/** How long a dig waits for a body afloat over its floor to land; sinking a fraction of a block takes a few ticks. */
+const WATER_FLOOR_SETTLE_TICKS = 20;
 
 export interface MineflayerBotSurface {
   readonly entity: {
@@ -651,6 +653,25 @@ export class MineflayerBot implements NavigationBot {
       `target feet=${observedBlock(feetBlock)}, head=${observedBlock(headBlock)}.`
     );
   }
+  /**
+   * Land a body afloat just above a solid floor before it digs.
+   *
+   * Search prices a stance over a solid floor as grounded. Water arriving
+   * after planning can float the body off that floor, where vanilla digs five
+   * times slower, and Mineflayer fixes a dig's duration as the swing starts:
+   * a log priced at three seconds took fifteen and outlived its confirmation.
+   */
+  async #settleOntoWaterFloor(signal: AbortSignal): Promise<void> {
+    for (let tick = 0; tick < WATER_FLOOR_SETTLE_TICKS; tick += 1) {
+      const { position, onGround, isInWater } = this.bot.entity;
+      if (!isInWater || onGround) return;
+      const below = { x: Math.floor(position.x), y: Math.floor(position.y) - 1, z: Math.floor(position.z) };
+      if ((this.bot.blockAt(below) as MineflayerBlock | null)?.boundingBox !== "block") return;
+      this.#control("jump", false);
+      signal.throwIfAborted();
+      await this.bot.waitForTicks(1);
+    }
+  }
   /** The block that lands in `position` within two seconds of a break, or null when nothing does. */
   async #awaitRefill(position: BlockPosition, signal: AbortSignal): Promise<{ readonly block: unknown } | null> {
     for (let tick = 0; tick < 40; tick += 1) {
@@ -699,6 +720,7 @@ export class MineflayerBot implements NavigationBot {
               } as const;
             await this.bot.equip(item, "hand");
           }
+          await this.#settleOntoWaterFloor(signal);
           signal.throwIfAborted();
           this.selectedTool()?.(operation.toolType);
           issued = true;

@@ -166,9 +166,13 @@ export async function observeHoleDrops(
 /** What `sealDisposalHole` reports; the caller adds how far it then stepped back. */
 export type DisposalHoleSeal = Pick<HoleClosure, "item" | "placed"> & { readonly error?: string };
 
-/** Use the first carried, physically safe block admitted by the live scaffold policy. */
-function plugMaterial(bot: Bot): InventoryItem | null {
-  return preferredScaffoldItem(bot);
+/**
+ * Use the first carried, physically safe block admitted by the live scaffold
+ * policy, never one the request is discarding: a request to drop 192 of a
+ * stack keeps the rest, and plugging with it would spend more than asked.
+ */
+function plugMaterial(bot: Bot, discarding: ReadonlySet<string>): InventoryItem | null {
+  return preferredScaffoldItem(bot, discarding);
 }
 
 /**
@@ -185,18 +189,19 @@ export async function sealDisposalHole(
   bottom: Vec3,
   place: typeof placeSolidBlockInto,
   context: ActionContext,
+  discarding: ReadonlySet<string> = new Set(),
 ): Promise<DisposalHoleSeal> {
   let item: string | null = null;
   let placed = 0;
   for (const cell of [bottom.offset(0, 1, 0), bottom.offset(0, 2, 0)]) {
     context.signal?.throwIfAborted();
     if (!air(bot, cell)) continue;
-    const material = plugMaterial(bot);
+    const material = plugMaterial(bot, discarding);
     if (!material)
       return {
         item,
         placed,
-        error: `[DROP_HOLE_OPEN] No full, dry, non-falling block is carried to plug the hole at (${cell.x}, ${cell.y}, ${cell.z}).`,
+        error: `[DROP_HOLE_OPEN] No full, dry, non-falling block other than the items discarded is carried to plug the hole at (${cell.x}, ${cell.y}, ${cell.z}).`,
       };
     const result = await place(bot, cell, material, { signal: context.signal });
     if (result.kind === "failed")

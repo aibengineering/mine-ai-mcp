@@ -1,6 +1,6 @@
 template: ../../templates/single-action.yaml
 
-tags: [known-failing, regression, slow]
+tags: [regression, slow]
 description: >-
   Climb the melee staircase to every one of the ten native crystals on seed
   8675309, lowest first, caged or exposed, and melee each from the covered rim
@@ -8,11 +8,12 @@ description: >-
   crystal gets at most five requests while view_status still lists it. Kept
   apart from end-crystals-every-method because a staircase climbed after a
   pillar fails today (known-failing/combat/end-crystals-pillar-then-staircase.yaml).
-  Fails intermittently: on 2026-10-20 it passed twice for the End migration,
-  then failed in two of three runs on the merged branch. Once the staircase to
-  the caged crystal at -33.5,83,-24.5 stopped five times running (slow-tier
-  run, under load), and once the bot died partway (13-15-24Z, alone). The
-  staircase on caged towers stays covered by end-crystals-every-method.
+  Failed intermittently until 2026-10-21, three ways: the builder judged a dig
+  stance from the cell centre while the body stood 0.12 blocks off it, so it
+  "arrived" and never worked ("2 passes changed nothing"); a perched dragon's
+  breath beside the bot's raised cell closed every route ("visited 7 nodes"),
+  read as unreachable treads; and a dragon shelter raised on the rim stance
+  left its walls on the attack line ([CRYSTAL_ATTACK_CORNER_BLOCKED]).
 
 world:
   type: default

@@ -2,6 +2,7 @@ import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
 import { ProtectedAttackProgress } from "../../control/combat/attack-progress.js";
 import type { FightOutcome } from "../../control/combat/engagement.js";
 import { type CombatExecutionSnapshot } from "../../control/combat/execution.js";
+import { meleeImminent } from "../../perception/combat/observations.js";
 import { CombatPosition } from "../../positioning/combat/position.js";
 
 import { CoverFight } from "./cover.js";
@@ -103,13 +104,23 @@ export async function runMobFight(
   } finally {
     observation.stopEffects();
   }
+  // A fight that ends with another attacker closing hands over a raised
+  // guard. Lowered here, the next fight's shield blocks only five ticks after
+  // it rises, and a wither skeleton beside a dead partner swung inside that
+  // gap; nor does a blocked swing buy time, since these mobs strike again
+  // within two ticks of it. An owner that is cancelled still releases it.
+  const keepGuard =
+    !scene.ownerSignal.aborted &&
+    Object.values(scene.bot.entities).some(
+      (entity) => entity.isValid && entity !== scene.target && !scene.dead.has(entity.id) && meleeImminent(scene.bot, entity),
+    );
   try {
     await scene.execution.run("release", () =>
       weapons.itemUse.neutralise(async () => {
         if (scene.footingRecovery.needed && !scene.signal.aborted) await locomotion.recoverFooting();
         if (scene.ownerSignal.aborted) locomotion.footing.release();
         else await locomotion.footing.stop(scene.ownerSignal);
-      }, scene.ownerSignal),
+      }, scene.ownerSignal, keepGuard),
     );
     scene.reportProgress("ended", outcome.kind, "observation" in outcome ? outcome.observation : null);
     return outcome;

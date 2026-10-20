@@ -189,6 +189,12 @@ export interface RunContext extends RouteContext {
    * supplies the field or whether the caller opted out.
    */
   readonly stepField: StepFieldProvider | null;
+  /**
+   * The clock each search measures its compute slices by, in milliseconds;
+   * `performance.now` when absent. A test whose subject is not planning time
+   * passes one that stands still, so a search is never split by load.
+   */
+  readonly now?: () => number;
 }
 
 export interface NavigationRunDependencies {
@@ -656,6 +662,7 @@ export class NavigationRun {
       // movement. The same segment searched standing still, after a plan-ahead
       // result was abandoned, is a pause the bot's operator can see.
       limits: ahead ? (this.request.continuationSearchLimits ?? this.request.searchLimits) : this.request.searchLimits,
+      ...(this.context.now && { now: this.context.now }),
     });
     for (;;) {
       // Every slice, the first included, starts on a fresh turn of the event
