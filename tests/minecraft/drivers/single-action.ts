@@ -1,15 +1,12 @@
 import { z } from "zod";
 import type { ClientCompletion } from "mine-labs/client";
+import { checkExpectation, expectationSchema, playerParams } from "../driver-params.ts";
 import type { ScenarioContext } from "../scenario.ts";
 
 const requestSchema = z.strictObject({
   action: z.string().trim().min(1),
   input: z.record(z.string(), z.unknown()),
-  expect: z.strictObject({
-    status: z.enum(["succeeded", "partial", "failed"]),
-    errorContains: z.string().min(1).optional(),
-    interruptionContains: z.string().min(1).optional(),
-  }).default({ status: "succeeded" }),
+  expect: expectationSchema,
 });
 
 /**
@@ -18,25 +15,8 @@ const requestSchema = z.strictObject({
  * failure must never turn a runtime failure or cancellation into a passing test.
  */
 export async function run(context: ScenarioContext): Promise<ClientCompletion> {
-  const { action, input, expect } = requestSchema.parse(context.scenario.params);
+  const { action, input, expect } = playerParams(context, requestSchema);
   const output = await context.call(action, input);
-  const { result } = output;
-  if (("kind" in result && result.kind === "runtime_failure") || result.status === "cancelled") {
-    return { status: "failed", detail: output.summary };
-  }
-  const error = result.status === "succeeded" ? "" : result.error;
-  const interruption = expect.interruptionContains;
-  const matches = result.status === expect.status &&
-    (expect.errorContains === undefined || error.includes(expect.errorContains)) &&
-    (interruption === undefined ||
-      output.interruptions?.some((reason) => reason.includes(interruption)) === true);
-  const expected = [
-    `Expected ${expect.status}`,
-    expect.errorContains && `error containing ${JSON.stringify(expect.errorContains)}`,
-    interruption && `interruption containing ${JSON.stringify(interruption)}`,
-  ].filter(Boolean).join(" with ");
-  return {
-    status: matches ? "succeeded" : "failed",
-    detail: matches ? output.summary : `${expected}; ${output.summary}`,
-  };
+  const { matches, detail } = checkExpectation(expect, output);
+  return { status: matches ? "succeeded" : "failed", detail };
 }

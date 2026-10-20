@@ -35,8 +35,10 @@
     "typecheck:tests": "bun check -p tests/tsconfig.json",
     "test": "bun run typecheck && bun run typecheck:scenarios && bun run typecheck:tests && bun test --parallel ./src ./scenarios/src ./tests",
     "evidence:render": "bun scenarios/src/action-evidence-page.ts",
-    "scenarios": "bunx --bun mine-labs run tests/minecraft/scenarios --jobs 2 --repeat forever",
-    "scenarios:once": "bunx --bun mine-labs run tests/minecraft/scenarios --jobs 2 --repeat 1",
+    "scenarios": "bunx --bun mine-labs run tests/minecraft/scenarios --skip-tag slow --jobs 2 --repeat forever",
+    "scenarios:once": "bunx --bun mine-labs run tests/minecraft/scenarios --skip-tag slow --jobs 2 --repeat 1",
+    "scenarios:full": "bunx --bun mine-labs run tests/minecraft/scenarios --jobs 2 --repeat 1",
+    "scenarios:known-failing": "bunx --bun mine-labs run tests/minecraft/known-failing --jobs 2 --repeat 1",
     "scenarios:spectator": "bun tests/minecraft/build-spectator-mods.ts && bunx --bun mine-labs run tests/minecraft/scenarios --spectator",
     "scenarios:tailscale": "bun tests/minecraft/build-spectator-mods.ts && bunx --bun mine-labs run tests/minecraft/scenarios --tailscale"
   },

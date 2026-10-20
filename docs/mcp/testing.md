@@ -153,22 +153,31 @@ the spectator build runs Gradle, with `$JAVA_HOME/bin/java` when `JAVA_HOME` is
 set and `java` on `PATH` otherwise. If the default Java is older, prefix the
 command, for example `JAVA_HOME=/path/to/jdk-21 bun run scenarios:once`.
 
-`scenarios` runs `tests/minecraft/scenarios` repeatedly with two workers; appended
-options such as `--jobs` and `--repeat` override those defaults.
-`scenarios:once` runs the same suite once with two workers, which is the check
-to make after changing a fixture, template, driver or the host.
-`scenarios:spectator` builds the highlighter and opens that same suite in the
+The suite has two tiers, split by the scenario tag `slow` (End fights, long
+Nether hunts and anything over about five minutes).
+`scenarios:once` runs the fast tier of `tests/minecraft/scenarios` once with two
+workers, skipping `slow` fixtures, which is the check to make after changing a
+fixture, template, driver or the host. `scenarios` repeats that fast tier until
+stopped; appended options such as `--jobs` and `--repeat` override its defaults.
+`scenarios:full` runs every fixture in `tests/minecraft/scenarios` once, `slow`
+ones included.
+`scenarios:known-failing` runs `tests/minecraft/known-failing` once: faithful
+fixtures for behaviour that fails today, which neither tier discovers.
+`scenarios:spectator` builds the highlighter and opens the whole suite in the
 managed Java viewer. Its controls select scenarios and repetition. The YAML
 `client` command still runs the bot participant in either mode.
 
 Run these commands from the package root:
 
 ```sh
-# Run the whole suite once with two workers.
+# Run the fast tier once with two workers.
 bun run scenarios:once
 
-# Soak the current suite with two workers.
+# Soak the fast tier with two workers.
 bun run scenarios
+
+# Run every fixture once, slow ones included.
+bun run scenarios:full
 
 # Run one fixture once.
 bunx --bun mine-labs run tests/minecraft/scenarios/collect/mixed-trees.yaml --repeat 1

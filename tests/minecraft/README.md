@@ -13,12 +13,14 @@ Starting worn or held items belong under `players[].equipment`, for example
 drivers should only call `equip` when equipping is part of the behavior under test.
 
 Everything for this suite lives here: shared host files at the top level,
-replaceable test logic in `drivers/`, YAML defaults in `templates/`, and runnable
-cases in `scenarios/`. Point Mine Labs at `scenarios/`, not this whole directory:
-it recursively discovers every YAML file, including templates.
+replaceable test logic in `drivers/`, YAML defaults in `templates/`, runnable
+cases in `scenarios/`, and faithful fixtures for behaviour that fails today in
+`known-failing/`. Point Mine Labs at `scenarios/` or `known-failing/`, not this
+whole directory: it recursively discovers every YAML file, including templates.
 
 Group scenarios by behavior: `collect`, `craft`, `build`, `bucket`, `barter`,
-`drop`, `explore`, `hunt`, `combat`, and `pathfinder`. World type and multi-location
+`drop`, `explore`, `hunt`, `combat`, `pathfinder`, `portal`, `progression`,
+`sleep`, `storage` and `survival`. World type and multi-location
 verification belong in the fixture's YAML, so flat and natural-world cases
 appear together when reviewing a capability. A fixture's `name` is its file
 name without `.yaml`, and Mine Labs lists it as `<folder>/<file>`.
@@ -30,6 +32,11 @@ Each scenario also declares its purpose in `description` and its type in `tags`:
 - `acceptance`: a capability or behavior we expect to work.
 - `regression`: a known failure we want to keep fixed; describe that failure too.
 - `reliability`: repeated execution exposes marginal movement or control behavior.
+- `slow`: End fights, long Nether hunts and anything else over about five
+  minutes. It moves the fixture out of the fast tier (see
+  [Two tiers](#two-tiers-and-the-known-failing-folder)).
+- `known-failing`: the fixture lives in `known-failing/` because the behavior
+  fails today. It always comes with `regression`.
 
 Keep scenarios in their behavior folders. In Mine Labs, press **F9** to inspect
 the current or most recently run scenario, including its purpose and live goals.
@@ -74,8 +81,11 @@ params:
     errorContains: "[INVENTORY_FULL]"
 ```
 
-`expect.status` accepts `succeeded`, `partial`, or `failed`. Optional
-`errorContains` matches literal text, not a regular expression. Both conditions
+`expect.status` accepts `succeeded`, `partial`, or `failed`, or a list of them
+when the world decides between outcomes: a hunt asked for more than its pen
+holds clears the pen and reports `[partial, failed]`, and kill or distance goals
+then judge the defeat. Optional
+`errorContains` matches literal text, not a regular expression. All conditions
 must match; mismatches report the expectation alongside the actual action
 summary. Runtime failures and cancellations always fail the trial. These are
 our driver's parameters, not Mine Labs goal types.
@@ -98,9 +108,41 @@ params:
     - { action: collect_block, input: { block_name: iron_ore, count: 3, scaffold: false } }
 ```
 
-Every step must succeed, and the sequence stops on the first failure. Final
-inventory and world assertions stay in Mine Labs goals. Use a custom driver only
-when the scenario needs logic beyond an ordered list of successful calls.
+Each step takes the same optional `expect` as a single action, and defaults to
+success. The sequence stops at the first step whose expectation fails. An
+optional leading `waitTicks` delays the first request, for a request made once
+an arranged fight is under way:
+
+```yaml
+params:
+  waitTicks: 40
+  actions:
+    # A stone cell: the refusal is part of the behavior under test.
+    - action: use_bucket
+      input: { action: fill, liquid: water, x: 4, y: -60, z: 0 }
+      expect: { status: failed, errorContains: "[BUCKET_NOT_A_SOURCE]" }
+    - { action: collect_block, input: { block_name: stone, count: 2, scaffold: false } }
+```
+
+Final inventory and world assertions stay in Mine Labs goals. Use a custom
+driver only when the scenario needs logic beyond an ordered list of calls with
+expected results.
+
+For a fixture that requests nothing, select `drivers/idle.ts`. It waits
+`params.waitTicks`, or `params.players.<username>.waitTicks` when that player
+has one, then reports success. The runtime's reflexes own the body meanwhile,
+and the world goals carry the verdict. The host closes the runtime, and its
+reflexes with it, once the driver returns, so the wait must cover the whole
+arranged hazard.
+
+```yaml
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/idle.ts]
+params:
+  waitTicks: 600
+```
 
 ## Combined behavior scenarios
 
@@ -151,6 +193,103 @@ second requires the driver to report success. Neither the action's claim nor
 the inventory alone can pass this test. Omitting `who` selects the first player.
 The timeout is the trial's budget, not an action timeout.
 
+## Pens: several actors in one world
+
+A combined scenario usually places one actor per behavior in a single world.
+Mine Labs starts one client per `players[]` entry, each running the fixture's
+`client` command with its own username, so every pen runs the same driver and
+finds its own request by name:
+
+- **Distance.** Each actor stands in its own walled pen, far enough from the
+  others that mobs and tracking cannot cross: about 100 blocks apart for idle
+  arenas and 200 for hunts. Cover every pen with `reset`, which on the flat
+  template means overriding its small reset region.
+- **One request per pen.** `params.players.<username>` holds each pen's request.
+  `drivers/action-sequence.ts` reads `{ waitTicks?, actions? }` from it; a pen
+  with only `waitTicks` idles, so idle and requesting pens can share a fixture.
+  `drivers/single-action.ts` reads `{ action, input, expect? }`, and
+  `drivers/idle.ts` reads `{ waitTicks }`. Once `params.players` is present,
+  every pen needs an entry and no scenario-level request may sit beside it;
+  the drivers reject either mistake, and an entry naming an undeclared player.
+- **`who`-scoped goals.** Give every player-observing goal (`completion`,
+  `hasItem`, `health`, `survive`, `reach`, `entityDistance`) the pen's `who`, so
+  one pen's success cannot stand in for another's. A goal without `who` reads
+  only the first player, and `survive` without `who` reads them all.
+- **The spectator rule.** `templates/flat-single-action.yaml`'s `tick` rule puts
+  every player other than `Actor` into spectator mode. A multi-player fixture
+  overrides `tick` with its own names:
+  `"gamemode spectator @a[name=!Idler,name=!Worker,gamemode=!spectator]"`.
+
+```yaml
+players:
+  - { name: Idler, pos: [0.5, -60, 0.5], equipment: { mainhand: iron_sword } }
+  - { name: Worker, pos: [100.5, -60, 0.5], inventory: [{ item: stone_pickaxe }, { item: bucket }] }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    Idler: { waitTicks: 400 }
+    Worker:
+      actions:
+        - action: use_bucket # a stone cell, refused
+          input: { action: fill, liquid: water, x: 104, y: -60, z: 0 }
+          expect: { status: failed, errorContains: "[BUCKET_NOT_A_SOURCE]" }
+        - { action: collect_block, input: { block_name: stone, count: 2, scaffold: false } }
+tick:
+  - "gamemode spectator @a[name=!Idler,name=!Worker,gamemode=!spectator]"
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: kill, target: zombie }
+    - { kind: survive, who: Idler, seconds: 15 }
+    - { kind: completion, who: Idler }
+    - { kind: hasItem, who: Worker, item: cobblestone, count: 2 }
+    - { kind: completion, who: Worker }
+```
+
+## Arranging mid-trial events
+
+The fixture arranges every stimulus in YAML; drivers never stage the world.
+Mine Labs offers these shapes:
+
+- **One-shot events.** Top-level `schedule:` entries run once per trial, either
+  after a delay or when a vanilla `execute if` condition first holds:
+
+  ```yaml
+  schedule:
+    - { afterTicks: 100, run: "summon zombie 4.5 -60 0.5 {PersistenceRequired:1b}" }
+    - { when: "entity @a[name=Actor,y=-55,dy=10]", run: "effect give Actor slowness 5" }
+  ```
+
+- **Starting hunger.** `players[].food` and `players[].saturation` set the
+  food bar before the trial, as `health` sets the wound.
+- **Selecting mobs.** `kill` and `entityCount` accept `tag:` and
+  `near: { pos, radius }`, so a pen's goal counts only its own quarry:
+  `{ kind: kill, target: zombie, tag: pen_east }` or
+  `{ kind: entityCount, entity: blaze, near: { pos: [200, -60, 0], radius: 20 }, max: 0 }`.
+  Tag the entity with `Tags:["pen_east"]` in its `nbt`.
+- **Worn or damaged items.** Inventory and equipment items take item
+  components, for example `shield[damage=335]` for a shield one block from
+  breaking: `equipment: { offhand: "shield[damage=335]" }`.
+- **Upper bounds on items.** `hasItem` accepts `max:`, so a goal can require
+  that an item was spent or never picked up: `{ kind: hasItem, item: arrow, max: 0 }`.
+
+Two vanilla idioms remain:
+
+- **Provoking a neutral mob.** A schedule entry damages it in the player's name:
+  `run: "damage @e[type=enderman,tag=pen_west,limit=1] 1 minecraft:player_attack by Actor"`.
+- **Anger from the start.** `AngryAt` takes the player's UUID, and servers run
+  in offline mode, so the UUID is fixed by the name. Compute it once and paste
+  the integer array into the mob's `nbt`, with `AngerTime`:
+
+  ```sh
+  bun -e 'const h=require("node:crypto").createHash("md5").update("OfflinePlayer:Actor").digest();h[6]=h[6]&15|48;h[8]=h[8]&63|128;console.log(`[I;${[0,4,8,12].map(i=>h.readInt32BE(i))}]`)'
+  # [I;1445601452,1478178322,-1964412895,62273435]
+  ```
+
 ## Shared setup
 
 Every fixture names one of three templates. They live beside `scenarios/` so
@@ -195,9 +334,9 @@ The action starts only after Mine Labs sends `start`.
 
 ## Runtime boundary and evidence
 
-The host builds `createMinecraftRuntime` once. Drivers receive only `scenario`
-and `call(action, input)`. The bot, runtime, cancellation and action recording are
-owned by the host.
+The host builds `createMinecraftRuntime` once. Drivers receive only `scenario`,
+the session's `username`, `waitForTicks(ticks)` and `call(action, input)`. The
+bot, runtime, cancellation and action recording are owned by the host.
 `call` records the request, runs the registered action, records its full output
 and summary, and returns them. It does not decide whether a test passed.
 The host closes the runtime before reporting completion so artifacts are flushed.
@@ -211,9 +350,11 @@ The implementation has three responsibility boundaries:
   After completion the bot stays connected for Mine Labs' final world observations;
   Mine Labs' stop signal closes it. A setup or host failure also closes it.
 - `drivers/single-action.ts`: read the YAML request, call the action, and check its expected result.
+  `drivers/action-sequence.ts` and `drivers/idle.ts` are its siblings; the three
+  share the per-player envelope and expectation checks in `driver-params.ts`.
 
-Player-arrangement observation uses the shared helper at
-`../../scenarios/src/player-preparation.ts`.
+Player-arrangement observation uses the shared helper `player-preparation.ts`
+beside the host.
 
 `runWithRuntime` creates the runtime and waits for the start signal before timing
 the driver's run. Preparation
@@ -268,9 +409,10 @@ A fixture that depends on either sets it under `client.env`, as
 `combat/raised-shield-movement.yaml` does for both.
 
 Use the single-action driver for expected success, partial progress, or refusal,
-with Mine Labs goals for inventory and world observations. Custom drivers are
-for sequences, timing checks, dynamic inputs, or action-specific evidence that
-these expectations and world goals cannot express.
+the sequence driver for ordered requests, and the idle driver for reflexes, with
+Mine Labs goals for inventory and world observations. Custom drivers are for
+timing checks, dynamic inputs, or action-specific evidence that these
+expectations and world goals cannot express.
 
 A driver exports `run(context): Promise<ClientCompletion>`. There are no
 preparation or runtime-configuration hooks. Add capabilities to this contract
@@ -282,7 +424,27 @@ when `JAVA_HOME` is set, otherwise `java` on `PATH`. If the default Java is
 older, point `JAVA_HOME` at a Java 21 installation for the command. The viewer
 build below uses the same rule.
 
-Run the Minecraft suite once:
+## Two tiers and the known-failing folder
+
+The suite runs in two tiers, decided by the `slow` tag. Tag a fixture `slow`
+when it fights in the End, hunts at length in the Nether, or otherwise takes
+more than about five minutes.
+
+- `bun run scenarios:once`: the fast tier (`--skip-tag slow`) once with two
+  workers. It aims at about 15 minutes, and is the check to make after
+  changing a fixture, template, driver or the host.
+- `bun run scenarios`: the same fast tier, repeated until stopped.
+- `bun run scenarios:full`: every fixture under `scenarios/` once, `slow` ones
+  included.
+- `bun run scenarios:known-failing`: every fixture under `known-failing/` once.
+
+`known-failing/<category>/` holds faithful fixtures for behaviour that fails
+today. Neither tier discovers them, because both point at `scenarios/`. Each
+carries the tags `known-failing` and `regression`, and its `description` states
+the failure as observed. The folders sit at the same depth as
+`scenarios/<category>/`, so template and client paths work unchanged. When the
+behaviour is fixed, move the fixture into `scenarios/` and drop the
+`known-failing` tag.
 
 ```bash
 bun run scenarios:once

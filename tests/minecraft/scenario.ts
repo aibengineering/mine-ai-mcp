@@ -13,6 +13,11 @@ export interface ScenarioCall extends ActionOutput<string, ActionResult> {
 
 export interface ScenarioContext {
   readonly scenario: ScenarioDefinition;
+  /**
+   * This session's player name. Mine Labs starts one client per declared
+   * player, so a fixture with several pens finds its own request by it.
+   */
+  readonly username: string;
   /** Let a fixture settle after the trial starts, before taking action. */
   waitForTicks(ticks: number): Promise<void>;
   /** Run a registered action; the host owns cancellation, recording and cleanup. */

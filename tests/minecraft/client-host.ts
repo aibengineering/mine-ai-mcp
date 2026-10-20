@@ -55,6 +55,7 @@ async function runWithRuntime(driver: ScenarioRun, bot: Bot, session: NodeClient
   overlay?.follow(runtime.navigation);
   const context: ScenarioContext = {
     scenario: session.scenario,
+    username: session.username,
     waitForTicks: async (ticks) => {
       await bot.waitForTicks(ticks);
       session.signal.throwIfAborted();

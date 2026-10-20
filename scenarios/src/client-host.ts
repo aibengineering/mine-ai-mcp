@@ -9,7 +9,7 @@ import {
 } from "@aibengineering/mine-ai-mcp";
 
 import { installScenarioPathfinder } from "./pathfinder-implementation.ts";
-import { observeScenarioPlayerPreparation } from "./player-preparation.ts";
+import { observeScenarioPlayerPreparation } from "../../tests/minecraft/player-preparation.ts";
 import type { MineAiScenario, MineAiScenarioContext, MineAiScenarioPreparation } from "./scenario-client.ts";
 
 const scenarioFile = process.argv[2];

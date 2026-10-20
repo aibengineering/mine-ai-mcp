@@ -3,7 +3,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import mineflayer, { type Bot } from "mineflayer";
 import type { NodeClientSession } from "mine-labs/client";
 import { BOT_PHYSICS_OPTIONS, loadBotPlugins } from "@aibengineering/mine-ai-mcp";
-import { observeScenarioPlayerPreparation } from "../../scenarios/src/player-preparation.ts";
+import { observeScenarioPlayerPreparation } from "./player-preparation.ts";
 
 type PreparationSession = Pick<NodeClientSession, "scenario" | "signal" | "ready" | "arranged">;
 
