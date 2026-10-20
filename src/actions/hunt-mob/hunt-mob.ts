@@ -43,6 +43,7 @@ import {
   type HuntMobResult,
 } from "./contract.js";
 import { observeHuntDrops } from "./drop-accounting.js";
+import { quarryDownAtLavaShore } from "../../survival/weapons/melee.js";
 import { collectionTargetSafetyTier, compareCollectionTargets } from "./target-selection.js";
 import { closestLoadedSpawner, SpawnerCamp, spawnerCampGoal } from "./spawner-camp.js";
 
@@ -67,7 +68,10 @@ export interface HuntDrop {
 }
 
 /** What the hunt decides about a pursuit; the walk and the movement policy belong to navigation. */
-export type HuntPursuit = Omit<HuntRequest, "route" | "movements">;
+export type HuntPursuit = Omit<HuntRequest, "route" | "movements"> & {
+  /** Where the request began; see EngageOptions. */
+  readonly ground?: Position3;
+};
 
 export interface HuntMobDependencies {
   readonly createCamp: (waitMs: number) => SpawnerCamp;
@@ -78,7 +82,7 @@ export interface HuntMobDependencies {
    * range; getting there is the navigation process's job.
    */
   readonly pursue: (pursuit: HuntPursuit) => Promise<HuntResult>;
-  readonly engageTarget: (target: Entity, context: ActionContext) => Promise<TargetEngagement>;
+  readonly engageTarget: (target: Entity, context: ActionContext, ground?: Position3) => Promise<TargetEngagement>;
   readonly collectDropAfterDeath: (
     observation: HuntDropObservation,
     context: ActionContext,
@@ -142,6 +146,11 @@ export function huntMobDependencies(
       try {
         pending = hunt(bot, {
           ...pursuit,
+          // The fight will not follow a quarry down to a lava shore, so the
+          // hunt does not select one or walk after it.
+          matches: (entity) =>
+            pursuit.matches(entity) &&
+            !quarryDownAtLavaShore(navigation.world, pursuit.ground ?? bot.entity.position, entity.position),
           signal: AbortSignal.any([stop.signal, ...(pursuit.signal ? [pursuit.signal] : [])]),
           movements: createMovements(bot, {
             allowSprinting: true,
@@ -156,7 +165,7 @@ export function huntMobDependencies(
         remove();
       }
     },
-    engageTarget: (target, context) => engageTarget(bot, combat, target, context),
+    engageTarget: (target, context, ground) => engageTarget(bot, combat, target, context, ground),
     collectDropAfterDeath: (observation, context) =>
       collectDropAfterDeath(bot, navigation, observation, context, discarded),
     sweepDropsAfterDeath: (observation, context) =>
@@ -184,6 +193,7 @@ export async function engageTarget(
   combat: CombatController,
   target: Entity,
   context: ActionContext,
+  ground?: Position3,
 ): Promise<TargetEngagement> {
   let deathPosition: Position3 | null = null;
   const onDeath = (entity: Entity) => {
@@ -193,7 +203,7 @@ export async function engageTarget(
   try {
     const signal = context.signal ?? new AbortController().signal;
     const targetId = target.id;
-    const outcome = await combat.engage(targetId, signal, "pursue");
+    const outcome = await combat.engage(targetId, signal, "pursue", ground ? { ground } : {});
     return { outcome, deathPosition: outcome.kind === "died" ? (deathPosition ?? positionOf(target)) : null };
   } finally {
     bot.removeListener("entityDead", onDeath);
@@ -509,6 +519,8 @@ interface HuntEngagement {
   readonly observation: HuntObservation;
   readonly dependencies: HuntMobDependencies;
   readonly context: ActionContext;
+  /** Where the request began; see EngageOptions. */
+  readonly ground: Position3;
 }
 
 /**
@@ -526,7 +538,7 @@ async function fightAndCollect(fight: HuntEngagement, targetId: number): Promise
   observation.targetsEngaged += 1;
   const dropEntityBaseline = snapshotEntityIds(bot);
   const dropInventoryBefore = observation.inventoryAfter;
-  const { outcome, deathPosition } = await dependencies.engageTarget(target, context);
+  const { outcome, deathPosition } = await dependencies.engageTarget(target, context, fight.ground);
   observation.attacks += outcome.attacks;
   observation.projectileGuards += outcome.projectileGuards;
   for (const style of outcome.stylesUsed) observation.combatStyles.add(style);
@@ -614,6 +626,8 @@ function beginHuntMob(
   const mob = bot.registry.entitiesByName[request.mobName];
   const drop = bot.registry.itemsByName[request.dropName];
   const inventoryBefore = drop ? bot.inventory.count(drop.id, null) : 0;
+  // Resumed attempts keep the ground the request began on.
+  const ground = bot.entity.position.clone();
   const camp = request.campSpawner ? dependencies.createCamp(request.observeForMs) : null;
   const observation: HuntObservation = {
     stopReason: "execution_failed",
@@ -679,7 +693,7 @@ function beginHuntMob(
     if (missingSpawner) return stoppedResult(missingSpawner.reason, observation, missingSpawner.termination);
 
     const quarry: HuntDrop = { name: request.dropName, id: drop.id };
-    const fight: HuntEngagement = { bot, request, drop: quarry, observation, dependencies, context };
+    const fight: HuntEngagement = { bot, request, drop: quarry, observation, dependencies, context, ground };
     const settled = () => settleInventory(bot, quarry, observation);
     const inventoryStop = () =>
       hasInventorySpaceFor(bot.inventory, new Set([quarry.name]))
@@ -691,6 +705,7 @@ function beginHuntMob(
     if (!settled() && initialInventoryStop) return stoppedResult(initialInventoryStop, observation, "inventory_full");
 
     const pursuit = await dependencies.pursue({
+      ground,
       preflight: checkShield,
       matches: (entity) => entity.entityType === mob.id && entity.isValid,
       compareTargets: (left, right) => compareCollectionTargets(bot, left, right),

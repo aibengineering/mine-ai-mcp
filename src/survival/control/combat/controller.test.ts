@@ -455,8 +455,8 @@ test("a kill hands the guard over raised while the partner is closing", async ()
   }
 });
 
-for (const botAtShore of [false, true])
-  test(`a pursued cube at a lava shore below ${botAtShore ? "is still approached from that shore" : "is not followed off the shelf"}`, async () => {
+for (const lavaBesideCube of [true, false])
+  test(`a pursued cube below ${lavaBesideCube ? "at a lava shore is not followed off the shelf" : "away from lava is still approached"}`, async () => {
     // The 2026-10-20 basalt hunt: a cube bounced off the shelf, the approach
     // followed it from y 47 to the shore at y 33, and a pack's knockback there
     // put the bot in the lava (hunts-basalt 2026-10-20T20-32-02-466Z-t00008).
@@ -469,8 +469,8 @@ for (const botAtShore of [false, true])
         for (let y = 58; y <= 70; y++) world.load({ x, y, z }, { stateId: 0 });
         if (x <= 2) for (let y = 58; y <= 63; y++) world.load({ x, y, z }, { stateId: 1 });
       }
-    const lava = botAtShore ? { x: 1, z: 2 } : { x: 9, z: 2 };
-    world.load({ x: lava.x, y: botAtShore ? 63 : 57, z: lava.z }, { stateId: 102, collisionShapes: [], traits: { liquid: "lava", empty: true } });
+    const lava = lavaBesideCube ? { x: 9, y: 57, z: 2 } : { x: 1, y: 63, z: 2 };
+    world.load(lava, { stateId: 102, collisionShapes: [], traits: { liquid: "lava", empty: true } });
     Object.assign(target, { name: "magma_cube", kind: "Hostile mobs", height: 2.08, width: 2.08, metadata: [] });
     target.position.set(9.5, 58, 0.5);
     bot.entity.position.set(0.5, 64, 0.5);
@@ -484,11 +484,38 @@ for (const botAtShore of [false, true])
       },
     } as NavigationRuntime;
     const result = await createCombatController(bot, navigation).engage(target.id, new AbortController().signal, "pursue");
-    assert.equal(routed, botAtShore);
-    if (!botAtShore) {
+    assert.equal(routed, !lavaBesideCube);
+    if (lavaBesideCube) {
       assert.equal(result.kind, "unreachable");
       assert.match("observation" in result ? result.observation : "", /lava shore/);
     }
+  });
+
+for (const fromShelf of [true, false])
+  test(`a cube one drop below at a lava shore ${fromShelf ? "is not followed when the hunt began higher" : "is approached by a pursuit begun at that level"}`, async () => {
+    // hunts-basalt-proof 2026-10-20T21-52-36-663Z-t00001: each drop of the
+    // chase from y 47 was within a safe drop of the bot, until the bot stood
+    // at y 35 and dropped to a cube at the shore at y 32 and into the lava.
+    const fixture = combatFixture(["iron_sword", "shield"], { targetDistance: 9 });
+    const { bot, target } = fixture;
+    const world = new GoalTestWorld();
+    world.load({ x: 9, y: 60, z: 2 }, { stateId: 102, collisionShapes: [], traits: { liquid: "lava", empty: true } });
+    Object.assign(target, { name: "magma_cube", kind: "Hostile mobs", height: 2.08, width: 2.08, metadata: [] });
+    target.position.set(9.5, 61, 0.5);
+    bot.entity.position.set(0.5, 64, 0.5);
+    let routed = false;
+    const navigation = {
+      ...navigationFixture(),
+      world,
+      navigate: async () => {
+        routed = true;
+        return { status: "stopped", reason: "test route" } as Awaited<ReturnType<NavigationRuntime["navigate"]>>;
+      },
+    } as NavigationRuntime;
+    await createCombatController(bot, navigation).engage(target.id, new AbortController().signal, "pursue", {
+      ground: { x: 0.5, y: fromShelf ? 76 : 64, z: 0.5 },
+    });
+    assert.equal(routed, !fromShelf);
   });
 
 test("a shielded swing keeps both sides of a nearby pack inside the guard", async () => {

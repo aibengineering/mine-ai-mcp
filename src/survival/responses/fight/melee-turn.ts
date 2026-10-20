@@ -7,11 +7,11 @@ import { isCreeper } from "../../perception/combat/creepers.js";
 import { facing } from "../../weapons/aim.js";
 import { MELEE_RANGE, type CombatLoadout } from "../../weapons/equipment.js";
 import {
-  atLavaShore,
   canMeleeTarget,
   hasMeleeKnockbackRoom,
   hasSweepBystander,
   meleeDistance,
+  quarryDownAtLavaShore,
   waitingForDescendingCube,
 } from "../../weapons/melee.js";
 import type { EndermanFight } from "./enderman.js";
@@ -26,20 +26,9 @@ const meleeThreatInReach = (scene: FightScene): boolean =>
   scene.perception.read().some((threat) => threat.meleeImminent);
 
 const QUARRY_AT_LAVA_SHORE = "the quarry went down to a lava shore; a pursuit does not follow it off higher ground";
-/**
- * A hunted cube bounced off the basalt shelf at y 47 and the approach followed
- * it, drop by drop, to the lava shore at y 33. A pack's knockback there put
- * the bot in the lava, and the cubes on the islands beyond were out of reach.
- * A bot already fighting at a shore is not leaving higher ground.
- */
-function followsQuarryDownToLava(scene: FightScene): boolean {
-  return (
-    scene.movement === "pursue" &&
-    scene.target.position.y < scene.bot.entity.position.y - 1 &&
-    atLavaShore(scene.navigation.world, scene.target.position) &&
-    !atLavaShore(scene.navigation.world, scene.bot.entity.position)
-  );
-}
+const followsQuarryDownToLava = (scene: FightScene): boolean =>
+  scene.movement === "pursue" &&
+  quarryDownAtLavaShore(scene.navigation.world, scene.request.ground ?? scene.bot.entity.position, scene.target.position);
 
 export async function runMeleeTurn(
   scene: FightScene,
