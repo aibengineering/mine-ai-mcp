@@ -157,11 +157,24 @@ assertion:
 | [gauntlet-lava-parkour](scenarios/pathfinder/gauntlet-lava-parkour.yaml) | Maximum gap crossings plus the obstacle course's steps, drops, magma detour and door. Repeat it for movement reliability. |
 | [cave-excavation-course](scenarios/pathfinder/cave-excavation-course.yaml) | Carpet maze, dripstone stairs and the unavoidable sand curtain. |
 
-`navigate-route.ts` checks each named arrival with `view_status`, after ten
-physics ticks let the final landing settle. It requires full health at every
-checkpoint. Digging defaults to false; only the cave excavation course enables
-it. Scaffolding is always disabled. Mine Labs also checks the final position,
-health, deaths and protected or cleared blocks independently.
+Every route course runs on `drivers/pathfinder-course.ts`. It runs named
+navigate legs and checks each one with `view_status` once it settles
+(`settleTicks`, default 10). A successful leg must end within `range` plus
+`tolerance` (default 0.75) of its marker, and every leg must end alive at full
+health.
+
+- `dig` and `scaffold` default to false, for the whole course or per leg.
+- A leg may set `build: true`, give `target: [x, z]` to omit y, or carry the
+  usual `expect` for a refusal.
+- `takeover: "[BREATH]"` accepts a leg cancelled by the named survival reflex.
+  Any other cancellation or runtime failure still fails.
+- A leg of `{ action, input }` runs another action under the same checks.
+- A leading `waitTicks` lets an arranged hazard settle.
+- Pens use `params.players.<name>: { dig?, scaffold?, waitTicks?, legs }`.
+
+A respawned body is back at full health, so give every pen that can die a
+`survive` goal. Mine Labs also checks the final position, health, deaths and
+protected or cleared blocks independently.
 
 The workshop runs at 16 TPS and checks inventory between stages, before later
 calls can consume or replace evidence. Its temporary batch cooks nine items
