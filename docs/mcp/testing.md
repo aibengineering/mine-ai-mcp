@@ -155,10 +155,13 @@ command, for example `JAVA_HOME=/path/to/jdk-21 bun run scenarios:once`.
 
 The suite has two tiers, split by the scenario tag `slow` (End fights, long
 Nether hunts and anything over about five minutes).
-`scenarios:once` runs the fast tier of `tests/minecraft/scenarios` once with two
-workers, skipping `slow` fixtures, which is the check to make after changing a
+`scenarios:once` runs the fast tier of `tests/minecraft/scenarios` once,
+skipping `slow` fixtures, which is the check to make after changing a
 fixture, template, driver or the host. `scenarios` repeats that fast tier until
 stopped; appended options such as `--jobs` and `--repeat` override its defaults.
+Every script runs one trial at a time at below-normal CPU priority, so a run
+does not take over a machine someone is using; append `--jobs N` or
+`--normal-priority` to opt out.
 `scenarios:full` runs every fixture in `tests/minecraft/scenarios` once, `slow`
 ones included.
 `scenarios:known-failing` runs `tests/minecraft/known-failing` once: faithful
@@ -170,10 +173,10 @@ managed Java viewer. Its controls select scenarios and repetition. The YAML
 Run these commands from the package root:
 
 ```sh
-# Run the fast tier once with two workers.
+# Run the fast tier once.
 bun run scenarios:once
 
-# Soak the fast tier with two workers.
+# Soak the fast tier.
 bun run scenarios
 
 # Run every fixture once, slow ones included.
@@ -182,7 +185,7 @@ bun run scenarios:full
 # Run one fixture once.
 bunx --bun mine-labs run tests/minecraft/scenarios/collect/mixed-trees.yaml --repeat 1
 
-# Run a folder once with two workers.
+# Run a folder once with two parallel workers.
 bunx --bun mine-labs run tests/minecraft/scenarios/combat --repeat 1 --jobs 2
 
 # Build the viewer mod and open the whole suite.

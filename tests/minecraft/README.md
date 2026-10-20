@@ -432,13 +432,18 @@ The suite runs in two tiers, decided by the `slow` tag. Tag a fixture `slow`
 when it fights in the End, hunts at length in the Nether, or otherwise takes
 more than about five minutes.
 
-- `bun run scenarios:once`: the fast tier (`--skip-tag slow`) once with two
-  workers. It aims at about 15 minutes, and is the check to make after
-  changing a fixture, template, driver or the host.
+- `bun run scenarios:once`: the fast tier (`--skip-tag slow`) once. It is
+  the check to make after changing a fixture, template, driver or the host.
 - `bun run scenarios`: the same fast tier, repeated until stopped.
 - `bun run scenarios:full`: every fixture under `scenarios/` once, `slow` ones
   included.
 - `bun run scenarios:known-failing`: every fixture under `known-failing/` once.
+
+The suite runs on machines people are using at the same time. So every script
+runs one trial at a time, and Mine Labs lowers itself, each Minecraft server and
+each bot client to below-normal CPU priority before starting. A dedicated
+machine can opt out by appending `--jobs N` for parallel workers or
+`--normal-priority`, for example `bun run scenarios:once --jobs 2`.
 
 `known-failing/<category>/` holds faithful fixtures for behaviour that fails
 today. Neither tier discovers them, because both point at `scenarios/`. Each
