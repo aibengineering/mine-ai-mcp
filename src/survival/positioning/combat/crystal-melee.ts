@@ -116,6 +116,25 @@ export function crystalMeleeAimFrom(bot: Bot, crystal: Vec3, eye: Vec3): Vec3 | 
   return null;
 }
 
+/**
+ * The block to dig so the attack line can open: the first obstruction on the
+ * first aim ray whose obstruction `clearable` accepts. A dragon shelter raised
+ * on the stance leaves its walls and cap between the eye and the crystal; a
+ * live climb then stood at its stance with the staircase complete and was
+ * refused five times running.
+ */
+export function crystalMeleeObstruction(bot: Bot, crystal: Vec3, eye: Vec3, clearable: (position: Vec3) => boolean): Vec3 | null {
+  for (const aim of crystalMeleeAimPoints(crystal, eye)) {
+    const delta = aim.minus(eye), distance = delta.norm();
+    // Prismarine returns the loaded Block, the planning raycaster a bare cell.
+    const hit = bot.world.raycast(eye, delta.scaled(1 / distance), distance) as { position?: Vec3 } | null;
+    if (!hit?.position) continue;
+    const position = new Vec3(hit.position.x, hit.position.y, hit.position.z);
+    if (clearable(position)) return position;
+  }
+  return null;
+}
+
 /** Whether any aim point is within reach at all, before line of sight is known. */
 export function crystalMeleeReach(crystal: Vec3, eye: Vec3): boolean {
   return crystalMeleeAimPoints(crystal, eye).length > 0;
