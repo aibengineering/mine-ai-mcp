@@ -1,0 +1,77 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression]
+description: >-
+  Use chests in three pens. Organize, deposit into and withdraw from a stocked
+  chest, and after each step the chest's real layout and the bot's remembered
+  layout of it must agree, ending with 68 cobblestone packed into slots 1 and
+  2. With only three free slots, a chest under a deepslate lid is refused as
+  blocked; clearing the lid opens it, and a newly placed chest opens too. From
+  36 occupied slots, craft and place a chest, deposit 128 cobblestone into it,
+  then craft and place a furnace and cook two beef. Guards container memory
+  drifting from the chest, opening a blocked chest or refusing for want of
+  room, and the full-inventory path to new workstations.
+# Absorbs flat/storage/chest-round-trip, cramped-chest and
+# full-inventory-workstations.
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0, keepInventory: true }
+geometry:
+  # Round trip: a stocked chest.
+  - fill: { block: polished_andesite, from: [-12, -60, -12], to: [12, -60, 12] }
+  - setblock: { at: [4, -59, 0], block: chest }
+  # Cramped: a deepslate ceiling and a deepslate block on the chest's lid.
+  - fill: { block: stone, from: [95, -60, -5], to: [105, -60, 5] }
+  - fill: { block: deepslate, from: [95, -57, -5], to: [105, -57, 5] }
+  - setblock: { at: [101, -59, 0], block: chest }
+  - setblock: { at: [101, -58, 0], block: deepslate }
+  # Full inventory: a stone pad with an existing table.
+  - fill: { block: stone, from: [192, -60, -8], to: [208, -60, 8] }
+  - setblock: { at: [202, -59, 0], block: crafting_table }
+setup:
+  - "item replace block 4 -59 0 container.0 with minecraft:cobblestone 40"
+  - "item replace block 4 -59 0 container.5 with minecraft:oak_log 2"
+  - "item replace block 4 -59 0 container.8 with minecraft:cobblestone 30"
+players:
+  - name: Organizer
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: cobblestone, count: 1 }
+  - name: Cramped
+    pos: [100.5, -59, 0.5]
+    inventory:
+      # 31 stacks, a pickaxe and a chest: three slots free.
+      - { item: cobblestone, count: 1984 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: chest, count: 1 }
+  - name: Full
+    pos: [200.5, -59, 0.5]
+    inventory:
+      - { item: cobblestone, count: 2112 }
+      # Consuming these eight planks frees the output slot; a stack of 64 would not.
+      - { item: oak_planks, count: 8 }
+      - { item: coal, count: 4 }
+      - { item: beef, count: 2 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/full-inventory-storage.ts]
+params:
+  players:
+    Organizer: { case: round-trip, chest: { x: 4, y: -59, z: 0 } }
+    Cramped: { case: cramped, chest: { x: 101, y: -59, z: 0 }, lid: { x: 101, y: -58, z: 0 } }
+    Full: { case: full-inventory }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, who: Organizer, item: cobblestone, count: 3, max: 3 }
+    - { kind: completion, who: Organizer }
+    - { kind: hasItem, who: Cramped, item: cobbled_deepslate, count: 1 }
+    - { kind: blockAt, pos: [101, -58, 0], block: air }
+    - { kind: completion, who: Cramped }
+    - { kind: hasItem, who: Full, item: cooked_beef, count: 2 }
+    # 2112, less 128 deposited and eight for the furnace.
+    - { kind: hasItem, who: Full, item: cobblestone, count: 1976, max: 1976 }
+    - { kind: completion, who: Full }

@@ -9,6 +9,6 @@
       "@aibengineering/mine-ai-mcp": ["../src/index.ts"]
     }
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "../tools/**/*.ts"],
   "exclude": ["../dist"]
 }

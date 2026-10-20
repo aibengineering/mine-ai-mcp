@@ -1,0 +1,45 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression]
+description: >-
+  In a one-wide stone tunnel, open the wall into a disposal hole and toss
+  twelve rotten flesh and all the cobblestone into it; five seconds later the
+  hole's bottom must hold exactly what the receipt says was dropped, with
+  nothing carried back. Fails today: the receipt reports 72 cobblestone
+  dropped (70 carried plus two mined while opening the wall) but the hole's
+  bottom holds 73 or 74, so the disposal leaves spoil it neither carries nor
+  reports. The 2026-10-19 legacy run saw the same 73 for 72. The open-ground
+  and full-inventory disposals stay green in drop/disposal-holes.
+# Split from drop/disposal-holes; absorbs flat/drop/disposal-hole-underground.
+# Failing runs: 2026-10-20T06-27-34-009Z and 2026-10-20T06-28-14-475Z (.mine-labs/other).
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0, naturalRegeneration: false }
+geometry:
+  - fill: { block: stone, from: [-8, -63, -8], to: [8, -54, 8] }
+  - fill: { block: air, from: [0, -60, -5], to: [0, -59, 5] }
+players:
+  - name: Tunneler
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: rotten_flesh, count: 16 }
+      - { item: cobblestone, count: 70 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/disposal-holes.ts]
+params:
+  actions:
+    - action: drop_item
+      input: { items: [{ item_name: rotten_flesh, count: 12 }, { item_name: cobblestone }], in_a_hole: true }
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: hasItem, who: Tunneler, item: rotten_flesh, count: 4, max: 4 }
+    - { kind: hasItem, who: Tunneler, item: cobblestone, count: 0, max: 0 }
+    - { kind: blockAt, pos: [0, -61, 0], block: stone }
+    - { kind: health, who: Tunneler, health: 20 }
+    - { kind: completion, who: Tunneler }

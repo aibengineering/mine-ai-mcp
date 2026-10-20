@@ -1,0 +1,73 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression]
+description: >-
+  Build two cobblestone enclosures from inside them. A builder starting in the
+  footprint of a hollow 3x3x3 box must finish the box from outside rather than
+  seal itself in. A builder standing inside the run-12 camp, beside its
+  furnace, table and bed, must finish the camp's walls, floor row and whole
+  roof while carrying its cobblestone split 47/63/17 across three stacks, so
+  placement crosses a stack boundary. Guards the builder that roofs itself in
+  and run 12's build that stopped when its first stack ran out, leaving a gap
+  in the roof (1,-58,2 in the original camp).
+# Absorbs flat/build/sealed-box and roof-gap. The camp's stack split is set by
+# a one-shot item replace after the start, since inventory gives merge stacks.
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, randomTickSpeed: 0, keepInventory: true }
+geometry:
+  # Box: a stone pad under the box and its surroundings.
+  - fill: { block: stone, from: [-8, -61, -8], to: [10, -60, 10] }
+  # Camp: the original camp moved 100 blocks east, with its open floor row.
+  - fill: { block: air, from: [100, -61, 4], to: [104, -61, 4] }
+  - setblock: { at: [101, -60, 2], block: furnace }
+  - setblock: { at: [101, -60, 3], block: crafting_table }
+  - setblock: { at: [103, -60, 2], block: "white_bed[facing=south,part=foot]" }
+  - setblock: { at: [103, -60, 3], block: "white_bed[facing=south,part=head]" }
+schedule:
+  - { afterTicks: 1, run: "item replace entity Camper hotbar.1 with cobblestone 47" }
+  - { afterTicks: 1, run: "item replace entity Camper hotbar.2 with cobblestone 63" }
+  - { afterTicks: 1, run: "item replace entity Camper hotbar.3 with cobblestone 17" }
+players:
+  - name: Boxer
+    pos: [1.5, -59, 1.5]
+    inventory:
+      - { item: cobblestone, count: 64 }
+  - name: Camper
+    pos: [102.48, -60, 3.43]
+    inventory:
+      - { item: cooked_beef, count: 8 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/enclosures.ts]
+params:
+  players:
+    Boxer:
+      block_name: cobblestone
+      regions:
+        - { shape: shell, from: [0, -59, 0], to: [2, -57, 2] }
+      endOutside: { from: [1, -59, 1], to: [1, -57, 1] }
+    Camper:
+      # The one-shot stack split lands on the first trial tick.
+      waitTicks: 10
+      block_name: cobblestone
+      remove_wrong_blocks: true
+      regions:
+        - { shape: fill, from: [100, -61, 4], to: [104, -61, 4] }
+        - { shape: walls, from: [100, -60, 0], to: [104, -59, 4] }
+        - { shape: fill, from: [100, -58, 0], to: [104, -58, 4] }
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: blocksAt, block: cobblestone, positions: [[0, -57, 0], [0, -57, 1], [0, -57, 2], [1, -57, 0], [1, -57, 1], [1, -57, 2], [2, -57, 0], [2, -57, 1], [2, -57, 2]] }
+    - { kind: health, who: Boxer, health: 20 }
+    - { kind: completion, who: Boxer }
+    - kind: blocksAt
+      block: cobblestone
+      positions: [[100, -58, 0], [100, -58, 1], [100, -58, 2], [100, -58, 3], [100, -58, 4], [101, -58, 0], [101, -58, 1], [101, -58, 2], [101, -58, 3], [101, -58, 4], [102, -58, 0], [102, -58, 1], [102, -58, 2], [102, -58, 3], [102, -58, 4], [103, -58, 0], [103, -58, 1], [103, -58, 2], [103, -58, 3], [103, -58, 4], [104, -58, 0], [104, -58, 1], [104, -58, 2], [104, -58, 3], [104, -58, 4]]
+    - { kind: blocksAt, block: cobblestone, positions: [[100, -61, 4], [102, -61, 4], [104, -61, 4]] }
+    - { kind: health, who: Camper, health: 20 }
+    - { kind: completion, who: Camper }

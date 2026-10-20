@@ -1,0 +1,50 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance, regression]
+description: >-
+  At midnight with mob spawning on, cross 120 blocks of steep generated
+  terrain on seed 20260904 in one navigate, with whatever hostiles spawn along
+  the way priced by the avoidance field and met by the runtime's reflexes, and
+  arrive alive. Guards the hostile field breaking a route that has to work.
+# Migrated from default/terrain/night-hostile-haul-20260904; the 8674349 and
+# 8675309 seeds are deleted. Health is not asserted: a night crossing costs
+# some. The destination is the legacy offsets from the pinned spawn.
+world:
+  type: default
+  seed: 20260904
+  time: midnight
+  # Easy: on normal a hostile arriving during the arrangement wait moved the
+  # bot off its pinned column and the trial never started.
+  difficulty: easy
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: true
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+players:
+  - name: NightHauler
+    pos: [-18.5, 82, 25.5]
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: iron_boots
+      offhand: shield
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+params:
+  action: navigate
+  # The observed surface is at feet y=86; the same column also has a cave floor.
+  input: { x: -103, y: 86, z: -59, range: 3 }
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    - { kind: reach, who: NightHauler, pos: [-103, 86, -59], radius: 4 }
+    - { kind: survive, who: NightHauler, seconds: 1 }
+    - { kind: completion, who: NightHauler }

@@ -63,11 +63,16 @@ bun run build
 bun test src scenarios/src
 ```
 
-Reproduce the tracked catalogue scenario with:
+Reproduce the tracked catalogue tour with:
 
 ```powershell
-bun node_modules/mine-labs/bin/mine-labs.mjs run scenarios/flat/evidence/action-catalog.yaml --jobs 1 --port 25691 --out .mine-labs/async-catalog --isolated
+bun run evidence:capture -- --port 25691 --out .mine-labs/async-catalog
 ```
+
+It runs `tools/action-evidence/action-catalog.yaml` (formerly
+`scenarios/flat/evidence/action-catalog.yaml`) and rewrites
+`.mine-labs/evidence/action-evidence.{json,html}`; `bun run evidence:render`
+re-renders the page from that JSON.
 
 Raw artifacts below are local, ignored files under the implementation worktree:
 

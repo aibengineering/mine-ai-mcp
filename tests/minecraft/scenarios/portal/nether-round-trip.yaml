@@ -1,0 +1,41 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Build a Nether portal frame from exactly ten carried obsidian and four
+  cobblestone supports, light it, and refuse to enter without the recommended
+  supplies, without moving. With the supply override, cross into the Nether;
+  re-entering the arrival portal from inside it is refused; after stepping out
+  and waiting out vanilla's portal cooldown, return to the Overworld, which
+  needs no supplies.
+# Migrated from flat/bucket/portal-frame-and-crossing. build/portals-through-leaves
+# covers frames only.
+world:
+  type: flat
+  time: noon
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, keepInventory: true, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: stone, from: [-16, -61, -16], to: [20, -60, 16] }
+players:
+  - name: PortalBuilder
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: obsidian, count: 10 }
+      - { item: cobblestone, count: 4 }
+      - { item: flint_and_steel, count: 1 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/nether-round-trip.ts]
+params:
+  interior: { x: 5, y: -58, z: 0 }
+  cooldownTicks: 220
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - kind: blocksAt
+      block: nether_portal
+      positions: [[5, -58, 0], [6, -58, 0], [5, -57, 0], [6, -57, 0], [5, -56, 0], [6, -56, 0]]
+    - { kind: hasItem, who: PortalBuilder, item: obsidian, count: 0, max: 0 }
+    - { kind: completion, who: PortalBuilder }

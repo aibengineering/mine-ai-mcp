@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { viewStatusResultSchema } from "./contract.js";
+import { MOB_KINDS, viewStatusResultSchema } from "./contract.js";
 import { createViewStatusAction, formatViewStatusResult, observeLiveSituation } from "./view-status.js";
 import { botFixture, registry } from "../../test-support/bot.js";
 import { temporaryBotData } from "../../test-support/bot-data.js";
@@ -512,4 +512,23 @@ test("reports which movements the carried inventory unlocks, and what blocks the
     report(unarmed),
     /- Scaffold placement \(pillar up, bridge gaps\): unavailable \(no admitted scaffold block carried\)/,
   );
+});
+
+// default/observation/loaded-mobs: on generated worlds the live registry was
+// asked whether any loaded entity in a mob category carried a type outside
+// MOB_KINDS, which the summary would drop without a word. That depends only on
+// the 1.21.4 registry, not on what a seed happened to spawn, so ask it of every
+// entity the registry files under a mob category. The one exception is the
+// evoker's fangs, an attack effect the registry files as a hostile "other":
+// leaving it out of the mob census is correct, and listing it here means a new
+// exception has to be named rather than slipping through.
+const NOT_A_MOB = new Set(["evoker_fangs"]);
+test("every 1.21.4 entity in a mob category has a published mob kind", () => {
+  const mobs = registry.entitiesArray.filter((entity) =>
+    (entity.category === "Passive mobs" || entity.category === "Hostile mobs") && !NOT_A_MOB.has(entity.name));
+  assert.ok(mobs.length > 50, "the registry lists the vanilla mobs");
+  const unpublished = mobs
+    .filter((entity) => !(MOB_KINDS as readonly string[]).includes(entity.type))
+    .map((entity) => `${entity.name} (${entity.category}/${entity.type})`);
+  assert.deepEqual(unpublished, []);
 });
