@@ -853,6 +853,9 @@ export class EndCombat {
     let lineDigs = 0;
     while (!observation.destroyed && !observation.shot) {
       signal.throwIfAborted();
+      // An approach pass answers a lost crystal with "changed" before any real
+      // wait; without this check the climb re-entered itself and never yielded.
+      if (!crystal.isValid) return this.crystalResult(observation, "stopped", "Selected crystal is no longer observed");
       if (this.danger) {
         const escape = await this.evade(signal);
         if (escape.outcome !== "evaded") {
