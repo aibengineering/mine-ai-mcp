@@ -6,10 +6,11 @@ import { observedEyeHeight } from "../../../world/block-visibility.js";
 import { clearCombatRay } from "../../../world/entity-geometry.js";
 import type { CombatOutcome } from "../../control/combat/contract.js";
 import { positionThreat } from "../../perception/combat/observations.js";
-import { roofLurePath, type RoofPosition } from "../../positioning/combat/planner.js";
+import { roofExitPath, roofLurePath, type RoofPosition } from "../../positioning/combat/planner.js";
 import type { AttemptBudget, ProgressBudget } from "../../state/budgets.js";
 import { aimPoint } from "../../weapons/aim.js";
-import { canMeleeTarget } from "../../weapons/melee.js";
+import { MELEE_RANGE } from "../../weapons/equipment.js";
+import { canMeleeTarget, meleeDistance } from "../../weapons/melee.js";
 export type EndermanRoof =
   | { readonly kind: "unprepared" | "unavailable" }
   | { readonly kind: "provoking"; readonly plan: RoofPosition; readonly budget: AttemptBudget }
@@ -19,6 +20,8 @@ import type { FightMovement } from "./movement.js";
 import type { FightScene } from "./scene.js";
 import type { FightWeapons } from "./weapons.js";
 
+/** How long the bot waits in the open for a quarry it baited around a wall. */
+const ROOF_EXIT_WAIT_TICKS = 40;
 export type TacticalStep =
   { readonly kind: "ready" | "continue" } | { readonly kind: "outcome"; readonly outcome: CombatOutcome };
 /** Provocation, roof preparation and confirmed-damage windows for one quarry. */
@@ -112,6 +115,13 @@ export class EndermanFight implements Disposable {
     if (this.state.kind !== "committed" || this.scene.movement !== "pursue") return;
     await this.lureRoof(this.state.cell, false);
   }
+  /** A guarded swing at a hostile quarry that has come into reach. */
+  private async meetQuarry(): Promise<void> {
+    const loadout = this.weapons.currentLoadout();
+    if (loadout.kind === "melee" && this.scene.roofTargetHostile() &&
+      (!loadout.shield || this.weapons.itemUse.shieldRaised))
+      await this.scene.execution.run("defend", async () => { this.weapons.strike(this.scene.requestedTarget, loadout); });
+  }
   private async steerRoof(cell: Vec3, signal: AbortSignal, stop: () => boolean, provoke = false) {
     const destination = cell.offset(0.5, 0, 0.5);
     return driveHorizontalSteering({
@@ -122,10 +132,7 @@ export class EndermanFight implements Disposable {
         else {
           await this.weapons.maintainGuard();
           await this.weapons.faceGuard();
-          const loadout = this.weapons.currentLoadout();
-          if (loadout.kind === "melee" && this.scene.roofTargetHostile() &&
-            (!loadout.shield || this.weapons.itemUse.shieldRaised))
-            await this.scene.execution.run("defend", async () => { this.weapons.strike(this.scene.requestedTarget, loadout); });
+          await this.meetQuarry();
         }
         await waitForPhysicsTicks(this.scene.bot, 1, signal);
       },
@@ -153,10 +160,19 @@ export class EndermanFight implements Disposable {
   private async lureRoof(cell: Vec3, provoke: boolean): Promise<void> {
     this.nextBaitTick = this.scene.elapsedTicks + 20;
     if (!this.scene.position.hasHeightProtection() || !this.scene.bot.entity.onGround) return;
-    const path = roofLurePath(this.scene.navigation.world, cell, this.scene.requestedTarget.position);
+    const toward = roofLurePath(this.scene.navigation.world, cell, this.scene.requestedTarget.position);
+    // A quarry stalled behind the roof's own wall, within reach but for that
+    // wall, is nearer than any footing it could reach, so the walk toward it
+    // is empty and the wait runs out. Out from under the roof it can reach
+    // the bot: wait there for it, meet it with a swing, and step back, so it
+    // follows to the mouth.
+    const around = !provoke && toward.length < 2 &&
+      meleeDistance(this.scene.bot, this.scene.requestedTarget) <= MELEE_RANGE;
+    const path = around ? roofExitPath(this.scene.navigation.world, cell) : toward;
     if (path.length < 2) return;
     const initial = this.scene.requestedTarget.position.clone();
     const responded = () => provoke ? this.scene.roofTargetHostile()
+      : around ? canMeleeTarget(this.scene.bot, this.scene.requestedTarget)
       : this.scene.requestedTarget.position.distanceTo(initial) >= 0.2;
     const stop = () => responded() || this.scene.settled() || ("budget" in this.state && this.state.budget.exhausted) || this.weapons.contact() !== null;
     if (this.weapons.currentLoadout().shield) await this.weapons.raiseGuard();
@@ -174,6 +190,12 @@ export class EndermanFight implements Disposable {
             this.returnPath.push(path[index - 1]!);
             const moved = await this.steerRoof(path[index]!, signal, stop, provoke);
             if (moved.kind !== "arrived") break;
+          }
+          for (let held = 0; around && held < ROOF_EXIT_WAIT_TICKS && !stop(); held++) {
+            await this.weapons.maintainGuard();
+            await this.weapons.faceGuard();
+            await this.meetQuarry();
+            await waitForPhysicsTicks(this.scene.bot, 1, signal);
           }
           this.scene.reportDecision({ kind: "response", evidence: {
             boundary: "enderman_roof_bait", stage: "return", targetId: this.scene.targetId,

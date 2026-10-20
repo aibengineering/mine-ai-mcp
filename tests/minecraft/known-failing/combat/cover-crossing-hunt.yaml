@@ -16,7 +16,15 @@ description: >-
   blaze. The legacy fixture (blaze-crossfire-first-hit-shield) measured only
   the first exchange and passed. This is the crossing pen of
   combat/cover-fights, split out until a hunt below its fight bar reports
-  that it cannot continue instead of looping.
+  that it cannot continue instead of looping. The hit itself had three
+  causes, fixed on 2026-10-21: the reflex admitted the fight at reach, four
+  ticks before the swing of an attacker closing on a sprinting bot and one
+  short of a raised shield's five; a fight ended when its target stepped back
+  with the partner still in reach; and after a kill the body went back to the
+  hunt, whose preparation lowered the shield, before the partner was
+  answered. The crossing then passed 20 runs in 22. Both failures were the
+  remaining one: with the skeletons on opposite sides, the swing at one turns
+  the guard away from the other, whose hit lands from behind.
 
 world:
   type: flat

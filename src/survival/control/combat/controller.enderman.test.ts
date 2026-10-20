@@ -221,6 +221,27 @@ test("an explicitly pursued angry Enderman in reach is guarded and hit before se
   assert.ok(fixture.itemUse.includes(true), "guard before the exposed contact hit");
 });
 
+test("a hunt out of blocks returns to the roof it built instead of reporting missing material", () => {
+  // The 2026-10-20 ShelterPair pen: eleven cobblestone roofed cell 200,0;
+  // the first kill ended at 204.21,-2.19, seven steps from that roof, with the
+  // second enderman at 210,-5. The local six-step search found no roof, and
+  // with no blocks left the hunt stopped on [COMBAT_BUILD_MATERIALS_MISSING]
+  // although the roof still stood and its gaze to the quarry was clear.
+  const { bot, target, navigation, world } = blazePreflightFixture(["diamond_sword", "shield"]);
+  target.name = "enderman";
+  target.height = 2.9;
+  target.position.set(10.5, 64, -4.5);
+  bot.entity.position.set(4.21, 64, -2.19);
+  for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) world.load({ x, y: 66, z }, { stateId: 1 });
+  assert.equal(combatResourceRefusal(bot, navigation, target), null);
+  const planned = new CombatPosition(bot, navigation, target, new Set()).planRoof({
+    kind: "provoke",
+    targetEye: target.position.offset(0, 2.55, 0),
+    eyeHeight: 1.62,
+  });
+  assert.equal(planned.kind, "unreachable", "the standing roof is a destination, not missing material");
+});
+
 test("a roof preparation failure stays local when knockback changes the occupied cell", () => {
   const { bot, target, navigation } = protectedEndermanFixture();
   const position = new CombatPosition(bot, navigation, target, new Set());
@@ -386,6 +407,38 @@ test("an angry enderman behind a wall keeps its protected return wait", async ()
   if (outcome.kind !== "unreachable") throw new Error("Expected the protected wait to expire.");
   assert.match(outcome.observation, /No confirmed damage/);
   assert.ok(fixture.clock.tick >= 300 && fixture.clock.tick < 330);
+});
+
+test("a quarry stalled behind the roof's own wall is baited out around it", async () => {
+  // The 2026-10-20 Alcove pen: the bot held its nook at 0.46,0.51 and the
+  // enderman, pathing to the bot's cell, stopped behind the nook's north wall
+  // at 0.57,-1.6: from the bot's cell that node ties with the open mouth. No
+  // footing was nearer the quarry, so no bait was walked, the 300-tick roof
+  // wait ran out, and with no blocks for another roof the hunt gave up.
+  const fixture = protectedEndermanFixture();
+  const { bot, target } = fixture;
+  const world = openArena(new MemoryWorld(), 6, 68);
+  for (let x = -1; x <= 1; x++)
+    for (let z = -1; z <= 1; z++)
+      for (const y of [64, 65]) if (z !== 0 || x < 0) world.load({ x, y, z }, { stateId: 1 });
+  for (const x of [0, 1]) world.load({ x, y: 66, z: 0 }, { stateId: 1 });
+  const navigation = { ...fixture.navigation, world };
+  target.position.set(0.57, 64, -1.6);
+  bot.world.raycast = (() =>
+    bot.entity.position.x < 2 ? { x: 0, y: 65, z: -1, face: 3, intersect: new Vec3(0.5, 65, 0) } : null) as Bot["world"]["raycast"];
+  const stopped = new AbortController();
+  const baits: unknown[] = [];
+  const controller = controllerAfterObservedHit(bot, navigation);
+  controller.onDecision((event) => {
+    if (event.kind !== "response") return;
+    const evidence = event.evidence as { boundary?: unknown; stage?: unknown; path?: unknown };
+    if (evidence.boundary !== "enderman_roof_bait" || evidence.stage !== "out") return;
+    baits.push(evidence.path);
+    stopped.abort();
+  });
+  await controller.engage(7, stopped.signal, "pursue");
+  assert.deepEqual(baits, [[{ x: 0, y: 64, z: 0 }, { x: 1, y: 64, z: 0 }, { x: 2, y: 64, z: 0 }]]);
+  assert.ok(fixture.clock.tick < 300, "the bait comes before the roof wait runs out");
 });
 
 test("unconfirmed swings and other attackers' damage cannot keep a protected fight alive", async () => {

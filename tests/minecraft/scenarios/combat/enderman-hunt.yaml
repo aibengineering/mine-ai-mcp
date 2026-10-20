@@ -2,17 +2,24 @@ template: ../../templates/flat-single-action.yaml
 
 tags: [acceptance, regression]
 description: >-
-  Six enderman hunts, one pen each, with different protection and supply: a
-  roof it must build from sixteen cobblestone (Constructed), a roof already
-  over its head (NoApproach), an enderman raised on a stone stair (Stairs), a
-  close native pair met in diamond armour with seventeen netherrack
-  (ClosePair), and a low roof nearby with a bow in the kit (Pearl). Each pen
-  must kill its enderman, pick up the pearl it is made to carry, and survive;
-  Stairs must keep ten health and ClosePair twelve, with no regeneration. In
-  the sixth pen (Obstructed) the model forbids digging and placing, and two
-  endermen are sealed in a cobblestone box: the hunt must report that it
-  failed, change no block, and survive. The pens with too few blocks to roof
-  every fight are known-failing/combat/enderman-hunt-short-of-blocks.
+  Eight enderman hunts, one pen each, with every kind of protection and supply:
+  a roof it must build from sixteen cobblestone (Constructed), a narrow
+  two-high alcove and nothing to build with (Alcove), a roof already over its
+  head (NoApproach), an enderman raised on a stone stair (Stairs), a pair with
+  only eleven blocks, one shelter's worth (ShelterPair), a close native pair
+  met in diamond armour with seventeen netherrack (ClosePair), and a low roof
+  nearby with a bow in the kit (Pearl). Each pen must kill its endermen and
+  survive, and every single-enderman pen must pick up the pearl its quarry is
+  made to carry; Stairs must keep ten
+  health and ClosePair twelve, with no regeneration. In the eighth pen
+  (Obstructed) the model forbids digging and placing, and two endermen are
+  sealed in a cobblestone box: the hunt must report that it failed, change no
+  block, and survive. Alcove and ShelterPair used to stop with
+  [COMBAT_BUILD_MATERIALS_MISSING] beside a living enderman about one run in
+  four: Alcove's enderman could settle behind the nook's side wall, a node
+  as near the bot as the mouth, where no bait walked and the roof wait ran
+  out; ShelterPair could finish its first kill more than six steps from the
+  roof it built, beyond the local roof search, with its blocks spent.
 
 # Pens two hundred blocks apart along x, beyond entity tracking, so no hunt
 # sees another pen's endermen. Every coordinate stays within z -8..7 so the
@@ -32,9 +39,11 @@ world:
 reset:
   - "kill @e[type=!minecraft:player]"
   - "fill -10 -60 -8 14 -50 7 air"
+  - "fill 190 -60 -8 214 -50 7 air"
   - "fill 390 -60 -8 414 -50 7 air"
   - "fill 590 -60 -8 614 -50 7 air"
   - "fill 790 -60 -8 814 -50 7 air"
+  - "fill 990 -60 -8 1014 -50 7 air"
   - "fill 1190 -60 -8 1214 -50 7 air"
   - "fill 1390 -60 -8 1414 -50 7 air"
   - "fill 600 -61 0 600 -61 0 grass_block"
@@ -45,6 +54,10 @@ setup:
   - "scoreboard players set #pair_settled pens 0"
 
 geometry:
+  # Alcove: a two-high stone nook west of the bot, open to the east.
+  - fill: { block: stone, from: [199, -60, -1], to: [201, -59, 1] }
+  - fill: { block: air, from: [200, -60, 0], to: [201, -59, 0] }
+  - fill: { block: stone, from: [200, -58, 0], to: [201, -58, 0] }
   # NoApproach: a cobblestone roof directly over the start.
   - fill: { block: cobblestone, from: [399, -58, -1], to: [401, -58, 1] }
   # Obstructed: the same roof, and a sealed cobblestone box on a stone floor
@@ -61,12 +74,15 @@ geometry:
   # Pearl: a low cobblestone roof a few steps west.
   - fill: { block: cobblestone, from: [1396, -58, -1], to: [1398, -58, 1] }
 
-# Every hunted enderman holds a pearl with a drop chance above one, so its
-# kill always yields one and the hunt can only finish by killing.
+# Every enderman hunted alone holds a pearl with a drop chance above one, so
+# its kill always yields one and the hunt can only finish by killing.
 entities:
   - type: enderman
     pos: [7.5, -60, 0.5]
     nbt: '{PersistenceRequired:1b,Tags:["constructed"],HandItems:[{id:"minecraft:ender_pearl",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  - type: enderman
+    pos: [207.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,Tags:["alcove"],HandItems:[{id:"minecraft:ender_pearl",count:1},{}],HandDropChances:[2.0f,0.0f]}'
   - type: enderman
     pos: [406.5, -60, 0.5]
     nbt: '{PersistenceRequired:1b,Tags:["noapproach"],HandItems:[{id:"minecraft:ender_pearl",count:1},{}],HandDropChances:[2.0f,0.0f]}'
@@ -79,6 +95,14 @@ entities:
   - type: enderman
     pos: [806.5, -56, 0.5]
     nbt: '{PersistenceRequired:1b,Tags:["stairs"],HandItems:[{id:"minecraft:ender_pearl",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  # The pair carries only its own loot, at most one pearl each, and is asked
+  # for three: the hunt has to clear both and then report the shortfall.
+  - type: enderman
+    pos: [1006.5, -60, -2.5]
+    nbt: '{PersistenceRequired:1b,Tags:["shelterpair"]}'
+  - type: enderman
+    pos: [1006.5, -60, 2.5]
+    nbt: '{PersistenceRequired:1b,Tags:["shelterpair"]}'
   # The close pair, as the live bot met it: one almost touching, one six off.
   - type: enderman
     pos: [1200.5, -60, 1.03]
@@ -98,6 +122,12 @@ players:
       - { item: diamond_sword, count: 1 }
       - { item: shield, count: 1 }
       - { item: cobblestone, count: 16 }
+  - name: Alcove
+    pos: [202.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
   - name: NoApproach
     pos: [400.5, -60, 0.5]
     inventory:
@@ -117,6 +147,13 @@ players:
       - { item: diamond_sword, count: 1 }
       - { item: shield, count: 1 }
       - { item: cobblestone, count: 64 }
+  - name: ShelterPair
+    pos: [1000.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 11 }
   # The original kit carried no shield, which the hunt now refuses for
   # hostile quarry; the shield is worn so the hunt is admitted.
   - name: ClosePair
@@ -155,11 +192,18 @@ params:
       idleWithinTicks: 400
       actions:
         - { action: collect_mob_drop, input: { mob_name: enderman, drop_name: ender_pearl, count: 1 } }
+    Alcove: *one
     NoApproach: *one
     Stairs: *one
     Pearl: *one
     # One of the pair is the request, as it was live.
     ClosePair: *one
+    ShelterPair:
+      idleWithinTicks: 400
+      actions:
+        - action: collect_mob_drop
+          input: { mob_name: enderman, drop_name: ender_pearl, count: 3 }
+          expect: { status: [partial, failed] }
     Obstructed:
       idleWithinTicks: 400
       actions:
@@ -176,7 +220,7 @@ params:
           expect: { status: [partial, failed] }
 
 tick:
-  - "gamemode spectator @a[name=!Constructed,name=!NoApproach,name=!Obstructed,name=!Stairs,name=!ClosePair,name=!Pearl,gamemode=!spectator]"
+  - "gamemode spectator @a[name=!Constructed,name=!Alcove,name=!NoApproach,name=!Obstructed,name=!Stairs,name=!ShelterPair,name=!ClosePair,name=!Pearl,gamemode=!spectator]"
   # ClosePair's request is one of the two; the other stays standing. Ten
   # seconds after it holds its pearl the hunt has returned, and the survivor
   # is removed rather than left beside a body with no reflexes.
@@ -194,6 +238,11 @@ goal:
     - { kind: hasItem, who: Constructed, item: ender_pearl, count: 1 }
     - { kind: survive, who: Constructed, seconds: 1 }
     - { kind: completion, who: Constructed }
+
+    - { kind: kill, target: enderman, tag: alcove }
+    - { kind: hasItem, who: Alcove, item: ender_pearl, count: 1 }
+    - { kind: survive, who: Alcove, seconds: 1 }
+    - { kind: completion, who: Alcove }
 
     - { kind: kill, target: enderman, tag: noapproach }
     - { kind: hasItem, who: NoApproach, item: ender_pearl, count: 1 }
@@ -219,6 +268,10 @@ goal:
     - { kind: health, who: Stairs, health: 10 }
     - { kind: survive, who: Stairs, seconds: 1 }
     - { kind: completion, who: Stairs }
+
+    - { kind: kill, target: enderman, tag: shelterpair }
+    - { kind: survive, who: ShelterPair, seconds: 1 }
+    - { kind: completion, who: ShelterPair }
 
     - { kind: hasItem, who: ClosePair, item: ender_pearl, count: 1 }
     - { kind: health, who: ClosePair, health: 12 }

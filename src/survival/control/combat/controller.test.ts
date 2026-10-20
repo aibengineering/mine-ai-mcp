@@ -423,6 +423,38 @@ test("melee cooldown guards a nearer pack member behind the bot without spending
   assert.ok(guarded.every((yaw) => Math.abs(yaw - Math.PI / 2) < 0.001));
 });
 
+test("a kill hands the guard over raised while the partner is closing", async () => {
+  // The 2026-10-20 crossing: the first wither skeleton died with its partner
+  // 3.3 blocks off. The release lowered the shield and the next fight raised
+  // it 50 ms later; the partner's swing landed with four ticks of use, one
+  // short of a block. A blocked swing bought no time: the next came 2 ticks on.
+  for (const partnered of [true, false]) {
+    const fixture = combatFixture(["iron_sword", "shield"], { targetDistance: 2 });
+    const { bot, target, script } = fixture;
+    const partner = { ...target, id: 8, kind: "Hostile mobs", position: new Vec3(-3.3, 64, 0) } as Entity;
+    if (partnered) bot.entities[partner.id] = partner;
+    let killed = false;
+    let lowered = 0;
+    script.onAttack = () => {
+      bot.emit("entityDead", target);
+      killed = true;
+    };
+    const deactivate = bot.deactivateItem;
+    bot.deactivateItem = () => {
+      if (killed) lowered++;
+      deactivate();
+    };
+    const result = await createCombatController(bot, navigationFixture()).engage(
+      target.id,
+      new AbortController().signal,
+      "hold",
+    );
+    assert.equal(result.kind, "died");
+    assert.equal(lowered > 0, !partnered, partnered ? "the closing partner keeps the guard up" : "an empty field releases it");
+    stopCombatFixtureClocks();
+  }
+});
+
 test("a shielded swing keeps both sides of a nearby pack inside the guard", async () => {
   const fixture = combatFixture(["iron_sword", "shield"], { targetDistance: 2 });
   const other = { ...fixture.target, id: 8, kind: "Hostile mobs", position: new Vec3(0, 64, 2) } as Entity;
