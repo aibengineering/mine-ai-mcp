@@ -643,6 +643,26 @@ test("the fight holds its guard while the pair's other attacker is still in reac
   assert.deepEqual(fixture.recorded(), ["fight -> contact_ended"]);
 });
 
+test("a kill answers the response's next attacker in reach without handing the body back", async () => {
+  // The 2026-10-20 crossing: one wither skeleton died with its partner 2.7
+  // blocks off. The response settled, the resumed hunt's preparation lowered
+  // the shield, and the reflex's next fight raised it four ticks before the
+  // partner's swing: one short of a block.
+  const engaged: number[] = [];
+  await using fixture = reflexFixture(async (targetId) => {
+    engaged.push(targetId);
+    fixture.bot.entities[targetId]!.isValid = false;
+    return died(targetId);
+  });
+  fixture.bot.entities[7] = hostile(7, "zombie", 2);
+  fixture.bot.entities[8] = hostile(8, "zombie", -2);
+  fixture.tick();
+  assert.ok(await until(() => fixture.recorded().length > 0));
+  assert.deepEqual(engaged, [7, 8]);
+  assert.deepEqual(fixture.recorded(), ["fight -> target_died"]);
+  assert.deepEqual(fixture.outcomes()[0].killedTargetIds, [7, 8]);
+});
+
 test("ending the original melee contact cannot drop the owner while another fuse needs clearance", async () => {
   let engaging = false;
   await using fixture = reflexFixture((targetId, signal) => new Promise(resolve => {

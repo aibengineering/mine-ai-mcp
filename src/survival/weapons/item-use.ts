@@ -96,10 +96,14 @@ export class CombatItemUse {
   }
 
   /** Settle controls and repeat release after a tick, as the existing cleanup requires. */
-  async neutralise(settleMovement: () => Promise<void>, ownerSignal: AbortSignal): Promise<void> {
+  async neutralise(settleMovement: () => Promise<void>, ownerSignal: AbortSignal, keepShield = false): Promise<void> {
+    const lower = () => {
+      if (keepShield && this.shieldRaised) this.record("shield_kept");
+      else this.lowerShield();
+    };
     try {
       this.#cancelDraw();
-      this.lowerShield();
+      lower();
     } finally {
       try {
         try {
@@ -107,7 +111,7 @@ export class CombatItemUse {
         } catch (cause) {
           if (!ownerSignal.aborted) throw cause;
         }
-        this.lowerShield();
+        lower();
       } finally {
         // A health cancellation can precede the same hit's velocity packet.
         // Finish item release, then the landing, then relinquish controls.
