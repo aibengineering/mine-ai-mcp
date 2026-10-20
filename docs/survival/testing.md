@@ -48,7 +48,7 @@ to test this rewrite.
 | [Flat combat](../../scenarios/flat/combat)                                                                            | Idle contact, shield readiness, bows, packs, fuses, protection, body handoff, and pending request continuation       |
 | [Hunt](../../scenarios/flat/hunt)                                                                                     | Requested quarry, moving bystanders, incidental kills, dropped items, capacity, and safe quantity handoff            |
 | [Survival](../../scenarios/flat/survival)                                                                             | Fire, lava, air, hunger, shelter, and cancellation                                                                   |
-| [Combat terrain](../../scenarios/flat/combat-terrain) and [generated hazards](../../scenarios/default/nether/hazards) | Supported attack positions, native knockback, slopes, lowered floors, gaps, and lava edges                           |
+| [Combat terrain](../../scenarios/flat/combat-terrain) and [generated Nether terrain](../../tests/minecraft/scenarios/pathfinder/basalt-deltas-traverse.yaml) | Supported attack positions, native knockback, slopes, lowered floors, gaps, and lava edges                           |
 | [End](../../scenarios/default/end)                                                                                    | Crystal bow/melee/cage paths, dragon breath and body escape, safe gaze, one perch window, and mixed Enderman contact |
 | [Portal](../../scenarios/flat/portal)                                                                                 | Portal activation and expected dimension transfer retain their own completion contract                               |
 | [Evidence catalog](../../scenarios/flat/evidence/action-catalog.yaml)                                                 | Every published tool's real MCP schema, response, and survival status                                                |
@@ -81,9 +81,8 @@ a missing survival summary fails the catalog.
 
 | Fixture                                                                            | Acceptance                                                                                                                                 |
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| [Fortress twelve rods](../../scenarios/default/nether/fortress-twelve-rods.yaml)   | One pending hunt; twelve native rods at at least one per minute; survival within 900 seconds; original generated spawner and ordinary loot |
-| [Nylium pearls](../../scenarios/default/nether/enderman-six-pearls-rate.yaml)      | Three repetitions, each six native pearls at at least one per minute and an observed return home alive                                     |
-| [Slope pearls](../../scenarios/default/nether/enderman-six-pearls-slope-rate.yaml) | The same three-repetition count, rate, and return requirement on generated slopes, within 480 seconds                                      |
+| [Fortress spawner rods](../../tests/minecraft/known-failing/hunt/fortress-spawner-rods.yaml) (known-failing) | One pending camp; twelve native rods at at least one per minute, then twelve eyes of ender; survival; original generated spawner and ordinary loot |
+| [Warped-forest pearls](../../tests/minecraft/scenarios/hunt/warped-forest-pearls.yaml) | One pearl across a canopy gap, then five native pearls below a generated slope at at least one per minute, and an observed return uphill alive |
 | [Full End fight](../../scenarios/default/end/ender-dragon.yaml)                    | All crystals destroyed, native dragon death, and survival; report damage separately from navigation progress                               |
 | [Full night](../../tests/minecraft/known-failing/combat/full-night-request.yaml)   | Reach dawn alive while preserving one pending request; one final handoff; no repeated successful shelter claims                            |
 

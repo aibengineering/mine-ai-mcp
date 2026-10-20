@@ -1,0 +1,103 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Two bots under blaze fire in the generated fortress of seed 20260906.
+  CoverBot idles on a fortress bridge in a netherrack cave, with no shield and
+  no bow, while five blazes open fire from above; whatever it does with its
+  carried blocks, it must still be alive and back to at least 18 health a
+  minute later. WithdrawBot starts at 11 health on the long western bridge
+  with a wither skeleton and a blaze closing in, and cannot heal: its food bar
+  stays below the regeneration threshold and it carries no food. Its single
+  navigate must reach the surveyed far-west exit alive. Folds
+  fortress-crossfire-cover and fortress-withdrawal.
+
+# The withdrawal is the legacy arrangement on the surveyed bridge. The cover
+# pen moves from the run-14 room of seed -5335131384818472281 onto this
+# fortress's eastern bridge, surveyed on 2026-10-20: 64 blocks from the
+# withdrawal start and beyond blaze follow range of its blaze, and more than
+# 16 blocks from both spawners, which stay asleep.
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  structures: true
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: false
+    randomTickSpeed: 0
+
+players:
+  - name: CoverBot
+    pos: [-369.5, 60, 283.5]
+    equipment:
+      head: diamond_helmet
+      chest: diamond_chestplate
+      legs: diamond_leggings
+      feet: diamond_boots
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cooked_beef, count: 64 }
+      - { item: cobblestone, count: 64 }
+  - name: WithdrawBot
+    pos: [-432.5, 60, 270.5]
+    health: 11
+    food: 17
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: golden_boots
+      offhand: shield
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    # Two minutes covers the withdrawal and its hold, so neither pen is left
+    # without reflexes while the other still runs.
+    CoverBot: { waitTicks: 2400 }
+    WithdrawBot:
+      actions:
+        - { action: navigate, input: { x: -490, y: 60, z: 270, range: 1 } }
+      holdTicks: 1200
+
+# Every mob arrives live once the trial has started: the withdrawal's pursuers
+# a second after its request, so the request is made before any reflex claims
+# the body.
+schedule:
+  - afterTicks: 0
+    run:
+      - "summon minecraft:blaze -372.5 63 283.5 {PersistenceRequired:1b}"
+      - "summon minecraft:blaze -366.5 63 283.5 {PersistenceRequired:1b}"
+      - "summon minecraft:blaze -372.5 63 279.5 {PersistenceRequired:1b}"
+      - "summon minecraft:blaze -367.5 63 279.5 {PersistenceRequired:1b}"
+      - "summon minecraft:blaze -369.5 63 286.5 {PersistenceRequired:1b}"
+  - afterTicks: 20
+    run:
+      - "summon minecraft:wither_skeleton -428.5 60 270.5 {PersistenceRequired:1b}"
+      - "summon minecraft:blaze -422.5 63 270.5 {PersistenceRequired:1b}"
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: survive, who: CoverBot, seconds: 100 }
+    - { kind: health, who: CoverBot, health: 18 }
+    - { kind: completion, who: CoverBot }
+    - { kind: reach, who: WithdrawBot, pos: [-489.5, 60, 270.5], radius: 2 }
+    - { kind: survive, who: WithdrawBot, seconds: 100 }
+    - { kind: health, who: WithdrawBot, health: 1 }
+    - { kind: completion, who: WithdrawBot }

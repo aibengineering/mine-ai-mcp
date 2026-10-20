@@ -1,0 +1,86 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Hunt magma cream with an iron melee kit on a generated basalt-deltas shelf,
+  seed 20260906, from two large cubes (which split into medium and small ones)
+  and a medium cube on a magma ledge, then return to the start, never touching
+  lava or the magma blocks underfoot, and end alive with the cream. Folds
+  generated-basalt-hunt, -hunt-melee, -large-cube-hunt, -pack-contact and
+  -pack-hunt. The island stage (generated-basalt-islands-hunt) fails today and
+  lives in known-failing/hunt/basalt-magma-cream-islands.yaml. Without Looting
+  the legacy pack hunts killed dozens of cubes for no cream; with one quarter
+  of medium and large cubes dropping, a hunt that does its job still failed on
+  loot luck, so the sword carries Looting III.
+
+# Cube cells re-surveyed against current generation on 2026-10-20.
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: false
+    randomTickSpeed: 0
+
+# The shelf cubes are held still until the first request is under way.
+entities:
+  - { type: magma_cube, pos: [195.5, 49, -18.5], nbt: '{Size:3,NoAI:1b,PersistenceRequired:1b,Tags:["cream"]}' }
+  - { type: magma_cube, pos: [197.5, 49, -17.5], nbt: '{Size:3,NoAI:1b,PersistenceRequired:1b,Tags:["cream"]}' }
+  - { type: magma_cube, pos: [201.5, 47, -22.5], nbt: '{Size:1,NoAI:1b,PersistenceRequired:1b,Tags:["cream"]}' }
+
+schedule:
+  - { afterTicks: 20, run: "execute as @e[tag=cream] run data merge entity @s {NoAI:0b}" }
+  - when: "entity @a[name=CreamHunter] at @a[name=CreamHunter] if block ~ ~ ~ minecraft:lava"
+    run: 'summon minecraft:marker 185 55 -19 {Tags:["lava_contact"]}'
+  - when: "entity @a[name=CreamHunter] at @a[name=CreamHunter] if block ~ ~-0.2 ~ minecraft:magma_block"
+    run: 'summon minecraft:marker 185 55 -19 {Tags:["magma_contact"]}'
+
+players:
+  - name: CreamHunter
+    pos: [185.5, 49, -19.5]
+    equipment:
+      # Looting III: a medium or large cube then drops cream about five times
+      # in eight instead of one in four, so a hunt that kills its quarry is not
+      # failed by loot luck. Small cubes still drop none.
+      mainhand: 'iron_sword[enchantments={levels:{"minecraft:looting":3}}]'
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: iron_boots
+      offhand: shield
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      # A spare: a long pack fight can break the worn shield, and a hunt for
+      # hostile quarry is refused without one.
+      - { item: shield, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    CreamHunter:
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: magma_cube, drop_name: magma_cream, count: 1 } }
+        - { action: navigate, input: { x: 185, y: 49, z: -20, range: 1 } }
+      # Keep the reflexes three seconds after the return, for cubes still hopping.
+      holdTicks: 60
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: hasItem, who: CreamHunter, item: magma_cream, count: 1 }
+    - { kind: reach, who: CreamHunter, pos: [185.5, 49, -19.5], radius: 2 }
+    - { kind: survive, who: CreamHunter, seconds: 1 }
+    - { kind: health, who: CreamHunter, health: 1 }
+    - { kind: entityCount, entity: marker, tag: lava_contact, max: 0 }
+    - { kind: entityCount, entity: marker, tag: magma_contact, max: 0 }
+    - { kind: completion, who: CreamHunter }

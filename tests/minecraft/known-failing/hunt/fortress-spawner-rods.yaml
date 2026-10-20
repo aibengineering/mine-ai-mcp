@@ -1,0 +1,83 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression, slow]
+description: >-
+  Camp the run-14 upper blaze spawner of seed -5335131384818472281, where the
+  bot died live on 2026-09-07, for twelve native blaze rods at no less than one
+  rod a minute, surviving the volleys of five blazes and everything the live
+  spawner adds, then craft twelve eyes of ender from the rods and twelve
+  carried pearls. End alive with the eyes and the six rods the powder left.
+  Folds fortress-twelve-rods, fortress-six-rods-rate, fortress-expedition-kit
+  and eyes-of-ender-collection; pearl hunting is hunt/warped-forest-pearls and
+  the eye recipe tree is craft/recipe-chains. The legacy runs collected rods at
+  0.13 and 0.27 a minute, or stopped after one. Observed in three 2026-10-20
+  runs: one passed (twelve rods in 10.2 minutes, 1.18 a minute); one stopped
+  after one rod at 55 seconds when the fire reflex took the body and the hunt
+  returned partial ("interrupted"); one wore out both shields and stopped with
+  [shield_required] after six rods in 9.2 minutes (0.65 a minute).
+
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: "-5335131384818472281"
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: false
+
+# The five blazes of the run-14 crossfire are loaded but held still until a
+# second after the hunt is requested; the untouched spawner supplies the rest.
+entities:
+  - { type: blaze, pos: [-30.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-25.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-30.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-25.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-27.5, 87, 357.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+
+schedule:
+  - { afterTicks: 20, run: "execute as @e[tag=fortress_trial] run data merge entity @s {NoAI:0b}" }
+
+# The 2026-09-07 expedition kit, with its shield worn and a spare.
+players:
+  - name: FortressHunter
+    pos: [-27.5, 82, 355.5]
+    equipment:
+      head: diamond_helmet
+      chest: diamond_chestplate
+      legs: diamond_leggings
+      feet: golden_boots
+      offhand: shield
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 192 }
+      - { item: cooked_beef, count: 64 }
+      - { item: cobblestone, count: 128 }
+      - { item: ender_pearl, count: 12 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/nether-expedition.ts]
+params:
+  idleWithinTicks: 400
+  actions:
+    - action: collect_mob_drop
+      input: { mob_name: blaze, drop_name: blaze_rod, count: 12, camp_spawner: true, observe_for_ms: 45000 }
+    - action: craft_item
+      input: { items: [{ item_name: ender_eye, count: 12 }] }
+  rate: { step: 0, count: 12, minimumPerMinute: 1 }
+
+goal:
+  kind: all
+  timeout: 960
+  goals:
+    - { kind: hasItem, who: FortressHunter, item: ender_eye, count: 12 }
+    - { kind: hasItem, who: FortressHunter, item: blaze_rod, count: 6 }
+    - { kind: survive, who: FortressHunter, seconds: 1 }
+    - { kind: completion, who: FortressHunter }
