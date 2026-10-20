@@ -6,6 +6,7 @@ import { writeIncidentArtifact, type IncidentReference, type IncidentRetention }
 import { IncidentRecorder, type SourceIdentity } from "../diagnostics/incident-recorder.js";
 import {
   RUNTIME_HEARTBEAT_MS,
+  RUNTIME_PENDING_REQUEST_MS,
   RUNTIME_UNRESPONSIVE_MS,
   runtimeMessageSchema,
   type RuntimeActivity,
@@ -254,7 +255,12 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
       });
     }
     const age = now - Math.max(lastHeartbeat, observationResumedAt);
-    if (age >= RUNTIME_UNRESPONSIVE_MS)
+    // An accepted request the child is still working is not evidence of a hang:
+    // a multi-second read of the world starves the heartbeat just as a wedge
+    // does, until it answers. A wedged child is killed by its own oldest
+    // unanswered request within the pending cap; a busy one finishes inside it.
+    const unresponsiveMs = pending.size === 0 ? RUNTIME_UNRESPONSIVE_MS : RUNTIME_PENDING_REQUEST_MS;
+    if (age >= unresponsiveMs)
       void fail(
         "RUNTIME_UNRESPONSIVE",
         `Runtime event-loop heartbeat absent for ${Math.round(now - lastHeartbeat)} ms.`,
