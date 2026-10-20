@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -36,7 +36,7 @@ async function supervised(
   });
   const address = supervisor.server.address();
   assert.ok(address && typeof address !== "string");
-  return { supervisor, url: `http://127.0.0.1:${address.port}` };
+  return { supervisor, url: `http://127.0.0.1:${address.port}`, directory };
 }
 
 /** Every test acts only once the runtime is answering for itself. */
@@ -163,6 +163,26 @@ test("a long operation with a live event loop is not timed out", { timeout: 15_0
   await supervisor.close();
   assert.ok(supervisor.child.exitCode !== null || supervisor.child.signalCode !== null, "close must reap its runtime.");
 });
+
+test(
+  "a read blocked past the unresponsive window answers when it is still the child's work",
+  { timeout: 15_000 },
+  async (t) => {
+    const { url, directory } = await supervised(t, "busy");
+    await whenHealthy(url);
+
+    // The child wedges its event loop for seven seconds while this request is
+    // pending, then answers. Judging only heartbeats would kill honest work in
+    // the middle of the read, as three playthrough deaths already did.
+    const response = await fetch(`${url}/busy`);
+    assert.equal(await response.text(), "finished", "A read inside the pending cap is work, not a hang.");
+
+    const diagnostics = await (await fetch(`${url}/diagnostics/runtime`)).json();
+    assert.equal(diagnostics.state, "ready");
+    assert.equal((await fetch(`${url}/health`)).status, 200);
+    assert.deepEqual(await readdir(directory), [], "Surviving work must not write an incident.");
+  },
+);
 
 test("a runtime launch failure stays observable and can be closed", { timeout: 5000 }, async (t) => {
   const { supervisor, url } = await supervised(t, "launch-failure", (directory) => ({
