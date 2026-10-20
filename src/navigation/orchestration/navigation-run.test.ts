@@ -551,6 +551,11 @@ test("a target oscillating between two cells is not mistaken for a repeated sear
     world: flatWorld(),
     bot: actuator,
     createId: () => "oscillating-goal",
+    // Each flip must meet a finished search. On the wall clock a loaded
+    // machine split the first search over its 8 ms slice, the flip landed
+    // mid-search, and the target was back in its first cell before a route
+    // was committed: two flips, and the repeat never arose.
+    now: () => 0,
     telemetry: onEvent((event) => {
       if (event.kind !== "search_slice" || flips >= 4) return;
       flips += 1;
@@ -565,9 +570,9 @@ test("a target oscillating between two cells is not mistaken for a repeated sear
     policy: walking(),
   });
   // Three flips is the smallest number that returns the target to its first
-  // cell, which is the repeat the guard has to tell apart. How many more happen
-  // depends on how many search slices the machine fits in before arrival.
-  assert.ok(flips >= 3, `expected the target to flip at least three times, saw ${flips}`);
+  // cell, which is the repeat the guard has to tell apart; every search here
+  // finishes in one slice, so all four happen before arrival.
+  assert.equal(flips, 4);
   assert.equal(outcome.kind, "completed");
 });
 
