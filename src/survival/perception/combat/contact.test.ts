@@ -25,5 +25,30 @@ test("a sword-armed attacker closing on a sprinting bot is in contact while a gu
     metadata: [],
   } as unknown as Bot["entity"];
   bot.entities[4] = skeleton;
-  assert.equal(inDefensiveContact(bot, skeleton), true);
+  // One tick earlier it stood 0.27 further off: it is coming.
+  skeleton.position.z = 11.02;
+  inDefensiveContact(bot, skeleton, 1000);
+  skeleton.position.z = 10.75;
+  assert.equal(inDefensiveContact(bot, skeleton, 1050), true);
+});
+
+test("a pinned attacker the bot walks toward is in contact only at reach", () => {
+  // navigation-handoff's Lane: four pinned zombies block a one-wide lane. At
+  // 4.8 blocks the fight began and held, waiting for a swing that a pinned
+  // mob never makes (hunts-regress 2026-10-20T22-26-37-009Z-t00001).
+  const bot = botFixture();
+  bot.entity.position.set(647.7, 64, 0.5);
+  bot.entity.width = 0.6;
+  bot.entity.height = 1.8;
+  bot.world.raycast = () => null;
+  const zombie = {
+    id: 39, name: "zombie", kind: "Hostile mobs", isValid: true, width: 0.6, height: 1.95,
+    position: new Vec3(652.5, 64, 0.5), velocity: new Vec3(0, 0, 0), metadata: [],
+  } as unknown as Bot["entity"];
+  bot.entities[39] = zombie;
+  assert.equal(inDefensiveContact(bot, zombie, 1000), false);
+  bot.entity.position.x = 648.2;
+  assert.equal(inDefensiveContact(bot, zombie, 1050), false, "the bot's own walk is not the zombie closing");
+  bot.entity.position.x = 649.4;
+  assert.equal(inDefensiveContact(bot, zombie, 1100), true, "within reach");
 });
