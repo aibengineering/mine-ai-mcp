@@ -101,6 +101,38 @@ test("a sealed box is finished from outside: the bot walks out before the last b
   assert.ok(finalFeet.x < 0 || finalFeet.x > 2 || finalFeet.z < 0 || finalFeet.z > 2, `ended outside, at ${finalFeet}`);
 });
 
+/**
+ * The first-entry End fight of 20 October: a fall saved by water left the bot
+ * on a staircase support at -37,87,19, standing in the cell its next tread
+ * needed. The way out it was given lay two blocks past the corner of the
+ * staircase's bounds at its own height, 87, in the air beside the tower, and
+ * every search for it ran out of its 2000 ms: "could not step out of the
+ * structure", three requests running. The tread beside it was a step away.
+ */
+test("a bot standing where a tread belongs steps onto the nearest open stance, not out past the bounds", async () => {
+  const { bot, put, physics } = structureWorld({ feet: new Vec3(-37, 87, 19) });
+  put(new Vec3(-37, 86, 19), "end_stone");
+  put(new Vec3(-38, 86, 19), "end_stone");
+  const node = (x: number, y: number, z: number) => ({ feet: { x, y, z }, remainingScaffolds: 0, overlayId: "" });
+  let checked = false;
+  await build(bot, {
+    ...physics,
+    cells: cells([[-37, 87, 19], [-37, 88, 20], [-33, 95, 24]], "end_stone"),
+    removeWrongBlocks: false,
+    route: async ({ goal }) => {
+      const resolved = goal.resolve(observation(-37, 87, 19));
+      assert.equal(resolved.kind, "active");
+      if (resolved.kind === "active") {
+        assert.equal(resolved.isSatisfied(node(-38, 87, 19), goalTestWorld), true, "the tread beside it is a way out");
+        assert.equal(resolved.isSatisfied(node(-37, 87, 19), goalTestWorld), false, "its own cell is not");
+        checked = true;
+      }
+      return { status: "stopped", reason: "checked", elapsedMs: 0 };
+    },
+  });
+  assert.ok(checked, "the bot was asked to step out");
+});
+
 test("enclosesBot reads a roofed box as sealed and a doorway as open", () => {
   const { bot, put } = structureWorld({ feet: new Vec3(1, 64, 1) });
   const filled = new Set(hollowBox().map(([x, y, z]) => packKey(x, y, z)));
