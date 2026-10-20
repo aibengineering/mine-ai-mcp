@@ -1,0 +1,67 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance]
+description: >-
+  The bot is killed at the start with keepInventory off, scattering a 57-item
+  kit, and respawns eight blocks away. pick_up_items with recover_death_items
+  must return to the retained death location and recover at least ninety
+  percent of each stack. Before pick_up_items, player_death kept the
+  coordinates but no published action could pursue the scattered items.
+
+world:
+  type: flat
+  time: noon
+  # Peaceful: nothing but the arranged death may hurt the bot.
+  difficulty: peaceful
+  # The respawn point is fixed, eight blocks from the death, so the bot cannot
+  # respawn on top of its items and collect them by standing still.
+  spawn: [8, -60, 0]
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: false
+    spawnRadius: 0
+    randomTickSpeed: 0
+
+reset:
+  - "fill -12 -62 -12 12 -55 12 air"
+
+geometry:
+  - fill: { block: polished_andesite, from: [-12, -61, -12], to: [12, -61, 12] }
+
+players:
+  - name: RecoveryBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: cobblestone, count: 32 }
+      - { item: oak_log, count: 16 }
+      - { item: iron_ingot, count: 8 }
+      - { item: diamond_pickaxe, count: 1 }
+
+schedule:
+  - { afterTicks: 0, run: "kill RecoveryBot" }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  # Death, the automatic respawn and the items settling on the floor.
+  waitTicks: 60
+  actions:
+    - { action: pick_up_items, input: { recover_death_items: true } }
+
+tick:
+  - "gamemode spectator @a[name=!RecoveryBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    # About ninety percent of each stack, adding up to 52 of the 57 items:
+    # the legacy fixture's ninety percent of the whole kit.
+    - { kind: hasItem, who: RecoveryBot, item: cobblestone, count: 29 }
+    - { kind: hasItem, who: RecoveryBot, item: oak_log, count: 15 }
+    - { kind: hasItem, who: RecoveryBot, item: iron_ingot, count: 7 }
+    - { kind: hasItem, who: RecoveryBot, item: diamond_pickaxe, count: 1 }
+    - { kind: completion, who: RecoveryBot }

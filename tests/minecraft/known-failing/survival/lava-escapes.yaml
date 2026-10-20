@@ -1,0 +1,131 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [known-failing, regression]
+description: >-
+  Three bots meet lava and the runtime's fire reflex must get each one out
+  alive. PocketBot is put in a one-cell lava pocket one step below its bank,
+  with a one-deep water cell two blocks east to put the burn out in.
+  LavaPoolBot is put in the middle of a 13x13 lava pool with nothing but
+  cobblestone and no bank within the reflex's reach, so it has to place a
+  step and climb out. MinerBot is digging obsidian when lava appears in its
+  own cell, and must break off and escape. Lava contact sets a fifteen-second
+  burn and regeneration is off, so a slow escape is fatal. Observed in ten
+  2026-10-20 runs across this fixture, its single-pen drafts and an earlier
+  seven-pen survival/fire-reflex: every bot leaves the lava, then either burns
+  to death about fifteen seconds later or ends on its last heart. Only pens
+  running alone ever came through (MinerBot once at 8 health), and deaths
+  were commonest with the most bots in the world. In the legacy runs the pool
+  bot died before placing a step, the dig ended at 1 health, and the pocket
+  reported an unhurt escape only because it started in the lava while still
+  immune from joining.
+
+# Pens 100 blocks apart, split from survival/fire-reflex. Each idle bot waits
+# on dry ground and is teleported into the lava once the runtime is up; a tag
+# set the first tick a body burns proves the lava reached it.
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -10 -61 -10 210 -50 10 air"
+
+setup:
+  - "scoreboard objectives add ml_fire dummy"
+
+geometry:
+  # PocketBot: a stone shelf with the lava cell and the water cell.
+  - fill: { block: stone, from: [-5, -62, -4], to: [9, -60, 4] }
+  - setblock: { block: lava, at: [0, -60, 0] }
+  - setblock: { block: water, at: [2, -60, 0] }
+
+  # LavaPoolBot: a netherrack bed under the pool, its centre six blocks from
+  # every edge, and a dry netherrack bank to the east where the bot waits.
+  - fill: { block: netherrack, from: [91, -61, -9], to: [109, -61, 9] }
+  - fill: { block: lava, from: [94, -60, -6], to: [106, -60, 6] }
+  - fill: { block: netherrack, from: [107, -60, -9], to: [109, -60, 9] }
+
+  # MinerBot: a stone shelf; the bot stands in a one-deep hole with obsidian
+  # at head height to the north and a one-deep water cell two blocks east.
+  - fill: { block: stone, from: [195, -62, -4], to: [209, -60, 4] }
+  - setblock: { block: air, at: [200, -60, 0] }
+  - setblock: { block: obsidian, at: [200, -59, -1] }
+  - setblock: { block: water, at: [202, -60, 0] }
+
+players:
+  - name: PocketBot
+    pos: [5.5, -59, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+  - name: LavaPoolBot
+    pos: [108.5, -59, 0.5]
+    inventory:
+      - { item: cobblestone, count: 8 }
+  - name: MinerBot
+    pos: [200.5, -60, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/fire-reflex.ts]
+params:
+  players:
+    # Each idle wait covers the escape and the whole residual burn after it.
+    PocketBot: { waitTicks: 400 }
+    LavaPoolBot: { waitTicks: 400 }
+    MinerBot:
+      actions:
+        # The subject is the escape. The dig may resume and finish afterwards
+        # or stop truthfully; a runtime failure or cancellation still fails.
+        - action: collect_block
+          input: { block_name: obsidian, count: 1, scaffold: false }
+          expect: { status: [succeeded, partial, failed] }
+      # Keep the reflexes through the residual burn after the dig returns.
+      holdTicks: 300
+
+schedule:
+  - afterTicks: 0
+    run:
+      # Tags a reused player kept from an earlier trial must not count.
+      - "tag @a remove ml_burned_PocketBot"
+      - "tag @a remove ml_burned_LavaPoolBot"
+      - "tag @a remove ml_burned_MinerBot"
+      - "tp PocketBot 0.5 -60 0.5"
+      - "tp LavaPoolBot 100.5 -60 0.5"
+  # MinerBot is already at its stance, so the dig is under way by now; a
+  # diamond pickaxe needs about 188 ticks for obsidian.
+  - { afterTicks: 40, run: "setblock 200 -60 0 lava" }
+  - { afterTicks: 1, when: "entity @a[name=PocketBot,scores={ml_fire=1..}]", run: "tag PocketBot add ml_burned_PocketBot" }
+  - { afterTicks: 1, when: "entity @a[name=LavaPoolBot,scores={ml_fire=1..}]", run: "tag LavaPoolBot add ml_burned_LavaPoolBot" }
+  - { afterTicks: 41, when: "entity @a[name=MinerBot,scores={ml_fire=1..}]", run: "tag MinerBot add ml_burned_MinerBot" }
+
+tick:
+  - "gamemode spectator @a[name=!PocketBot,name=!LavaPoolBot,name=!MinerBot,gamemode=!spectator]"
+  - "execute as @a store result score @s ml_fire run data get entity @s Fire"
+
+goal:
+  kind: all
+  timeout: 75
+  goals:
+    # Half a heart left is a near death, not an escape: the legacy dig's
+    # verdict, applied to every pen.
+    - { kind: entityCount, entity: player, tag: ml_burned_PocketBot, min: 1 }
+    - { kind: health, who: PocketBot, health: 2 }
+    - { kind: survive, who: PocketBot, seconds: 1 }
+    - { kind: completion, who: PocketBot }
+    - { kind: entityCount, entity: player, tag: ml_burned_LavaPoolBot, min: 1 }
+    - { kind: health, who: LavaPoolBot, health: 2 }
+    - { kind: survive, who: LavaPoolBot, seconds: 1 }
+    - { kind: completion, who: LavaPoolBot }
+    - { kind: entityCount, entity: player, tag: ml_burned_MinerBot, min: 1 }
+    - { kind: health, who: MinerBot, health: 2 }
+    - { kind: survive, who: MinerBot, seconds: 1 }
+    - { kind: completion, who: MinerBot }

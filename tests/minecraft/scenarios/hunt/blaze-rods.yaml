@@ -1,0 +1,105 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Blaze rods from two pens. BlazeHunter, armoured with a shield, sword, bow
+  and arrows, collects two rods from two free-flying blazes and survives
+  their fireballs. BystanderHunter collects one rod from a still blaze with a
+  1-health zombified piglin standing 0.7 blocks beside it: any sweep or stray
+  blow kills the piglin, and an angered piglin would cost health. Every blaze
+  carries a rod in its hand at a drop chance above one, so each kill drops a
+  rod and the goals measure acquisition, not luck.
+
+# Two hunt pens 200 blocks apart: free blazes would otherwise fly to the other
+# pen, and a fireball could hit the bystander, which no hunting choice of
+# BystanderHunter's could prevent. The bystander pen keeps the legacy NoAI
+# layout that pins the adjacency. Each hunter starts more than eight blocks
+# from every blaze: the runtime is up before the start, and a hostile inside
+# its eight-block contact range would have the hostile reflex holding the body
+# when the request arrives, which the runtime refuses.
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  # Fireballs light fires and the bot may build cover; clear both pens.
+  - "fill -24 -60 -24 40 -40 24 air"
+  - "fill -24 -60 176 40 -40 224 air"
+
+entities:
+  # BystanderHunter's pen.
+  - type: blaze
+    pos: [2.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,NoAI:1b,Tags:["bystander_pen"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  - type: zombified_piglin
+    pos: [2.5, -60, 1.2]
+    nbt: '{PersistenceRequired:1b,NoAI:1b,Health:1.0f,Tags:["bystander"]}'
+  # BlazeHunter's pen.
+  - type: blaze
+    pos: [8.5, -60, 200.5]
+    nbt: '{PersistenceRequired:1b,Tags:["rod_pen"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  - type: blaze
+    pos: [14.5, -60, 206.5]
+    nbt: '{PersistenceRequired:1b,Tags:["rod_pen"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+
+players:
+  - name: BystanderHunter
+    pos: [-7.5, -60, 0.5]
+    equipment:
+      offhand: shield
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: stone_axe, count: 1 }
+  - name: BlazeHunter
+    pos: [-5.5, -60, 200.5]
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: iron_boots
+      offhand: shield
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    # The carried shield admits the hostile quarry; no allow_without_shield.
+    BystanderHunter:
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: blaze, drop_name: blaze_rod, count: 1 } }
+    BlazeHunter:
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: blaze, drop_name: blaze_rod, count: 2 } }
+
+tick:
+  - "gamemode spectator @a[name=!BystanderHunter,name=!BlazeHunter,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: kill, target: blaze, tag: bystander_pen }
+    - { kind: hasItem, who: BystanderHunter, item: blaze_rod, count: 1 }
+    # A 1-health piglin dies to any hit at all.
+    - { kind: entityCount, entity: zombified_piglin, tag: bystander, min: 1 }
+    # A still blaze never hurts; lost health means an angered bystander.
+    - { kind: health, who: BystanderHunter, health: 20 }
+    - { kind: survive, who: BystanderHunter, seconds: 1 }
+    - { kind: completion, who: BystanderHunter }
+    - { kind: kill, target: blaze, tag: rod_pen }
+    - { kind: hasItem, who: BlazeHunter, item: blaze_rod, count: 2 }
+    - { kind: survive, who: BlazeHunter, seconds: 1 }
+    - { kind: completion, who: BlazeHunter }
