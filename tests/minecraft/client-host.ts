@@ -56,10 +56,7 @@ async function runWithRuntime(driver: ScenarioRun, bot: Bot, session: NodeClient
   const context: ScenarioContext = {
     scenario: session.scenario,
     username: session.username,
-    waitForTicks: async (ticks) => {
-      await bot.waitForTicks(ticks);
-      session.signal.throwIfAborted();
-    },
+    waitForTicks: (ticks) => waitForPhysicsTicks(bot, ticks, session.signal),
     call: (action, input) => callScenarioAction(runtime, session, action, input),
   };
 
@@ -80,6 +77,39 @@ async function runWithRuntime(driver: ScenarioRun, bot: Bot, session: NodeClient
     const detail = [error, `duration ${Date.now() - startedAt} ms`].filter(Boolean).join("; ");
     return { status: "failed", detail };
   }
+}
+
+/**
+ * Count the bot's physics ticks until `ticks` have passed or the trial stops.
+ *
+ * Mineflayer's own `waitForTicks` also rejects once its wall clock passes
+ * 50 ms a tick plus five seconds. The client's physics clock runs a little
+ * slow, and slower while another trial's server starts beside it: 1,800 ticks
+ * took 91.8 s alone on 2026-10-20, and 95 s with a neighbour starting, so a
+ * long idle window failed the trial on the client's clock rather than on
+ * anything the fixture observes. The trial's own timeout already bounds it.
+ */
+function waitForPhysicsTicks(bot: Bot, ticks: number, signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
+  if (ticks <= 0) return Promise.resolve();
+  return new Promise<void>((resolve, reject) => {
+    let remaining = ticks;
+    const cleanup = () => {
+      bot.off("physicsTick", tick);
+      signal.removeEventListener("abort", abort);
+    };
+    const tick = () => {
+      if (--remaining > 0) return;
+      cleanup();
+      resolve();
+    };
+    const abort = () => {
+      cleanup();
+      reject(signal.reason);
+    };
+    bot.on("physicsTick", tick);
+    signal.addEventListener("abort", abort, { once: true });
+  });
 }
 
 /** Record and execute an action; the driver decides whether its result passes. */
