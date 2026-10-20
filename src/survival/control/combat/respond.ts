@@ -33,9 +33,17 @@ async function fight(
     const { perception } = context;
     const creepers = perception.creeperClearance.observe(perception.tick, perception.resolvedIds);
     if (creeperEscape({ creepers, clearancePending: perception.creeperClearance.pending, stationaryCommitment: false })) return;
-    if (target?.isValid && defendsOnContact(target) && !inDefensiveContact(bot, target))
+    if (target?.isValid && defendsOnContact(target) && !inDefensiveContact(bot, target) && !otherContactRemains())
       contactEnded.abort("Melee target left defensive reach.");
   };
+  // Ending here lowers the shield, and the reflex's next fight raises it five
+  // ticks before it blocks. With another attacker of this response still in
+  // reach that gap is a hit; the controller defends it inside this engagement.
+  const otherContactRemains = () =>
+    request.threats.some(({ id }) => {
+      const other = bot.entities[id];
+      return other !== undefined && other !== target && other.isValid && defendsOnContact(other) && inDefensiveContact(bot, other);
+    });
   bot.on("physicsTick", observeContact);
   let result: CombatOutcome;
   try {

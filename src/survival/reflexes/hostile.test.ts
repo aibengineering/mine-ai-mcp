@@ -617,6 +617,32 @@ test("melee contact ending releases the reflex without marking the target unreac
   assert.equal(fixture.runner.status().busy, false);
 });
 
+test("the fight holds its guard while the pair's other attacker is still in reach", async () => {
+  // The 2026-10-20 crossing: the fight's wither skeleton stepped to 3.44
+  // blocks while its partner stood at 1.83. The fight ended, the shield came
+  // down, and the partner's swing landed three ticks into the next fight's
+  // guard, two before a raised shield blocks.
+  let engaging = false;
+  await using fixture = reflexFixture(
+    (targetId, signal) =>
+      new Promise((resolve) => {
+        engaging = true;
+        signal.addEventListener("abort", () => resolve({ ...died(targetId), kind: "cancelled" }), { once: true });
+      }),
+  );
+  fixture.bot.entities[7] = hostile(7, "zombie", 2);
+  fixture.bot.entities[8] = hostile(8, "zombie", -2);
+  fixture.tick();
+  assert.ok(await until(() => engaging));
+  fixture.bot.entities[7]!.position.y = 58;
+  fixture.tick();
+  assert.equal(await until(() => !fixture.runner.status().busy, 5), false, "the partner is still in reach");
+  fixture.bot.entities[8]!.position.y = 58;
+  fixture.tick();
+  assert.ok(await until(() => !fixture.runner.status().busy));
+  assert.deepEqual(fixture.recorded(), ["fight -> contact_ended"]);
+});
+
 test("ending the original melee contact cannot drop the owner while another fuse needs clearance", async () => {
   let engaging = false;
   await using fixture = reflexFixture((targetId, signal) => new Promise(resolve => {
