@@ -521,3 +521,28 @@ test("ten blocks beside a drop are spent on the shelter's own cells, and the ope
   }
   assert.deepEqual(bot.entity.position, start, "the bot stayed in its cell");
 });
+
+test("a shelter shaft is not dug beside lava that would run into it", async () => {
+  // Recorded in cube1 2026-10-20T22-58-31-012Z t00002: cornered on the edge
+  // row of a two-thick basalt shelf in a lava lake at (226.44, -59, 5.5),
+  // the hide dug the basalt underfoot. Lava beside that block flows into the
+  // emptied cell, and the body drops into it.
+  const lava = (position: Vec3) => ({ name: "lava", boundingBox: "empty", shapes: [], hardness: 100, position });
+  const bot = botIn({
+    health: 11,
+    blockAt: (position) => {
+      if (position.y >= -59) return air();
+      if (position.z >= 6 && position.y >= -61) return lava(position);
+      return { ...(stone() as object), name: "basalt", position, digTime: () => 250 };
+    },
+  });
+  bot.entity.position = new Vec3(226.44, -59, 5.5);
+  bot.game = { gameMode: "survival" } as Bot["game"];
+  let digs = 0;
+  bot.dig = async () => {
+    digs++;
+  };
+  const result = await hide(bot);
+  assert.equal(digs, 0);
+  assert.equal(result.kind, "failed");
+});

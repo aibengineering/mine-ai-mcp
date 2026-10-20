@@ -103,6 +103,23 @@ function diggable(block: WorldBlock | null): block is WorldBlock {
   return solid(block) && block.name !== "bedrock" && block.hardness !== null && block.hardness >= 0;
 }
 
+/**
+ * Whether breaking `cell` would let a liquid beside it run into the shaft
+ * the body then drops into.
+ *
+ * The CubeEvade pen stands on a two-thick basalt shelf in a lava lake. Its
+ * hide, cornered on the edge row, dug the basalt under its feet; the lava
+ * beside that block flowed into the new cell and the bot dropped into it
+ * (combat-diag cube1 2026-10-20T22-58-31-012Z t00001 and t00002: 11 to 3.3
+ * health, and death).
+ */
+function openToLiquid(bot: Bot, cell: Vec3): boolean {
+  return PROTECTION_SIDES.some((side) => {
+    const name = bot.blockAt(cell.plus(side))?.name;
+    return name === "lava" || name === "water";
+  });
+}
+
 function message(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
@@ -331,7 +348,7 @@ export async function hideInPlace(bot: Bot, options: HideOptions): Promise<HideR
       const standing = shelterFeet(bot);
       const below = bot.blockAt(standing.offset(0, -1, 0));
       const under = bot.blockAt(standing.offset(0, -2, 0));
-      if (!diggable(below) || !solid(under)) break;
+      if (!diggable(below) || !solid(under) || openToLiquid(bot, standing.offset(0, -1, 0))) break;
       const centered = await centerShelterCell(standing);
       if (shelterIntruder(bot, threatContext)) continue construction;
       if (!centered) return done({ kind: "failed", error: "The bot could not centre over the shelter shaft" });
