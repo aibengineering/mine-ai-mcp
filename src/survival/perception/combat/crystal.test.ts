@@ -279,6 +279,40 @@ test("explicit melee reports staircase supplies instead of falling back to a car
   assert.equal(moves, 0, "resource preflight must run before starting the climb");
 });
 
+/**
+ * First-entry fight of 20 October, crystal #34: the request resumed after a
+ * footing recovery, and the client then sent nothing for the remaining 25
+ * minutes; the server timed it out. A crystal that left observation made
+ * every approach pass return "changed" before any real wait, so the climb
+ * re-entered itself without ever yielding the event loop.
+ */
+test("a crystal that leaves observation mid-climb ends the request instead of spinning", async (t) => {
+  const f = fixture(t);
+  f.target.position.set(30.5, 80, 0.5);
+  const geometry = botFixture({ groundY: 63, blocks: { "30,79,0": "bedrock", "32,76,0": "obsidian" } });
+  f.bot.blockAt = position => geometry.blockAt(position.floored());
+  f.bot.inventory.items = () => [{ name: "end_stone", count: 64 }] as ReturnType<Bot["inventory"]["items"]>;
+  // Valid for the request's own checks, then gone; a spin reads it forever.
+  let reads = 0;
+  Object.defineProperty(f.target, "isValid", {
+    get: () => {
+      if (++reads > 10_000) throw new Error("the climb spun on a crystal it no longer observes");
+      return reads <= 2;
+    },
+  });
+  const navigation = {
+    navigate: async () => ({ status: "failed", reason: "fixture walks nowhere", elapsedMs: 1 } as const),
+  } as unknown as NavigationRuntime;
+  using observation = new CrystalObservation(f.bot, 42, "melee");
+  const result = await new EndCombat(f.bot, navigation, { needed: false } as FootingRecovery).crystal(
+    42,
+    new AbortController().signal,
+    observation,
+  );
+  assert.equal(result.outcome, "stopped");
+  assert.match(result.reason ?? "", /no longer observed/);
+});
+
 test("melee construction counts bot placements and recovered matching drops, not unrelated world changes", (t) => {
   const f = fixture(t);
   using observation = new CrystalObservation(f.bot, 42, "melee");
