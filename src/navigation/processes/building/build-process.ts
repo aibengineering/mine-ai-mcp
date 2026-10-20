@@ -50,7 +50,8 @@ import {
   type Navigate,
   type NavigationResult,
 } from "../../index.js";
-import type { Position3 } from "../../world/world.js";
+import { navigationFeet } from "../../world/block-geometry.js";
+import { samePosition, type Position3 } from "../../world/world.js";
 
 /**
  * How far a cell may be from the feet to be worked without moving, measured
@@ -364,16 +365,23 @@ class BuildTargeting {
       resolve: (observation) => {
         const spatial = approach.resolve(observation);
         if (spatial.kind === "invalid" || this.stateOf(target).kind !== "diggable") return spatial;
+        // The cell the body stands in is judged from the body, as the work in
+        // reach judges it; any other from its centre, where a route settles.
+        // A live End staircase stood 0.12 blocks off a centre that saw its
+        // dig: judged from the centre, the bot had arrived, and from the body
+        // there was nothing to work, so no pass or retry ever moved it.
+        const here = navigationFeet(observation.position, observation.stance === "supported");
         return {
           ...spatial,
           revision: `visible-dig:${spatial.revision}`,
           isSatisfied: (node, world) =>
             spatial.isSatisfied(node, world) &&
-            this.canWorkFrom(target, {
-              x: node.feet.x + 0.5,
-              y: node.feet.y,
-              z: node.feet.z + 0.5,
-            }),
+            this.canWorkFrom(
+              target,
+              samePosition(node.feet, here)
+                ? observation.position
+                : { x: node.feet.x + 0.5, y: node.feet.y, z: node.feet.z + 0.5 },
+            ),
         };
       },
     };

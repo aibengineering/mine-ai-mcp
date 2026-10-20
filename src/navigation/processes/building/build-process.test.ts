@@ -234,6 +234,55 @@ test("a hidden wrong block is approached from a visible stance instead of perman
 });
 
 /**
+ * The End staircase of 20 October, moved onto this floor 10 east, 1 up and 36
+ * south. A route dropped the bot at 4.46,64,1.62, in the cell whose centre
+ * sees the clearance cell at 1,63,0 but 0.12 blocks off it, where the bot
+ * stood, the ray clipped the ground beside it. The goal said "arrived" from
+ * the centre, the work in reach found nothing from the body, and every pass
+ * and every retry ended there without moving: "2 passes changed nothing".
+ */
+test("the cell the bot stands in is judged from the body, not its centre, so arrival and work agree", async () => {
+  const { bot, physics } = structureWorld({ feet: new Vec3(4, 64, 1) });
+  bot.entity.position = new Vec3(4.46, 64, 1.62);
+  const centred = (standing: { x: number; z: number }) =>
+    Math.abs(standing.x - Math.floor(standing.x) - 0.5) < 0.01 && Math.abs(standing.z - Math.floor(standing.z) - 0.5) < 0.01;
+  const here = () => ({ ...observation(), position: bot.entity.position.clone() });
+  const node = (feet: Vec3) => ({ feet: { x: feet.x, y: feet.y, z: feet.z }, remainingScaffolds: 0, overlayId: "" });
+  const result = await build(bot, {
+    ...physics,
+    canSeeDig: (_target, standing) => centred(standing),
+    breakInPlace: async (request) => {
+      assert.ok(centred(bot.entity.position), `dug only where the face is seen, not at ${bot.entity.position}`);
+      return physics.breakInPlace(request);
+    },
+    // The navigator's arrival rule: a goal satisfied where the bot stands ends
+    // the leg there; otherwise walk to the centre of the nearest cell it accepts.
+    route: async ({ goal, onArrival }) => {
+      for (let legs = 0; legs < 8; legs += 1) {
+        const resolved = goal.resolve(here());
+        if (resolved.kind !== "active") return { status: "stopped", reason: resolved.observation, elapsedMs: 0 };
+        const feet = bot.entity.position.floored();
+        if (!resolved.isSatisfied(node(feet), goalTestWorld)) {
+          const stances: Vec3[] = [];
+          for (let x = -3; x <= 3; x += 1) for (let z = -3; z <= 3; z += 1) stances.push(feet.offset(x, 0, z));
+          const stance = stances.sort((a, b) => a.distanceTo(feet) - b.distanceTo(feet))
+            .find((cell) => resolved.isSatisfied(node(cell), goalTestWorld));
+          if (!stance) return { status: "stopped", reason: "no stance", elapsedMs: 0 };
+          bot.entity.position = stance.offset(0.5, 0, 0.5);
+        }
+        const decision = onArrival ? await onArrival({ signal: undefined } as never) : { kind: "completed" };
+        if (decision.kind === "completed") return { status: "completed", elapsedMs: 0 };
+      }
+      return { status: "stopped", reason: "the fake route ran out of legs", elapsedMs: 0 };
+    },
+    cells: cells([[1, 63, 0]], "air"),
+    removeWrongBlocks: true,
+  });
+  assert.equal(result.status, "complete", String(result.reason));
+  assert.equal(result.dug, 1);
+});
+
+/**
  * The live portal of 3 September had cobblestone scaffolded up through its
  * interior, which a portal cannot be lit through. A cell asked to be air is
  * dug whether or not wrong blocks may be removed elsewhere, and it is never
