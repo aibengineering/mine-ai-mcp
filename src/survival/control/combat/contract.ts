@@ -7,6 +7,7 @@ import type { CombatPolicy } from "../../policy/combat/contract.js";
 import { type CombatPositionPlan } from "../../positioning/combat/geometry.js";
 import { type EndCombatResult } from "../../responses/end/execute.js";
 import type { Facts } from "../../state/answered.js";
+import type { Position3 } from "../../../utils/index.js";
 import { SurvivalPolicyState } from "../../state/survival-policy.js";
 import { type CombatExecutionSnapshot } from "./execution.js";
 import { type CombatHandoff } from "./handoff.js";
@@ -54,6 +55,11 @@ export type CombatDecision =
       readonly failedPeeks: number;
     }
   | { readonly kind: "retarget"; readonly from: number; readonly to: number };
+
+export interface EngageOptions {
+  /** Where the pursuing request began: a quarry gone down to a lava shore below it is not followed. */
+  readonly ground?: Position3;
+}
 
 export type CombatOutcome =
   | CombatResult<"died">
@@ -103,7 +109,12 @@ export interface CombatController {
     signal: AbortSignal,
   ): Promise<EndCombatResult>;
   endDanger(): boolean;
-  engage(targetId: number, signal: AbortSignal, movement: "pursue" | "hold"): Promise<CombatOutcome>;
+  engage(
+    targetId: number,
+    signal: AbortSignal,
+    movement: "pursue" | "hold",
+    options?: EngageOptions,
+  ): Promise<CombatOutcome>;
   stop(reason: string): Promise<void>;
   /** The caller retains ownership until protection/separation succeeds or its physical limits are observed. */
   finish(signal: AbortSignal): Promise<CombatHandoff>;

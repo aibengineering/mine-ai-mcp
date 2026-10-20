@@ -11,6 +11,7 @@ import {
   hasMeleeKnockbackRoom,
   hasSweepBystander,
   meleeDistance,
+  quarryDownAtLavaShore,
   waitingForDescendingCube,
 } from "../../weapons/melee.js";
 import type { EndermanFight } from "./enderman.js";
@@ -23,6 +24,11 @@ import type { FightWeapons } from "./weapons.js";
 /** Any hostile in reach whose next action is a hit, not only the selected quarry. */
 const meleeThreatInReach = (scene: FightScene): boolean =>
   scene.perception.read().some((threat) => threat.meleeImminent);
+
+const QUARRY_AT_LAVA_SHORE = "the quarry went down to a lava shore; a pursuit does not follow it off higher ground";
+const followsQuarryDownToLava = (scene: FightScene): boolean =>
+  scene.movement === "pursue" &&
+  quarryDownAtLavaShore(scene.navigation.world, scene.request.ground ?? scene.bot.entity.position, scene.target.position);
 
 export async function runMeleeTurn(
   scene: FightScene,
@@ -63,9 +69,15 @@ export async function runMeleeTurn(
     // shield it is not told to keep. A mob already in reach of the bot - the
     // quarry or the one beside it - is answered before the step, not after
     // its first swing.
+    if (followsQuarryDownToLava(scene))
+      return { ...scene.result("unreachable"), observation: QUARRY_AT_LAVA_SHORE };
+    const volley = guarded && isRangedAttacker(scene.target) ? locomotion.volleyStop : null;
     const stopped = await locomotion.approach(
       guarded && (weapons.projectileDefence() !== null || weapons.volleyActive() || meleeThreatInReach(scene)),
-      guarded && isRangedAttacker(scene.target) ? locomotion.volleyStop : null,
+      {
+        get reason() { return volley?.when() ? volley.reason : QUARRY_AT_LAVA_SHORE; },
+        when: () => (volley?.when() ?? false) || followsQuarryDownToLava(scene),
+      },
     );
     // A route also stops when its target dies mid-way, which is not a
     // reachability verdict: the next iteration reports what settled it.

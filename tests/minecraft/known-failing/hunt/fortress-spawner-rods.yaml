@@ -28,17 +28,21 @@ world:
     naturalRegeneration: true
     keepInventory: false
 
-# The five blazes of the run-14 crossfire are loaded but held still until a
-# second after the hunt is requested; the untouched spawner supplies the rest.
-entities:
-  - { type: blaze, pos: [-30.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
-  - { type: blaze, pos: [-25.5, 85, 355.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
-  - { type: blaze, pos: [-30.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
-  - { type: blaze, pos: [-25.5, 85, 359.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
-  - { type: blaze, pos: [-27.5, 87, 357.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
-
+# The arranged mobs appear, and the live spawner beside the start resumes,
+# a second into the trial, after the hunt is requested. Summoned at
+# preparation, even held still, the mobs stood within contact range of the
+# start, and the spawner put a blaze two blocks from it: the hostile reflex
+# fought them before the request, and a fight longer than the driver's idle
+# wait meant the hunt was never asked for.
+setup:
+  - "data merge block -28 82 357 {Delay:32767s}"
 schedule:
-  - { afterTicks: 20, run: "execute as @e[tag=fortress_trial] run data merge entity @s {NoAI:0b}" }
+  - { afterTicks: 20, run: "data merge block -28 82 357 {Delay:20s}" }
+  - { afterTicks: 20, run: 'summon minecraft:blaze -30.5 85 355.5 {PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { afterTicks: 20, run: 'summon minecraft:blaze -25.5 85 355.5 {PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { afterTicks: 20, run: 'summon minecraft:blaze -30.5 85 359.5 {PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { afterTicks: 20, run: 'summon minecraft:blaze -25.5 85 359.5 {PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { afterTicks: 20, run: 'summon minecraft:blaze -27.5 87 357.5 {PersistenceRequired:1b,Tags:["fortress_trial"]}' }
 
 # The 2026-09-07 expedition kit, with its shield worn and a spare.
 players:

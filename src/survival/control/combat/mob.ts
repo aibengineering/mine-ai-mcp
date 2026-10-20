@@ -5,7 +5,7 @@ import type { CombatPosition } from "../../positioning/combat/position.js";
 import { runMobFight } from "../../responses/fight/run.js";
 import type { FightEnvironment } from "../../responses/fight/scene.js";
 import { ProtectedAttackProgress } from "./attack-progress.js";
-import type { CombatOutcome, CombatResult } from "./contract.js";
+import type { CombatOutcome, CombatResult, EngageOptions } from "./contract.js";
 import { runEngagement } from "./engagement.js";
 import { CombatExecution, type CombatExecutionSnapshot } from "./execution.js";
 import { observeCombatDecision } from "./observation.js";
@@ -39,6 +39,7 @@ export async function runMobEngagement(
   movement: "pursue" | "hold",
   signal: AbortSignal,
   observe: MobObservation,
+  options: EngageOptions = {},
 ): Promise<CombatOutcome> {
   const { bot, navigation, policy, perception, survival, reportDecision } = environment;
   const minimumHealth =
@@ -105,7 +106,7 @@ export async function runMobEngagement(
         if (!target?.isValid) return emptyCombatEvidence(targetId, "target_lost");
         return runMobFight(
           environment,
-          { target, movement, minimumHealth, signal, ownerSignal: signal },
+          { target, movement, minimumHealth, signal, ownerSignal: signal, ground: options.ground },
           protectedProgress,
           observe,
         );

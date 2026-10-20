@@ -94,6 +94,25 @@ test("soul-sand support uses the observed lower surface when centering a shelter
   assert.doesNotMatch(result.error ?? "", /solid floor/);
 });
 
+test("a body standing on an edge shelters over the block that holds it", async () => {
+  // The 2026-10-20 basalt handoff: the withdrawal stopped at x 172.04, its
+  // centre above air at x 172 and its footprint on the floor at x 171, and the
+  // hide refused for want of a floor (hunts-basalt-fix 2026-10-20T20-52-01-006Z-t00007).
+  const bot = botIn({
+    health: 20,
+    items: [{ name: "cobblestone", count: 32 }],
+    equipError: "placement reached over the supporting block",
+    blockAt: (position) => (position.y < 64 && position.x <= 0 ? stone() : air()),
+  });
+  bot.entity.position.set(1.04, 64, 0.5);
+  bot.setControlState = (_control, state) => {
+    if (state) bot.entity.position.set(0.5, 64, 0.5);
+  };
+  const result = await hide(bot);
+  assert.equal(result.kind, "failed");
+  assert.match(result.error ?? "", /placement reached over the supporting block/);
+});
+
 test("same-cell knockback into a planned wall recenters before continuing construction", async () => {
   const bot = botIn({
     health: 20,

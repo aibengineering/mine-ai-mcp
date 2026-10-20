@@ -3,6 +3,7 @@ import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { NavigationRuntime } from "../../navigation/index.js";
+import { MemoryWorld } from "../../navigation/world/memory-world.js";
 import { SurvivalPolicyState } from "../../survival/state/survival-policy.js";
 import {
   dependencies,
@@ -122,6 +123,44 @@ for (const loss of ["broken", "forbidden"] as const) {
     assert.equal(result.hunt.targetsEngaged, 1);
   });
 }
+
+test("the real pursuit does not select a cube that has gone down to a lava shore", async () => {
+  // The 2026-10-20 basalt hunt: a cube bounced off the shelf at y 47 and the
+  // pursuit followed it to the lava shore at y 33, where a pack's knockback
+  // put the bot in the lava (hunts-basalt 2026-10-20T20-32-02-466Z-t00008).
+  const inventory = { count: 0 };
+  const type = minecraftData("1.21.4").entitiesByName.magma_cube.id;
+  const cube = mob(7, type, "magma_cube", 6, "Hostile mobs");
+  cube.position.y = 50;
+  const bot = carryingShield(huntBot([cube], inventory));
+  const world = new MemoryWorld();
+  world.load({ x: 7, y: 49, z: 0 }, { stateId: 102, collisionShapes: [], traits: { liquid: "lava", empty: true } });
+  let approached = 0;
+  const navigation = {
+    ...fakeNavigation,
+    world,
+    navigate: async () => {
+      approached++;
+      throw new Error("The hunt must not walk after a cube at a lava shore below");
+    },
+  } as NavigationRuntime;
+  let engaged = 0;
+  const combat = {
+    ...fakeCombat,
+    policy: new SurvivalPolicyState(bot),
+    engage: async (...args: Parameters<typeof fakeCombat.engage>) => {
+      engaged++;
+      return fakeCombat.engage(...args);
+    },
+  };
+  const result = await huntMob(bot, huntRequest("magma_cube"), {}, {
+    ...dependencies(bot, inventory, []),
+    pursue: huntMobDependencies(bot, navigation, combat).pursue,
+  });
+  assert.equal(approached, 0);
+  assert.equal(engaged, 0);
+  assert.equal(result.hunt.targetsEngaged, 0);
+});
 
 test("a shield lost while gathering drops at contact is checked again before engaging", async () => {
   const inventory = { count: 0 };

@@ -6,7 +6,7 @@ import { Vec3 } from "vec3";
 import { MemoryWorld as GoalTestWorld } from "../../navigation/world/memory-world.js";
 import { flatWorld, observation } from "../../test-support/navigation.js";
 import { entityDimensions } from "../../world/entity-dimensions.js";
-import { hasMeleeKnockbackRoom, meleeApproachGoal, meleeDistance } from "./melee.js";
+import { hasMeleeKnockbackRoom, meleeApproachGoal, meleeDistance, quarryDownAtLavaShore } from "./melee.js";
 
 const goalTestWorld = new GoalTestWorld();
 
@@ -158,4 +158,17 @@ test("a full wall can catch knockback but a one-block lip cannot replace landing
   assert.equal(hasMeleeKnockbackRoom(world, from, target), false);
   world.load({ x: 0, y: 64, z: -1 }, { stateId: 1 });
   assert.equal(hasMeleeKnockbackRoom(world, from, target), true);
+});
+
+test("a quarry is down at a lava shore only a drop below the bot, with the bot off the shore", () => {
+  // The basalt shelf has lava a few blocks off cubes at y 47-49, two below a
+  // bot on a bump at y 51; the lava ocean's shore is fourteen below. Only the
+  // shore is a descent the pursuit must not follow (hunts-basalt-fix3
+  // 2026-10-20T21-24-38-607Z-t00005 gave up on shelf cubes 2 blocks down).
+  const world = new GoalTestWorld();
+  world.load({ x: 2, y: 47, z: 0 }, { stateId: 102, collisionShapes: [], traits: { liquid: "lava", empty: true } });
+  const quarry = (y: number) => ({ x: 1.5, y, z: 0.5 });
+  assert.equal(quarryDownAtLavaShore(world, { x: 10.5, y: 51, z: 0.5 }, quarry(48)), false, "a cube on the shelf");
+  assert.equal(quarryDownAtLavaShore(world, { x: 10.5, y: 62, z: 0.5 }, quarry(48)), true, "a cube down at the shore");
+  assert.equal(quarryDownAtLavaShore(world, { x: 3.5, y: 62, z: 0.5 }, quarry(62)), false, "level with the bot");
 });
