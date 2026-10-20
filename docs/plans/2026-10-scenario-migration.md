@@ -167,7 +167,7 @@ climb still fails.
 | `pathfinder/flowing-lava-dig-release` | Lava released on landing burns the bot to death after the fire reflex interrupts the route | Lava and fire escapes |
 | `pathfinder/vine-column-handoff` | A lateral step onto a lower vine column never arrives; the body slides into lava (a partial patch is saved) | Vine column handoff |
 | `sleep/bed-exit-after-waking` | After waking, navigate finds no path off the bed | Pathing off a bed |
-| `survival/lava-escapes` | Bots leave the lava, then burn to death or end at 1 health | Lava and fire escapes |
+| `survival/lava-escapes` | The pool bot climbs out but, with no water, ends at 1 health at best, below the goal's 2; the pocket and dig pens are fixed and back in `survival/fire-reflex` | Lava and fire escapes |
 
 ### Runtime findings without a fixture
 
