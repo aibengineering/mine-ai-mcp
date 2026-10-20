@@ -265,7 +265,8 @@ Mine Labs offers these shapes:
   ```
 
 - **Starting hunger.** `players[].food` and `players[].saturation` set the
-  food bar before the trial, as `health` sets the wound.
+  food bar before the trial, as `health` sets the wound. Saturation is a whole
+  number no higher than `food`; declaring either one sets both.
 - **Selecting mobs.** `kill` and `entityCount` accept `tag:` and
   `near: { pos, radius }`, so a pen's goal counts only its own quarry:
   `{ kind: kill, target: zombie, tag: pen_east }` or
@@ -275,7 +276,8 @@ Mine Labs offers these shapes:
   components, for example `shield[damage=335]` for a shield one block from
   breaking: `equipment: { offhand: "shield[damage=335]" }`.
 - **Upper bounds on items.** `hasItem` accepts `max:`, so a goal can require
-  that an item was spent or never picked up: `{ kind: hasItem, item: arrow, max: 0 }`.
+  that an item was spent or never picked up: `{ kind: hasItem, item: arrow, count: 0, max: 0 }`.
+  `count` defaults to 1, so "none" needs both.
 
 Two vanilla idioms remain:
 
