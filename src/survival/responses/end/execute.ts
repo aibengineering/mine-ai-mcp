@@ -1,5 +1,5 @@
 import { findCrystalOpenings } from "../../positioning/combat/crystal-openings.js";
-import { buildCrystalStaircase, pillarShortfall, planCrystalStaircase } from "../../positioning/combat/crystal-staircase.js";
+import { buildCrystalStaircase, pillarShortfall, planCrystalStaircase, type CrystalStaircase } from "../../positioning/combat/crystal-staircase.js";
 import { standingCell } from "../../positioning/combat/geometry.js";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
@@ -17,6 +17,7 @@ import type { MovementPolicy } from "../../../navigation/movements/policy.js";
 import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
 import {
   breathBesideFeet,
+  breathOverStances,
   cloudExposure,
   dragonDanger,
   dragonExposure,
@@ -96,8 +97,8 @@ type EndMoveResult = { kind: "arrived" } | { kind: "changed" } | { kind: "failed
 const CRYSTAL_BLAST_MARGIN = 2;
 /** Blocks one melee request may dig off its attack line: a shelter's walls and cap are at most a few. */
 const CRYSTAL_LINE_DIGS = 6;
-/** A perched cloud lives ten seconds of server time; a loaded server stretches that. */
-const CRYSTAL_BREATH_WAIT_MS = 30_000;
+/** A perched cloud lives ten seconds of server time and a fireball's thirty; a loaded server stretches both. */
+const CRYSTAL_BREATH_WAIT_MS = 45_000;
 
 // Vanilla ServerLevel sends explosion packets only when distance squared is
 // below 4096. Beyond this range a destroyed crystal can vanish without a receipt.
@@ -870,7 +871,7 @@ export class EndCombat {
         const built = await this.buildCrystalApproach(observation, signal);
         if (built.kind === "changed") continue;
         if (built.kind === "failed") {
-          if (await this.breathPassed(signal)) continue;
+          if (await this.breathPassed(signal, observation.staircase)) continue;
           return this.crystalResult(observation, "stopped", built.reason);
         }
       }
@@ -958,10 +959,13 @@ export class EndCombat {
    * A perched dragon's breath settled on the floor beside the raised cell the
    * bot stood on: not exposed, so no escape ran, but navigation refuses every
    * step into the breath, and the staircase read its closed routes as
-   * unreachable treads. Wait for that breath to go, then build again.
+   * unreachable treads. A fireball's cloud on a tread above the bot closes the
+   * one-wide staircase the same way. Wait for that breath to go, then build again.
    */
-  private async breathPassed(signal: AbortSignal): Promise<boolean> {
-    const beside = breathBesideFeet(this.bot, this.bot.entity.position).map(cloud => cloud.id);
+  private async breathPassed(signal: AbortSignal, staircase: CrystalStaircase | null): Promise<boolean> {
+    const treads = staircase?.cells.filter(cell => cell.blockName === "air").map(cell => cell.position) ?? [];
+    const beside = [...breathBesideFeet(this.bot, this.bot.entity.position), ...breathOverStances(this.bot, treads)]
+      .map(cloud => cloud.id);
     if (beside.length === 0) return false;
     for (const deadline = Date.now() + CRYSTAL_BREATH_WAIT_MS; Date.now() < deadline;) {
       // Danger or lost footing is a changed scene the approach loop answers itself.

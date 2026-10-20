@@ -55,6 +55,16 @@ export function breathBesideFeet(bot: Bot, feet: Position3): DragonCloud[] {
     Math.abs(cloud.y - feet.y) <= 2 && Math.hypot(feet.x - cloud.x, feet.z - cloud.z) < cloud.radius + 1.3);
 }
 
+/**
+ * Native breath that a body standing in any of `stances` would be inside:
+ * navigation refuses each such step, so a route through them stays closed
+ * until the breath goes, wherever the bot itself stands.
+ */
+export function breathOverStances(bot: Bot, stances: readonly Position3[]): DragonCloud[] {
+  return readDragonCloudHazards(bot).filter((cloud) =>
+    stances.some((feet) => cloudExposure(cloud, { x: feet.x + 0.5, y: feet.y, z: feet.z + 0.5 }) > 0));
+}
+
 /** Native roar (phase 7) precedes flaming (5); the cloud spawns ten ticks
  * into flaming and waits twenty more before damage. Keep the warning through
  * flaming so there is no safe-looking gap before its entity arrives.
