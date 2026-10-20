@@ -13,12 +13,14 @@ const stepSchema = z.strictObject({
 const sequenceSchema = z.strictObject({
   waitTicks: ticksSchema.optional(),
   actions: z.array(stepSchema).min(1),
+  holdTicks: ticksSchema.optional(),
 });
 
 /** One pen's request: an idle pen declares only `waitTicks`. */
 const penSchema = z.strictObject({
   waitTicks: ticksSchema.optional(),
   actions: z.array(stepSchema).optional(),
+  holdTicks: ticksSchema.optional(),
 }).refine(
   ({ waitTicks, actions }) => waitTicks !== undefined || (actions?.length ?? 0) > 0,
   "declare waitTicks, actions, or both",
@@ -30,7 +32,7 @@ const penSchema = z.strictObject({
  */
 export async function run(context: ScenarioContext): Promise<ClientCompletion> {
   const schema = "players" in context.scenario.params ? penSchema : sequenceSchema;
-  const { waitTicks, actions = [] } = playerParams(context, schema);
+  const { waitTicks, actions = [], holdTicks } = playerParams(context, schema);
   // A leading wait lets the arranged fight or hazard begin before the first request.
   if (waitTicks !== undefined) await context.waitForTicks(waitTicks);
   const summaries: string[] = waitTicks === undefined ? [] : [`waited ${waitTicks} ticks`];
@@ -39,6 +41,13 @@ export async function run(context: ScenarioContext): Promise<ClientCompletion> {
     const { matches, detail } = checkExpectation(expect, output);
     summaries.push(`${index + 1}. ${detail}`);
     if (!matches) return { status: "failed", detail: summaries.join("; ") };
+  }
+  // The host closes the runtime, and every reflex with it, when the driver
+  // returns; a trailing hold keeps them on the body while a hazard that
+  // outlives the request plays out.
+  if (holdTicks !== undefined) {
+    await context.waitForTicks(holdTicks);
+    summaries.push(`held ${holdTicks} ticks`);
   }
   return { status: "succeeded", detail: summaries.join("; ") };
 }

@@ -111,7 +111,10 @@ params:
 Each step takes the same optional `expect` as a single action, and defaults to
 success. The sequence stops at the first step whose expectation fails. An
 optional leading `waitTicks` delays the first request, for a request made once
-an arranged fight is under way:
+an arranged fight is under way. An optional trailing `holdTicks` keeps the
+session, and so the runtime's reflexes, on the body after the last step, while
+a hazard that outlives the request plays out; the host closes the runtime when
+the driver returns:
 
 ```yaml
 params:
@@ -218,7 +221,7 @@ finds its own request by name:
   arenas and 200 for hunts. Cover every pen with `reset`, which on the flat
   template means overriding its small reset region.
 - **One request per pen.** `params.players.<username>` holds each pen's request.
-  `drivers/action-sequence.ts` reads `{ waitTicks?, actions? }` from it; a pen
+  `drivers/action-sequence.ts` reads `{ waitTicks?, actions?, holdTicks? }` from it; a pen
   with only `waitTicks` idles, so idle and requesting pens can share a fixture.
   `drivers/single-action.ts` reads `{ action, input, expect? }`, and
   `drivers/idle.ts` reads `{ waitTicks }`. Once `params.players` is present,

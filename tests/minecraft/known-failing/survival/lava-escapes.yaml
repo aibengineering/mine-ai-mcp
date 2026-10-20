@@ -75,7 +75,7 @@ players:
 client:
   command: bun
   cwd: ../..
-  args: [client-host.ts, drivers/fire-reflex.ts]
+  args: [client-host.ts, drivers/action-sequence.ts]
 params:
   players:
     # Each idle wait covers the escape and the whole residual burn after it.
