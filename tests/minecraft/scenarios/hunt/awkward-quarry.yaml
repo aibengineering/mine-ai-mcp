@@ -1,0 +1,154 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Three pens of quarry that is hard to get at. Climber starts in a cave
+  inside a stone mass and hunts a skeleton sealed in a pocket four blocks
+  above, through the cave ceiling (Run 16 request 77, where distance through
+  stone was taken for contact and the obstructed bow kept cancelling its own
+  approach), then a cow standing on top of the mass 56 blocks up (the
+  2026-09-08 search_time incident: the entity-goal search did not credit
+  ascent). PoolHunter starts on a ledge above a pool cell whose big dripleaf
+  is the short way to a zombie; the leaf tilts under a standing body and
+  drops it under the reset leaf (the 2026-09-12 lush-cave incident, seed
+  15276542 request 168), so the hunt must go round or break free.
+  PinnedHunter starts already held crouched under that flat leaf, the second
+  half of the incident, and must break it to get out. Every quarry holds its
+  drop in hand at a chance above one, so each kill yields it.
+
+# Hunt pens 200 blocks apart along x. The dripleaf pens are the legacy
+# shells translated by x=+200 and x=+400. Their zombies are NoAI with 100
+# health at the walled east end, out of reach from the leaf, and the hunters
+# carry no shield, as live: allow_without_shield admits the hostile quarry.
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 7 -16 16 70 16 air"
+  - "fill 194 -61 -3 210 -50 3 air"
+  - "fill 394 -61 -3 414 -50 3 air"
+
+geometry:
+  # Climber: a 33x33 stone mass from y 7 to 63, a two-high cave at y 8..9,
+  # a ceiling at 10..11, and above it a sealed 3x3 air pocket at 12..13.
+  - fill: { block: stone, from: [-16, 7, -16], to: [16, 63, 16] }
+  - fill: { block: air, from: [-7, 8, -7], to: [7, 9, 7] }
+  - fill: { block: air, from: [0, 12, 0], to: [2, 13, 2] }
+
+  # PoolHunter: the dripleaf-pool trap. Shell floor at -62, roof at -54.
+  - fill: { block: stone, from: [194, -62, -3], to: [209, -54, 3] }
+  # West ledge: floor top at -58, a one-block drop onto the leaf.
+  - fill: { block: air, from: [196, -57, 0], to: [199, -55, 0] }
+  # The pool cell: clay bed, waterlogged stem, leaf head one below the ledge.
+  - fill: { block: air, from: [200, -60, 0], to: [200, -55, 0] }
+  - setblock: { block: clay, at: [200, -61, 0] }
+  - setblock: { block: "big_dripleaf_stem[facing=east,waterlogged=true]", at: [200, -60, 0] }
+  - setblock: { block: "big_dripleaf[facing=east,tilt=none,waterlogged=false]", at: [200, -59, 0] }
+  # East bank: floor top at -60, ending at a wall at x 207.
+  - fill: { block: air, from: [201, -59, 0], to: [206, -55, 0] }
+  # The dry way round, six cells against the leaf's two.
+  - fill: { block: air, from: [199, -57, 1], to: [199, -55, 1] }
+  - fill: { block: air, from: [199, -57, 2], to: [199, -55, 2] }
+  - fill: { block: air, from: [200, -58, 2], to: [200, -55, 2] }
+  - fill: { block: air, from: [201, -59, 2], to: [201, -55, 2] }
+  - fill: { block: air, from: [202, -59, 2], to: [202, -55, 2] }
+  - fill: { block: air, from: [202, -59, 1], to: [202, -55, 1] }
+
+  # PinnedHunter: the same pool with no way round. The leaf's underside at
+  # -58.3125 leaves 1.69 blocks above the pool floor, so the server holds a
+  # 1.8-block body crouched; the ledge is two blocks up and out of reach.
+  # The east bank runs four blocks further than the legacy shell's, so the
+  # zombie starts nine blocks off, beyond the hostile reflex's eight-block
+  # contact range: the runtime is up before the start and would otherwise be
+  # fighting when the request arrives, which it refuses.
+  - fill: { block: stone, from: [394, -62, -3], to: [413, -54, 3] }
+  - fill: { block: air, from: [396, -57, 0], to: [399, -55, 0] }
+  - fill: { block: air, from: [400, -60, 0], to: [400, -55, 0] }
+  - setblock: { block: clay, at: [400, -61, 0] }
+  - setblock: { block: "big_dripleaf_stem[facing=east,waterlogged=true]", at: [400, -60, 0] }
+  - setblock: { block: "big_dripleaf[facing=east,tilt=none,waterlogged=false]", at: [400, -59, 0] }
+  - fill: { block: air, from: [401, -59, 0], to: [410, -55, 0] }
+
+entities:
+  - type: skeleton
+    pos: [1.2, 12, 1.6]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["ceiling_skeleton"],HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.0f,2.0f]}'
+  - type: cow
+    pos: [0.5, 64, 0.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["summit_cow"]}'
+  - type: zombie
+    pos: [205.5, -59, 0.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pool_zombie"],attributes:[{id:"minecraft:max_health",base:100.0d}],Health:100.0f,HandItems:[{id:"minecraft:rotten_flesh",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  - type: zombie
+    pos: [409.5, -59, 0.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pinned_zombie"],attributes:[{id:"minecraft:max_health",base:100.0d}],Health:100.0f,HandItems:[{id:"minecraft:rotten_flesh",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+
+players:
+  - name: Climber
+    pos: [0.6, 8, 0.5]
+    equipment:
+      offhand: shield
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: diamond_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 2 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 32 }
+  - name: PoolHunter
+    pos: [196.5, -57, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+  - name: PinnedHunter
+    pos: [400.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    Climber:
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: skeleton, drop_name: bone, count: 1 } }
+        - { action: collect_mob_drop, input: { mob_name: cow, drop_name: beef, count: 1 } }
+    PoolHunter:
+      actions:
+        - action: collect_mob_drop
+          input: { mob_name: zombie, drop_name: rotten_flesh, count: 1, allow_without_shield: true }
+    PinnedHunter:
+      actions:
+        - action: collect_mob_drop
+          input: { mob_name: zombie, drop_name: rotten_flesh, count: 1, allow_without_shield: true }
+
+tick:
+  - "gamemode spectator @a[name=!Climber,name=!PoolHunter,name=!PinnedHunter,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: kill, target: skeleton, tag: ceiling_skeleton }
+    - { kind: hasItem, who: Climber, item: bone, count: 1 }
+    - { kind: kill, target: cow, tag: summit_cow }
+    - { kind: hasItem, who: Climber, item: beef, count: 1 }
+    - { kind: survive, who: Climber, seconds: 1 }
+    - { kind: completion, who: Climber }
+    - { kind: kill, target: zombie, tag: pool_zombie }
+    - { kind: hasItem, who: PoolHunter, item: rotten_flesh, count: 1 }
+    - { kind: survive, who: PoolHunter, seconds: 1 }
+    - { kind: completion, who: PoolHunter }
+    - { kind: kill, target: zombie, tag: pinned_zombie }
+    - { kind: hasItem, who: PinnedHunter, item: rotten_flesh, count: 1 }
+    - { kind: survive, who: PinnedHunter, seconds: 1 }
+    - { kind: completion, who: PinnedHunter }

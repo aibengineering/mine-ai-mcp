@@ -1,0 +1,61 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Ask for white wool with spawner camping while no sheep is loaded. The hunt
+  remembers the closest spawner 20 blocks away at admission, waits out its
+  short observation window, walks back to that spawner, and takes the sheep
+  that appears there only once the bot has returned. Collecting the wool and
+  ending beside the spawner prove the return; the quiet-camp termination is
+  pinned by spawner-camp.test.ts.
+
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -16 -60 -16 28 -40 16 air"
+
+geometry:
+  # A spawner that never spawns: the quarry is arranged by the schedule.
+  - setblock: { block: 'spawner{SpawnCount:0s,SpawnData:{entity:{id:"minecraft:zombie"}}}', at: [0, -60, 0] }
+  - setblock: { block: glowstone, at: [1, -61, 0] }
+
+players:
+  - name: CampHunter
+    pos: [20.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+
+params:
+  action: collect_mob_drop
+  input:
+    mob_name: sheep
+    drop_name: white_wool
+    count: 1
+    camp_spawner: true
+    observe_for_ms: 1500
+
+schedule:
+  # The quarry appears at the source only when the bot is back within four
+  # blocks of it, so collecting wool requires the return.
+  - when: "entity @a[name=CampHunter,x=-4,y=-62,z=-4,dx=8,dy=6,dz=8]"
+    run: "summon sheep 1 -60 0 {Color:0b,NoAI:1b,PersistenceRequired:1b}"
+
+tick:
+  - "gamemode spectator @a[name=!CampHunter,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: hasItem, who: CampHunter, item: white_wool, count: 1 }
+    - { kind: reach, who: CampHunter, pos: [0.5, -60, 0.5], radius: 5 }
+    - { kind: survive, who: CampHunter, seconds: 1 }
+    - { kind: completion, who: CampHunter }

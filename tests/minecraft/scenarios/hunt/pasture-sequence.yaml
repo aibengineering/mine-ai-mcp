@@ -1,0 +1,131 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Rancher, with only a sword, works through three passive hunts in order. A
+  still cow 8.4 blocks out sits inside the hunt's eight-cell approach range
+  but outside eight blocks of real contact, so the hunt must close in rather
+  than swing from where it stands. A rabbit about 65 blocks away lies beyond
+  the 32-block detour bound the fight's approach once had. Two wandering
+  white sheep must both be counted. In a second pen, ChickenHunter, with a
+  bow, arrows and a sword, takes six feathers from ten wandering chickens on
+  short grass terraces. In a third, PennedHunter asks for a rabbit sealed in
+  bedrock 61 blocks away; the request must end without success or a hide,
+  and with the bot alive.
+
+# Rancher's pasture runs east along z 0: the cow by the start, the rabbit at
+# x 74 and the sheep at x 85, so the sheep step starts near its quarry.
+# Rancher carries no bow, as none of its legacy hunts did: a bow would shoot
+# the cow from where the bot stands and never test the contact boundary. The
+# chicken terraces are the legacy layout, 200 blocks north; the sealed rabbit
+# is 200 blocks south. No pen tracks another pen's mobs.
+# Chickens and the rabbit hold their drop in hand at a chance above one, so
+# every kill yields one; sheep and cows always drop wool and beef.
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -12 -60 -16 100 -45 16 air"
+  - "fill -12 -60 -216 30 -45 -184 air"
+  - "fill 56 -64 191 74 -51 209 air"
+
+geometry:
+  # ChickenHunter: the legacy chicken terraces, translated by z=-200: a
+  # raised grass floor, one block higher in the middle.
+  - fill: { block: grass_block, from: [5, -60, -204], to: [10, -60, -196] }
+  - fill: { block: grass_block, from: [10, -60, -204], to: [14, -59, -196] }
+  - fill: { block: grass_block, from: [14, -60, -204], to: [18, -60, -196] }
+  # PennedHunter's rabbit: bedrock nine blocks round it in every horizontal
+  # direction and down to the world floor; no standing cell is in contact.
+  - fill: { block: bedrock, from: [56, -64, 191], to: [74, -51, 209] }
+  - fill: { block: air, from: [65, -60, 200], to: [65, -59, 200] }
+
+entities:
+  - { type: cow, pos: [8.9, -60, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b}" }
+  - type: rabbit
+    pos: [74.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,Tags:["pasture_rabbit"],HandItems:[{id:"minecraft:rabbit_hide",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  - { type: sheep, pos: [85, -60, -2], nbt: "{Color:0b,PersistenceRequired:1b}" }
+  - { type: sheep, pos: [87, -60, 2], nbt: "{Color:0b,PersistenceRequired:1b}" }
+  - { type: chicken, pos: [7.5, -59, -199.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: chicken, pos: [8.5, -59, -197.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: chicken, pos: [9.5, -59, -202.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: chicken, pos: [11.5, -58, -199.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: chicken, pos: [12.5, -58, -197.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: chicken, pos: [13.5, -58, -202.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: chicken, pos: [15.5, -59, -199.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: chicken, pos: [16.5, -59, -197.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: chicken, pos: [17.5, -59, -202.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  - { type: chicken, pos: [18.5, -60, -199.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:feather",count:1},{}],HandDropChances:[2.0f,0.0f]}' }
+  # Within tracking range of PennedHunter, so the request faces a loaded but
+  # unreachable target rather than a missing one.
+  - type: rabbit
+    pos: [65.5, -60, 200.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["penned_rabbit"]}'
+
+players:
+  - name: Rancher
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+  - name: ChickenHunter
+    pos: [0.5, -60, -199.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+  - name: PennedHunter
+    pos: [4.5, -60, 200.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    Rancher:
+      actions:
+        # First, while the cow's offset from the start is still exact.
+        - { action: collect_mob_drop, input: { mob_name: cow, drop_name: beef, count: 1 } }
+        - { action: collect_mob_drop, input: { mob_name: rabbit, drop_name: rabbit_hide, count: 1 } }
+        - { action: collect_mob_drop, input: { mob_name: sheep, drop_name: white_wool, count: 2 } }
+    ChickenHunter:
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: chicken, drop_name: feather, count: 6 } }
+    PennedHunter:
+      actions:
+        - action: collect_mob_drop
+          input: { mob_name: rabbit, drop_name: rabbit_hide, count: 1 }
+          expect: { status: failed }
+
+tick:
+  - "gamemode spectator @a[name=!Rancher,name=!ChickenHunter,name=!PennedHunter,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: hasItem, who: Rancher, item: beef, count: 1 }
+    - { kind: kill, target: rabbit, tag: pasture_rabbit }
+    - { kind: hasItem, who: Rancher, item: rabbit_hide, count: 1 }
+    - { kind: hasItem, who: Rancher, item: white_wool, count: 2 }
+    - { kind: survive, who: Rancher, seconds: 1 }
+    - { kind: completion, who: Rancher }
+    - { kind: hasItem, who: ChickenHunter, item: feather, count: 6 }
+    - { kind: survive, who: ChickenHunter, seconds: 1 }
+    - { kind: completion, who: ChickenHunter }
+    # Termination is truthful: no hide, the sealed rabbit untouched, alive.
+    - { kind: hasItem, who: PennedHunter, item: rabbit_hide, count: 0, max: 0 }
+    - { kind: entityCount, entity: rabbit, tag: penned_rabbit, min: 1 }
+    - { kind: survive, who: PennedHunter, seconds: 1 }
+    - { kind: completion, who: PennedHunter }
