@@ -1,5 +1,5 @@
 import type { Bot } from "mineflayer";
-import type { ScenarioDefinition } from "mine-labs/client";
+import { itemId, type ScenarioDefinition } from "mine-labs/client";
 
 const POSITION_TOLERANCE = 1.5;
 /** Regeneration can add half a heart between the arranged wound and this observation. */
@@ -119,7 +119,9 @@ function expectedInventoryCounts(
 }
 
 function scenarioItemType(bot: Bot, name: string): number {
-  const item = bot.registry.itemsByName[name.replace(/^minecraft:/u, "")];
+  // A declared stack may carry components, `shield[damage=335]` say; the client
+  // counts and equips it by its base id.
+  const item = bot.registry.itemsByName[itemId(name).replace(/^minecraft:/u, "")];
   if (!item) throw new Error(`scenario item '${name}' is unknown to client ${bot.version}`);
   return item.id;
 }

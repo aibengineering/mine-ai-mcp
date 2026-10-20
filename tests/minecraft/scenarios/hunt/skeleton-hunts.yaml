@@ -69,15 +69,14 @@ players:
       - { item: cobblestone, count: 24 }
   - name: SpareHunter
     pos: [200.5, -60, 0.5]
-    # The worn shield is swapped for one at damage 335 at start (see
-    # schedule): the host's preparation check cannot read item components in
-    # equipment yet.
+    # Shield durability is 336, so damage 335 leaves one use: the first arrow it
+    # blocks breaks it.
     equipment:
       head: iron_helmet
       chest: iron_chestplate
       legs: iron_leggings
       feet: iron_boots
-      offhand: shield
+      offhand: "shield[damage=335]"
     inventory:
       - { item: iron_sword, count: 1 }
       - { item: shield, count: 1 }
@@ -113,10 +112,6 @@ tick:
   - "execute if score #arrows pens matches 1.. run scoreboard players add #arrows_settled pens 1"
 
 schedule:
-  # Shield durability is 336, so damage 335 leaves one use: the first arrow it
-  # blocks breaks it. The skeleton is nine blocks off, so this lands before
-  # any arrow can.
-  - { afterTicks: 0, run: "item replace entity SpareHunter weapon.offhand with minecraft:shield[minecraft:damage=335]" }
   - { when: "score #bones_settled pens matches 200..", run: "kill @e[type=skeleton,tag=bones]" }
   - { when: "score #arrows_settled pens matches 200..", run: "kill @e[type=skeleton,tag=spare]" }
 

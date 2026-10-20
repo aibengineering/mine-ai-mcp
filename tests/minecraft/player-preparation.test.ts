@@ -45,6 +45,26 @@ test("player readiness waits for the declared equipment to reach its actual slot
   assert.equal(bot.inventory.listenerCount("updateSlot"), 0);
 });
 
+// skeleton-hunts declared a worn shield as `shield[damage=335]` and the client
+// threw: the lookup took the whole stack, components included, for an item name.
+test("declared equipment with item components settles on its base item", async () => {
+  const slots: Array<{ type: number } | null> = Array(46).fill(null);
+  const bot = fakeBot({
+    quickBarSlot: 0,
+    registry: { itemsByName: { shield: { id: 7 } } },
+    inventory: Object.assign(new EventEmitter(), { items: () => [], slots }),
+  });
+  const scenario = { world: { dimension: "overworld" },
+    players: [{ name: "CraftBot", inventory: [], equipment: { offhand: "minecraft:shield[minecraft:damage=335]" } }],
+  } as unknown as ScenarioDefinition;
+  const observation = observeScenarioPlayerPreparation(bot, scenario);
+  const prepared = observation.wait();
+  slots[45] = { type: 7 };
+  bot.inventory.emit("updateSlot", 45, null, slots[45] as never);
+  await prepared;
+  observation.close();
+});
+
 test("requires a post-ready inventory update even when stale local counts already match", async () => {
   const bot = fakeBot();
   const inventory = bot.inventory as unknown as EventEmitter & { items: () => unknown[] };
