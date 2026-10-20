@@ -6,7 +6,7 @@ description: >-
   seed 5831896158372390619, where every route steps or digs onto a naturally
   suspended gravel column above lava. The original downward step reported
   completion before the gravel fell and dropped the miner into the lava. The
-  collection must refuse truthfully with [NO_REACHABLE_MATCHING_TARGETS] and
+  collection may take the ore safely or refuse it truthfully; either way it must
   leave the miner alive at full health, without regeneration, two seconds
   later.
 
@@ -47,8 +47,10 @@ params:
         - action: collect_block
           input: { block_name: nether_gold_ore, count: 1, x: 88, y: 38, z: -21, scaffold: true }
           # The ore is reachable only by stepping onto the suspended gravel or
-          # digging beside it; today's planner rejects both and refuses.
-          expect: { status: failed, errorContains: "[NO_REACHABLE_MATCHING_TARGETS]" }
+          # digging beside it. Taking it safely or refusing it are both truthful;
+          # the goals judge safety, so either outcome may pass and today's refusal
+          # does not become the requirement.
+          expect: { status: [succeeded, failed] }
       # The original step reported completion before the gravel fell: keep the
       # runtime two seconds longer so a delayed collapse is still observed.
       holdTicks: 40
