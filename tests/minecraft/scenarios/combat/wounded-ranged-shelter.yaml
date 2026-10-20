@@ -2,14 +2,21 @@ template: ../../templates/combat-idle-midnight.yaml
 
 tags: [acceptance, regression]
 description: >-
-  Three wounded idle bots, one per pen and 100 blocks apart, each stand
-  between two native ranged attackers on a bedrock pad and request nothing;
-  each must survive and recover to 18 health. At 10 health without a shield
-  and with no blocks at all, on ground that cannot be dug, under blazes
-  eighteen blocks either side; at 10 health between bow skeletons twelve
-  blocks either side; and at 5 health under blazes with soul fire burning in
-  all four cells around it. The blaze pen with blocks and the burning pen are
-  known-failing/combat/wounded-ranged-shelter-flaky.
+  Five wounded idle bots, one per pen and 100 blocks apart, each stand between
+  two native ranged attackers on a bedrock pad and request nothing; each must
+  survive and recover to 18 health. At 10 health without a shield under blazes
+  eighteen blocks either side; the same with a shield and arriving on fire from
+  a lava touch, whose burn the shield cannot block (it killed the equipped eyes
+  trial); the same with no blocks at all on ground that cannot be dug; at 10
+  health between bow skeletons twelve blocks either side; and at 5 health under
+  blazes with soul fire burning in all four cells around it. The first two pens
+  failed intermittently on 2026-10-20 and 21. The burning bot burned to death
+  when its shelter failed and it stood at hunger 19 without saturation, healing
+  a point every four seconds against a burn of one a second, because the hunger
+  reflex waited for hunger 17; it now eats. Other runs ended a bot at 15 to 17
+  health with a blaze fight still under way at the close, once after a melee
+  approach to a hovering blaze stopped as unreachable; no single cause was
+  isolated for those.
 
 # Midnight with natural regeneration switched on at the start: recovery is the
 # outcome. Each pen is a 17x17 bedrock pad in the superflat ground.
@@ -17,7 +24,7 @@ description: >-
 # the first schedule entry turns it on, as the absorbed drivers did once
 # their wound was in place. Fixtures sharing this world declare it again.
 #   x:    0          100          200
-#   z 0:                          Unbuildable
+#   z 0:  Blaze      Burning      Unbuildable
 #   z100: Skeleton   SoulFire
 world:
   type: flat
@@ -31,6 +38,8 @@ world:
     randomTickSpeed: 0
 
 geometry:
+  - fill: { block: bedrock, from: [-8, -61, -8], to: [8, -61, 8] }
+  - fill: { block: bedrock, from: [92, -61, -8], to: [108, -61, 8] }
   - fill: { block: bedrock, from: [192, -61, -8], to: [208, -61, 8] }
   - fill: { block: bedrock, from: [-8, -61, 92], to: [8, -61, 108] }
   - fill: { block: bedrock, from: [92, -61, 92], to: [108, -61, 108] }
@@ -41,6 +50,10 @@ geometry:
   - setblock: { at: [100, -60, 101], block: soul_fire }
 
 entities:
+  - { type: blaze, pos: [18.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_blaze"]}' }
+  - { type: blaze, pos: [-17.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_blaze"]}' }
+  - { type: blaze, pos: [118.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_burning"]}' }
+  - { type: blaze, pos: [82.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_burning"]}' }
   - { type: blaze, pos: [218.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_unbuildable"]}' }
   - { type: blaze, pos: [182.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_unbuildable"]}' }
   - type: skeleton
@@ -54,8 +67,33 @@ entities:
 
 schedule:
   - { afterTicks: 0, run: "gamerule naturalRegeneration true" }
+  # A native lava touch: two ticks in a lava cell set the bot burning for
+  # fifteen seconds after the cell is cleared.
+  - { afterTicks: 0, run: "setblock 100 -60 0 minecraft:lava" }
+  - { afterTicks: 2, run: "setblock 100 -60 0 minecraft:air" }
 
 players:
+  - name: BlazeShelter
+    pos: [0.5, -60, 0.5]
+    health: 10
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 32 }
+  # One point above the others: the lava touch costs about one through this
+  # armour, so the response starts near 10 health and burning.
+  - name: Burning
+    pos: [100.5, -60, 0.5]
+    health: 11
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: shield, count: 1 }
+      - { item: cooked_beef, count: 32 }
   - name: Unbuildable
     pos: [200.5, -60, 0.5]
     health: 10
@@ -87,12 +125,20 @@ params:
   waitTicks: 1600
 
 tick:
-  - "gamemode spectator @a[name=!Unbuildable,name=!SkeletonShelter,name=!SoulFire,gamemode=!spectator]"
+  - "gamemode spectator @a[name=!BlazeShelter,name=!Burning,name=!Unbuildable,name=!SkeletonShelter,name=!SoulFire,gamemode=!spectator]"
 
 goal:
   kind: all
   timeout: 150
   goals:
+    - { kind: health, who: BlazeShelter, health: 18 }
+    - { kind: survive, who: BlazeShelter, seconds: 1 }
+    - { kind: completion, who: BlazeShelter }
+
+    - { kind: health, who: Burning, health: 18 }
+    - { kind: survive, who: Burning, seconds: 1 }
+    - { kind: completion, who: Burning }
+
     - { kind: health, who: Unbuildable, health: 18 }
     - { kind: survive, who: Unbuildable, seconds: 1 }
     - { kind: completion, who: Unbuildable }

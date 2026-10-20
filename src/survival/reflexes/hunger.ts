@@ -25,7 +25,7 @@ export function attachHungerReflex(
     name: HUNGER_REFLEX,
     intervalTicks: CHECK_INTERVAL_TICKS,
     sense: () => {
-      if (policy.settling || !needsFood(bot.health, bot.food)) return null;
+      if (policy.settling || !needsFood(bot.health, bot.food, bot.foodSaturation)) return null;
       const owner = driver.runner.status().owner;
       const bodyBusy = owner === "takeover" || owner === "yielding";
       const combatActive = combat.activeEngagement() !== null;
