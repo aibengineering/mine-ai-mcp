@@ -18,6 +18,52 @@ import {
 } from "./response-result.js";
 import { responseScope } from "./scopes/response.js";
 import { creeperEscape } from "../../policy/combat/tactics.js";
+import { needsCombatRecovery } from "../../policy/combat/health.js";
+import { HOSTILE_CONTACT_RANGE, isThreat } from "../../perception/combat/threats.js";
+
+type Entity = Parameters<Bot["attack"]>[0];
+/**
+ * The next member of the fought group that this fight still owes, if any.
+ *
+ * The group is the directive's threats that were in contact, or had attacked
+ * the bot, when the decision answered them. Killing the target does not
+ * resolve the rest: a creeper retreat can carry the bot past the
+ * sixteen-block observation horizon, and a creeper that has lost the bot
+ * there stops coming back, so no fresh decision ever sees it again. In
+ * combat-diag2 19-57-59-928Z the second creeper of a pair ended 21.8 blocks
+ * off and outlived the window. Ordinary melee mobs come back into reach on
+ * their own and are left to the next decision; mobs fought where they stand
+ * - shooters, creepers, endermen - are taken in turn while they are still a
+ * threat and the bot is still fit to fight. Under defend_only the fight was
+ * never a pursuit, so it ends with its target as before.
+ */
+function nextGroupTarget(
+  bot: Bot,
+  request: Extract<HostileDirective, { kind: "fight" }>,
+  context: ResponseContext,
+  fought: ReadonlySet<number>,
+): Entity | null {
+  const policy = contextPolicy(context)().combat;
+  if (policy.engagement === "defend_only" || needsCombatRecovery(bot.health, policy.engage_min_health)) return null;
+  return (
+    request.threats
+      .filter((threat) => threat.distance <= HOSTILE_CONTACT_RANGE || context.attackerIds.has(threat.id))
+      .map((threat) => bot.entities[threat.id])
+      .filter(
+        (entity): entity is Entity =>
+          entity !== undefined &&
+          !fought.has(entity.id) &&
+          !defendsOnContact(entity) &&
+          isThreat(bot, entity, context) &&
+          entity.position.distanceTo(bot.entity.position) < policy.evade_safe_range,
+      )
+      .sort(
+        (left, right) =>
+          left.position.distanceTo(bot.entity.position) - right.position.distanceTo(bot.entity.position),
+      )[0] ?? null
+  );
+}
+
 async function fight(
   bot: Bot,
   controller: CombatController,
@@ -28,7 +74,7 @@ async function fight(
 ): Promise<FightResponseResult> {
   const contactEnded = new AbortController();
   const policyRevision = controller.policy.snapshot().revision;
-  const target = bot.entities[request.targetId];
+  let target = bot.entities[request.targetId];
   const observeContact = () => {
     const { perception } = context;
     const creepers = perception.creeperClearance.observe(perception.tick, perception.resolvedIds);
@@ -36,20 +82,42 @@ async function fight(
     if (target?.isValid && defendsOnContact(target) && !inDefensiveContact(bot, target))
       contactEnded.abort("Melee target left defensive reach.");
   };
+  const fought = new Set<number>();
+  const killed: number[] = [];
+  const totals = { attacks: 0, shieldRaisedSwings: 0, projectileGuards: 0, explosions: 0 };
+  const styles = new Set<CombatOutcome["stylesUsed"][number]>();
+  const weapons = new Set<string>();
   bot.on("physicsTick", observeContact);
   let result: CombatOutcome;
   try {
-    const pending = controller.engage(
-      request.targetId,
-      AbortSignal.any([signal, contactEnded.signal]),
-      decideFightMovement({
-        policy: controller.policy.combat,
-        health: bot.health,
-        target: target ? { name: target.name ?? "unknown", defendsOnContact: defendsOnContact(target) } : null,
-      }),
-    );
-    observeContact();
-    result = await pending;
+    let targetId = request.targetId;
+    for (;;) {
+      fought.add(targetId);
+      const pending = controller.engage(
+        targetId,
+        AbortSignal.any([signal, contactEnded.signal]),
+        decideFightMovement({
+          policy: controller.policy.combat,
+          health: bot.health,
+          target: target ? { name: target.name ?? "unknown", defendsOnContact: defendsOnContact(target) } : null,
+        }),
+      );
+      observeContact();
+      result = await pending;
+      totals.attacks += result.attacks;
+      totals.shieldRaisedSwings += result.shieldRaisedSwings;
+      totals.projectileGuards += result.projectileGuards;
+      totals.explosions += result.explosions;
+      for (const style of result.stylesUsed) styles.add(style);
+      for (const weapon of result.weaponsUsed) weapons.add(weapon);
+      if (result.kind !== "died") break;
+      killed.push(result.targetId);
+      if (signal.aborted) break;
+      const next = nextGroupTarget(bot, request, context, fought);
+      if (!next) break;
+      target = next;
+      targetId = next.id;
+    }
   } finally {
     bot.off("physicsTick", observeContact);
   }
@@ -57,17 +125,17 @@ async function fight(
   // The claim owner classifies cancellation/death without discarding them.
   const common = {
     ...encounterBaseline(bot, request, healthBefore),
-    attacks: result.attacks,
-    combatStyles: result.stylesUsed,
-    weaponsUsed: result.weaponsUsed,
-    shieldRaisedSwings: result.shieldRaisedSwings,
-    projectileGuards: result.projectileGuards,
-    explosions: result.explosions,
+    attacks: totals.attacks,
+    combatStyles: [...styles],
+    weaponsUsed: [...weapons],
+    shieldRaisedSwings: totals.shieldRaisedSwings,
+    projectileGuards: totals.projectileGuards,
+    explosions: totals.explosions,
   };
   return {
     ...common,
     response: "fight",
-    killedTargetIds: result.kind === "died" ? [result.targetId] : [],
+    killedTargetIds: killed,
     result:
       result.kind === "cancelled" && contactEnded.signal.aborted && !signal.aborted
         ? { kind: "contact_ended" }

@@ -6,7 +6,7 @@ import { encounterBaseline, type EvadeResponseResult } from "../control/combat/r
 import { incomingShieldProjectiles } from "../perception/combat/shield-projectiles.js";
 import { observeExposedAvoidanceContact } from "../perception/combat/threats.js";
 import { permittedCombatItems } from "../policy/combat/permissions.js";
-import { creeperEscape } from "../policy/combat/tactics.js";
+import { creeperEscape, creeperEscapeAdmits } from "../policy/combat/tactics.js";
 import type { HostileDirective } from "../policy/combat/response.js";
 import { equipCombatLoadout, readCombatItems, selectMeleeLoadout } from "../weapons/equipment.js";
 import { combatItemsForTarget } from "../weapons/melee.js";
@@ -43,7 +43,7 @@ export async function evade(
     const { perception } = context;
     const creepers = perception.creeperClearance.observe(perception.tick, perception.resolvedIds);
     const escape = creeperEscape({ creepers, clearancePending: perception.creeperClearance.pending, stationaryCommitment: true });
-    if (escape) perception.creeperClearance.require(creepers.filter(threat => escape.threatIds.includes(threat.id)));
+    if (escape) perception.creeperClearance.require(creepers.filter(threat => creeperEscapeAdmits(escape).includes(threat.id)));
     return escape !== null;
   };
   let guardStop: string | null = null;
