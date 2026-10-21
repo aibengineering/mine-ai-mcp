@@ -10,12 +10,15 @@ import { MELEE_RANGE } from "./equipment.js";
 import { arrowFlight } from "../perception/combat/arrow-flight.js";
 import { bowReleaseInTicks } from "../perception/combat/bow-timing.js";
 import { meleeDistance } from "./melee.js";
+import { projectileContact } from "../positioning/combat/exposure.js";
 
 type Entity = Parameters<Bot["attack"]>[0];
 const GUARD_COSINE = Math.cos((70 * Math.PI) / 180);
 // Allow a movement-packet send and the server's separate head update before contact.
 export const HEAD_TURN_LEAD_TICKS = 3;
 const IMPACT_GRACE_TICKS = 2;
+// Vanilla skeleton arrows launch at 1.6 blocks/tick.
+const ARROW_LAUNCH_SPEED = 1.6;
 const heldImpacts = new WeakMap<Bot, { entity: Entity; heading: Vec3; until: number; impactAt: number }>();
 
 /** A confirmed block ends the estimated contact grace, but does not identify an arrow. */
@@ -75,12 +78,16 @@ export function observeProjectileDefence(bot: Bot, movementAllowance = 0, now = 
       contact: impact?.position ?? flight.position,
     };
   }).sort((a, b) => a.impactInTicks - b.impactInTicks);
-  // Vanilla skeleton arrows launch at 1.6 blocks/tick. Before release this is
-  // an estimate: aim/spread and travel change. Observed flight replaces it.
-  const windupForecasts = windingUp.map((entity) => ({ entity,
-    releaseInTicks: bowReleaseInTicks(bot, entity),
-    impactInTicks: (bowReleaseInTicks(bot, entity) ?? 0) + entity.position.distanceTo(bot.entity.position) / 1.6,
-  })).sort((a, b) => a.impactInTicks - b.impactInTicks);
+  // Before release this is an estimate: aim/spread and travel change.
+  // Observed flight replaces it.
+  const windupForecasts = windingUp.map((entity) => {
+    const flightTicks = entity.position.distanceTo(bot.entity.position) / ARROW_LAUNCH_SPEED;
+    return { entity,
+      releaseInTicks: bowReleaseInTicks(bot, entity),
+      impactInTicks: (bowReleaseInTicks(bot, entity) ?? 0) + flightTicks,
+      contact: entity.heldItem?.name === "bow" ? drawnArrowContact(bot, entity, flightTicks) : entity.position,
+    };
+  }).sort((a, b) => a.impactInTicks - b.impactInTicks);
   const urgent = forecasts[0];
   // An earlier observed collision can supersede a held later shot. A new bow
   // draw cannot steal the heading during an already committed impact window.
@@ -90,7 +97,7 @@ export function observeProjectileDefence(bot: Bot, movementAllowance = 0, now = 
     held = undefined;
   }
   const directions = [...forecasts.map(({ contact, impactInTicks }) => ({ position: contact, impactInTicks })),
-    ...windupForecasts.map(({ entity, impactInTicks }) => ({ position: entity.position, impactInTicks }))]
+    ...windupForecasts.map(({ contact, impactInTicks }) => ({ position: contact, impactInTicks }))]
     .sort((a, b) => a.impactInTicks - b.impactInTicks).map(({ position }) => position);
   let { heading, coversAll } = shieldCoverage(
     bot.entity.position,
@@ -140,6 +147,25 @@ export function observeProjectileDefence(bot: Bot, movementAllowance = 0, now = 
     aligned: look.dot(unitDirections[0]!) >= GUARD_COSINE && covered(look) >= covered(heading),
     imminent: hits.length > 0 || held !== undefined,
   };
+}
+
+/**
+ * Where a drawn bow's arrow will enter this body, relative to where it stands
+ * now. Vanilla blocks with a shield when that entry point, on the body's box
+ * inflated by 0.3, lies in front of the head yaw the server held on the tick
+ * before the hit, whatever direction the shooter stands in. The bow aims at
+ * the body as it stands at release, and a walking body keeps moving through
+ * the two or three ticks a close shot flies, so the entry point moves round
+ * the box against the walk. A standing body gets the shooter's own bearing.
+ */
+function drawnArrowContact(bot: Bot, shooter: Entity, flightTicks: number): Vec3 {
+  const aim = bot.entity.position.offset(0, bot.entity.height / 3, 0);
+  const from = new Vec3(shooter.position.x, aim.y, shooter.position.z);
+  const velocity = bot.entity.velocity;
+  const drift = new Vec3(velocity?.x ?? 0, 0, velocity?.z ?? 0).scaled(Math.ceil(flightTicks));
+  const entry = projectileContact(bot.world, { position: from, velocity: aim.minus(from) },
+    { position: bot.entity.position.plus(drift), width: bot.entity.width, height: bot.entity.height });
+  return entry ? entry.minus(drift) : shooter.position;
 }
 
 /** The same guard cone drives facing and decides whether a shield can answer the exposed firing lines. */

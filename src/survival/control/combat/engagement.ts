@@ -11,7 +11,8 @@ export interface EngagementOperations {
   readonly purpose: Extract<CombatPurpose, { kind: "pursuit" | "contact_defence" }>;
   observe(): CombatDecisionFacts;
   record(facts: CombatDecisionFacts, response: HostileDirective): void;
-  fight(): Promise<FightOutcome>;
+  /** `defending`: hold and fight back without a health stop, after recovery proved impossible. */
+  fight(options?: { readonly defending: boolean }): Promise<FightOutcome>;
   recover(): Promise<EngagementRecovery>;
   deflect(targetId: number): Promise<void>;
 }
@@ -27,12 +28,22 @@ export async function runEngagement(signal: AbortSignal, operations: EngagementO
     stylesUsed: [] as CombatOutcome["stylesUsed"][number][],
     weaponsUsed: [] as string[],
   };
+  // Recovery that cannot happen leaves an attacker still on the bot. Holding
+  // for it, or handing the body back with a limit, gives that attacker free
+  // blows: the Cave pen of creeper-navigation, with no blocks, no pickaxe and
+  // no regeneration, stood its ground unguarded and was shot from 13 to 5
+  // health (combat-proof7 2026-10-20T23-14-14-751Z). The engagement instead
+  // defends against the quarry where it stands, shield and weapons and no
+  // health stop, until the quarry is resolved.
+  let defending = false;
+  const purpose = (): EngagementOperations["purpose"] | { kind: "contact_defence"; targetId: number } =>
+    defending ? { kind: "contact_defence", targetId: operations.purpose.targetId } : operations.purpose;
   try {
     for (;;) {
       signal.throwIfAborted();
       const facts = operations.observe();
       if (facts.health <= 0) return { ...evidence, kind: "bot_died" };
-      const response = decideCombatResponse(facts, operations.purpose);
+      const response = decideCombatResponse(facts, purpose());
       operations.record(facts, response);
       switch (response.kind) {
         case "deflect":
@@ -42,13 +53,22 @@ export async function runEngagement(signal: AbortSignal, operations: EngagementO
         case "evade": {
           const recovery = await operations.recover();
           signal.throwIfAborted();
-          if (operations.observe().health <= 0) return { ...evidence, kind: "bot_died" };
-          if (recovery.kind === "blocked")
+          const after = operations.observe();
+          if (after.health <= 0) return { ...evidence, kind: "bot_died" };
+          if (recovery.kind === "blocked") {
+            const attacker = after.contacts.find(
+              (contact) => contact.id === operations.purpose.targetId && contact.relationship.defend && contact.inContact,
+            );
+            if (!defending && operations.purpose.kind === "pursuit" && attacker) {
+              defending = true;
+              break;
+            }
             return { ...evidence, kind: "capability_blocked", reason: "recovery", observation: recovery.observation };
+          }
           break;
         }
         case "fight": {
-          const result = await operations.fight();
+          const result = await operations.fight({ defending });
           evidence.attacks += result.attacks;
           evidence.shieldRaisedSwings += result.shieldRaisedSwings;
           evidence.projectileGuards += result.projectileGuards;

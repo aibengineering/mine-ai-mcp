@@ -88,7 +88,10 @@ export function responseContinuation(settlement: HostileSettlement): Continuatio
           ? physical.result.kind === "recovered"
           : physical.response === "evade"
             ? physical.result.kind === "separated"
-            : physical.result.kind === "reflected";
+            : // A fireball that burst or passed without a reversal is gone
+              // too. Returning the request for it ended a basalt traverse
+              // unhurt, three seconds in (r3-a 2026-10-21T04-37-31-335Z).
+              physical.result.kind === "reflected" || physical.result.kind === "unobserved";
     if (resume) return { kind: "resume" };
   }
   const receipt = encounterReceipt(settlement);

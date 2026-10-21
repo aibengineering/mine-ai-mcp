@@ -47,3 +47,23 @@ test("a bow yields before fuse activation while an aligned guard can advance bet
   assert.equal(decideCombatTactic({ ...facts, projectile: { ...facts.projectile!, imminent: false } }).kind, "act");
   assert.equal(decideCombatTactic({ ...facts, creepers, footingRecovery: true }).kind, "recover_footing");
 });
+test("a creeper walking in on a fight with another enemy is answered before it lights", () => {
+  // Cave in r3-proof 2026-10-21T05-11-00-726Z (t00004), 1.76 s before the
+  // blast: the bot guards a skeleton volley with its quarry skeleton #24 while
+  // creeper #27 walks down the tunnel, unlit and in the open, 3.58 blocks
+  // away. Vanilla creepers light within three blocks of the player they
+  // follow and blow thirty ticks later unless it is seven blocks away; this
+  // one lit 0.2 s later and the escape that began then fell short.
+  const recorded: CombatTacticalFacts = {
+    ...facts, counterReady: true, meleeImminent: true, quarryId: 24,
+    creepers: [{ id: 27, distance: 3.5753, swelling: false, observed: true, exposed: true, fuseRemainingTicks: 30 }],
+    projectile: { imminent: true, aligned: true, coversAll: true, impactInTicks: 4 },
+  };
+  assert.deepEqual(decideCombatTactic(recorded), { kind: "escape", reason: "close_exposure", threatIds: [27] });
+  assert.equal(decideCombatTactic({ ...recorded, quarryId: 27 }).kind, "guard",
+    "a creeper quarry's own fight strikes it with knockback instead");
+  assert.equal(decideCombatTactic({ ...recorded, creepers: [{ ...recorded.creepers[0]!, distance: 10 }] }).kind, "guard",
+    "a creeper still far down the tunnel leaves the volley first");
+  assert.equal(decideCombatTactic({ ...recorded, escapeAvailable: false }).kind, "guard",
+    "with nowhere to go the fight goes on until a fuse calls for a blast answer");
+});
