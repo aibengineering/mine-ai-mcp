@@ -333,6 +333,26 @@ Still open:
   - Run 2's other failures were lagged runs of fixtures that pass when the
     server keeps up.
 
+### Confirmation pass (2026-10-22, at 49678c6, `--jobs 2`, no game running)
+
+| Run | Time | Result |
+| --- | ---: | --- |
+| Fast tier | 40 min | 102 of 103 passed |
+| Slow tier | 19.4 min | 11 of 13 passed |
+| Known-failing | 50 min | 15 of 18 failed as described. The intermittent `cover-crossing-hunt`, `end-crystals-pillar-then-staircase` and `ender-dragon-first-entry` (29 min) passed |
+
+No failing trial lagged. The three failures in the suite:
+- **`collect/waterfall-oak`, LiveCollector:** collected no logs in 114 s and
+  never returned. This is a new mode of the live stall: 9cbf1b0 fixed five
+  logs and then wandering off.
+- **`combat/end-crystals-staircase`:** the bot "was doomed to fall by Ender
+  Dragon", knocked off the staircase while climbing to the tower at
+  -12.5,86,-39.5.
+- **`hunt/warped-forest-pearls`:** the hunt's recovery shelter could not close,
+  because a protection cell held twisting vines, which placement cannot
+  replace. The hunt returned `capability_blocked`. The runtime does not break
+  such a plant before walling, which is a runtime gap.
+
 ### Known-failing now
 
 | Fixture | Failure | Pattern | Next |
