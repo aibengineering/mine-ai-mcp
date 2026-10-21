@@ -50,6 +50,7 @@ export class CombatTactics {
       // Any hostile in reach, not only the selected quarry: the swing that
       // opens a fight is often from the one the bot did not pick.
       meleeImminent: perception.read().some((threat) => threat.meleeImminent),
+      quarryId: scene.target.id,
       projectile: projectile ? { imminent: projectile.imminent, aligned: projectile.aligned, coversAll: projectile.coversAll,
         impactInTicks: projectile.projectiles[0]?.impactInTicks ?? projectile.windupForecasts[0]?.impactInTicks ?? null } : null,
     };
