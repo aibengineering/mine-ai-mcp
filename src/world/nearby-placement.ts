@@ -2,7 +2,7 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { cellIntersectsPlayerBody } from "../utils/index.js";
 import { isDryPlacementSite, supportsFlatPlacement } from "./block-classification.js";
-import { placeBlock, findPlacementSupport, type WorldBlock } from "./placement.js";
+import { placeBlock, findPlacementSupport, occupiedCell, type WorldBlock } from "./placement.js";
 import { chestOpeningObstruction } from "./chest-clearance.js";
 
 /** Vanilla block-interaction reach, measured from the bot's feet cell like every other placement here. */
@@ -33,7 +33,7 @@ interface PlacementCell {
  * has walls on every side and no free floor, and the model walked off to
  * find open ground instead of crafting where it stood.
  */
-function chooseCell(bot: Bot, itemName: string, maxRadius: number): PlacementCell | null {
+export function chooseCell(bot: Bot, itemName: string, maxRadius: number): PlacementCell | null {
   const feet = bot.entity.position.floored();
   let chosen: { readonly cell: PlacementCell; readonly distance: number; readonly onFloor: boolean } | null = null;
   for (let dx = -maxRadius; dx <= maxRadius; dx += 1) {
@@ -44,6 +44,9 @@ function chooseCell(bot: Bot, itemName: string, maxRadius: number): PlacementCel
         if (distance > NEARBY_PLACEMENT_REACH || cellIntersectsPlayerBody(position, bot.entity.position)) continue;
         if (!isDryPlacementSite(bot.blockAt(position))) continue;
         if (chestOpeningObstruction(bot, itemName, position)) continue;
+        // A mob standing in the cell refuses the placement after the choice is
+        // made; a wandering animal on generated ground took the nearest cell.
+        if (occupiedCell(bot, position)) continue;
         const placement = findPlacementSupport(bot, position, supportsFlatPlacement);
         if (placement) {
           const { support, face } = placement;
