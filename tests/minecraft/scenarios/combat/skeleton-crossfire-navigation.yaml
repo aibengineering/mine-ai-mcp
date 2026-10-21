@@ -22,9 +22,12 @@ world:
     naturalRegeneration: false
     randomTickSpeed: 0
 
-# Pens two hundred blocks apart. Two seconds after a bot reaches its
-# destination its request has returned; the skeletons left in its pen are
-# then removed rather than left to shoot a body with no reflexes.
+# Pens two hundred blocks apart. A bot's runtime closes the moment its
+# request returns, so the skeletons in its pen are removed on the first tick
+# it stands in its destination zone. They used to be removed forty ticks
+# later, and in r4-shield 2026-10-21T05-48-02-946Z (t00001) FirstShot arrived
+# at full health, its runtime closed, and in that gap it was shot to 16
+# health and ended outside the goal radius, with no reflex to answer.
 reset:
   - "kill @e[type=!minecraft:player]"
   - "fill -8 -60 -12 52 -50 12 air"
@@ -71,8 +74,8 @@ tick:
   - "execute if entity @a[name=Elevated,x=241,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #elevated pens 1"
 
 schedule:
-  - { when: "score #first pens matches 40..", run: "kill @e[tag=first]" }
-  - { when: "score #elevated pens matches 40..", run: "kill @e[tag=elevated]" }
+  - { when: "score #first pens matches 1..", run: "kill @e[tag=first]" }
+  - { when: "score #elevated pens matches 1..", run: "kill @e[tag=elevated]" }
 
 goal:
   kind: all
