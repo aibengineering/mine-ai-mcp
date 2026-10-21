@@ -192,3 +192,39 @@ test("the selected deflection executes before the quarry fight", async () => {
   assert.equal(outcome.kind, "died");
   assert.deepEqual(effects, ["deflect", "fight"]);
 });
+
+test("an attacker still on the bot after impossible recovery is fought where it stands", async () => {
+  // combat-proof7 2026-10-20T23-14-14-751Z: the Cave pen at 13 health, with
+  // no blocks, no pickaxe and no regeneration, could neither shelter nor
+  // heal. Its engagement handed back a recovery limit while the skeleton it
+  // was fighting kept shooting, and it ended at 5.
+  const bot = Object.assign(new EventEmitter(), { health: 9 }) as unknown as Bot;
+  const base = operations(bot);
+  const skeleton = {
+    id: 7,
+    name: "skeleton",
+    position: { x: 14, y: -60, z: 2 },
+    distance: 11,
+    relationship: { avoid: true, defend: true, attention: "observed_attack" as const },
+    inContact: true,
+    inReach: false,
+    defendsOnContact: false,
+    ranged: true,
+    utility: { inReach: false, visible: true, hasHitUs: true, safeDropGround: true, distance: 11 },
+  };
+  const effects: string[] = [];
+  const outcome = await runEngagement(new AbortController().signal, {
+    ...base,
+    observe: () => ({ ...base.observe(), contacts: [skeleton] }),
+    recover: async () => {
+      effects.push("recover");
+      return { kind: "blocked", observation: "Nothing below the bot could be dug and nothing could be placed." };
+    },
+    fight: async (options) => {
+      effects.push(options?.defending ? "defend" : "fight");
+      return result("died", 4);
+    },
+  });
+  assert.deepEqual(effects, ["recover", "defend"]);
+  assert.equal(outcome.kind, "died");
+});

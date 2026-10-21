@@ -101,12 +101,19 @@ export async function runMobEngagement(
       observe: () => observeCombatDecision(bot, context),
       record: (facts, response) =>
         reportDecision({ kind: "response", evidence: combatDecisionEvidence(facts, purpose, response) }),
-      fight: async () => {
+      fight: async ({ defending } = { defending: false }) => {
         const target = bot.entities[targetId];
         if (!target?.isValid) return emptyCombatEvidence(targetId, "target_lost");
         return runMobFight(
           environment,
-          { target, movement, minimumHealth, signal, ownerSignal: signal, ground: options.ground },
+          {
+            target,
+            movement: defending ? "hold" : movement,
+            minimumHealth: defending ? 0 : minimumHealth,
+            signal,
+            ownerSignal: signal,
+            ground: options.ground,
+          },
           protectedProgress,
           observe,
         );
