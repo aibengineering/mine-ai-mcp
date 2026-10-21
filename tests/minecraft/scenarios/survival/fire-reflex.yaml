@@ -13,8 +13,12 @@ description: >-
   one step below its bank, with a one-deep water cell two blocks east, and
   MinerBot is digging obsidian when lava appears in its own cell, with the
   same water. Lava contact sets a fifteen-second burn, fifteen health, so
-  those two must reach the water. Regeneration is off, so each health floor
-  bounds the burn. The pocket and dig pens used to burn to death or end on
+  those two must reach the water. MinerBot carries no block, so once the
+  lava sits under the open cell beside the obsidian it reports the obsidian
+  unmineable instead of mining it; a drop that spilled into that lava used
+  to burn, and the collection then explored past the trial's end.
+  Regeneration is off, so each health floor bounds the burn. The pocket and
+  dig pens used to burn to death or end on
   their last heart: every orthogonal bank of the pocket is equally near, the
   escape took the first one scanned, west, from where the pocket lies across
   the way to the water; and a body that landed on the lip of the east bank

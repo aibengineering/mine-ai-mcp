@@ -87,14 +87,40 @@ function dropFloorOf(bot: Bot, position: BlockPosition): BlockPosition | null {
 }
 
 /**
+ * Where the target's drop could spill into lava from the open cells beside it.
+ *
+ * A broken block's drop pops out up to a quarter block off centre and drifts
+ * up to another quarter, so it can cross into a neighbouring cell. An open
+ * neighbour over lava, directly or down an open column, burns it.
+ */
+function spillClosuresOf(bot: Bot, position: BlockPosition): BlockPosition[] {
+  const closures: BlockPosition[] = [];
+  for (const offset of NEIGHBOURS) {
+    if (offset.y !== 0) continue;
+    const cell = { x: position.x + offset.x, y: position.y, z: position.z + offset.z };
+    const block = bot.blockAt(new Vec3(cell.x, cell.y, cell.z), false);
+    if (!block || block.boundingBox !== "empty" || block.name === "lava" || block.name === "water" ||
+      block.name === "bubble_column") continue;
+    const below = { x: cell.x, y: cell.y - 1, z: cell.z };
+    if (bot.blockAt(new Vec3(below.x, below.y, below.z), false)?.name === "lava") closures.push(below);
+    else {
+      const floor = dropFloorOf(bot, cell);
+      if (floor !== null) closures.push(floor);
+    }
+  }
+  return closures;
+}
+
+/**
  * Every cell that must hold a block before the target comes out: its lava
- * faces, which would flood the mined cell, and a floor when its drop would
- * otherwise fall down an open column into lava.
+ * faces, which would flood the mined cell, a floor when its drop would
+ * otherwise fall down an open column into lava, and the lava a drop could
+ * spill into from the open cells beside it.
  */
 export function lavaClosuresOf(bot: Bot, position: BlockPosition): BlockPosition[] {
   const closures = lavaFacesOf(bot, position).map(({ x, y, z }) => ({ x, y, z }));
   const floor = dropFloorOf(bot, position);
-  return floor === null ? closures : [...closures, floor];
+  return [...closures, ...(floor === null ? [] : [floor]), ...spillClosuresOf(bot, position)];
 }
 
 function plural(count: number, noun: string): string {
@@ -148,11 +174,14 @@ export function evaluateMineTarget(
   const needsIsolation = floodRule || (below.kind === "loaded" && below.traits.liquid === "water");
 
   const lavaFaces = lavaFacesOf(bot, position).length;
+  const spills = spillClosuresOf(bot, position).length;
   const closures = lavaClosuresOf(bot, position).length;
   if (closures > availableBlocks) {
-    const floor = closures > lavaFaces ? "a floor over lava" : null;
-    const needed = lavaFaces === 0 ? floor : floor === null ? plural(lavaFaces, "lava face")
-      : `${plural(lavaFaces, "lava face")} and ${floor}`;
+    const needed = [
+      lavaFaces > 0 ? plural(lavaFaces, "lava face") : null,
+      closures > lavaFaces + spills ? "a floor over lava" : null,
+      spills > 0 ? "lava a drop could spill into" : null,
+    ].filter((part): part is string => part !== null).join(" and ");
     return {
       kind: "prohibited",
       reason: `${needed}, ${plural(availableBlocks, "block")} available for placement`,
