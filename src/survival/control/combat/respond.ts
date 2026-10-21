@@ -91,11 +91,20 @@ async function fight(
     // reach that gap is a hit; the controller defends it inside this engagement.
     const otherContactRemains = () =>
       request.threats.some(({ id }) => id !== targetId && contact(bot.entities[id]));
+    // Under defend_only a fight admitted because its target was in reach is
+    // contact defence, whatever the species: it ends when the target leaves
+    // reach, and the decision withdraws instead. A blaze that dropped into
+    // reach and rose again otherwise held the bot guarding on the spot under
+    // its fire for two minutes, never letting the requested route resume,
+    // until it burned to death (r3-a 2026-10-21T04-34-32-648Z, Blazes pen of
+    // withdraw-navigation).
+    const defendedInReach =
+      controller.policy.combat.engagement === "defend_only" && target !== undefined && inDefensiveContact(bot, target);
     const observeContact = () => {
       const { perception } = context;
       const creepers = perception.creeperClearance.observe(perception.tick, perception.resolvedIds);
       if (creeperEscape({ creepers, clearancePending: perception.creeperClearance.pending, stationaryCommitment: false })) return;
-      if (target?.isValid && defendsOnContact(target) && !inDefensiveContact(bot, target) && !otherContactRemains())
+      if (target?.isValid && (defendsOnContact(target) || defendedInReach) && !inDefensiveContact(bot, target) && !otherContactRemains())
         contactEnded.abort("Melee target left defensive reach.");
     };
     bot.on("physicsTick", observeContact);

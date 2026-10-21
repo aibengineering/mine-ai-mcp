@@ -1174,3 +1174,26 @@ test("an emergency retreat does not route through blocks its carried tools canno
   assert.notEqual(refused, null);
   assert.notEqual(refused, "penalized", "a hand break of stone is not an escape route");
 });
+
+test("under defend_only a blaze fought in reach releases the body when it rises out of reach", async () => {
+  // r3-a 2026-10-21T04-34-32-648Z, Blazes pen of withdraw-navigation: told
+  // to stop fighting and leave, the bot defended against a blaze that had
+  // dropped into reach, then guarded on the spot for two minutes while it
+  // hovered out of reach and shot, until it burned to death.
+  let engaging = false;
+  await using fixture = reflexFixture(
+    (targetId, signal) =>
+      new Promise((resolve) => {
+        engaging = true;
+        signal.addEventListener("abort", () => resolve({ ...died(targetId), kind: "cancelled" }), { once: true });
+      }),
+  );
+  await fixture.editPolicy({ combat: { engagement: "defend_only" } });
+  fixture.bot.entities[7] = hostile(7, "blaze", 2);
+  fixture.tick();
+  assert.ok(await until(() => engaging));
+  fixture.bot.entities[7]!.position.y = 70;
+  fixture.tick();
+  assert.ok(await until(() => fixture.recorded().length > 0));
+  assert.deepEqual(fixture.recorded(), ["fight -> contact_ended"]);
+});
