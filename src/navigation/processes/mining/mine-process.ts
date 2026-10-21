@@ -1019,7 +1019,10 @@ class MineTargeting {
         : routable.length === 0
           ? AWAIT_PENDING_DROPS
           : anyGoal(routable.map((target) => coalesce(this.bot, target, this.request.movements)));
-    if (this.#targets.length === 0 && this.request.explore && this.#branchGoal === null) {
+    // Matching blocks that were found and refused are not a reason to look
+    // elsewhere: the process reports them, as it does between routes, and a
+    // route still running when its last drop is taken must not explore instead.
+    if (this.#targets.length === 0 && this.rejections.size === 0 && this.request.explore && this.#branchGoal === null) {
       const feet = this.bot.entity.position.floored();
       this.#branchGoal = branchMiningGoal({ x: feet.x, y: feet.y, z: feet.z });
     }
