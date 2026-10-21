@@ -88,3 +88,29 @@ test("a drop column that ends on a solid block or in water needs no floor", () =
   stop = "water";
   assert.deepEqual(lavaClosuresOf(bot, { x: 0, y: 64, z: 0 }), []);
 });
+
+test("an open cell beside the target over lava is a drop's spill path and needs closing", () => {
+  // survival/fire-reflex, MinerBot, 2026-10-21: obsidian at 500,-59,-1 rests
+  // on stone, and the hole the bot escaped from now holds lava at 500,-60,0,
+  // under the open cell beside the obsidian. A broken block's drop pops out
+  // with a random offset and drift of up to half a block: in two of eight
+  // trials it crossed into that cell, fell into the lava and burned within
+  // 0.7 s, and the collection then explored for another obsidian until the
+  // trial ran out.
+  const bot = botFixture();
+  const lava = new Vec3(500, -60, 0);
+  let lavaThere = true;
+  answerBlocks(bot, (position) =>
+    position.equals(new Vec3(500, -59, -1)) ? "obsidian"
+      : position.equals(lava) ? (lavaThere ? "lava" : "stone")
+      : position.y <= -60 ? "stone" : "air",
+  );
+  const target = bot.blockAt(new Vec3(500, -59, -1))!;
+  assert.deepEqual(lavaClosuresOf(bot, target.position), [{ x: 500, y: -60, z: 0 }]);
+  assert.deepEqual(evaluateMineTarget(bot, createMovementPolicy(), target, flatWorld(), 0), {
+    kind: "prohibited",
+    reason: "lava a drop could spill into, 0 blocks available for placement",
+  });
+  lavaThere = false;
+  assert.deepEqual(lavaClosuresOf(bot, target.position), [], "a closed pocket is no spill path");
+});

@@ -147,6 +147,7 @@ function request(bot: Bot, overrides: Partial<MineRequest> = {}): MineRequest {
     collects: () => true,
     isSatisfied: () => false,
     observedInventoryGain: () => 0,
+    requested: Number.POSITIVE_INFINITY,
     movements: {} as MineRequest["movements"],
     castSearchRadius: 64,
     explore: false,
@@ -620,6 +621,34 @@ test("standing on a drop in its pickup delay, the blocks beside the bot are mine
   );
   assert.equal(result.status, "satisfied");
   assert.deepEqual(broken, ["3,65,0", "3,66,0"]);
+});
+
+test("drops already enough for the request are waited for, not mined beside", async () => {
+  // collect/netherrack-bank, 2026-10-21: breaking beside touched drops while
+  // they sat out their pickup delay ran on after those drops already covered
+  // the request. The 32nd netherrack arrived with three more lying beside the
+  // bot and all 36 breaks spent, so a single drop lost on a ledge ended a run
+  // at 31 of 32 with [DROP_RECOVERY_EXHAUSTED] and nothing left to mine with.
+  const beside = new Vec3(3, 65, 0);
+  const bot = fakeBot({ blocks: [new Vec3(4, 64, 0), new Vec3(5, 65, 0), beside], drops: [new Vec3(5.5, 66, 0.5)], feet: new Vec3(4.5, 65, 0.5) });
+  Object.assign(bot.entities[0]!, { width: 0.25, height: 0.25 });
+  let gained = 31;
+  const result = await mine(
+    bot,
+    request(bot, {
+      requested: 32,
+      isSatisfied: () => gained >= 32,
+      observedInventoryGain: () => gained,
+      breakInPlace: async () => {
+        throw new Error("the touched drop is the last item the request needs");
+      },
+      route: async () => {
+        gained = 32;
+        return { status: "completed", elapsedMs: 0 };
+      },
+    }),
+  );
+  assert.equal(result.status, "satisfied");
 });
 
 test("a drop out of reach is still collected before any block beside the bot", async () => {

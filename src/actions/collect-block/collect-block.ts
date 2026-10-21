@@ -261,6 +261,7 @@ function beginCollectBlock(
         collects: (itemName) => collectable.has(itemName),
         isSatisfied: () => gained() >= request.requested,
         observedInventoryGain: gained,
+        requested: request.requested,
         movements,
         castSearchRadius: LOADED_SEARCH_RADIUS,
         explore: exactCell === null,

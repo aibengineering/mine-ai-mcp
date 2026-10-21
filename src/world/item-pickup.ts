@@ -56,6 +56,15 @@ export function snapshotEntityIds(bot: Bot): ReadonlySet<number> {
   return new Set(Object.values(bot.entities).map((entity) => entity.id));
 }
 
+/** How many items a dropped stack holds; an entity whose stack is not yet known counts as one. */
+export function droppedItemCount(entity: Bot["entity"]): number {
+  try {
+    return entity.getDroppedItem()?.count ?? 1;
+  } catch {
+    return 1;
+  }
+}
+
 /** Item metadata can arrive after the entity, so unreadable metadata is not evidence yet. */
 export function droppedItemName(entity: Bot["entity"]): string | null {
   try {
