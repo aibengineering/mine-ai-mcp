@@ -184,12 +184,17 @@ the suite; its "Known-failing now" table is the current list.
   are live before a trial starts, so a hostile within 8 blocks of a start takes
   the body first and the first request is refused `[ACTION_BUSY]`. Fixtures
   either start bots further away or use `idleWithinTicks`.
-- **Two unit tests flake under load:**
-  - "cancelling while a second ceiling still pins the body releases the
-    observation wait";
-  - "a target oscillating between two cells…" in `navigation-run.test.ts`.
-- **`end-crystals-every-method` failed once under load,** at the staircase to
-  the caged tower, and passed twice on an idle machine.
+- **Two unit tests flaked under load:** "cancelling while a second ceiling
+  still pins the body releases the observation wait", and "a target
+  oscillating between two cells…" in `navigation-run.test.ts`. Fixed in
+  f445cd8: the navigator takes a search clock the tests stand still.
+- **`end-crystals-every-method` failed once under load** at the staircase to
+  the caged tower. Its staircase causes were fixed in 18d4135, d3f5080 and
+  74a2f9d.
+- **A request a reflex handed back unfinished reported `cancelled`,** which the
+  model could not tell from its own cancellation. Since f453caf it reports
+  `failed` with the reflex's reason; only a model or operator cancellation
+  reports `cancelled`.
 
 ## Flake investigation (2026-10-21)
 
@@ -301,9 +306,10 @@ Still open:
   saved, but it never fired live, so it is not merged.
 - **Opposing skeletons**, rare: arrows landing in the same tick from opposite
   sides need positioning.
-- **`withdraw-navigation` Sealed:** a reflex-returned request reports
-  "cancelled", which the harness fails. Whether that should be "failed" is a
-  contract decision.
+- **`withdraw-navigation` Sealed:** a reflex-returned request reported
+  "cancelled", which the harness fails. Decided 2026-10-21: such a request now
+  reports `failed` with the reflex's reason (f453caf), and the fixture passed
+  five in a row.
 - The two failures above.
 
 

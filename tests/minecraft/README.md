@@ -333,9 +333,9 @@ Two vanilla idioms remain:
 
 ## Shared setup
 
-Every fixture names one of three templates. They live beside `scenarios/` so
+Every fixture names one of four templates. They live beside `scenarios/` so
 Mine Labs will not discover them as runnable tests, and all supply the Minecraft
-version, the viewer mod and the single-action client:
+version, the viewer mod and a default client:
 
 - `templates/single-action.yaml` supplies only those. The fixture arranges its
   own world, reset region and players.
@@ -350,6 +350,12 @@ version, the viewer mod and the single-action client:
   avoided rather than damage healed back. A fixture whose world differs in any
   other way (time, seed, type, difficulty or another gamerule) still declares
   its own whole `world`.
+- `templates/combat-idle-midnight.yaml` names `flat-single-action-no-regen.yaml`
+  and sets the idle-reflex combat pens' world: midnight, normal difficulty,
+  regeneration off, the idle driver in place of the single-action client, and a
+  reset that only clears summoned entities. Hostiles need the night, and a
+  health goal then measures damage the reflex avoided. Each pen fixture still
+  declares its own players, entities, spectator rule and `params`.
 
 Each fixture declares its own position, equipment and geometry.
 The client working directory resolves from each fixture to this suite's root;
