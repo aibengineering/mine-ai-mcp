@@ -7,6 +7,8 @@ const HEALTH_TOLERANCE = 1;
 
 export interface PlayerPreparationObservation {
   wait(): Promise<void>;
+  /** The setup facts still missing, named for a log line while preparation waits. */
+  unmet(): string[];
   close(): void;
 }
 
@@ -51,6 +53,19 @@ export function observeScenarioPlayerPreparation(
     bot.game.dimension === expectedDimension &&
     positionMatches(bot, expectedPosition) &&
     healthMatches(bot, expectedHealth);
+  // The conditions still unmet, named, so a stalled preparation says what it waits for.
+  const unmet = (): string[] => [
+    ...(inventoryUpdateObserved ? [] : ["no inventory update since arrangement"]),
+    ...(positionUpdateObserved ? [] : ["no position update since arrangement"]),
+    ...(healthUpdateObserved ? [] : ["no health update since arrangement"]),
+    ...(inventoryMatches(bot, expectedInventory) ? [] : ["inventory differs from the declared items"]),
+    ...expectedEquipment
+      .filter(({ slot, type }) => bot.inventory.slots[slot]?.type !== type)
+      .map(({ slot }) => `equipment slot ${slot} not yet filled`),
+    ...(bot.game.dimension === expectedDimension ? [] : [`in ${bot.game.dimension}, expected ${expectedDimension}`]),
+    ...(positionMatches(bot, expectedPosition) ? [] : [`at ${bot.entity.position}, expected ${expectedPosition?.join(", ")}`]),
+    ...(healthMatches(bot, expectedHealth) ? [] : [`health ${bot.health}, expected ${expectedHealth}`]),
+  ];
   const check = () => {
     if (preparationMatches()) settle?.();
   };
@@ -102,6 +117,7 @@ export function observeScenarioPlayerPreparation(
         signal?.addEventListener("abort", onAbort, { once: true });
       });
     },
+    unmet,
     close,
   };
 }

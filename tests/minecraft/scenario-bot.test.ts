@@ -31,6 +31,7 @@ function fixture() {
     signal: controller.signal,
     ready: () => ready.resolve(),
     arranged: arranged.promise,
+    log: () => {},
   };
   return { bot, controller, ready, arranged, session };
 }

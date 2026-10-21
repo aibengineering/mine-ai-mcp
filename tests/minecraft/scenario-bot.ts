@@ -5,24 +5,49 @@ import type { NodeClientSession } from "mine-labs/client";
 import { BOT_PHYSICS_OPTIONS, loadBotPlugins } from "@aibengineering/mine-ai-mcp";
 import { observeScenarioPlayerPreparation } from "./player-preparation.ts";
 
-type PreparationSession = Pick<NodeClientSession, "scenario" | "signal" | "ready" | "arranged">;
+type PreparationSession = Pick<NodeClientSession, "scenario" | "signal" | "ready" | "arranged" | "log">;
+
+/** How often a preparation that has not finished says which stage it is in. */
+const PREPARATION_REPORT_MS = 10_000;
 
 /** Physics stays paused until the arranged player and its starting terrain arrive. */
 export async function prepareScenarioBot(bot: Bot, session: PreparationSession): Promise<void> {
-  bot.physicsEnabled = false;
+  // A preparation that stalls says where: Mine Labs only reports that the
+  // arrangement was not observed in time, which cannot tell a missing
+  // inventory update from a body that never landed.
+  let stage = "spawn and vitals";
+  let unmet = (): string[] => [];
+  const started = Date.now();
+  const report = setInterval(() => {
+    const details = unmet();
+    session.log(
+      `preparation still at ${stage} after ${Math.round((Date.now() - started) / 1000)} s ` +
+        `(health ${bot.health}, at ${bot.entity?.position ?? "unknown"})` +
+        (details.length > 0 ? `: ${details.join("; ")}` : ""),
+    );
+  }, PREPARATION_REPORT_MS);
   try {
-    loadBotPlugins(bot);
-    await waitForSpawnAndVitals(bot, session.signal);
-    await waitForArrangement(bot, session);
-    await waitForStandingColumn(bot, session.signal);
-  } finally {
-    // Setup owns this pause. No physics or spawn hooks survive into execution.
-    bot.physicsEnabled = true;
-  }
+    bot.physicsEnabled = false;
+    try {
+      loadBotPlugins(bot);
+      await waitForSpawnAndVitals(bot, session.signal);
+      stage = "arrangement";
+      await waitForArrangement(bot, session, (observed) => (unmet = observed));
+      unmet = () => [];
+      stage = "starting column";
+      await waitForStandingColumn(bot, session.signal);
+    } finally {
+      // Setup owns this pause. No physics or spawn hooks survive into execution.
+      bot.physicsEnabled = true;
+    }
 
-  // Start grounded by default so actions plan from a settled position.
-  // Add an exception only when a real fixture needs to start off the ground.
-  await waitForGround(bot, session.signal);
+    // Start grounded by default so actions plan from a settled position.
+    // Add an exception only when a real fixture needs to start off the ground.
+    stage = "landing";
+    await waitForGround(bot, session.signal);
+  } finally {
+    clearInterval(report);
+  }
 }
 
 export function createScenarioBot(session: NodeClientSession): Bot {
@@ -64,12 +89,18 @@ async function waitForSpawnAndVitals(bot: Bot, signal: AbortSignal): Promise<voi
   }
 }
 
-async function waitForArrangement(bot: Bot, session: PreparationSession): Promise<void> {
+async function waitForArrangement(
+  bot: Bot,
+  session: PreparationSession,
+  exposeUnmet: (unmet: () => string[]) => void,
+): Promise<void> {
   const preparation = observeScenarioPlayerPreparation(bot, session.scenario, session.signal);
   try {
     session.ready();
     await session.arranged;
     session.signal.throwIfAborted();
+    // Only once Mine Labs has arranged the player do unmet conditions mean a stall.
+    exposeUnmet(preparation.unmet);
     await preparation.wait();
   } finally {
     preparation.close();

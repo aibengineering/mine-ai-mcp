@@ -38,6 +38,8 @@ test("player readiness waits for the declared equipment to reach its actual slot
   bot.inventory.emit("updateSlot", 6, null, slots[6] as never);
   await setImmediate();
   assert.equal(ready, false);
+  // A stalled preparation names what it still waits for.
+  assert.deepEqual(observation.unmet(), ["equipment slot 5 not yet filled"]);
   slots[5] = { type: 2 };
   bot.inventory.emit("updateSlot", 5, null, slots[5] as never);
   await prepared;
