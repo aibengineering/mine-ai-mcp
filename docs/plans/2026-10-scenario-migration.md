@@ -20,12 +20,14 @@ went with them. The tables further down are the plan as triage made it; this
 section records what was built and where it differs.
 
 **The suite now:**
-- `tests/minecraft/scenarios/` holds **112 fixtures**, up from 35. 103 of them
-  form the fast tier. The 9 tagged `slow` form the rest of the full tier: the
-  End fights, the long Nether pearl hunt, and the two multi-location generated
-  worlds, which expand into 12 trials.
-- `tests/minecraft/known-failing/` holds **24 fixtures** for behaviour that
-  fails today, described as observed. Neither tier runs them.
+- `tests/minecraft/scenarios/` holds **113 fixtures**, up from 35, after the
+  flake investigation returned `end-crystals-staircase`. 103 of them form the
+  fast tier. The 10 tagged `slow` form the rest of the full tier: the End
+  fights, the long Nether pearl hunt, and the two multi-location generated
+  worlds, which expand into 13 trials.
+- `tests/minecraft/known-failing/` holds **18 fixtures** for behaviour that
+  fails today, described as observed; it held 24 before the flake fixes.
+  Neither tier runs them.
 - Most consolidated fixtures place one bot per walled pen, each with its own
   request and `who`-scoped goals. Each is either shown to fail when a pen is
   made impossible or a goal tightened, or carries a stated reason why its goals
@@ -141,7 +143,10 @@ The vine-column-handoff fix an agent wrote is saved as a patch for its fix
 session. It is not applied: it makes the lateral step complete, but the next
 climb still fails.
 
-### Known-failing and proposed fix sessions
+### Known-failing and proposed fix sessions (as of 2026-10-20)
+
+The flake investigation below fixed several of these and moved them back into
+the suite; its "Known-failing now" table is the current list.
 
 | Fixture | Observed failure | Fix session |
 | --- | --- | --- |
@@ -185,6 +190,103 @@ climb still fails.
   - "a target oscillating between two cells…" in `navigation-run.test.ts`.
 - **`end-crystals-every-method` failed once under load,** at the staircase to
   the caged tower, and passed twice on an idle machine.
+
+## Flake investigation (2026-10-21)
+
+The user asked for the cause of every intermittent failure to be found and
+fixed, not retried or quarantined. Each fix below either has a unit test that
+failed before it, or is named as a harness or fixture fix. Each was proven by
+repeated live runs: five passes in a row, or two for End fights.
+
+| Flake | Root cause | Where | Fix |
+| --- | --- | --- | --- |
+| Lava pocket escape (PocketBot) | Equally near banks were taken in scan order, so the escape could pick a bank cut off from the water and stand down while the burn ran | runtime | 097b379 |
+| Lava escape in general | The escape released a burning body still overhanging the lava on its bank's lip | runtime | 20d2a13 |
+| `drop/disposal-holes` (2046 of 2048) | With every slot full, the hole's plug could spend the netherrack the request was keeping, depending on whether the dug cobblestone was picked up first | runtime | 9a7cab5 |
+| Waterfall oak stall | A body floating 0.27 above its stance in waterfall water dug five times slower, so the log timed out and was abandoned | runtime | 9cbf1b0 |
+| Two unit tests under load | Search slices ran on the wall clock, so an overrun slice changed what the tests observed | test | f445cd8 |
+| `combat/enderman-other-target` | An enderman angry at another mob glances at nearby players; the threat check read that glance as an attack | runtime | a3de1c4 |
+| `combat/creeper-reflex`, PairBow | The escape sprint left one creeper beyond its follow range, and nothing went back for it after the first kill | runtime | a05b3a7 |
+| `survival/nether-idle-survival`, CliffBot | A wounded bot without food could only evade an angry enderman, which teleports to its target | runtime | 59e7b83 |
+| `combat/wounded-ranged-shelter`, Burning | A burning bot at hunger 19 never ate, because the hunger reflex fed wounded bots only below 18 | runtime | 2e5409f |
+| `combat/evade`, CubeEvade | A cornered hide dug the block beside lava under the bot's feet | runtime | 30d0f72 |
+| Skeleton death in `combat/creeper-navigation` | A bot with no pickaxe spent seven seconds hand-digging stone for a shelter under fire | runtime | c383c1b |
+| `combat/enderman-hunt`, ShelterPair | A hunt out of blocks looked for roofs only six steps away and missed the one it had built | runtime | 7d118cd |
+| `combat/enderman-hunt`, Alcove | An enderman stalled behind the alcove's own wall was never baited out | runtime | c77ef28 |
+| `combat/cover-crossing-hunt` (improved) | Melee fights were admitted too late for the shield, ended with a partner still in reach, and handed the body back before the next attacker was answered | runtime | 078f060, 895f6cb, de88a57, 2d9187a |
+| Waits failing under load (several fixtures) | The host's tick wait failed on wall-clock time when the client ran slow | harness | 6707927 (supersedes 8fdff05) |
+| `hunt/basalt-magma-cream` | The hunt followed cubes down to the lava shore, one drop at a time | runtime | a667ddb, 7391707 |
+| `hunt/fortress-rod-and-exit` (unsafe handoff) | The shelter and handoff checks used the cell under the body's centre, which can overhang an edge | runtime | 3e9f6c2 |
+| Run-14 hunts never made their request | Blazes pinned in contact range of the start took the body first | fixture | d7e885a |
+| Resumed hunt refused with its drop in hand | A shield broken in a reflex fight refused a hunt that had already succeeded | runtime | 347d33f |
+| `end-crystals-staircase` and every-method | A dragon shelter left blocks on the attack line; breath beside the feet closed the stair routes; the dig stance was judged from the cell centre, not the body | runtime | 18d4135, d3f5080, 74a2f9d |
+| End arrangement checked too early | The driver judged the crystals before they reached the client | driver | 7854cb8 |
+| First-entry: breath above the stairs, a builder in a needed cell, a climb that spun | Three runtime causes found on the way | runtime | 65e7ab7, 0f84668, 0c8f7ae |
+| `place_block` choosing a mob's cell (`hunt/wild-animal-and-receipts`) | A placement with no coordinates chose the nearest cell before checking it for bodies, and a wandering pig sometimes stood there | runtime | 1b50a97 |
+
+**Load.** With four agents at `--jobs 4`, client physics fell to 13–15 ticks a
+second and clients froze for 2–5 s, which caused failures of its own. Those
+were not counted as samples. A suite run alone at `--jobs 4` keeps about 19.5
+ticks a second.
+
+
+### Final fast-tier runs (2026-10-21, both at c383c1b, `--jobs 4`, no game running)
+
+| Run | Time | Result |
+| --- | ---: | --- |
+| 1 | 22.5 min | 100 of 103 passed. Failures: `skeleton-crossfire-navigation` (Elevated pen hit by an arrow), `awkward-quarry` (PinnedHunter never observed its arrangement while the server ran 4.3 s behind), `wild-animal-and-receipts` (the pig, fixed in 1b50a97) |
+| 2 | 22.75 min | 97 of 103 passed. Failures: `basalt-crossfire-traverse`, `cover-fights`, `creeper-navigation`, `creeper-reflex`, `basalt-magma-cream`, `tool-tier-progression` (one of five iron drops never recovered) |
+
+**The remaining flake rate comes mostly from server lag at `--jobs 4`.** Across
+both runs, the server logged "Can't keep up!", running 2 to 4 s behind, in 15%
+of passing trials but in 6 of 9 failing ones. Lagged trials failed about one in
+four times. The rest failed about one in fifty. Four multi-pen servers with
+their bots saturate this machine in bursts. `--jobs 3` or `--jobs 2` would
+trade runtime for steadier trials. The one-at-a-time runs failed 3 and 4 of
+103 before most of these fixes.
+
+### Still flaky, with known or suspected cause
+
+- **Combat:**
+  - `combat/creeper-navigation` (Cave, Mixed), about 2 in 10: a bot that can
+    neither shelter nor heal holds for a recovery that never comes. The fix is
+    a shield-guarded fight, a policy change.
+  - `combat/skeleton-crossfire-navigation` (Elevated) and known-failing
+    `skeleton-arena-crossfire`: arrows released within two ticks from
+    opposite sides. One shield arc cannot cover them; the fix is positioning
+    that keeps shooters within one arc.
+  - `combat/evade` (CubeEvade), 1 in 10: a magma cube's blow during the
+    evade; no evidence covered the hit.
+- **Load-sensitive:**
+  - `hunt/awkward-quarry`: under server lag, the bot pinned under a big
+    dripleaf missed its arrangement window.
+  - `progression/tool-tier-progression`: under lag, a drop's recovery found no
+    path.
+  - Run 2's other failures were lagged runs of fixtures that pass when the
+    server keeps up.
+
+### Known-failing now
+
+| Fixture | Failure | Pattern | Next |
+| --- | --- | --- | --- |
+| `collect/cast-obsidian-spawn-column` | Route to the obsidian runs out of its dive breath budget | consistent | Dive budgets on collection routes |
+| `combat/basalt-crossfire-wounded` | An evade or hide response cancels the wounded navigate | consistent | Requests resuming after reflex claims |
+| `combat/busy-smelt-interrupted` | The cook is cancelled by `[HOSTILE_CONTACT]`, not resumed | consistent | Requests resuming after reflex claims |
+| `combat/full-night-request` | A hide response ends the pending hunt's window | consistent | Requests resuming after reflex claims |
+| `combat/cover-crossing-hunt` | Shield faces one skeleton while the other swings | about 1 in 10 | Shield arc positioning |
+| `combat/skeleton-arena-crossfire` | Arrows from opposite sides within two ticks | intermittent | Shield arc positioning |
+| `combat/navigation-side-bridge` | Armour carried, not worn (as the legacy run); loops on an unreachable skeleton | consistent | Navigation under ranged fire |
+| `combat/end-crystals-pillar-then-staircase` | Vanilla arrow spread is wider than the slit under the cage; about 40% hits | intermittent, cause proven | Fire from an elevated cell |
+| `combat/ender-dragon-first-entry` | Escape blocked by breath in a one-wide pit or tunnel | intermittent (passed once) | Breath escape from narrow cells |
+| `combat/ender-dragon-bow` | `shoot_dragon` mostly `[DRAGON_SHOT_BLOCKED]` | consistent | Bow dragon intercepts |
+| `drop/disposal-hole-tunnel` | Pit spoil left unreported at the bottom; sometimes picked up again | consistent | Disposal result contract |
+| `hunt/basalt-magma-cream-islands` | Jump between islands overshoots into lava; slow return | consistent | Hunt routes over lava |
+| `hunt/fortress-rod-and-exit-run14` | Shields wear out; reflex-fight rods left on the ground; slow exit | 1 to 2 of 3 | Fortress blaze hunts |
+| `hunt/fortress-spawner-rods` | Shield wear and rate under one rod per minute | consistent | Fortress blaze hunts |
+| `pathfinder/flowing-lava-dig-release` | Burns to death after the fire reflex interrupts the route | consistent | Lava and fire escapes |
+| `pathfinder/vine-column-handoff` | Lateral step onto a lower column never arrives (partial patch saved) | consistent | Vine column handoff |
+| `sleep/bed-exit-after-waking` | No path off the bed after waking | consistent | Pathing off a bed |
+| `survival/lava-escapes` (LavaPoolBot) | Two lava hits ten ticks apart kill it unless it reacts at once; regeneration off, as in the legacy fixture | mostly fails | A faster escape strategy |
 
 ## Method
 
