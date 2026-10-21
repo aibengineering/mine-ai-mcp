@@ -40,13 +40,18 @@ setup:
   - "scoreboard players set #arrows_settled pens 0"
 
 entities:
-  # BoneGatherer's field, spread from twelve to fifty blocks out.
-  - { type: skeleton, pos: [12.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
-  - { type: skeleton, pos: [22.5, -60, 7.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
-  - { type: skeleton, pos: [30.5, -60, -8.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
-  - { type: skeleton, pos: [38.5, -60, 5.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
-  - { type: skeleton, pos: [45.5, -60, -4.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
-  - { type: skeleton, pos: [50.5, -60, 9.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  # BoneGatherer's field, spread from twelve to fifty blocks out. Each kill
+  # drops exactly one bone: the native table drops none to two, so six kills
+  # could yield fewer than three (28 of 729 fields) and empty the field before
+  # the goal. One bone a kill keeps the native mean, three kills, and stops
+  # the loot table from failing the trial. The empty table also drops no
+  # arrows, so a kill never adds to the one-arrow budget.
+  - { type: skeleton, pos: [12.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [22.5, -60, 7.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [30.5, -60, -8.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [38.5, -60, 5.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [45.5, -60, -4.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [50.5, -60, 9.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
   # SpareHunter's quarry. The off-hand arrow with a drop chance above one
   # guarantees exactly one arrow per kill, so the loot table cannot fail the
   # trial; skeleton-fired arrows cannot be picked up, so none can stand in.
