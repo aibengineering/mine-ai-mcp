@@ -490,7 +490,7 @@ Measured on 2026-10-20 and 21:
 
 | Run | Trials | One at a time | `--jobs 2` | `--jobs 4` |
 | --- | ---: | ---: | ---: | ---: |
-| Fast tier | 103 | 81 minutes | 40 to 42 minutes | 22.5 minutes |
+| Fast tier | 103 | 81 to 85 minutes | 40 to 44 minutes | 22.5 minutes |
 | Slow-tagged fixtures | 13 | 40 minutes | not measured | not measured |
 
 The full tier is both together.
@@ -499,7 +499,7 @@ Expect a fast-tier run to fail a few trials, on different fixtures each time:
 
 | Workers | Failures in two runs of 103 trials |
 | --- | --- |
-| Two | 6 and 2 |
+| Two | 6 and 2; after the third round of fixes, 1 and 1 |
 | Four | 3 and 6 |
 
 At `--jobs 4` the server sometimes logs "Can't keep up!", running 2 to 4 s

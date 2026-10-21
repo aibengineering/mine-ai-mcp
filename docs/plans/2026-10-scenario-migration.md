@@ -264,7 +264,47 @@ failures were all runtime behaviours:
   `defend_only`.
 - `combat/wounded-ranged-shelter`, Unbuildable: recovered only to 16.95.
 
-Across the four final runs, the fast tier fails about 4% of its trials.
+Across those four runs, the fast tier failed about 4% of its trials.
+
+### Third round (2026-10-21)
+
+| Flake | Root cause | Where | Fix |
+| --- | --- | --- | --- |
+| Basalt crossing ended mid-route | A deflected fireball that burst or passed without an observed reversal counted as a capability limit, so the interrupted navigate was ended, not resumed | runtime | 378f36e |
+| Withdraw navigation, Blazes | Under `defend_only`, a fight with a blaze that hovered out of reach never ended | runtime | 890403c |
+| Withdraw navigation, Blazes (refused navigate) | The navigate went out the instant the policy change released the fight, while a reflex had just re-claimed the body | harness | ece906e: steps can wait for an idle body |
+| Creeper navigation, Cave | With shelter and healing impossible, the engagement returned a recovery limit while the skeleton kept shooting | runtime | ae8a0ea |
+| Creeper navigation, Cave (second mode) | A creeper walking in while the bot fought another enemy got no retreat until its fuse lit | runtime | d695746 |
+| Skeleton crossfire, Elevated | The walking guard judged cover from the route's facing, but a drawn arrow enters where the body will be at impact | runtime | 2e6c45e |
+| Skeleton crossfire, finished pens | A pen's skeletons outlived its request, and with it the bot's reflexes | fixture | d8c0d56 |
+| Wounded ranged shelter, 15–17 health | Health was read at a fixed moment while the pen still dueled a blaze. It now counts recovery to 18 at any point under fire, then clears the shooters | fixture | c7be072 |
+| Cover fights, Transit | A blaze holding above sword reach was abandoned seconds before it came down | runtime | 5cb4b6b |
+| Skeleton hunts, bones short | Cover searches on open ground restarted each second until the shield broke; a broken shield refused bones already on the ground; native loot sometimes gave fewer than three bones | runtime, runtime, fixture | 0f4871a, 8681835, 9324030 |
+| Netherrack bank 31 of 32 | Breaking continued beside drops that already covered the request, spending the spare breaks meant for lost drops | runtime | a043508 |
+| Fire reflex, MinerBot | After the escape, the obsidian's drop could roll into lava left in the hole, and collection then explored past the trial | runtime | 0dd02e9 |
+| Cast obsidian, location 1 | A pour onto short grass lands one cell up, so the water landing never confirmed itself | runtime | deb4bc3 |
+| Tool-tier lost iron | A drop resting in a one-block cliff notch had no satisfying stance for pickup | runtime | fade428 |
+| Preparation stalls (awkward-quarry) | Not reproduced. Preparation now logs which stage and conditions it waits on | harness | edde8ed |
+
+Two confirming fast-tier runs at 1e51ef6, after the third round:
+
+| Run | Workers | Time | Result |
+| --- | --- | ---: | --- |
+| 1 | two | 44 min | 102 of 103 passed: `creeper-reflex` PairBow left a creeper alive (a05b3a7 made it rarer, but not gone) |
+| 2 | one (a game had started) | 85 min | 102 of 103 passed: `fortress-rod-and-exit` did not finish within 300 s (new mode) |
+
+Neither failing trial lagged. The fast tier now fails about 1% of its
+trials, down from about 4%.
+
+Still open:
+- **CubeEvade**, rare: a cube hopping into the planned route. A patch is
+  saved, but it never fired live, so it is not merged.
+- **Opposing skeletons**, rare: arrows landing in the same tick from opposite
+  sides need positioning.
+- **`withdraw-navigation` Sealed:** a reflex-returned request reports
+  "cancelled", which the harness fails. Whether that should be "failed" is a
+  contract decision.
+- The two failures above.
 
 
 ### Still flaky, with known or suspected cause
