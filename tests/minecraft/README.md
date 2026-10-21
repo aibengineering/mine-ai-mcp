@@ -499,7 +499,7 @@ Expect a fast-tier run to fail a few trials, on different fixtures each time:
 
 | Workers | Failures in two runs of 103 trials |
 | --- | --- |
-| Two | 6 and 2; after the third round of fixes, 1 and 1 |
+| Two | 6 and 2; after the third round of fixes, 1 (and 1 in a one-worker run) |
 | Four | 3 and 6 |
 
 At `--jobs 4` the server sometimes logs "Can't keep up!", running 2 to 4 s
