@@ -486,25 +486,24 @@ machine can opt out by appending `--jobs N` for parallel workers or
 
 Measured on 2026-10-20 and 21:
 
-| Run | Trials | One at a time | `--jobs 4` |
-| --- | ---: | ---: | ---: |
-| Fast tier | 103 | 81 minutes | 22.5 minutes |
-| Slow-tagged fixtures | 13 | 40 minutes | not measured |
+| Run | Trials | One at a time | `--jobs 2` | `--jobs 4` |
+| --- | ---: | ---: | ---: | ---: |
+| Fast tier | 103 | 81 minutes | 40 to 42 minutes | 22.5 minutes |
+| Slow-tagged fixtures | 13 | 40 minutes | not measured | not measured |
 
 The full tier is both together.
 
-Expect a fast-tier run to fail a few trials. The two final runs at `--jobs 4`
-failed 3 and 6 of 103, each time on different fixtures. Most failures came
-with the server logging "Can't keep up!", running 2 to 4 s behind:
+Expect a fast-tier run to fail a few trials, on different fixtures each time:
 
-| Trials | Failed |
-| --- | ---: |
-| Lagged | about 1 in 4 |
-| Not lagged | about 1 in 50 |
+| Workers | Failures in two runs of 103 trials |
+| --- | --- |
+| Two | 6 and 2 |
+| Four | 3 and 6 |
 
-On this machine, four multi-bot fixtures at once saturate the CPU in bursts.
-Use fewer workers when a clean run matters more than its runtime. The failures
-are runtime behaviours that usually hold, not fixture errors: the fixtures stay
+At `--jobs 4` the server sometimes logs "Can't keep up!", running 2 to 4 s
+behind, and lagged trials fail more often. At `--jobs 2` lag is rare, and no
+failing trial lagged. So lag adds failures at four workers, but most
+failures are runtime behaviours that hold most of the time. The fixtures stay
 in the tier as regressions to fix, not to quarantine.
 
 Before treating a fast-tier failure as new:

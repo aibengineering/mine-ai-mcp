@@ -237,13 +237,35 @@ ticks a second.
 | 1 | 22.5 min | 100 of 103 passed. Failures: `skeleton-crossfire-navigation` (Elevated pen hit by an arrow), `awkward-quarry` (PinnedHunter never observed its arrangement while the server ran 4.3 s behind), `wild-animal-and-receipts` (the pig, fixed in 1b50a97) |
 | 2 | 22.75 min | 97 of 103 passed. Failures: `basalt-crossfire-traverse`, `cover-fights`, `creeper-navigation`, `creeper-reflex`, `basalt-magma-cream`, `tool-tier-progression` (one of five iron drops never recovered) |
 
-**The remaining flake rate comes mostly from server lag at `--jobs 4`.** Across
-both runs, the server logged "Can't keep up!", running 2 to 4 s behind, in 15%
-of passing trials but in 6 of 9 failing ones. Lagged trials failed about one in
-four times. The rest failed about one in fifty. Four multi-pen servers with
-their bots saturate this machine in bursts. `--jobs 3` or `--jobs 2` would
-trade runtime for steadier trials. The one-at-a-time runs failed 3 and 4 of
-103 before most of these fixes.
+**Server lag adds failures at `--jobs 4`, but it is not the main source.**
+At `--jobs 4` the server logged "Can't keep up!", running 2 to 4 s behind, in
+15% of passing trials and in 6 of 9 failing ones.
+
+Two more runs at `--jobs 2`, both at 6a96fdd, tested whether fewer workers
+would remove the failures:
+
+| Run | Time | Result |
+| --- | ---: | --- |
+| 1 | 41.6 min | 97 of 103 passed |
+| 2 | 40 min | 101 of 103 passed |
+
+Lag was rare (10 of 206 trials), and no failing trial lagged. The eight
+failures were all runtime behaviours:
+- `collect/netherrack-bank`: 31 of 32; a dropped item was never recovered, the
+  same as in `tool-tier-progression`.
+- `combat/cover-fights`, Transit: a blaze `targets_unreachable`.
+- `combat/skeleton-crossfire-navigation`, Elevated: hit by an arrow.
+- `hunt/basalt-magma-cream`: cream collected, then the bot touched lava on
+  the shore.
+- `hunt/skeleton-hunts`, BoneGatherer: 2 of 3 bones, then
+  `no_loaded_targets`.
+- `survival/fire-reflex`, MinerBot: never reported completion.
+- `combat/withdraw-navigation`, Blazes: never reached the bridge's end after
+  `defend_only`.
+- `combat/wounded-ranged-shelter`, Unbuildable: recovered only to 16.95.
+
+Across the four final runs, the fast tier fails about 4% of its trials.
+
 
 ### Still flaky, with known or suspected cause
 
