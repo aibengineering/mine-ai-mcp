@@ -31,7 +31,7 @@ import {
 } from "../../index.js";
 import { blockReader, observeMineflayerBlock } from "../../mineflayer/world.js";
 import { isSafeSupport } from "../../world/block-geometry.js";
-import { stanceReachesItem, withinItemPickupReach } from "../../world/item-geometry.js";
+import { PICKUP_OVERLAP_MARGIN, stanceReachesItem, withinItemPickupReach } from "../../world/item-geometry.js";
 import { admitsDive, openWaterSurface } from "../../world/swimming.js";
 import { holdWaterPosition } from "../../steering/hold-water-position.js";
 import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
@@ -1210,7 +1210,8 @@ async function runRoute(
           const entity = bot.entities[target.entityId];
           if (!entity?.position) continue;
           const item = { position: entity.position, width: entity.width ?? 0.25, height: entity.height ?? 0.25 };
-          if (withinItemPickupReach(bot.entity.position, item) || !stanceReachesItem(feet, item)) continue;
+          if (withinItemPickupReach(bot.entity.position, item, PICKUP_OVERLAP_MARGIN) || !stanceReachesItem(feet, item))
+            continue;
           await stepIntoPickupReach(bot, target.entityId, signal);
           break;
         }
