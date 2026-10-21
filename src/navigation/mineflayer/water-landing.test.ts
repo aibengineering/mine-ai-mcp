@@ -376,3 +376,50 @@ test("dry oak leaves are refused as a landing floor, and the forecast finds no l
   assert.equal(predictWaterLanding({ x: 0.5, y: 33, z: 0.5 }, { x: 0, y: -1, z: 0 }, world), null,
     "a long drop onto a canopy must forecast no landing rather than a pour that cannot work");
 });
+
+test("a pour through grass in the landing cell protects from the source above and recovers it there", async () => {
+  // collect/cast-obsidian location 1, 2026-10-21: a nine-block bucket drop
+  // onto short grass. A bucket's ray stops on the grass's outline, and water
+  // goes into the cell beside the face it hits, so the source appeared one
+  // cell above the landing (-808,109,810), flowed down over the grass, and
+  // the bot landed unhurt in it. The landing was reported as not protected
+  // because no source stood in the landing cell itself.
+  const item = { name: "water_bucket", count: 1, slot: 36 };
+  const named: Record<string, string> = { "0,1,0": "short_grass" };
+  const read = worldOf(named, { groundY: 0 });
+  const blocks: CellReader = (cell) => {
+    const block = read(cell);
+    if (block?.name === "water") block.getProperties = () => ({ level: cell.y === 2 ? 0 : 7 });
+    // Grass has an outline a bucket's ray stops on, and no collision.
+    if (block?.name === "short_grass") Object.assign(block, { shapes: [], boundingBox: "empty" });
+    return block;
+  };
+  const aims: number[] = [];
+  let uses = 0;
+  const bot = botFixture({ items: [item], position: new Vec3(0.5, 2.1, 0.5), blocks }, {
+    quickBarSlot: 0, clearControlStates: () => {}, deactivateItem: () => {},
+    setQuickBarSlot: () => { Reflect.set(bot, "heldItem", item); },
+    lookAt: async (point: Vec3) => { aims.push(point.y); },
+    activateItem: () => {
+      uses++;
+      if (uses === 1) {
+        item.name = "bucket"; Reflect.set(bot, "heldItem", item);
+        named["0,2,0"] = "water"; named["0,1,0"] = "water";
+        bot.entity.position.y = 1; bot.entity.onGround = true; Reflect.set(bot.entity, "isInWater", true);
+      } else {
+        item.name = "water_bucket"; Reflect.set(bot, "heldItem", item);
+        delete named["0,2,0"]; delete named["0,1,0"];
+      }
+    },
+  });
+  bot.entity.onGround = false; bot.entity.velocity.y = -0.65;
+  let settled = false;
+  const work = saveWaterLanding(bot, { signal: new AbortController().signal, permitted: () => true }).finally(() => { settled = true; });
+  for (let ticks = 0; ticks < 250 && !settled; ticks++) { await nextTurn(); bot.emit("physicsTick"); }
+  const evidence = await work;
+  assert.equal(evidence.reason, undefined);
+  assert.equal(evidence.phase, "recovered");
+  assert.equal(evidence.waterRecovered, true);
+  assert.equal(uses, 2);
+  assert.equal(Math.floor(aims.at(-1)!), 2, "the scoop aims at the source where it stands");
+});

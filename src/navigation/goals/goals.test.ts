@@ -218,11 +218,13 @@ test("an item goal's estimate falls onto the drop and never rewards climbing abo
   assert.ok(DESCENT_TICKS_PER_BLOCK > HORIZONTAL_TICKS_PER_BLOCK);
 });
 
-test("an item goal accepts the cell the pickup volume actually reaches", () => {
+test("an item goal accepts the cells the pickup volume actually reaches", () => {
   // Vanilla grows the player's box by about half a block downward and two
   // upward before collecting, so an item one cell above the feet is inside it
   // and one cell below is not. Hovering over a drop must therefore stay
-  // unsatisfied, or the route stops one cell short of the handover.
+  // unsatisfied, or the route stops one cell short of the handover. Sideways
+  // it grows by a block, so the cell beside the drop's reaches it once the
+  // body closes on it, and the one beyond does not.
   const snapshot = active(
     itemPickupGoal({ id: 7 }).resolve(
       watching(observation().position, { position: { x: 6.5, y: 62.06, z: 5.5 }, width: 0.25, height: 0.25 }),
@@ -233,15 +235,32 @@ test("an item goal accepts the cell the pickup volume actually reaches", () => {
   assert.equal(at(6, 62, 5), true);
   assert.equal(at(6, 61, 5), true);
   assert.equal(at(6, 63, 5), false);
-  assert.equal(at(5, 62, 5), false);
-  assert.equal(at(6, 62, 6), false);
+  assert.equal(at(5, 62, 5), true);
+  assert.equal(at(6, 62, 6), true);
   assert.equal(at(4, 62, 5), false);
+  assert.equal(at(6, 62, 7), false);
 });
 
-test("an adjacent drop stops routing only when the actual body is in pickup reach", () => {
-  const drop = { position: { x: 1.9, y: 64, z: 0.5 }, width: 0.25, height: 0.25 };
+test("a drop in a notch with no headroom is reached from the floor cell beside it", () => {
+  // progression/tool-tier-progression, coal step, 2026-10-21: a drop resting
+  // at 25,-57,2 in a mined notch with stone above, which no stance can occupy.
+  // Search answered "no path; closest node 25,-58,1" from the cell beside
+  // it, the drop was blacklisted, and a lost last drop ended the iron step
+  // at 4 of 5. From that cell vanilla's pickup box reaches the item.
+  const drop = { position: { x: 25.5, y: -57, z: 2.3 }, width: 0.25, height: 0.25 };
+  const snapshot = active(itemPickupGoal({ id: 7 }).resolve(watching({ x: 30.5, y: -59, z: 1.5 }, drop)));
+  assert.equal(snapshot.isSatisfied(node({ x: 25, y: -58, z: 1 }), goalTestWorld), true);
+  assert.equal(snapshot.isSatisfied(node({ x: 25, y: -59, z: 0 }), goalTestWorld), false, "two cells off is out of reach");
+});
+
+test("a drop beyond what its cell can reach keeps routing until the actual body touches it", () => {
+  // A body can stop anywhere in its cell; one stopped at x 0.1 left a coal run
+  // just out of reach. From cell 0 the body can close to x 0.7, which reaches
+  // an item at 2.2 only from the next cell, so cell 0 stays unsatisfied until
+  // the actual body is in reach.
+  const drop = { position: { x: 2.2, y: 64, z: 0.5 }, width: 0.25, height: 0.25 };
   const goal = itemPickupGoal({ id: 7 });
-  const touching = active(goal.resolve(watching({ x: 0.8, y: 63, z: 0.5 }, drop)));
+  const touching = active(goal.resolve(watching({ x: 0.9, y: 63, z: 0.5 }, drop)));
   const outside = active(goal.resolve(watching({ x: 0.1, y: 63, z: 0.5 }, drop)));
   const feet = node({ x: 0, y: 63, z: 0 });
 

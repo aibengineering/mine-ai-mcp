@@ -559,13 +559,14 @@ test("a target oscillating between two cells is not mistaken for a repeated sear
     telemetry: onEvent((event) => {
       if (event.kind !== "search_slice" || flips >= 4) return;
       flips += 1;
-      actuator.moveTargetTo(flips % 2 === 1 ? 4 : 5);
+      actuator.moveTargetTo(flips % 2 === 1 ? -5 : 5);
     }),
   });
   const outcome = await settle(navigator, {
-    // An exact-cell goal, so a flip genuinely invalidates the route it was
-    // planned for. A range goal would simply retain the plan and never reach
-    // the ledger this guards.
+    // The two cells lie on opposite sides of the bot, so no stance on a route
+    // to one reaches the item at the other and a flip genuinely invalidates
+    // the route it was planned for. A goal both satisfy would simply retain
+    // the plan and never reach the ledger this guards.
     goal: itemPickupGoal({ id: 7 }),
     policy: walking(),
   });

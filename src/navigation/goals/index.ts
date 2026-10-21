@@ -14,7 +14,7 @@
  */
 import type { GeneratedMovement } from "../movements/catalogue.js";
 import { navigationFeet } from "../world/block-geometry.js";
-import { withinItemPickupReach } from "../world/item-geometry.js";
+import { stanceReachesItem, withinItemPickupReach } from "../world/item-geometry.js";
 import {
   samePosition,
   type BlockPosition,
@@ -387,7 +387,12 @@ export function itemPickupGoal(entity: EntityReference): Goal {
         revision: `item:${entityRevision(target)}:${touching}`,
         heuristic: (node) =>
           touching ? 0 : Math.min(...occupancyCells(cell, 2).map((level) => ticksToReach(node.feet, level))),
-        isSatisfied: (node) => touching || occupies(node.feet, cell, 2),
+        // A stance whose cell can bring the item into vanilla's pickup box is
+        // as good as its own cell: a drop in a notch with no headroom has no
+        // own-cell stance, though the floor in front reaches it. The arrival
+        // then closes on the item inside that cell (`stepIntoPickupReach`),
+        // since a body can stop anywhere in it.
+        isSatisfied: (node) => touching || occupies(node.feet, cell, 2) || stanceReachesItem(node.feet, target),
       };
     },
   };

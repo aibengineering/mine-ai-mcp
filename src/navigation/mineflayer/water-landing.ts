@@ -124,6 +124,8 @@ export async function saveWaterLanding(bot: Bot, options: {
       if (bot.heldItem?.name !== "water_bucket" || !waterableLanding(world, cell) || !latest || latest.ticks > 2 ||
         latest.cell.x !== cell.x || latest.cell.y !== cell.y || latest.cell.z !== cell.z)
         return;
+      sourcesBefore = new Set(pourCells(cell).filter(sourceAt).map(cellKey));
+      pouredCell = null;
       bot.activateItem();
       issued = true;
       evidence.pours++;
@@ -141,6 +143,20 @@ export async function saveWaterLanding(bot: Bot, options: {
     const block = bot.blockAt(new Vec3(cell.x, cell.y, cell.z));
     return block?.name === "water" && Number(block.getProperties().level) === 0;
   };
+  // A bucket's ray stops on the outline of grass or a flower in the landing
+  // cell, and the server puts the water into the cell beside the face it hit:
+  // above it from overhead, beside it from an angle. The water still flows
+  // down over the plant and protects the landing, so the pour is wherever a
+  // new source stands among those cells, and that is the one to recover.
+  const pourCells = (cell: BlockPosition): BlockPosition[] =>
+    [[0, 0, 0], [0, 1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]].map(([x, y, z]) => ({ x: cell.x + x!, y: cell.y + y!, z: cell.z + z! }));
+  const cellKey = (cell: BlockPosition) => `${cell.x},${cell.y},${cell.z}`;
+  let sourcesBefore = new Set<string>();
+  let pouredCell: BlockPosition | null = null;
+  const pouredAt = (cell: BlockPosition): BlockPosition => {
+    pouredCell ??= pourCells(cell).find(candidate => sourceAt(candidate) && !sourcesBefore.has(cellKey(candidate))) ?? null;
+    return pouredCell ?? cell;
+  };
   const reclaimAfterLaunch = async (cell: BlockPosition) => {
     recoveryEpoch++;
     redirected = true;
@@ -150,9 +166,9 @@ export async function saveWaterLanding(bot: Bot, options: {
     try {
       check();
       bot.clearControlStates();
-      const point = new Vec3(cell.x + 0.5, cell.y + 0.1, cell.z + 0.5);
-      const acknowledged = () => sourceAt(cell) && bot.heldItem?.name === "bucket" && waterCount() === fullBefore - 1;
-      const inReach = () => bot.entity.position.offset(0, observedEyeHeight(bot.entity), 0).distanceTo(point) <= 4.5;
+      const point = () => { const source = pouredAt(cell); return new Vec3(source.x + 0.5, source.y + 0.1, source.z + 0.5); };
+      const acknowledged = () => sourceAt(pouredAt(cell)) && bot.heldItem?.name === "bucket" && waterCount() === fullBefore - 1;
+      const inReach = () => bot.entity.position.offset(0, observedEyeHeight(bot.entity), 0).distanceTo(point()) <= 4.5;
       if (!inReach()) throw new Error("A new launch stranded the placed water outside recoverable reach.");
       if (!acknowledged()) {
         // Inventory can acknowledge a pour before its block packet. A native
@@ -191,7 +207,7 @@ export async function saveWaterLanding(bot: Bot, options: {
       }
       // The incoming velocity is known before the next position step. Scoop
       // only our confirmed source while the launched body is still in reach.
-      await whileOwned(() => bot.lookAt(point, true), signal);
+      await whileOwned(() => bot.lookAt(point(), true), signal);
       check();
       if (!inReach()) throw new Error("The launched body lost reach of its water source.");
       if (!acknowledged()) throw new Error("The owned source or empty bucket changed before reclamation.");
@@ -200,8 +216,9 @@ export async function saveWaterLanding(bot: Bot, options: {
         await waitForPhysicsTicks(bot, 1, signal);
         check();
         const observed = bot.blockAt(new Vec3(cell.x, cell.y, cell.z));
-        if (waterCount() === fullBefore && observed && !sourceAt(cell)) {
+        if (waterCount() === fullBefore && observed && !sourceAt(pouredAt(cell))) {
           issued = false;
+          pouredCell = null;
           evidence.phase = "armed";
           evidence.cell = null;
           evidence.pouredTick = null;
@@ -227,7 +244,7 @@ export async function saveWaterLanding(bot: Bot, options: {
     if (!evidence.cell) return;
     // Only a confirmed landing can already have completed its ordinary scoop.
     // Before that, missing receipts still belong to the issued pour.
-    if (evidence.phase === "landed" && waterCount() === fullBefore && !sourceAt(evidence.cell)) return;
+    if (evidence.phase === "landed" && waterCount() === fullBefore && !sourceAt(pouredAt(evidence.cell))) return;
     usePending = whileOwned(() => reclaimAfterLaunch(evidence.cell!), signal).catch(error => {
       issueError = error;
       // A missing physics stream must not extend the acknowledgment deadline.
@@ -285,7 +302,7 @@ export async function saveWaterLanding(bot: Bot, options: {
       if (reclaiming) { await waitForPhysicsTicks(bot, 1, signal); continue; }
       const cell = evidence.cell;
       if (issued && cell) {
-        if (sourceAt(cell) && bot.heldItem?.name === "bucket" && waterCount() === fullBefore - 1)
+        if (sourceAt(pouredAt(cell)) && bot.heldItem?.name === "bucket" && waterCount() === fullBefore - 1)
           evidence.phase = "poured";
         if (evidence.phase === "poured" && bot.entity.onGround && bot.entity.position.y <= cell.y + 0.05 && Reflect.get(bot.entity, "isInWater")) {
           const landingEpoch = recoveryEpoch;
@@ -301,7 +318,8 @@ export async function saveWaterLanding(bot: Bot, options: {
           await selectBucket("bucket");
           check();
           if (landingEpoch !== recoveryEpoch) continue;
-          await whileOwned(() => bot.lookAt(new Vec3(cell.x + 0.5, cell.y + 0.1, cell.z + 0.5), true), signal);
+          const source = pouredAt(cell);
+          await whileOwned(() => bot.lookAt(new Vec3(source.x + 0.5, source.y + 0.1, source.z + 0.5), true), signal);
           check();
           if (landingEpoch !== recoveryEpoch) continue;
           bot.activateItem();
@@ -309,8 +327,8 @@ export async function saveWaterLanding(bot: Bot, options: {
             await waitForPhysicsTicks(bot, 1, signal);
             check();
             if (landingEpoch !== recoveryEpoch) continue flight;
-            const after = bot.blockAt(new Vec3(cell.x, cell.y, cell.z));
-            if (waterCount() === fullBefore && after && !sourceAt(cell)) {
+            const after = bot.blockAt(new Vec3(source.x, source.y, source.z));
+            if (waterCount() === fullBefore && after && !sourceAt(source)) {
               evidence.waterRecovered = true;
               evidence.phase = "recovered";
               publish();
