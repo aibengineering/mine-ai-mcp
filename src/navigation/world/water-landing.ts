@@ -32,6 +32,17 @@ function clearBodySweep(world: Pick<WorldView, "blockAt">, from: Position3, to: 
       }
   return true;
 }
+/**
+ * Where a falling body's tick actually ends: the native client resolves the
+ * fall first and stops only the horizontal axis a wall blocks. Refusing the
+ * whole forecast instead left a body drifting toward a step beside its
+ * landing with no forecast for its last ten blocks, and no pour.
+ */
+function sweepAgainstWalls(world: Pick<WorldView, "blockAt">, from: Position3, to: Position3): { x: number; z: number } | null {
+  for (const [x, z] of [[to.x, to.z], [from.x, to.z], [to.x, from.z], [from.x, from.z]] as const)
+    if (clearBodySweep(world, from, { x, y: to.y, z })) return { x, z };
+  return null;
+}
 /** Forecast the unpowered body, using Mineflayer's post-physics velocity (the next tick's displacement). */
 export function predictWaterLanding(position: Position3, velocity: Position3, world: Pick<WorldView, "blockAt">): WaterLanding | null {
   let { x, y, z } = position;
@@ -58,19 +69,26 @@ export function predictWaterLanding(position: Position3, velocity: Position3, wo
               contacts.push({ x: fx, y: floorY + 1, z: fz });
           }
         if (contacts.length) {
+          const landed = sweepAgainstWalls(world, from, { x, y: floorY + 1, z });
+          if (!landed) return null;
           // The source must still overlap the body after horizontal motion.
           // Prefer the centre column when several equally high floors fit.
           const cell = contacts.filter(cell =>
-            cell.x + 1 > x - 0.299 && cell.x < x + 0.299 &&
-            cell.z + 1 > z - 0.299 && cell.z < z + 0.299 && waterableLanding(world, cell),
+            cell.x + 1 > landed.x - 0.299 && cell.x < landed.x + 0.299 &&
+            cell.z + 1 > landed.z - 0.299 && cell.z < landed.z + 0.299 && waterableLanding(world, cell),
           ).sort((a, b) =>
-            (a.x + 0.5 - x) ** 2 + (a.z + 0.5 - z) ** 2 -
-            ((b.x + 0.5 - x) ** 2 + (b.z + 0.5 - z) ** 2),
+            (a.x + 0.5 - landed.x) ** 2 + (a.z + 0.5 - landed.z) ** 2 -
+            ((b.x + 0.5 - landed.x) ** 2 + (b.z + 0.5 - landed.z) ** 2),
           )[0];
-          return cell && clearBodySweep(world, from, { x, y: cell.y, z }) ? { cell, ticks, drop: peak - cell.y } : null;
+          return cell ? { cell, ticks, drop: peak - cell.y } : null;
         }
       }
-    if (!clearBodySweep(world, from, { x, y: nextY, z })) return null;
+    const moved = sweepAgainstWalls(world, from, { x, y: nextY, z });
+    if (!moved) return null;
+    if (moved.x !== x) vx = 0;
+    if (moved.z !== z) vz = 0;
+    x = moved.x;
+    z = moved.z;
     y = nextY;
     peak = Math.max(peak, y);
     vx *= 0.91;

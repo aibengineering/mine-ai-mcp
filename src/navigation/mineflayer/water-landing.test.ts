@@ -59,8 +59,37 @@ test("the body's edge catches a raised full floor before its centre reaches the 
   // A falling body can step onto a corner entered during horizontal movement.
   assert.deepEqual(predictWaterLanding({ x: 0.5, y: 2.1, z: 0.5 }, { x: 0.5, y: -0.5, z: 0 }, world)?.cell,
     { x: 1, y: 2, z: 0 });
-  assert.equal(predictWaterLanding({ x: 0.5, y: 1.6, z: 0.5 }, { x: 0.5, y: -0.5, z: 0 }, world), null,
-    "a wall whose top is already above the feet is still refused");
+  assert.deepEqual(predictWaterLanding({ x: 0.5, y: 1.6, z: 0.5 }, { x: 0.5, y: -0.5, z: 0 }, world)?.cell,
+    { x: 0, y: 1, z: 0 }, "a wall whose top is already above the feet stops the drift, and the body lands beside it");
+});
+
+/**
+ * Seed 8675309, 20 October: the dragon knocked the bot off a staircase, and
+ * it fell eleven blocks toward 17,60,27 drifting north at 0.3 to 0.7 blocks a
+ * tick. A step of end stone at 15-17,60,26 stood just north of that landing.
+ * Each forecast carried the drift on into that step and was refused whole, so
+ * from 70.5 down to 60.2 there was no forecast and no pour; the body met the
+ * step at z 27.3, stopped, and landed on 17,59,27 dry. The same refusal beside
+ * a tower's wall let a later fall from the staircase kill the bot.
+ */
+test("a fall drifting into a step beside its landing is forecast to stop against it and land", () => {
+  // The observed step: end stone at y 60 north of the landing, over a floor at 59.
+  const step = new Set(["15,60,25", "15,60,26", "15,60,27", "16,60,25", "16,60,26", "17,60,25", "17,60,26", "18,60,25", "19,60,25"]);
+  const world = new MemoryWorld();
+  for (let x = 13; x <= 22; x++) for (let z = 22; z <= 42; z++) for (let y = 55; y <= 75; y++)
+    world.load({ x, y, z }, { stateId: y <= 59 || step.has(`${x},${y},${z}`) ? 1 : 0 });
+  // Recorded feet and post-physics velocity, ten blocks up and in the last ticks.
+  for (const [position, velocity] of [
+    [{ x: 17.6799, y: 70.5358, z: 35.2905 }, { x: -0.0133, y: -0.3043, z: -0.9632 }],
+    [{ x: 17.5845, y: 63.4405, z: 28.3811 }, { x: -0.0047, y: -1.0248, z: -0.3413 }],
+    [{ x: 17.5798, y: 62.4156, z: 28.0398 }, { x: -0.0043, y: -1.0827, z: -0.3106 }],
+  ] as const) {
+    const prediction = predictWaterLanding(position, velocity, world);
+    assert.deepEqual(prediction?.cell, { x: 17, y: 60, z: 27 }, `forecast from y ${position.y}`);
+  }
+  const lastWarning = predictWaterLanding({ x: 17.5755, y: 61.3329, z: 27.7292 }, { x: -0.0039, y: -1.1395, z: -0.2826 }, world);
+  assert.equal(lastWarning?.ticks, 2, "the pour window opens two ticks out");
+  assert.deepEqual(lastWarning?.cell, { x: 17, y: 60, z: 27 });
 });
 
 test("the recorded eighth-tower diagonal corner gives two ticks to pour", () => {
