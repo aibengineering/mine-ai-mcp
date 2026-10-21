@@ -9,7 +9,7 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { asVec3, cellKey } from "../../../utils/index.js";
 import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../../world/block-visibility.js";
-import { droppedItemName } from "../../../world/item-pickup.js";
+import { droppedItemCount, droppedItemName } from "../../../world/item-pickup.js";
 import type { useItemAt } from "../../../world/item-use.js";
 import { isLiquidSource, sourceInSight, USE_RAY_REACH } from "../../../world/liquid.js";
 import { findLoadedBlockPositions } from "../../../world/loaded-block-scan.js";
@@ -186,6 +186,8 @@ export interface MineRequest {
   readonly isSatisfied: () => boolean;
   /** Inventory gain already observed for this collection request. */
   readonly observedInventoryGain: () => number;
+  /** The inventory gain the request asks for, against which drops still lying count. */
+  readonly requested: number;
   readonly movements: MovementPolicy;
   /** Radius for finding lava pools to cast when no matching block is loaded. */
   readonly castSearchRadius: number;
@@ -641,10 +643,15 @@ async function breakBesideDrops(
   const position = bot.entity.position;
   const drops = targeting.targets().filter((target) => target.kind === "drop");
   if (drops.length === 0) return false;
+  let lying = 0;
   for (const drop of drops) {
     const entity = bot.entities[drop.entityId];
     if (!entity || !withinItemPickupReach(position, entity)) return false;
+    lying += droppedItemCount(entity);
   }
+  // Drops that already cover the request are only waited for. Another break
+  // spends the extra-break budget that exists for drops that are lost.
+  if (request.observedInventoryGain() + lying >= request.requested) return false;
   const feet = position.floored();
   const eye = position.offset(0, STANDING_EYE_HEIGHT, 0);
   const supports = new Set(drops.map((drop) => cellKey({ ...drop.position, y: drop.position.y - 1 })));
