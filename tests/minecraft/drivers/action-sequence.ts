@@ -8,6 +8,8 @@ const stepSchema = z.strictObject({
   action: z.string().trim().min(1),
   input: z.record(z.string(), z.unknown()),
   expect: expectationSchema,
+  /** As the request-level option, for a later step made while a reflex may hold the body. */
+  idleWithinTicks: ticksSchema.optional(),
 });
 
 const responseSchema = z.enum(["fight", "evade", "hide"]);
@@ -18,7 +20,9 @@ const responseSchema = z.enum(["fight", "evade", "hide"]);
  * - `idleWithinTicks` makes the first request wait, observing with
  *   `view_status`, until no reflex owns the body, so a request made into a
  *   running fight is made once rather than refused and repeated. A body that
- *   never comes free within the bound fails the trial.
+ *   never comes free within the bound fails the trial. A step can carry its
+ *   own `idleWithinTicks` for a later request, made after an earlier step
+ *   such as a policy change released a fight a reflex may claim again.
  * - `holdTicks` keeps the session, and the runtime's reflexes, on the body
  *   after the last step. The host closes the runtime when the driver returns.
  * - `forbidResponses` reads the recorded hostile-reflex outcomes once the steps
@@ -79,7 +83,16 @@ export async function run(context: ScenarioContext): Promise<ClientCompletion> {
     latest = idle.latest;
     summaries.push(`waited ${idle.waited} ticks for an idle body`);
   }
-  for (const [index, { action, input, expect }] of actions.entries()) {
+  for (const [index, { action, input, expect, idleWithinTicks: stepIdle }] of actions.entries()) {
+    if (stepIdle !== undefined) {
+      const idle = await waitForIdleBody(context, stepIdle);
+      if (!idle.idle) {
+        summaries.push(`${index + 1}. the body was still owned (${idle.owner}) after ${idle.waited} ticks; no request was made`);
+        return { status: "failed", detail: summaries.join("; ") };
+      }
+      latest = idle.latest;
+      summaries.push(`waited ${idle.waited} ticks for an idle body`);
+    }
     let request = input;
     if (action === POLICY_ACTION && !("expected_revision" in input)) {
       if (latest?.survivalPolicy?.revision === undefined) latest = await context.call("view_status", {});

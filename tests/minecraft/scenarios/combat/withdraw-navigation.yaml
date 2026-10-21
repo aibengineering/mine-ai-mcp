@@ -98,12 +98,15 @@ params:
             changes: { combat: { engagement: defend_only, hide: never } }
             lifetime: { kind: session }
             reason: Stop fighting and get to the end of the bridge.
-        - { action: navigate, input: { x: 60, y: 72, z: 0, range: 1, dig: false, scaffold: false } }
+        # The policy change releases the fight, but a blaze still in reach can
+        # be defended against again before the route is asked for; a model
+        # told the body is busy waits for it, and so does this step.
+        - { action: navigate, input: { x: 60, y: 72, z: 0, range: 1, dig: false, scaffold: false }, idleWithinTicks: 400 }
     Skeletons:
       waitTicks: 100
       actions:
         - *withdraw
-        - { action: navigate, input: { x: 260, y: 72, z: 0, range: 1, dig: false, scaffold: false } }
+        - { action: navigate, input: { x: 260, y: 72, z: 0, range: 1, dig: false, scaffold: false }, idleWithinTicks: 400 }
     Sealed:
       waitTicks: 100
       holdTicks: 900

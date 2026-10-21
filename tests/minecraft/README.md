@@ -117,7 +117,9 @@ a hazard that outlives the request plays out; the host closes the runtime when
 the driver returns. A request made into a fight already under way sets
 `idleWithinTicks`: the first step waits, observing with `view_status`, until no
 reflex owns the body, and fails the trial if that takes longer, so the request
-is made once rather than refused and repeated. A `set_survival_policy` step
+is made once rather than refused and repeated. A later step can carry its own
+`idleWithinTicks` when an earlier step, such as a policy change, released a
+fight that a reflex may claim again. A `set_survival_policy` step
 that leaves out `expected_revision` is sent with the revision from the latest
 reply, as a model would. `forbidResponses: [hide]` reads the recorded
 hostile-reflex outcomes after the steps and fails on any response a policy step
