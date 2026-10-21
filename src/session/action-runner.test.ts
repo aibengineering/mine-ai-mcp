@@ -237,10 +237,12 @@ test("a claim waits for the interrupted owner to settle and keeps the session ex
 
   interruptedMaySettle.resolve();
   const interrupted = await foregroundOutcome;
+  // The reflex handed the request back unfinished: it failed for the reflex's
+  // reason, which only a model cancellation would report as cancelled.
   assert.deepEqual(interrupted.result, {
     kind: "runtime_failure",
-    status: "cancelled",
-    error: "hostile contact",
+    status: "failed",
+    error: "hostile contact; the reflex returned the request unfinished.",
   });
   if (admission.kind !== "claimed") return;
   assert.equal(admission.interrupted?.action, "stub");
@@ -437,19 +439,23 @@ test("a request executor starts only after admission and is reused with fresh at
 /**
  * A preempted task is resumed only when all three agree: the task declared its
  * request safe to repeat, the reflex handed the body back fit, and nobody
- * cancelled during the handoff. Each row withholds one; each ends cancelled
- * after its single run, with no interruption reported as survived.
+ * cancelled during the handoff. Each row withholds one and ends after its
+ * single run, with no interruption reported as survived. A request the reflex
+ * handed back unfinished failed, for the reflex's reason; only the model's own
+ * cancellation reports cancelled.
  */
 const unresumed: ReadonlyArray<{
   readonly name: string;
   readonly execution: ActionExecution;
   readonly work: () => Promise<{ value: string; continuation: { kind: "resume" } | { kind: "return"; reason: null } }>;
   readonly cancelDuringHandoff?: boolean;
+  readonly status: "failed" | "cancelled";
 }> = [
   {
     name: "the reflex withdrew",
     execution: { kind: "resumable_task" },
     work: async () => ({ value: "evaded", continuation: { kind: "return", reason: null } }),
+    status: "failed",
   },
   {
     name: "the reflex threw",
@@ -457,21 +463,24 @@ const unresumed: ReadonlyArray<{
     work: async () => {
       throw new Error("session torn down");
     },
+    status: "failed",
   },
   {
     name: "the task did not declare its request safe to repeat",
     execution: { kind: "task" },
     work: async () => ({ value: "killed", continuation: { kind: "resume" } }),
+    status: "failed",
   },
   {
     name: "a control cancellation arrived during the handoff",
     execution: { kind: "resumable_task" },
     work: async () => ({ value: "killed", continuation: { kind: "resume" } }),
     cancelDuringHandoff: true,
+    status: "cancelled",
   },
 ];
 
-test("a preempted task stays cancelled unless it may repeat, the reflex resumes it, and nobody cancels", async () => {
+test("a preempted task ends unless it may repeat, the reflex resumes it, and nobody cancels", async () => {
   for (const row of unresumed) {
     const runs = { count: 0 };
     const runner = new ActionRunner();
@@ -483,13 +492,13 @@ test("a preempted task stays cancelled unless it may repeat, the reflex resumes 
     const output = await outcome;
     await (claim.kind === "claimed" ? claim.outcome.catch(() => undefined) : undefined);
     assert.equal(runs.count, 1, row.name);
-    assert.equal(output.result.status, "cancelled", row.name);
+    assert.equal(output.result.status, row.status, row.name);
     assert.equal(output.interruptions, undefined, row.name);
   }
 });
 
 for (const resumeInterrupted of [true, false]) {
-  test(`an admitted request stays current through takeover until its ${resumeInterrupted ? "resumed" : "cancelled"} response`, async () => {
+  test(`an admitted request stays current through takeover until its ${resumeInterrupted ? "resumed" : "returned"} response`, async () => {
     const runner = new ActionRunner();
     const attempts = { count: 0 };
     const action = stubAction(
@@ -530,7 +539,7 @@ for (const resumeInterrupted of [true, false]) {
     const settledAfter = Date.now();
     gate.resolve();
     const output = await pending;
-    assert.equal(output.result.status, resumeInterrupted ? "succeeded" : "cancelled");
+    assert.equal(output.result.status, resumeInterrupted ? "succeeded" : "failed");
     assert.equal(attempts.count, resumeInterrupted ? 2 : 1);
     const context = runner.requestContext();
     assert.equal(context.requestId, null);
@@ -785,7 +794,7 @@ for (const resumeInterrupted of [true, false]) {
       await lowerFinished;
       if (higher.kind === "claimed") await higher.outcome;
       const output = await request;
-      assert.equal(output.result.status, resumeInterrupted ? "succeeded" : "cancelled");
+      assert.equal(output.result.status, resumeInterrupted ? "succeeded" : "failed");
       assert.equal(attempts, resumeInterrupted ? 2 : 1);
       assert.deepEqual(order, [
         "foreground released",

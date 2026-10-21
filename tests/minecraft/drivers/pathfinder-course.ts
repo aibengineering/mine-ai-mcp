@@ -91,7 +91,9 @@ export async function run(context: ScenarioContext): Promise<ClientCompletion> {
     const expected = checkExpectation(leg.expect, output);
     const takenOver =
       leg.takeover !== undefined &&
-      (("kind" in output.result && output.result.kind === "runtime_failure") || output.result.status === "cancelled") &&
+      // A reflex that takes the leg and hands it back reports it failed with
+      // the reflex's reason; the named takeover is what the leg accepts.
+      (("kind" in output.result && output.result.kind === "runtime_failure") || output.result.status === "failed" || output.result.status === "cancelled") &&
       output.summary.includes(leg.takeover);
     const detail = takenOver ? output.summary : expected.detail;
     if (!expected.matches && !takenOver) return fail(`${leg.label}: ${detail}`);

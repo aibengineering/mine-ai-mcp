@@ -344,7 +344,9 @@ for (const kind of ["mob", "end"] as const) {
       }
       releaseCleanup();
       const output = await pending;
-      assert.equal(output.result.status, "cancelled");
+      // The End fight is taken by the reflex and handed back unfinished; the
+      // ordinary fight is cancelled by the model.
+      assert.equal(output.result.status, kind === "end" ? "failed" : "cancelled");
       if (kind === "end") assert.ok(await until(() => fixture.recorded().length === 1));
       assert.equal(defenses, kind === "end" ? 1 : 0);
       assert.equal(fixture.runner.status().owner, "idle");

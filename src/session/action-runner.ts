@@ -176,6 +176,21 @@ function measured<Name extends string, Result extends ActionResult>(
   return interruptions.length > 0 ? { ...output, interruptions: [...interruptions] } : output;
 }
 
+/**
+ * A reflex that took the body and handed the request back unfinished ended
+ * it: the objective failed, for the reflex's reason. Only a cancellation the
+ * model asked for reports `cancelled`; a request returned to the model without
+ * its result is otherwise indistinguishable from one the model stopped.
+ */
+function returnedUnfinished<Result extends ActionResult>(
+  result: Result | RuntimeFailure,
+  reflexReason: string,
+): Result | RuntimeFailure {
+  if (result.status !== "cancelled") return result;
+  const detail = result.error && !reflexReason.includes(result.error) ? `: ${result.error}` : ".";
+  return { ...result, status: "failed", error: `${reflexReason}; the reflex returned the request unfinished${detail}` } as Result | RuntimeFailure;
+}
+
 export class ActionRunner {
   readonly #highlighter: BlockHighlighter | undefined;
   readonly #position: () => ProgressPosition | null;
@@ -345,10 +360,15 @@ export class ActionRunner {
         interruptions.push(preemption.reason);
         return measured(definition.name, startedAtMs, result, interruptions);
       }
-      if (!resumable) return measured(definition.name, startedAtMs, result, interruptions);
+      // A reflex verdict of cancel (a death, a lost connection) stays as reported;
+      // any other hand-back that does not resume ends the request unfinished.
+      const returned = verdict.kind === "cancel"
+        ? result
+        : returnedUnfinished(result, [preemption.reason, verdict.kind === "return" ? verdict.reason : null].filter(Boolean).join(" "));
+      if (!resumable) return measured(definition.name, startedAtMs, returned, interruptions);
       if (verdict.kind !== "resume") {
         if (verdict.kind === "return" && verdict.reason) interruptions.push(verdict.reason);
-        return measured(definition.name, startedAtMs, result, interruptions);
+        return measured(definition.name, startedAtMs, returned, interruptions);
       }
       if (invocation.lifetime.signal.aborted) return measured(definition.name, startedAtMs, result, interruptions);
       interruptions.push(preemption.reason);
