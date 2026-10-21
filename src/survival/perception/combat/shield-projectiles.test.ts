@@ -291,3 +291,32 @@ test("a retreat warning includes a crossing shot before it intersects the statio
   shot.velocity = shot.velocity.scaled(-1);
   assert.equal(incomingShieldProjectiles(fixture.bot, 2)[0], undefined, "outgoing shots do not retain the guard");
 });
+test("a walking guard counts a close draw as covered only where its arrow will enter the body", () => {
+  // Elevated in r3-c 2026-10-21T05-00-53-619Z (t00011), 196 ms before an
+  // unblocked arrow: the bot walks west at 0.08 blocks/tick, guarded, facing
+  // west along its route; skeleton #10 draws 3.7 blocks to the north-west.
+  // Vanilla 1.21.4 blocks when the arrow's entry point on the bot's box
+  // (inflated by 0.3) lies in front of the head yaw the server held on the
+  // tick before the hit. The arrow aims at where the bot stands at release
+  // and lands two or three ticks later, by when the walk has carried the box
+  // west, so it enters the north face east of the centre: 90 degrees from a
+  // westward yaw. The shooter's own bearing, 58 degrees off, looked covered.
+  const { bot } = fixture();
+  delete bot.entities[8];
+  bot.entity.position.set(209.2431, -60, -13.4401);
+  bot.entity.velocity.set(-0.0824, -0.0784, -0.0106);
+  bot.entity.yaw = 1.482;
+  bot.entities[10] = {
+    id: 10, name: "skeleton", kind: "Hostile mobs", isValid: true, height: 1.99, width: 0.6,
+    position: new Vec3(207.7681, -60, -16.8118), velocity: new Vec3(0, 0, 0),
+    heldItem: { name: "bow" }, metadata: { 8: 1 }, headYaw: 3.5834, pitch: 0,
+  } as unknown as Bot["entity"];
+  const walking = observeProjectileDefence(bot)!;
+  assert.deepEqual(walking.windingUp.map((entity) => entity.id), [10]);
+  assert.equal(walking.aligned, false, "the route's heading leaves the entry point unguarded");
+
+  // Standing, the same draw enters on the shooter's bearing and the same
+  // heading still covers it.
+  bot.entity.velocity.set(0, -0.0784, 0);
+  assert.equal(observeProjectileDefence(bot)!.aligned, true);
+});
