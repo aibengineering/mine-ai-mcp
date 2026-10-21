@@ -18,6 +18,15 @@ import type { FightMovement } from "./movement.js";
 import type { FightScene } from "./scene.js";
 import type { FightWeapons } from "./weapons.js";
 
+/**
+ * Optional cover searches one engagement may end in a row without trying a
+ * refuge. A search that finds nothing, or that an incoming arrow cuts short,
+ * is the same search the next time on the same ground: an archer strafing one
+ * block or loosing another arrow does not put cover on open ground. A refuge
+ * tried and rejected narrows the next search instead, so it is not counted.
+ */
+export const FRUITLESS_COVER_SEARCH_LIMIT = 3;
+
 /** The current fighting refuge and its complete maintenance/peek cycle. */
 export class CoverFight {
   get recovering(): boolean {
@@ -25,6 +34,12 @@ export class CoverFight {
   }
   peekAttacks = 0;
   failedPeeks = 0;
+  /** Cover searches in a row that ended without trying a refuge, refused or interrupted. */
+  fruitlessCoverSearches = 0;
+  /** Whether another optional cover search may take the body in this engagement. */
+  get maySearchCover(): boolean {
+    return this.scene.position.canEstablish && this.fruitlessCoverSearches < FRUITLESS_COVER_SEARCH_LIMIT;
+  }
   constructor(
     readonly scene: FightScene,
     readonly weapons: FightWeapons,
@@ -145,6 +160,18 @@ export class CoverFight {
         this.weapons.itemUse.invalidateShield();
       }
     });
+  /** One counted cover search: fruitless unless it establishes or rejects a refuge. */
+  readonly searchCover = async (signal: AbortSignal): Promise<ProtectionRefusal | null> => {
+    const rejected = this.scene.position.rejectedCoverCount;
+    let stopped: ProtectionRefusal | null | undefined;
+    try {
+      stopped = await this.establishCover(signal);
+      return stopped;
+    } finally {
+      if (stopped === null) this.fruitlessCoverSearches = 0;
+      else if (this.scene.position.rejectedCoverCount === rejected) this.fruitlessCoverSearches++;
+    }
+  };
   readonly keepPosition = async (
     signal: AbortSignal,
   ): Promise<
@@ -173,7 +200,7 @@ export class CoverFight {
       const shieldAnswersExposure = shieldAnswersThreats(this.scene.bot, this.weapons.currentLoadout().shield, exposed);
       if (
         !this.scene.position.plan &&
-        this.scene.position.canEstablish &&
+        this.maySearchCover &&
         exposed.length > 0 &&
         !shieldAnswersExposure
       ) {
@@ -181,12 +208,12 @@ export class CoverFight {
         // Price it before taking the body for construction; the ordinary
         // shield/attack and health-boundary responses remain available.
         if (this.scene.position.planCover().kind === "materials_missing") return { kind: "proceed" };
-        const stopped = await this.establishCover(signal);
+        const stopped = await this.searchCover(signal);
         if (!stopped) return { kind: "continue" };
         // Construction changed the world and left material for another
         // arrangement. Reobserve it; an unchanged refusal cannot retry.
         if (stopped.kind === "materials_missing") return { kind: "proceed" };
-        if (this.scene.position.canEstablish) return { kind: "continue" };
+        if (this.maySearchCover) return { kind: "continue" };
         // The cover search remembers this refusal. It does not establish that
         // the enemy is unreachable; ordinary approach and contact defence remain.
         this.scene.reportDecision({ kind: "response", evidence: {

@@ -66,7 +66,8 @@ export class CombatPosition {
     const scope = this.searchScope();
     return this.answered.find(scope.capability, scope.scope) === null;
   }
-  private get rejectedCoverCount(): number {
+  /** Refuges tried and rejected for this target; each one narrows the next cover search. */
+  get rejectedCoverCount(): number {
     return this.answered
       .snapshot()
       .filter((entry) => entry.capability === "combat.cover" && entry.scope.startsWith(`target:${this.target.id}:`))

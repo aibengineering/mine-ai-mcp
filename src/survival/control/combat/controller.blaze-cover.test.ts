@@ -392,3 +392,52 @@ test("an optional cover route failure leaves ordinary combat available", async (
   assert.deepEqual(await cover.keepPosition(new AbortController().signal), { kind: "proceed" });
   assert.equal(attempts, 1, "unchanged rejected cover does not retry");
 });
+
+test("arrows on open ground cannot keep restarting a cover search that finds nothing", async () => {
+  // Recorded in hunt/skeleton-hunts (BoneGatherer, t00007): the bot stood at
+  // (70.5, -60, -9.5) on a superflat field with skeletons at (77.8, -19.7),
+  // (64.4, -16.5) and (58.5, -4.5). No cell within 32 blocks shelters it from
+  // all three, so every cover search either exhausted its 4225 nodes or was
+  // cut short by the next arrow, and each restart cost a blocked arrow until
+  // the shield broke. A strafing archer or another arrow does not put cover
+  // on open ground; after a few fruitless searches the guarded approach runs.
+  const { CoverFight, FRUITLESS_COVER_SEARCH_LIMIT } = await import("../../responses/fight/cover.js");
+  const fixture = blazePreflightFixture(["iron_sword", "shield"]);
+  const { bot, target } = fixture;
+  for (let x = -14; x <= 14; x++) for (let z = -14; z <= 14; z++)
+    for (let y = 64; y <= 72; y++) fixture.world.load({ x, y, z }, { stateId: 0, traits: { empty: true } });
+  target.name = "skeleton";
+  armWithBow(target);
+  target.position.set(7.8, 64, -9.7);
+  const archers = [target, ...[new Vec3(-5.6, 64, -6.5), new Vec3(-11.5, 64, 5.5)].map((position, index) => {
+    const archer = Object.assign(combatFixture([]).target, target, { id: 8 + index, position });
+    armWithBow(archer);
+    return archer;
+  })];
+  const shield = bot.inventory.items().find((item) => item.name === "shield")!;
+  let searches = 0;
+  const position = {
+    plan: null, canEstablish: true, rejectedCoverCount: 0, adoptExisting: () => {},
+    threats: () => archers.map((archer) => positionThreat(bot, archer)),
+    planCover: () => ({ kind: "unreachable" }),
+  };
+  const scene = {
+    bot, target, position, navigation: fixture.navigation,
+    movement: "pursue", protectedProgress: { leave: () => {} },
+    reportDecision: () => {},
+  } as unknown as ConstructorParameters<typeof CoverFight>[0];
+  const weapons = { contact: () => null, currentLoadout: () => ({ shield }) } as unknown as ConstructorParameters<typeof CoverFight>[1];
+  const cover = new CoverFight(scene, weapons, {} as ConstructorParameters<typeof CoverFight>[2]);
+  Object.assign(cover, { establishCover: async () => {
+    searches++;
+    // Odd searches are cut short by an arrow; even ones exhaust the search,
+    // whose refusal the archer's one-block strafe reopens at once.
+    if (searches % 2 === 1) throw new DOMException("Incoming projectile interrupted the combat position effect.", "AbortError");
+    return { kind: "unreachable", reason: "Cover position approach stopped: search radius limit 32 blocks reached" };
+  } });
+  const turns: string[] = [];
+  for (let turn = 0; turn < 8; turn++)
+    turns.push(await cover.keepPosition(new AbortController().signal).then((kept) => kept.kind, () => "interrupted"));
+  assert.equal(searches, FRUITLESS_COVER_SEARCH_LIMIT, `turns: ${turns.join(", ")}`);
+  assert.equal(turns.at(-1), "proceed", "the guarded approach takes over");
+});
