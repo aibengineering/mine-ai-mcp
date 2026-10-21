@@ -67,6 +67,8 @@ export class FightScene implements Disposable {
   projectileGuards = 0;
   explosions = 0;
   elapsedTicks = 0;
+  /** When a hovering flier was first seen above sword reach in this fight. */
+  hoverWaitStartedAt: number | null = null;
   constructor(
     readonly environment: FightEnvironment,
     readonly request: FightRequest,

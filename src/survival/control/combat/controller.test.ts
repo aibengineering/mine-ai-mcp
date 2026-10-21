@@ -518,6 +518,32 @@ for (const fromShelf of [true, false])
     assert.equal(routed, !fromShelf);
   });
 
+test("a pursued blaze hovering above sword reach is waited for under the guard, not routed to", async () => {
+  // hunts-transit 2026-10-21T04-35-46-887Z-t00005: the blaze's feet rose to
+  // 5.4 blocks above the floor, two approach searches found no stance in
+  // reach, and the hunt gave up; six seconds later it was on the ground.
+  const fixture = combatFixture(["iron_sword", "shield"]);
+  const { bot, target, script, clock } = fixture;
+  Object.assign(target, { name: "blaze", kind: "Hostile mobs", height: 1.8, width: 0.6, metadata: [] });
+  target.position.set(0.5, 69.4, 3);
+  bot.entity.position.set(0.5, 64, 0.5);
+  let routes = 0;
+  const navigation = {
+    ...navigationFixture(),
+    navigate: async () => {
+      routes++;
+      return { status: "stopped", reason: "no path" } as Awaited<ReturnType<NavigationRuntime["navigate"]>>;
+    },
+  } as NavigationRuntime;
+  script.onWait = () => {
+    if (clock.tick === 60) target.position.set(0.5, 64, 2);
+  };
+  script.onAttack = () => bot.emit("entityDead", target);
+  const result = await createCombatController(bot, navigation).engage(target.id, new AbortController().signal, "pursue");
+  assert.equal(result.kind, "died");
+  assert.equal(routes, 0);
+});
+
 test("a shielded swing keeps both sides of a nearby pack inside the guard", async () => {
   const fixture = combatFixture(["iron_sword", "shield"], { targetDistance: 2 });
   const other = { ...fixture.target, id: 8, kind: "Hostile mobs", position: new Vec3(0, 64, 2) } as Entity;
