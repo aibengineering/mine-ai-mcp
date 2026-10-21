@@ -64,18 +64,26 @@ geometry:
   - fill: { block: stone, from: [203, -60, 0], to: [204, -58, 1] }
   - fill: { block: stone, from: [201, -60, -1], to: [202, -60, -1] }
 
-setup:
-  - 'summon item 3.5 -60.0 2.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
-  - 'summon item 7.5 -60.0 -2.5 {Item:{id:"minecraft:diamond",count:2},PickupDelay:0s,Age:-32768s}'
-  - 'summon item 13.5 -57.0 0.5 {Item:{id:"minecraft:diamond",count:3},PickupDelay:0s,Age:-32768s}'
-  - 'summon item 17.5 -59.0 4.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
-  - 'summon item 42.5 -60.0 3.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
-  - 'summon item 49.5 -60.0 -3.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
-  - 'summon item 53.5 -60.0 4.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
-  - 'summon item 40.5 -60.0 8.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
-  - 'summon item 45.5 -60.0 15.5 {Item:{id:"minecraft:gravel",count:4},PickupDelay:0s,Age:-32768s}'
-  - 'summon item 108.5 -60.0 0.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s,Tags:["moving_pickup"]}'
-  - 'summon item 203.5 -57.0 0.5 {Item:{id:"minecraft:ender_pearl",count:1},PickupDelay:0s,Age:-32768s}'
+
+schedule:
+  # Summoned once the players are arranged, not in setup: a player joining
+  # in survival picks up any item within reach before the harness clears its
+  # inventory. A new player spawns at random inside the open-floor zone, and
+  # on a reused server the pearl collector rejoins where it took the pearl;
+  # either took a stack the requests then never saw.
+  - afterTicks: 0
+    run:
+      - 'summon item 3.5 -60.0 2.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 7.5 -60.0 -2.5 {Item:{id:"minecraft:diamond",count:2},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 13.5 -57.0 0.5 {Item:{id:"minecraft:diamond",count:3},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 17.5 -59.0 4.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 42.5 -60.0 3.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 49.5 -60.0 -3.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 53.5 -60.0 4.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 40.5 -60.0 8.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 45.5 -60.0 15.5 {Item:{id:"minecraft:gravel",count:4},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 108.5 -60.0 0.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s,Tags:["moving_pickup"]}'
+      - 'summon item 203.5 -57.0 0.5 {Item:{id:"minecraft:ender_pearl",count:1},PickupDelay:0s,Age:-32768s}'
 
 entities:
   - { type: enderman, pos: [201.5, -60, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b,Tags:[\"pearl\"]}" }
@@ -100,14 +108,18 @@ client:
   args: [client-host.ts, drivers/action-sequence.ts]
 params:
   players:
+    # Each request waits for the summoned items to reach the client.
     Sweeper:
+      waitTicks: 10
       actions:
         - { action: pick_up_items, input: { item: diamond, x: 7, y: -58, z: 0, radius: 12 } }
         - { action: pick_up_items, input: { item: diamond, x: 49, y: -60, z: 4, radius: 16 } }
     Pursuer:
+      waitTicks: 10
       actions:
         - { action: pick_up_items, input: { item: diamond, x: 108, y: -60, z: 0, radius: 24 } }
     PearlCollector:
+      waitTicks: 10
       actions:
         - { action: pick_up_items, input: { item: ender_pearl, x: 203, y: -57, z: 0, radius: 4 } }
 

@@ -326,6 +326,45 @@ test("a newly observed ore target replaces the branch goal in the same route", a
   assert.equal(result.status, "satisfied");
 });
 
+test("a route that sees only refused blocks left does not turn into exploring", async () => {
+  // collect/waterfall-oak, NoMaterial, 2026-10-22: with no dirt, the logs
+  // under the waterfall are refused for want of isolation material. The last
+  // dry log's drop was taken while its pickup route was still running, and
+  // that route's next look found only the two refused logs. It switched to
+  // the exploration goal, which the process itself refuses while matching
+  // blocks are refused, and walked off for two minutes instead of reporting
+  // the partial collection beside the tree.
+  const clock = testClock();
+  const refused = new Vec3(5, 64, 0);
+  const bot = fakeBot({ blocks: [refused], drops: [new Vec3(2.5, 64, 0.5)] });
+  let routes = 0;
+  let gained = 0;
+  const result = await mine(
+    bot,
+    request(bot, {
+      now: clock.now,
+      explore: true,
+      observedInventoryGain: () => gained,
+      canMine: () => ({ kind: "prohibited", reason: "liquid isolation needs a permitted building block or an empty bucket" }),
+      route: async (options) => {
+        routes += 1;
+        const drop = { id: 0, position: new Vec3(2.5, 64, 0.5), width: 0.25, height: 0.25 };
+        const first = options.goal.resolve({ position: bot.entity.position, entities: new Map([[0, drop]]) } as never);
+        assert.equal(first.kind, "active", "the drop is the goal");
+        delete bot.entities[0];
+        gained = 1;
+        clock.advance(260);
+        const next = options.goal.resolve({ position: bot.entity.position, entities: new Map() } as never);
+        assert.equal(next.kind, "invalid", next.kind === "active" ? `kept going for ${next.revision}` : "");
+        return { status: "completed", elapsedMs: 0 };
+      },
+    }),
+  );
+  assert.equal(routes, 1);
+  assert.equal(result.status, "unreachable");
+  assert.match(result.reason ?? "", /liquid isolation needs/);
+});
+
 test("an anticipated drop follows Mineflayer's item entity before its metadata arrives", async () => {
   const target = new Vec3(5, 64, 0);
   const bot = fakeBot({ blocks: [target] });
