@@ -10,6 +10,7 @@ import { Vec3 } from "vec3";
 import { asVec3, cellKey } from "../../../utils/index.js";
 import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../../world/block-visibility.js";
 import { droppedItemCount, droppedItemName } from "../../../world/item-pickup.js";
+import { stepIntoPickupReach } from "../../steering/pickup-approach.js";
 import type { useItemAt } from "../../../world/item-use.js";
 import { isLiquidSource, sourceInSight, USE_RAY_REACH } from "../../../world/liquid.js";
 import { findLoadedBlockPositions } from "../../../world/loaded-block-scan.js";
@@ -30,7 +31,7 @@ import {
 } from "../../index.js";
 import { blockReader, observeMineflayerBlock } from "../../mineflayer/world.js";
 import { isSafeSupport } from "../../world/block-geometry.js";
-import { withinItemPickupReach } from "../../world/item-geometry.js";
+import { stanceReachesItem, withinItemPickupReach } from "../../world/item-geometry.js";
 import { admitsDive, openWaterSurface } from "../../world/swimming.js";
 import { holdWaterPosition } from "../../steering/hold-water-position.js";
 import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
@@ -1200,6 +1201,19 @@ async function runRoute(
         const targets = targeting.refresh();
         if (targeting.isSatisfied() || targets.length === 0 || targeting.broken.length >= request.maximumBreaks)
           return { kind: "completed" };
+
+        // A drop's goal accepts a stance whose cell can reach it; close on it
+        // inside the cell before judging what this arrival achieved.
+        const feet = bot.entity.position.floored();
+        for (const target of targets) {
+          if (target.kind !== "drop") continue;
+          const entity = bot.entities[target.entityId];
+          if (!entity?.position) continue;
+          const item = { position: entity.position, width: entity.width ?? 0.25, height: entity.height ?? 0.25 };
+          if (withinItemPickupReach(bot.entity.position, item) || !stanceReachesItem(feet, item)) continue;
+          await stepIntoPickupReach(bot, target.entityId, signal);
+          break;
+        }
 
         const acted =
           (await recoverWaterInReach(bot, request, targeting, signal)) ||

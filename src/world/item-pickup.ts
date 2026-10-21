@@ -2,6 +2,7 @@ import type { Bot } from "mineflayer";
 import type { Vec3 } from "vec3";
 import { armSignal, asVec3, type Position3 } from "../utils/index.js";
 import { itemPickupGoal, type MovementPolicy, type Navigate, type NavigationResult } from "../navigation/index.js";
+import { stepIntoPickupReach } from "../navigation/steering/pickup-approach.js";
 import { withinItemPickupReach } from "../navigation/world/item-geometry.js";
 import { hasInventorySpaceFor } from "./inventory-capacity.js";
 
@@ -127,6 +128,7 @@ export async function pickupObservedItem(
       movements: options.movements,
       goal: itemPickupGoal({ id: entity.id }),
       onArrival: async ({ signal }) => {
+        await stepIntoPickupReach(bot, options.entityId, signal);
         const settlement = await pickup.settle(pickupMs);
         if (signal.aborted || settlement.kind === "signalled" || options.hasArrived()) return { kind: "completed" };
         const current = bot.entities[options.entityId];
