@@ -687,8 +687,11 @@ function beginHuntMob(
     // One pursuit can fight several loaded targets before this function returns.
     const quarry: HuntDrop = { name: request.dropName, id: drop.id };
     const settled = () => settleInventory(bot, quarry, observation);
-    // A resumed attempt may already carry what was asked for. The shield gate
-    // guards the next approach; it is no verdict on a hunt that needs none.
+    // A resumed attempt may already carry what was asked for, or find it lying
+    // loaded where the reflex's fights dropped it. Walking to a dropped bone is
+    // no approach to a skeleton: the shield gate guards the next approach, and
+    // it is no verdict on a hunt that needs none.
+    if (!settled()) await dependencies.gatherLoadedDrops(quarry, context);
     if (settled()) return { status: "succeeded", hunt: huntEvidence(observation), termination: "quantity_collected" };
     let shieldRequired: string | null = null;
     const checkShield = () => (shieldRequired = shieldRefusal(bot, request, dependencies));
@@ -703,7 +706,6 @@ function beginHuntMob(
         ? null
         : `[INVENTORY_FULL] No free slot or matching stack space for ${quarry.name}.`;
 
-    if (!settled()) await dependencies.gatherLoadedDrops(quarry, context);
     const initialInventoryStop = inventoryStop();
     if (!settled() && initialInventoryStop) return stoppedResult(initialInventoryStop, observation, "inventory_full");
 

@@ -177,3 +177,31 @@ test("a shield lost while gathering drops at contact is checked again before eng
   assert.equal(result.termination, "shield_required");
   assert.equal(result.hunt.targetsEngaged, 0);
 });
+
+test("a hunt whose shield broke still picks up the drops already lying loaded", async () => {
+  // Recorded in hunt/skeleton-hunts (hunts-skel2 t00001): the field's arrows
+  // broke BoneGatherer's shield during the reflex's fights, whose kills left
+  // bones lying loaded at (7.3, -60, -35.8), (54, -60, -8.9) and (20.2, -60,
+  // -11). The hunt resumed at (-10.4, -60, -46.4) and refused for want of a
+  // shield before picking any up. Walking to a dropped bone approaches no
+  // skeleton, so the gate guarding approaches must not stand before it.
+  const inventory = { count: 0 };
+  const type = minecraftData("1.21.4").entitiesByName.skeleton.id;
+  const bot = huntBot([mob(16, type, "skeleton", 44, "Hostile mobs")], inventory);
+  let pursued = 0;
+  const effects = dependencies(bot, inventory, []);
+  const result = await huntMob(bot, { ...huntRequest("skeleton"), count: 3 }, {}, {
+    ...effects,
+    gatherLoadedDrops: async () => {
+      inventory.count += 3;
+      return 3;
+    },
+    pursue: async (pursuit) => {
+      pursued++;
+      return effects.pursue(pursuit);
+    },
+  });
+  assert.equal(result.status, "succeeded", result.status === "succeeded" ? "" : result.error);
+  assert.equal(result.hunt.gained, 3);
+  assert.equal(pursued, 0, "no skeleton was approached");
+});
