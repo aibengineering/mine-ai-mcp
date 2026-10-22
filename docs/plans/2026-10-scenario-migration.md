@@ -556,6 +556,51 @@ Still open in `combat/evade`, in pens the fix does not touch:
   (cube-ab-base 2026-10-22T03-34-00-989Z-t00002). The server did not log
   "Can't keep up!", so only physics gaps in the incidents show these.
 
+### Final pass (2026-10-22, at df85fa5, `--jobs 4`, no game running)
+
+The fast tier ran 104 trials in 23 min, and 101 passed. Each failing
+fixture was rerun five times:
+
+| Fixture | Reruns | Reading |
+| --- | --- | --- |
+| `collect/obsidian-in-rock` | 0 of 5 | Regression from a2cb6c6: 3 of 3 at 2187ab3, 0 of 3 at a2cb6c6 |
+| `pathfinder/flowing-lava-course` | 3 of 5 | 15 of 15 at 49678c6 against 12 of 15 at df85fa5 |
+| `combat/night-hostile-haul` | 5 of 5 | A one-off: an evade at full health hit its navigation timeout |
+
+- **`collect/obsidian-in-rock`, LevelCaster, 1444dbb:** a cast's arrival
+  pours and scoops back, but the flow it spread still lay on all six new
+  obsidian blocks. With a full bucket and no building blocks, all six were
+  refused for liquid isolation. Before a2cb6c6, that refusal started branch
+  exploration. Exploring mined nothing, but it kept the route alive for
+  0.3 s, by which time the flow had drained. a2cb6c6 rightly stopped that
+  exploring, which left the refusal final. A scooped cast now waits up to
+  three seconds for unfed water on its pool to drain before the formed
+  obsidian is judged. a2cb6c6's rule is unchanged.
+  - **Unit test:** replays the leftover flow; it fails at df85fa5.
+  - **Proof:** obsidian-in-rock 5 of 5 and waterfall-oak 5 of 5, no lag.
+    The collect folder passed 23 of 24; the miss was `underwater-sand`,
+    which fails at df85fa5 too (below).
+- **`pathfinder/flowing-lava-course`, two causes:**
+  - **Collector, cd4a5a4, a regression from 2187ab3:** the pickup approach
+    steered flush to its cell's edge beside spent lava, released at 0.08
+    blocks a tick, and coasted 0.03 into the lava. The approach point now
+    keeps 0.2 more from any side that damages on contact.
+    - **Unit test:** replays the recorded pose, drop and lava cell.
+  - **Spreader, 48d8925, an older gap exposed by CPU stalls:** the planner
+    refused cells holding lava, but not cells that spreading lava enters on
+    its next update. After a 1.2 to 4.9 s stall, a replan skirted the front
+    and stepped into a cell as it filled. The movement policy now refuses a
+    cell that lava beside its feet or head flows into next, following
+    vanilla's spread rules. A falling stream or a flow over a drop doesn't
+    count. A committed route also replans when lava lands beside a step it
+    has yet to walk.
+    - **Unit tests:** cover the spread rules, replay the recorded replan,
+      and check that lava landing beside a route replans it.
+  - **Proof:** flowing-lava-course 8 of 8 with no stall. The pathfinder
+    folder passed 23 of 23, and 19 of 21 other lava trials passed: the
+    obsidian regression above, and CliffBot's recorded enderman flake, which
+    then passed 6 of 6.
+
 ### Known-failing now
 
 | Fixture | Failure | Pattern | Next |
