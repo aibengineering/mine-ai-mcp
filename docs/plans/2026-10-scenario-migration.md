@@ -304,7 +304,10 @@ trials, down from about 4%.
 
 Still open:
 - **CubeEvade**, rare: a cube hopping into the planned route. A patch is
-  saved, but it never fired live, so it is not merged.
+  saved, but it never fired live, so it is not merged. Fixed 2026-10-22 in
+  201808f: the bot's own retreat strikes knocked the cube onto the route.
+  The patch's replan, gated to hostiles not coming at the body, fired in
+  5 of 24 proof trials; see the confirmation-pass fixes.
 - **Opposing skeletons**, rare: arrows landing in the same tick from opposite
   sides need positioning.
 - **`withdraw-navigation` Sealed:** a reflex-returned request reported
@@ -336,8 +339,12 @@ Still open:
     3.4 blocks off and not closing, so the response handed the body back;
     the hunt's preparation lowered the kept shield, and the partner closed
     and swung inside the five ticks the re-raised shield needed.
-  - `combat/evade` (CubeEvade), 1 in 10: a magma cube's blow during the
-    evade; no evidence covered the hit.
+  - `combat/evade` (CubeEvade): fixed in 201808f (retreat strikes herding
+    the cube along the route; see the confirmation-pass fixes). What
+    remains in `combat/evade` is in other pens: WitherEvade sometimes dies
+    to the wither skeletons (twice in 48 proof trials without lag),
+    BlazeCorridor sometimes burns after a fireball, and client stalls of 2
+    to 6 s under load kill whichever pen is in contact.
 - **Load-sensitive:**
   - `hunt/awkward-quarry`: under server lag, the bot pinned under a big
     dripleaf missed its arrangement window.
@@ -508,6 +515,46 @@ return fix's first session (`.mine-labs/perch`, before the breath-jump fix):
   was destroyed, the client stopped answering and spun one core until the
   2400 s timeout. Bun's inspector cannot pause a spinning thread, so no stack
   was captured. This may be the same freeze as 70b8936.
+
+- **`combat/evade`, CubeEvade, 201808f:** the bot's own retreat strikes put
+  the cube in its way. Empty-handed sprint punches knock their target along
+  the bot's heading. The first punch carried the small cube from beside the
+  route onto it; the bot caught it up and punched it on, herding it about 14
+  blocks down the shelf until it landed on the body. In 50 instrumented
+  trials (`.mine-labs/cube-diag2`), 170 of 179 retreat strikes hit a cube
+  ahead of the heading, and the first ones carried it 3 to 6 blocks. Every
+  hit with evidence was this herding: r3-cube t00001 and t00014,
+  cube-ab-base 2026-10-22T03-38-32-243Z-t00012, and both hits in 60
+  six-pen samples. The route was never re-priced while it was walked.
+  - **Rejected:** withholding strikes on a cube ahead. The first strike is
+    what turns the cube aside on the approach; without it the cube hopped
+    onto the body there, 4 hits in 18 trials.
+  - **Fix:** the saved replan patch, gated. A route stops and searches
+    again, once per hostile, when a hostile lies within 3 blocks ahead of
+    the moving body, unless it is coming at the body. Ungated, the stop
+    stood WitherEvade still beside a closing wither skeleton until it died
+    (cube-proof3 2026-10-22T04-34-35-464Z-t00004). The earlier proof runs
+    could not see the patch fire: incidents keep 20 s, and the patch
+    recorded nothing. The evade's evidence now lists `replannedFor`, kept
+    in the trial's bot-data.
+  - **Unit test:** replays the t00012 ticks; a walker closing from ahead
+    does not stop the route.
+  - **Proof:** 18 passes in a row, no lag (`.mine-labs/cube-proof4`,
+    2026-10-22T04-52-26-582Z-t00007 to 04-58-19-911Z-t00024). CubeEvade took
+    no damage in all 24 trials, and the replan fired in 5 of them.
+    knockback-ledge, idle-melee-reflex, wounded-hide and creeper-navigation
+    passed once each.
+
+Still open in `combat/evade`, in pens the fix does not touch:
+- **WitherEvade** died to the wither skeletons without lag in cube-proof3
+  t00014 and cube-proof4 2026-10-22T04-50-47-421Z-t00004. Its evades never
+  replanned, and it often takes one 7-point hit (10 of 29 baseline trials).
+- **BlazeCorridor** burned after a fireball hit during a projectile guard
+  (cube-proof 2026-10-22T03-29-36-185Z-t00002, cube-proof2 t00009).
+- **Client stalls** of 2 to 6 s at `--jobs 3`, with another agent's runs on
+  the machine, killed HurtEvade and hit CubeEvade before its evade began
+  (cube-ab-base 2026-10-22T03-34-00-989Z-t00002). The server did not log
+  "Can't keep up!", so only physics gaps in the incidents show these.
 
 ### Known-failing now
 

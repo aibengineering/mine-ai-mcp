@@ -17,6 +17,59 @@ import {
 } from "../weapons/projectile-guard.js";
 import { defendWhileRetreating } from "../weapons/retreat-melee.js";
 const EVADE_ARRIVAL_MARGIN = 8;
+// A hostile this close in front of a moving body is about to be run into.
+const CLOSING_AHEAD_RANGE = 3;
+const CLOSING_AHEAD_COSINE = Math.cos((60 * Math.PI) / 180);
+// Below this the body has stopped; a hostile beside it is not on its heading.
+const CLOSING_AHEAD_SPEED = 0.1;
+// How far back a hostile's own motion is read, and the speed toward the body
+// (blocks per tick) above which it is coming at the body rather than lying in
+// the route.
+const APPROACH_TICKS = 3;
+const APPROACH_SPEED = 0.05;
+
+/**
+ * The hostile the moving body is about to run into, if any. An evade route is
+ * priced against hostiles where the search saw them and then walked for up to
+ * fifty steps, but the escape itself moves them: a sprinting retreat strike
+ * knocks its target several blocks along the body's heading. CubeEvade
+ * punched the small magma cube from beside its route onto it, caught it up
+ * and punched it on four more times, then ran into it and was struck at 1.8
+ * blocks (cube-ab-base t00012, as in r3-cube t00001 and t00014). Searching
+ * again from where the cube now lies takes the other side of the shelf.
+ *
+ * Only a hostile lying in the route or carried along it counts, not one coming
+ * at the body: the stop and the search that follow stood WitherEvade still
+ * beside a closing wither skeleton for a second, and it was struck until it
+ * died (cube-proof3 t00004).
+ */
+export function threatClosingAhead(
+  position: { readonly x: number; readonly z: number },
+  velocity: { readonly x: number; readonly z: number },
+  threats: readonly {
+    readonly id: number;
+    readonly position: { readonly x: number; readonly z: number };
+    /** Where it was `APPROACH_TICKS` ticks ago; null until it has been watched that long. */
+    readonly earlier: { readonly x: number; readonly z: number } | null;
+  }[],
+): number | null {
+  const speed = Math.hypot(velocity.x, velocity.z);
+  if (speed < CLOSING_AHEAD_SPEED) return null;
+  let nearest: { id: number; distance: number } | null = null;
+  for (const threat of threats) {
+    if (threat.earlier === null) continue;
+    const dx = threat.position.x - position.x, dz = threat.position.z - position.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance > CLOSING_AHEAD_RANGE || distance === 0) continue;
+    const towardBody =
+      ((threat.earlier.x - threat.position.x) * dx + (threat.earlier.z - threat.position.z) * dz) /
+      (distance * APPROACH_TICKS);
+    if (towardBody > APPROACH_SPEED) continue;
+    if ((dx * velocity.x + dz * velocity.z) / (distance * speed) < CLOSING_AHEAD_COSINE) continue;
+    if (!nearest || distance < nearest.distance) nearest = { id: threat.id, distance };
+  }
+  return nearest?.id ?? null;
+}
 export async function evade(
   bot: Bot,
   navigation: NavigationRuntime,
@@ -47,6 +100,8 @@ export async function evade(
     return escape !== null;
   };
   let guardStop: string | null = null;
+  // Hostiles a route was stopped for and searched again around, in order.
+  const replannedFor: number[] = [];
   // Select the hand before navigation starts owning digs and placements.
   const target = request.threats.map((threat) => bot.entities[threat.id]).find((entity) => entity?.isValid);
   const carried = target ? combatItemsForTarget(bot, target) : readCombatItems(bot);
@@ -55,18 +110,24 @@ export async function evade(
   using defence = defendWhileRetreating(bot, context, signal);
   const makeGoal = () => safeFromEntitiesGoal([...threats.values()], request.safeRange + EVADE_ARRIVAL_MARGIN);
   let goal = makeGoal();
+  // Each threat's last few observed positions, oldest first.
+  const trails = new Map<number, { readonly x: number; readonly z: number }[]>();
   const observe = () => {
     if (signal.aborted) return;
     // Keep the same last observation for the navigation goal and final evidence.
     // A creeper explosion removes the entity without necessarily emitting entityDead.
     for (const [id, threat] of threats) {
       const entity = bot.entities[id];
-      if (entity?.isValid)
-        threats.set(id, {
-          ...threat,
-          position: { ...entity.position },
-          distance: entity.position.distanceTo(bot.entity.position),
-        });
+      if (!entity?.isValid) continue;
+      threats.set(id, {
+        ...threat,
+        position: { ...entity.position },
+        distance: entity.position.distanceTo(bot.entity.position),
+      });
+      const trail = trails.get(id) ?? [];
+      trail.push({ x: entity.position.x, z: entity.position.z });
+      if (trail.length > APPROACH_TICKS + 1) trail.shift();
+      trails.set(id, trail);
     }
     for (const threat of observeExposedAvoidanceContact(bot, context)) {
       if (dead.has(threat.id) || threats.has(threat.id)) continue;
@@ -78,6 +139,7 @@ export async function evade(
   // and include new contacts as they enter the same policy's observed range.
   const resolved = (entity: Bot["entity"]) => {
     dead.add(entity.id);
+    trails.delete(entity.id);
     if (threats.delete(entity.id)) goal = makeGoal();
   };
   bot.on("entityDead", resolved);
@@ -93,6 +155,7 @@ export async function evade(
       shieldRaisedSwings: 0,
       projectileGuards,
       explosions,
+      replannedFor: [...replannedFor],
     };
   };
   try {
@@ -101,9 +164,33 @@ export async function evade(
     // left the bot trying to build cover with melee attackers already on it.
     // Let this admitted route reach separation or its existing physical limit.
     let route: Awaited<ReturnType<NavigationRuntime["navigate"]>>;
+    // One replan per hostile per approach: a route that must still pass it
+    // is not stopped again until it has been left behind.
+    const rerouted = new Set<number>();
     for (;;) {
       const routeStart = bot.entity.position.floored();
       const incoming = new AbortController();
+      const closing = new AbortController();
+      const observeClosing = () => {
+        const live = [...threats.values()].filter((threat) => bot.entities[threat.id]?.isValid);
+        for (const id of rerouted)
+          if (!live.some((threat) => threat.id === id && threat.distance <= CLOSING_AHEAD_RANGE + 2)) rerouted.delete(id);
+        const ahead = threatClosingAhead(
+          bot.entity.position,
+          bot.entity.velocity,
+          live
+            .filter((threat) => !rerouted.has(threat.id))
+            .map((threat) => {
+              const trail = trails.get(threat.id) ?? [];
+              const earlier = trail.length > APPROACH_TICKS ? trail[0]! : null;
+              return { id: threat.id, position: threat.position, earlier };
+            }),
+        );
+        if (ahead === null || closing.signal.aborted) return;
+        rerouted.add(ahead);
+        replannedFor.push(ahead);
+        closing.abort(`Hostile #${ahead} closed on the route ahead.`);
+      };
       const observeProjectile = () => {
         if (
           (context.policy?.shield ?? true) &&
@@ -114,6 +201,7 @@ export async function evade(
           incoming.abort("Incoming projectile requires a settled shield guard.");
       };
       bot.on("physicsTick", observeProjectile);
+      bot.on("physicsTick", observeClosing);
       try {
         observeProjectile();
         // An already-settled body has no route to cancel. Start readiness now
@@ -139,7 +227,7 @@ export async function evade(
                 }),
                 goal: { resolve: (observation) => goal.resolve(observation) },
                 signal,
-                stopSignal: incoming.signal,
+                stopSignal: AbortSignal.any([incoming.signal, closing.signal]),
                 timeoutMs: Math.max(1, budget.remaining),
                 // Separation chooses the destination; the registered hostile field also
                 // prices the path there. Without it an evade ran through a magma cube
@@ -153,6 +241,7 @@ export async function evade(
               });
       } finally {
         bot.off("physicsTick", observeProjectile);
+        bot.off("physicsTick", observeClosing);
       }
       observe();
       const stillContact = encounterBaseline(
@@ -171,6 +260,8 @@ export async function evade(
         !budget.exhausted
       )
         continue;
+      // Search again from here, pricing the hostile where it now is.
+      if (!signal.aborted && !incoming.signal.aborted && closing.signal.aborted && !budget.exhausted) continue;
       if (signal.aborted || !incoming.signal.aborted || budget.exhausted) break;
       // Navigation has settled its current landing/dig before releasing the
       // body. Turning inside its tick listener would steer the escape back
