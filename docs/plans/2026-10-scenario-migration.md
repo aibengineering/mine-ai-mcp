@@ -353,6 +353,53 @@ No failing trial lagged. The three failures in the suite:
   replace. The hunt returned `capability_blocked`. The runtime does not break
   such a plant before walling, which is a runtime gap.
 
+### Confirmation-pass fixes (2026-10-22)
+
+All three suite failures were root-caused and fixed, each with a unit test
+that failed first and repeated live passes, no lag.
+- **`collect/waterfall-oak`:** two causes.
+  - **LiveCollector, 2187ab3:** the pickup approach stopped at the first
+    0.02-block overlap of the item, and the waterfall's current pushed the
+    body back before the server saw it. The approach now holds on to the item
+    with a 0.15 margin until it is taken or one second passes.
+  - **NoMaterial, a2cb6c6:** a target refresh inside a running route started
+    exploring when only refused logs were left. It now leaves the refusal for
+    the mining loop to report.
+  - **Proof:** 5 of 5 passed.
+- **`combat/end-crystals-staircase`, 9c52111:** the water-bucket fall save
+  never poured beside a wall or step. Its forecast refused the whole fall
+  when the body's sideways drift touched a block. Each forecast tick now stops
+  only the blocked axis, as the client does.
+  - **Unit test:** replays the recorded fall onto a step at 15–17,60,26.
+  - **Proof:** 7 of 7 passed, with four water saves and none failed.
+- **`hunt/warped-forest-pearls`, 6227920:** the shelter now breaks out a
+  collisionless plant (vines, sugar cane) in a wall cell before placing the
+  wall, under the combat dig permission. With digging prohibited, the refusal
+  names the plant.
+  - **Proof:** 2 of 2 passed; `combat/wounded-hide` and
+    `combat/neutral-bystanders` passed as regression checks.
+- **`pathfinder/item-pickup-course`, e91dd24 (found while proving
+  waterfall-oak):** a fixture fault. A player joining beside a summoned item
+  picked it up before the harness cleared its inventory. Items are now
+  summoned once the players stand in their pens.
+  - **Proof:** 6 of 6 passed on reused servers.
+- **Possible client hang, 70b8936:** a staircase proof trial's client stopped
+  answering for 20 s and was timed out. Reading the code turned up a build
+  loop that re-ran a step-out route that ended without moving the bot, never
+  yielding to the event loop. Two such routes now stop the build with the
+  existing "could not step out" refusal.
+  - **Unit test:** reproduces the spin.
+  - **Not proven:** nothing ties this loop to the freeze. If it recurs, the
+    stuck client's stack needs capturing.
+
+Still open in `combat/end-crystals-staircase` (1 death in the proof
+sessions): walking back across the fountain, the return route steps up into
+the perched dragon's wing reach. An escape steps it one block down, and the
+route steps up again, for about 15 s. The dragon's take-off launched the bot
+to y 125. The fall save poured, but a second hit knocked it off the water.
+The fix is a return route that avoids perched-dragon contact cells, as the
+head approach already does, or waits for the dragon to leave the perch.
+
 ### Known-failing now
 
 | Fixture | Failure | Pattern | Next |
