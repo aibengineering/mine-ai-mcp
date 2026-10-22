@@ -1124,6 +1124,69 @@ test("liquid-adjacent mining leaves the pickup hole before a submerged dig", asy
   assert.equal(inspected, true);
 });
 
+test("a route goes on from a mined cell under water only once the water has flowed into it", async () => {
+  // collect/underwater-sand, 2026-10-22 (uw-tip t00005, and 49678c6's
+  // uw-base t00006), shifted 125 up: standing on the pool's floor at
+  // 2.528,-60,0.5 with water to its head, the bot broke the sand at 3,-61,0
+  // beside its feet. The drop lay at 3.369,-60.801,0.303 in the hole, below
+  // the reach of a body on the floor. The pickup route was planned 60 ms after
+  // the break, while the hole was still air under the source above it, and a
+  // planner that swims only through water found no way down into it: it left
+  // the pool over a rim it could not climb back, tunnelled under the floor for
+  // the drop, and never reached the last sand. Water arrived 240 ms after the
+  // break.
+  const hole = new Vec3(3, 64, 0);
+  const bot = fakeBot({
+    blocks: [hole],
+    solids: [new Vec3(2, 64, 0)],
+    feet: new Vec3(2.528, 65, 0.5),
+    isInWater: true,
+    onWaitForTicks: () => {
+      if (bot.blockAt(hole)?.name !== "air") return;
+      // Vanilla water flows into an opened cell five ticks after the update.
+      if (++ticksOpen >= 5) bot.addFlowingWater(hole);
+    },
+  });
+  let ticksOpen = 0;
+  // Read as Mineflayer does, by the cell a point lies in, and with water
+  // levels: the pool's sources are level 0, the flow falling into the hole 8.
+  const plain = bot.blockAt.bind(bot);
+  Object.assign(bot, {
+    blockAt: (point: Vec3) => {
+      const block = plain(point.floored());
+      return block?.name === "water" ? { ...block, getProperties: () => ({ level: block.stateId === 4 ? 0 : 8 }) } : block;
+    },
+  });
+  for (const cell of [new Vec3(2, 65, 0), new Vec3(2, 66, 0), new Vec3(3, 65, 0), new Vec3(3, 66, 0)]) bot.addWater(cell);
+  let holeOnContinue: string | undefined;
+  await mine(
+    bot,
+    request(bot, {
+      canMine: () => ({ kind: "mineable", routeMayBreak: false }),
+      // A submerged stance is a working cell only for a swimmer whose dig fits a breath.
+      movements: {
+        allowSwimming: true,
+        evaluateBreak: () => ({ decision: { kind: "allowed" }, tool: null }),
+        digTimeEstimator: { estimate: () => 75 },
+      } as unknown as MineRequest["movements"],
+      isSatisfied: () => holeOnContinue !== undefined,
+      breakInPlace: async () => {
+        bot.removeBlock(hole);
+        bot.entities[11] = fakeItemEntity(11, new Vec3(3.369, 64.199, 0.303));
+        Object.assign(bot.entities[11]!, { width: 0.25, height: 0.25 });
+        return { status: "broken" };
+      },
+      route: async ({ onArrival }) => {
+        const outcome = await onArrival!(arrivalAt(bot));
+        assert.equal(outcome.kind, "continue", "the drop is still to be collected");
+        holeOnContinue = bot.blockAt(hole)?.name;
+        return { status: "completed", elapsedMs: 0 };
+      },
+    }),
+  );
+  assert.equal(holeOnContinue, "water", "the route was handed back before the water reached the mined cell");
+});
+
 const obsidianRequest = {
   matches: (block: { name: string }) => block.name === "obsidian",
   matchingStateIds: new Set([5]),
