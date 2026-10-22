@@ -11,6 +11,9 @@ export interface DragonCloud {
   readonly radius: number;
 }
 
+/** How far a jump lifts the body above its take-off cell (vanilla peaks near 1.25). */
+export const JUMP_CLEARANCE = 1.3;
+
 /** Vanilla cloud damage checks a horizontal radius and a half-block-high box. */
 export function cloudExposure(cloud: DragonCloud, feet: Position3, jumpClearance = 0): number {
   if (feet.y >= cloud.y + 0.5 || feet.y + 1.8 + jumpClearance <= cloud.y) return 0;
