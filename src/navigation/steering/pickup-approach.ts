@@ -1,6 +1,12 @@
 import type { Bot } from "mineflayer";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
-import { nearestPickupPoint, PICKUP_OVERLAP_MARGIN, withinItemPickupReach } from "../world/item-geometry.js";
+import { damagesOnContact } from "../mineflayer/world.js";
+import {
+  nearestPickupPoint,
+  PICKUP_OVERLAP_MARGIN,
+  type PickupHazards,
+  withinItemPickupReach,
+} from "../world/item-geometry.js";
 import { horizontalControlsToward } from "./local-steering.js";
 
 /** A second: past a block drop's ten-tick pickup delay, and across a cell even against a current. */
@@ -17,7 +23,8 @@ const PICKUP_APPROACH_TICKS = 20;
  * toward the nearest point the cell allows and keeps steering there, so a
  * current cannot carry the body back out of reach before the server takes
  * the item. It stops when the item is gone, when the body leaves the ground,
- * or after a bounded number of ticks.
+ * or after a bounded number of ticks. The point keeps clear of a neighbour
+ * that damages on contact, since the body coasts on past where it releases.
  */
 export async function stepIntoPickupReach(
   bot: Bot,
@@ -28,6 +35,18 @@ export async function stepIntoPickupReach(
   const controls = ["forward", "back", "left", "right"] as const;
   const physics = signal ?? new AbortController().signal;
   const feet = bot.entity.position.floored();
+  // Lava can arrive beside the cell during the approach, so ask every tick.
+  const damaging = (dx: number, dz: number) =>
+    [0, 1].some((dy) => {
+      const block = bot.blockAt(feet.offset(dx, dy, dz));
+      return block !== null && damagesOnContact(block.name);
+    });
+  const hazards = (): PickupHazards => ({
+    west: damaging(-1, 0),
+    east: damaging(1, 0),
+    north: damaging(0, -1),
+    south: damaging(0, 1),
+  });
   const observed = () => {
     const entity = bot.entities[entityId];
     return entity?.position ? { position: entity.position, width: entity.width ?? 0.25, height: entity.height ?? 0.25 } : null;
@@ -37,7 +56,7 @@ export async function stepIntoPickupReach(
       const item = observed();
       if (!item) return true;
       if (!bot.entity.onGround) break;
-      const steer = horizontalControlsToward(bot.entity, nearestPickupPoint(feet, item), 0.05);
+      const steer = horizontalControlsToward(bot.entity, nearestPickupPoint(feet, item, hazards()), 0.05);
       for (const control of controls) bot.setControlState(control, steer[control]);
       bot.setControlState("sprint", false);
       await waitForPhysicsTicks(bot, 1, physics);
