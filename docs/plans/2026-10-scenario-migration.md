@@ -600,6 +600,19 @@ fixture was rerun five times:
     folder passed 23 of 23, and 19 of 21 other lava trials passed: the
     obsidian regression above, and CliffBot's recorded enderman flake, which
     then passed 6 of 6.
+- **`collect/underwater-sand`, b66af70, not a regression:** 7 of 8 at
+  49678c6 and 7 of 8 at 161f0b9, failing the same way. When the third drop
+  settled in the hole its block left, the pickup route was planned 60 ms
+  after the break, while the hole was still air under the pool. Water
+  arrived 240 ms later. The planner swims only through water, so its one
+  stance was under the floor. It left the pool over a rim it could not climb
+  back with `scaffold: false`, and the last sand, minable only from inside
+  the pool, was given up after a 129k-node search. Mining now waits up to
+  10 ticks for water to flow into a cell it opened before it routes on.
+  - **Unit test:** replays the recorded break and drop.
+  - **Proof:** underwater-sand 10 of 10 and 12 of 12 (waits of 5 to 6
+    ticks). Waterfall-oak and flowing-lava-course passed 5 of 5 each, the
+    collect folder 24 of 24, and item-pickup-course once.
 
 ### Known-failing now
 
