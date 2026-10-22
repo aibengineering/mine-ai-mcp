@@ -345,6 +345,10 @@ Still open:
     to the wither skeletons (twice in 48 proof trials without lag),
     BlazeCorridor sometimes burns after a fireball, and client stalls of 2
     to 6 s under load kill whichever pen is in contact.
+  - `combat/fortress-wounded`, about 1 in 4 (see the release pass):
+    CoverBot sometimes misses its 18-health recovery bar under blaze fire,
+    and WithdrawBot was once moved off its target during the hold after
+    arriving.
 - **Load-sensitive:**
   - `hunt/awkward-quarry`: under server lag, the bot pinned under a big
     dripleaf missed its arrangement window.
@@ -613,6 +617,24 @@ fixture was rerun five times:
   - **Proof:** underwater-sand 10 of 10 and 12 of 12 (waits of 5 to 6
     ticks). Waterfall-oak and flowing-lava-course passed 5 of 5 each, the
     collect folder 24 of 24, and item-pickup-course once.
+
+### Release pass (2026-10-22, at 338eadc, `--jobs 4`, no game running)
+
+The fast tier passed 102 of 104 trials in 21 min. Both failures were combat
+health or position checks, and both fixtures were rerun:
+- **`combat/skeleton-crossfire-navigation`, Elevated:** ended at 16 health,
+  hit by an arrow. It passed 5 of 5 on rerun; this is the pen's recorded
+  rare flake.
+- **`combat/fortress-wounded`:** older and intermittent, not from today's
+  fixes.
+  - **Numbers:** 5 of 6 at df85fa5 and 3 of 6 at 338eadc (including this
+    run), which is no clear difference at these sample sizes.
+  - **CoverBot:** missed its 18-health recovery bar (15.4 to 16.7) at both
+    commits.
+  - **WithdrawBot:** missed once at 338eadc. Its navigate arrived within
+    range, and something moved it more than 2 blocks during the minute-long
+    hold that followed.
+  - **Not investigated further;** it is listed under "Still flaky".
 
 ### Known-failing now
 
