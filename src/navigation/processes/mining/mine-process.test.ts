@@ -31,6 +31,7 @@ function fakeBot(options: {
   const lava = new Set((options.lava ?? []).map(key));
   const obsidian = new Set<string>();
   const water = new Set<string>();
+  const flowing = new Set<string>();
   const solid = (cell: Vec3) => blocks.has(key(cell)) || solids.has(key(cell)) || obsidian.has(key(cell));
   const entities = Object.fromEntries((options.drops ?? []).map((cell, index) => [index, fakeItemEntity(index, cell)]));
   const events = new EventEmitter();
@@ -109,6 +110,8 @@ function fakeBot(options: {
       if (obsidian.has(at)) return block("obsidian", 5, "block");
       if (lava.has(at)) return block("lava", 3, "empty", false);
       if (water.has(at)) return block("water", 4, "empty", false);
+      // Any state above the source's is flow.
+      if (flowing.has(at)) return block("water", 6, "empty", false);
       return block("air", 0, "empty");
     },
     removeBlock: (cell: Vec3) => blocks.delete(key(cell)),
@@ -118,6 +121,8 @@ function fakeBot(options: {
     removeLava: (cell: Vec3) => lava.delete(key(cell)),
     addWater: (cell: Vec3) => water.add(key(cell)),
     removeWater: (cell: Vec3) => water.delete(key(cell)),
+    addFlowingWater: (cell: Vec3) => flowing.add(key(cell)),
+    removeFlowingWater: (cell: Vec3) => flowing.delete(key(cell)),
   } as unknown as FakeWorld;
 }
 
@@ -130,6 +135,8 @@ type FakeWorld = Bot & {
   removeLava(cell: Vec3): void;
   addWater(cell: Vec3): void;
   removeWater(cell: Vec3): void;
+  addFlowingWater(cell: Vec3): void;
+  removeFlowingWater(cell: Vec3): void;
 };
 
 function fakeItemEntity(id: number, position: Vec3): Bot["entity"] {
@@ -1294,6 +1301,76 @@ test("a failed scoop is recovered before mining the cast obsidian", async () => 
   assert.equal(result.status, "satisfied");
   assert.equal(scoops, 3);
   assert.equal(carrying[0]?.name, "water_bucket");
+});
+
+test("a scooped cast's leftover flow drains before what it formed is judged", async () => {
+  // collect/obsidian-in-rock, LevelCaster, 2026-10-22: a caster with no
+  // building block poured on a level pool on arrival and scooped its water
+  // back. The flow it left stood on all six new obsidian blocks for a moment,
+  // so the next look refused every one for want of isolation material, and
+  // the request failed 2.5 s in with the bucket full. The same six were
+  // mineable 0.3 s later.
+  const carrying = [{ name: "water_bucket" }];
+  const pool = [new Vec3(1, 64, 0), new Vec3(2, 64, 0)];
+  const spread = pool.map((cell) => cell.offset(0, 1, 0));
+  let ticksSinceScoop: number | null = null;
+  const bot: FakeWorld = fakeBot({
+    lava: pool,
+    solids: [new Vec3(0, 64, 0), new Vec3(1, 63, 0), new Vec3(2, 63, 0)],
+    carrying,
+    feet: new Vec3(-3.5, 65, 0.5),
+    onWaitForTicks: () => {
+      if (ticksSinceScoop === null) return;
+      ticksSinceScoop += 1;
+      // An unfed flow recedes on its own scheduled updates.
+      if (ticksSinceScoop === 8) for (const cell of spread) bot.removeFlowingWater(cell);
+    },
+  });
+  let landing: Vec3 | null = null;
+  let broken = 0;
+  const result = await mine(
+    bot,
+    request(bot, {
+      ...obsidianRequest,
+      explore: true,
+      isSatisfied: () => broken >= pool.length,
+      canMine: (block) =>
+        bot.blockAt(block.position.offset(0, 1, 0))?.name === "water" && !carrying.some((item) => item.name === "bucket")
+          ? { kind: "prohibited", reason: "liquid isolation needs a permitted building block or an empty bucket" }
+          : { kind: "mineable", routeMayBreak: true },
+      cast: async (_bot, use) => {
+        if (use.item.name === "water_bucket") {
+          carrying[0] = { name: "bucket" };
+          const cell = use.expectedCells![0]!.position;
+          landing = new Vec3(cell.x, cell.y, cell.z);
+          bot.addWater(landing);
+          for (const source of pool) {
+            bot.removeLava(source);
+            bot.addObsidian(source);
+          }
+        } else {
+          carrying[0] = { name: "water_bucket" };
+          bot.removeWater(landing!);
+          for (const cell of spread) bot.addFlowingWater(cell);
+          ticksSinceScoop = 0;
+        }
+        return { kind: "used" };
+      },
+      route: async (options) => {
+        // The route arrives at the pool's lip, and the arrival pours.
+        bot.entity.position = new Vec3(0.5, 65, 0.5);
+        await options.onArrival?.(arrivalAt(bot));
+        assert.equal(carrying[0]?.name, "water_bucket", "the arrival poured and scooped");
+        const next = options.goal.resolve({ position: bot.entity.position, entities: new Map() } as never);
+        assert.equal(next.kind, "active", "what the pour formed is the route's next goal");
+        for (const source of pool) bot.removeObsidian(source);
+        broken = pool.length;
+        return { status: "completed", elapsedMs: 0 };
+      },
+    }),
+  );
+  assert.equal(result.status, "satisfied");
+  assert.deepEqual(carrying, [{ name: "water_bucket" }]);
 });
 
 test("an unrecoverable cast source cannot be hidden by reaching the inventory quantity", async () => {
