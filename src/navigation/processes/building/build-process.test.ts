@@ -133,6 +133,30 @@ test("a bot standing where a tread belongs steps onto the nearest open stance, n
   assert.ok(checked, "the bot was asked to step out");
 });
 
+/**
+ * A step-out route that ends without moving the bot, because its goal already
+ * held where the bot stood or the body never left the cell, sent the build
+ * straight back to the same step-out. Each pass awaited only a route that
+ * settled at once, so the loop never yielded: a live End client stopped
+ * answering the server mid-staircase and was timed out.
+ */
+test("a step-out that leaves the bot where it was stops the build instead of spinning", async () => {
+  const { bot, physics } = structureWorld({ feet: new Vec3(2, 64, 0) });
+  let routes = 0;
+  const result = await build(bot, {
+    ...physics,
+    cells: cells([[2, 64, 0], [3, 64, 0]]),
+    removeWrongBlocks: false,
+    route: async () => {
+      if (++routes > 100) throw new Error("the build spun on a step-out that never moved the bot");
+      return { status: "completed", elapsedMs: 0 };
+    },
+  });
+  assert.equal(result.status, "stopped");
+  assert.match(String(result.reason), /could not step out of the structure/);
+  assert.ok(routes <= 3, `${routes} step-out routes`);
+});
+
 test("enclosesBot reads a roofed box as sealed and a doorway as open", () => {
   const { bot, put } = structureWorld({ feet: new Vec3(1, 64, 1) });
   const filled = new Set(hollowBox().map(([x, y, z]) => packKey(x, y, z)));

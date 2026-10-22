@@ -497,6 +497,7 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
   const targeting = new BuildTargeting(bot, request);
   const movements = request.movements(targeting.protectedCells);
   let idlePasses = 0;
+  let stepOutStalls = 0;
 
   for (;;) {
     request.signal?.throwIfAborted();
@@ -511,9 +512,17 @@ export async function build(bot: Bot, request: BuildRequest): Promise<BuildResul
     // likewise when every remaining placement would seal the bot in.
     if (targeting.standingInStructure() || targeting.onlyEnclosing()) {
       const goal = targeting.standingInStructure() ? targeting.clearOfStructureGoal() : targeting.outsideGoal();
+      const before = feetOf(bot);
       const exit = await request.route({ movements, goal, signal: request.signal, stopSignal: request.stopSignal });
       if (exit.status === "stopped") {
         return targeting.result("stopped", `could not step out of the structure: ${exit.reason}`);
+      }
+      // A route that settles where it began changes nothing the next pass
+      // could see, and only a settled route was awaited: repeating it never
+      // yielded, and a live client stopped answering its server.
+      stepOutStalls = feetOf(bot).equals(before) ? stepOutStalls + 1 : 0;
+      if (stepOutStalls >= IDLE_PASSES) {
+        return targeting.result("stopped", `could not step out of the structure: ${IDLE_PASSES} step-out routes ended where they began`);
       }
       continue;
     }
