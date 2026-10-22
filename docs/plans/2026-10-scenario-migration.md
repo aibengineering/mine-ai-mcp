@@ -392,13 +392,39 @@ that failed first and repeated live passes, no lag.
   - **Not proven:** nothing ties this loop to the freeze. If it recurs, the
     stuck client's stack needs capturing.
 
-Still open in `combat/end-crystals-staircase` (1 death in the proof
-sessions): walking back across the fountain, the return route steps up into
-the perched dragon's wing reach. An escape steps it one block down, and the
-route steps up again, for about 15 s. The dragon's take-off launched the bot
-to y 125. The fall save poured, but a second hit knocked it off the water.
-The fix is a return route that avoids perched-dragon contact cells, as the
-head approach already does, or waits for the dragon to leave the perch.
+- **`combat/end-crystals-staircase`, perched return, 392012a:** walking
+  back across the fountain, the return route stepped up into the perched
+  dragon's wing reach. An escape stepped it one block down, and the route
+  stepped up again for about 15 s, until the take-off launched the bot to
+  y 125 (run 2026-10-21T22-50-17-456Z-t00006). The return now refuses the
+  perched head, neck and wing boxes, as the head approach does. When they
+  close every route, it holds its clear cell until the perch changes, for
+  at most 90 s.
+  - **Unit tests:** replay the recorded perch pose and the step from
+    -5,63,1 to -5,64,0; a closed return waits instead of stopping.
+- **`combat/end-crystals-staircase`, breath jump, 9a9d0d7 (found while
+  proving the return):** a fireball cloud on a tread cleared a standing head
+  by 0.12 blocks, so navigation admitted the cell, but the step-up into it
+  lifted the head into the cloud. The route jumped through it until the bot
+  died, six damage a jump (runs 2026-10-22T01-41-26-600Z-t00001 and
+  01-47-09-942Z-t00004). Navigation now refuses a jump whose envelope
+  enters observed breath deeper than the route's start.
+  - **Unit test:** replays the recorded cloud and step-up.
+- **Proof for both:** 6 of 6 passed in a row, no lag (`.mine-labs/perch2`,
+  2026-10-22T02-09-30-067Z-t00001 to 02-23-31-072Z-t00006).
+
+Still open in `combat/end-crystals-staircase`, both seen once in the
+return fix's first session (`.mine-labs/perch`, before the breath-jump fix):
+- **Shelter in the strafing band** (2026-10-22T01-41-26-600Z-t00003): the
+  bot sheltered high on a staircase (7.6,86,40.5) while the dragon strafed
+  at y 85. Each pass's wing knockback hit it through the walls for 1.25, so
+  the 90 s hold ended at health 7. The next requests re-entered the same
+  shelter, and it died there. The shelter's safety check ignores flying wing
+  contact, and `holdWhile` keeps the bot in place while the body passes.
+- **Client hang** (2026-10-22T01-41-26-600Z-t00002): after the last crystal
+  was destroyed, the client stopped answering and spun one core until the
+  2400 s timeout. Bun's inspector cannot pause a spinning thread, so no stack
+  was captured. This may be the same freeze as 70b8936.
 
 ### Known-failing now
 
