@@ -137,6 +137,17 @@ export class FightMovement {
             coversAll: defence.coversAll, aligned: defence.aligned,
           } });
           stop.abort("incoming projectile needs combat facing");
+          // Mineflayer sends this tick's movement as soon as the physicsTick
+          // listeners return, before the guard that takes over can turn. The
+          // route's heading would reach the server first, and vanilla blocks
+          // with the head yaw it held on the tick before the hit: an arrow two
+          // ticks out then lands on the side the route faced away from
+          // (skeleton-arena-crossfire, xfire-base t00002). A forced look
+          // applies synchronously, so this tick carries the guard's facing.
+          if (this.weapons.itemUse.shieldRaised)
+            void this.scene.bot.lookAt(defence.facing, true).catch((error: unknown) => {
+              this.scene.responseRequired.abort(error);
+            });
         } else if (stopWhen?.when()) stop.abort(stopWhen.reason);
         else if (
           meleeDistance(this.scene.bot, this.scene.target) <= MELEE_RANGE &&
