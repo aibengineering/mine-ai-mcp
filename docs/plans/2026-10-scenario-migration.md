@@ -20,12 +20,13 @@ went with them. The tables further down are the plan as triage made it; this
 section records what was built and where it differs.
 
 **The suite now:**
-- `tests/minecraft/scenarios/` holds **113 fixtures**, up from 35, after the
-  flake investigation returned `end-crystals-staircase`. 103 of them form the
-  fast tier. The 10 tagged `slow` form the rest of the full tier: the End
-  fights, the long Nether pearl hunt, and the two multi-location generated
-  worlds, which expand into 13 trials.
-- `tests/minecraft/known-failing/` holds **18 fixtures** for behaviour that
+- `tests/minecraft/scenarios/` holds **114 fixtures**, up from 35, after the
+  flake investigation returned `end-crystals-staircase` and the crossfire
+  round `cover-crossing-hunt`. 104 of them form the fast tier. The 10 tagged
+  `slow` form the rest of the full tier: the End fights, the long Nether
+  pearl hunt, and the two multi-location generated worlds, which expand into
+  13 trials.
+- `tests/minecraft/known-failing/` holds **17 fixtures** for behaviour that
   fails today, described as observed; it held 24 before the flake fixes.
   Neither tier runs them.
 - Most consolidated fixtures place one bot per walled pen, each with its own
@@ -321,9 +322,20 @@ Still open:
     arrows in the back during the creeper escape can still take Cave to the
     bar.
   - `combat/skeleton-crossfire-navigation` (Elevated) and known-failing
-    `skeleton-arena-crossfire`: arrows released within two ticks from
-    opposite sides. One shield arc cannot cover them; the fix is positioning
-    that keeps shooters within one arc.
+    `skeleton-arena-crossfire`: seven guard faults behind the arena's hits
+    were fixed in the crossfire round (see the confirmation-pass fixes).
+    Elevated did not fail in 52 runs that round. What the arena still
+    fails on, about 1 trial in 7, is the hypothesis this entry first
+    recorded: two arrows from different skeletons landing one or two ticks
+    apart, their entry points 150 to 180 degrees apart on the body. No
+    heading blocks both, and the turn made when the first block is
+    confirmed reaches the server a tick late. Positioning that keeps the
+    shooters within one arc, or a turn timed to the first impact rather
+    than its confirmation, would answer it.
+  - `combat/cover-crossing-hunt`, 1 in 32: after a kill, the partner paused
+    3.4 blocks off and not closing, so the response handed the body back;
+    the hunt's preparation lowered the kept shield, and the partner closed
+    and swung inside the five ticks the re-raised shield needed.
   - `combat/evade` (CubeEvade), 1 in 10: a magma cube's blow during the
     evade; no evidence covered the hit.
 - **Load-sensitive:**
@@ -413,6 +425,55 @@ that failed first and repeated live passes, no lag.
     `naturalRegeneration false`, so full hunger counts as healing, and it
     hides or evades instead of fighting. In t00004 the evade ran past both
     skeletons and the bot died. In t00007 a stationary guard stopped at 6.
+- **Skeleton crossfire (crossfire round, branch `flake-crossfire`):**
+  `skeleton-crossfire-navigation` passed 20 of 20 at 3f3e029 (xfire-base,
+  xfire-base2), so the Elevated hit was not reproduced. The arena passed 15
+  of 20 there and `cover-crossing-hunt` 10 of 10. The ledger's hypothesis,
+  arrows from opposite sides within two ticks, was one cause among eight:
+  - **f50389f:** the server reports a skeleton's pitch as level (0 in 15,429
+    of 15,575 samples), so a draw from a skeleton above the bot's head, as
+    one knocked up by the bot's swing, read as aimed elsewhere (xfire-base
+    t00006, xfire-base2 t00019). A level pitch now gives no vertical
+    evidence; the head's yaw decides.
+  - **3dc9ce0:** the reported head lags a walking body, 10 degrees off at 3.5
+    blocks, so a draw dropped out of the windups two ticks before release
+    (xfire-fix3 t00017). A draw seen aimed at the bot stays so while the
+    head is within 30 degrees.
+  - **cb1f953:** a blocked arrow's flight stayed extrapolated from launch for
+    several ticks and kept the guard facing it while the next arrow came
+    (xfire-base t00012, xfire-base2 t00010). A block confirmation now retires
+    the arrow at the body.
+  - **3b2c7e5:** an approach that stopped for an arrow sent the route's
+    heading on that tick, and the guard's turn a tick late (xfire-base
+    t00002). The stop now applies the guard's facing before the send.
+  - **84a2889:** an approach lowered its shield beside an arrow in flight
+    that missed the standing body, then sprinted into its line (xfire-base
+    t00006). It stays guarded while an arrow is within its stride.
+  - **7922fb1:** after a kill, a skeleton drawing at the bot from beyond
+    contact range was not fought next, and the resumed navigate lowered the
+    shield (xfire-fix1 t00007). The response now fights it, guard kept up.
+  - **da1a170:** the guard's 70-degree cone faced one attacker alone when two
+    stood further apart, although vanilla blocks anything within 90 degrees
+    of the head yaw. Two wither skeletons 144 degrees apart hit
+    `cover-crossing-hunt` from behind (xfire-cover1 t00011), and two arrows
+    entering 167 degrees apart a tick apart hit the arena (xfire-fix2
+    t00007). Attackers in reach, and arrows landing within the turn horizon
+    of each other, are now held between when an 85-degree half-arc holds
+    them.
+  - **Unit tests:** each commit replays its recorded scene and fails without
+    the fix.
+  - **Proof:** in xfire-proof1 (`--jobs 3`, no lag)
+    `skeleton-crossfire-navigation` passed 12 of 12 in a row,
+    `cover-crossing-hunt` 12 of 12 and the arena 9 of 12. In xfire-fix4
+    (`--jobs 1`) crossfire-navigation and the arena passed 10 of 10 each and
+    `cover-crossing-hunt` 9 of 10. creeper-navigation,
+    cover-fights, idle-ranged-reflex and withdraw-navigation passed once
+    each (xfire-regress1).
+  - **Moved:** `cover-crossing-hunt` returned to `scenarios/combat` in
+    c7569ac, 31 of 32 since da1a170.
+  - **Still open:** the arena stays known-failing at about 1 trial in 7, on
+    the hypothesis itself (see "Still flaky"), and the crossing's rare
+    handover after a kill.
 
 Still open in `combat/end-crystals-staircase` (1 death in the proof
 sessions): walking back across the fountain, the return route steps up into
@@ -430,8 +491,7 @@ head approach already does, or waits for the dragon to leave the perch.
 | `combat/basalt-crossfire-wounded` | An evade or hide response cancels the wounded navigate | consistent | Requests resuming after reflex claims |
 | `combat/busy-smelt-interrupted` | The cook is cancelled by `[HOSTILE_CONTACT]`, not resumed | consistent | Requests resuming after reflex claims |
 | `combat/full-night-request` | A hide response ends the pending hunt's window | consistent | Requests resuming after reflex claims |
-| `combat/cover-crossing-hunt` | Shield faces one skeleton while the other swings | about 1 in 10 | Shield arc positioning |
-| `combat/skeleton-arena-crossfire` | Arrows from opposite sides within two ticks | intermittent | Shield arc positioning |
+| `combat/skeleton-arena-crossfire` | Two arrows landing one or two ticks apart, entry points 150 to 180 degrees apart | about 1 in 7 (19 of 22 after the crossfire round) | Positioning that keeps shooters in one arc, or a turn timed to the first impact |
 | `combat/navigation-side-bridge` | Armour carried, not worn (as the legacy run); loops on an unreachable skeleton | consistent | Navigation under ranged fire |
 | `combat/end-crystals-pillar-then-staircase` | Vanilla arrow spread is wider than the slit under the cage; about 40% hits | intermittent, cause proven | Fire from an elevated cell |
 | `combat/ender-dragon-first-entry` | Escape blocked by breath in a one-wide pit or tunnel | intermittent (passed once) | Breath escape from narrow cells |
