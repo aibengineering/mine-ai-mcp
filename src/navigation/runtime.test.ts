@@ -1,9 +1,10 @@
 import { exactBlockGoal } from "./goals/index.js";
 import { createMovementPolicy } from "./movements/policy.js";
-import { createNavigationRuntime } from "./runtime.js";
+import { avoidingObservedBreath, createNavigationRuntime } from "./runtime.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture } from "../test-support/bot.js";
+import { flatWorld } from "../test-support/navigation.js";
 
 test("builds and closes one navigation runtime for a bot", async () => {
   const bot = botFixture();
@@ -62,4 +63,26 @@ test("navigation uses observed perched-cloud clearance", async () => {
   } finally {
     await navigation.close();
   }
+});
+
+/**
+ * Staircase fight of 22 October (run 2026-10-22T01-41-26-600Z-t00001): a
+ * fireball's breath lay on the tread at y 79.92 above the climb. Standing on
+ * -46,78,1 the head stops 0.12 below it, so the step was admitted, but the
+ * step-up from -46,77,2 lifts the head into it. The route jumped through it
+ * three times, six damage each, and the bot died. These are the recorded
+ * cloud (its fireball footprint reserved at radius seven) and steps.
+ */
+test("a step-up whose jump rises into breath above its landing is refused", () => {
+  const cloud = { id: 123, x: -45.49348371844987, y: 79.92159999847412, z: 0.40520858723854586, radius: 7 };
+  const movements = avoidingObservedBreath(createMovementPolicy(), [cloud], { x: -45.5, y: 76, z: 3.5 });
+  const world = flatWorld();
+  assert.equal(movements.decideStep(-46, 78, 1, world).kind, "allowed", "standing there, the head stays below the cloud");
+  assert.equal(movements.decideStep(-46, 79, 1, world).kind, "prohibited");
+  assert.equal(movements.decideMovement?.("step_up", { x: -46, y: 77, z: 2 }, { x: -46, y: 78, z: 1 }).kind, "prohibited");
+  assert.equal(movements.decideMovement?.("walk", { x: -46, y: 77, z: 2 }, { x: -46, y: 77, z: 1 }).kind ?? "allowed", "allowed");
+  assert.equal(movements.decideMovement?.("step_up", { x: -46, y: 76, z: 3 }, { x: -46, y: 77, z: 2 }).kind, "allowed",
+    "a block lower, the jump's head stays below the cloud");
+  assert.equal(movements.decideMovement?.("step_up", { x: -36, y: 77, z: 10 }, { x: -36, y: 78, z: 11 }).kind, "allowed",
+    "beyond the radius a jump is free");
 });

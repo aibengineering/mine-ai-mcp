@@ -9,7 +9,9 @@ import { TestEndCombat as EndCombat } from "../../../test-support/combat.js";
 import type { FootingRecovery } from "../footing.js";
 
 import { botFixture } from "../../../test-support/bot.js";
+import { flatWorld } from "../../../test-support/navigation.js";
 import { physicsEveryMillisecond } from "../../../test-support/physics.js";
+import { CrystalObservation } from "../../perception/combat/crystal.js";
 import { PerchObservation } from "../../perception/combat/perch.js";
 
 /** No footing recovery is pending in these fixtures. */
@@ -446,4 +448,72 @@ test("damage-interrupted breath excavation gives the next escape a route without
   const result = await new EndCombat(bot, navigation, footing).evade(new AbortController().signal);
   assert.equal(result.outcome, "evaded");
   assert.equal(attempts, 2);
+});
+
+/**
+ * Staircase fight of 21 October (run 2026-10-21T22-50-17-456Z-t00006): after
+ * the last crystal, the walk back to 9,64,-14 crossed the fountain while the
+ * dragon sat on it. The return route stepped up from -5,63,1 to -5,64,0, into
+ * the perched wing's reach; the escape stepped one block down again, and the
+ * two handed the body back and forth for 15 s until the take-off launched it
+ * to y 125. These are the recorded perch pose and the cell the escape left.
+ */
+function staircaseReturn(onRoute: (movements: Parameters<NavigationRuntime["navigate"]>[0]["movements"], call: number) => boolean) {
+  const bot = botFixture({ dimension: "the_end", position: new Vec3(-4.5, 63, 1.45), groundY: 62 },
+    { clearControlStates: () => {}, deactivateItem: () => {}, _client: new EventEmitter() });
+  const perched = dragon(5, { yaw: 0.6135923151542566 });
+  perched.position.set(-0.027594914940232584, 67.26512656614356, 0.13981359499631196);
+  bot.entities[42] = perched;
+  bot.entities[40] = { id: 40, name: "end_crystal", isValid: false, position: new Vec3(-12.5, 98, 39.5) } as unknown as Bot["entity"];
+  let routes = 0;
+  const navigation = {
+    world: flatWorld(),
+    navigate: async ({ goal, movements }: Parameters<NavigationRuntime["navigate"]>[0]) => {
+      routes++;
+      const resolved = goal.resolve({} as never);
+      assert.equal(resolved.kind, "active");
+      if (resolved.kind === "active") assert.match(resolved.revision, /^crystal-return:9,64,-14/);
+      if (!onRoute(movements, routes)) return { status: "failed", reason: "no path fixture", elapsedMs: 1 } as const;
+      bot.entity.position.set(9.5, 64, -13.5);
+      return { status: "completed", elapsedMs: 1 } as const;
+    },
+  } as unknown as NavigationRuntime;
+  const observation = new CrystalObservation(bot, 40, "melee");
+  observation.destroyed = true;
+  observation.meleeReturn = new Vec3(9, 64, -14);
+  return { bot, perched, observation, end: new EndCombat(bot, navigation, steady), routes: () => routes };
+}
+
+test("the crystal return keeps out of the perched dragon's wing reach it stepped into", async () => {
+  const world = flatWorld();
+  const f = staircaseReturn((movements) => {
+    assert.equal(movements.decideStep(-5, 64, 0, world).kind, "prohibited",
+      "the recorded step-up cell lies inside the perched wing's knockback box");
+    assert.equal(movements.decideMovement?.("step_up", { x: -5, y: 63, z: 1 }, { x: -5, y: 64, z: 0 }).kind, "prohibited");
+    assert.notEqual(movements.decideStep(-4, 63, 2, world).kind, "prohibited", "a block lower, the wing does not reach");
+    assert.equal(movements.decideMovement?.("walk", { x: -5, y: 63, z: 1 }, { x: -4, y: 63, z: 2 }).kind ?? "allowed", "allowed");
+    return true;
+  });
+  using observation = f.observation;
+  using _physics = physicsEveryMillisecond(f.bot);
+  const result = await f.end.crystal(40, new AbortController().signal, observation);
+  assert.equal(result.outcome, "crystal_destroyed");
+  assert.equal(result.crystal?.melee.returnedToGround, true);
+  assert.equal(f.routes(), 1);
+});
+
+test("a crystal return that the perched wings close waits for the perch to change, not stops", async () => {
+  const f = staircaseReturn((_movements, call) => {
+    if (call === 1) {
+      // The dragon turns its wings away while the body holds its clear cell.
+      setTimeout(() => { f.perched.yaw = 0.6135923151542566 + Math.PI / 2; }, 20);
+      return false;
+    }
+    return true;
+  });
+  using observation = f.observation;
+  using _physics = physicsEveryMillisecond(f.bot);
+  const result = await f.end.crystal(40, new AbortController().signal, observation);
+  assert.equal(result.outcome, "crystal_destroyed", result.reason ?? "");
+  assert.equal(f.routes(), 2);
 });
