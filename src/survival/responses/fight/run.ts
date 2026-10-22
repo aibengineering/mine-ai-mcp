@@ -2,7 +2,9 @@ import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
 import { ProtectedAttackProgress } from "../../control/combat/attack-progress.js";
 import type { FightOutcome } from "../../control/combat/engagement.js";
 import { type CombatExecutionSnapshot } from "../../control/combat/execution.js";
-import { meleeImminent } from "../../perception/combat/observations.js";
+import { isWindingUpAtBot, meleeImminent } from "../../perception/combat/observations.js";
+import { incomingShieldProjectiles } from "../../perception/combat/shield-projectiles.js";
+import { isHostile } from "../../perception/combat/threats.js";
 import { CombatPosition } from "../../positioning/combat/position.js";
 
 import { CoverFight } from "./cover.js";
@@ -109,11 +111,14 @@ export async function runMobFight(
   // it rises, and a wither skeleton beside a dead partner swung inside that
   // gap; nor does a blocked swing buy time, since these mobs strike again
   // within two ticks of it. An owner that is cancelled still releases it.
+  // A bow drawn at the bot is as near: its arrow can leave the next tick
+  // (skeleton-arena-crossfire, xfire-fix1 t00007), and so is one in flight.
   const keepGuard =
     !scene.ownerSignal.aborted &&
-    Object.values(scene.bot.entities).some(
-      (entity) => entity.isValid && entity !== scene.target && !scene.dead.has(entity.id) && meleeImminent(scene.bot, entity),
-    );
+    (Object.values(scene.bot.entities).some(
+      (entity) => entity.isValid && entity !== scene.target && !scene.dead.has(entity.id) &&
+        (meleeImminent(scene.bot, entity) || (isHostile(entity) && isWindingUpAtBot(scene.bot, entity))),
+    ) || incomingShieldProjectiles(scene.bot).length > 0);
   try {
     await scene.execution.run("release", () =>
       weapons.itemUse.neutralise(async () => {

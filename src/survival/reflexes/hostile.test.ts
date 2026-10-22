@@ -667,6 +667,32 @@ test("a kill answers the response's next attacker in reach without handing the b
   assert.deepEqual(fixture.outcomes()[0].killedTargetIds, [7, 8]);
 });
 
+test("a kill answers the response's next shooter drawing at the bot without handing the body back", async () => {
+  // skeleton-arena-crossfire, xfire-fix1 2026-10-22T02-33-59-604Z (t00007):
+  // the fight killed skeleton #191 while #189, eleven blocks off, drew at the
+  // bot. Beyond contact range and with no hit yet, #189 was not owed a fight,
+  // so the response handed the body back and the resumed navigate sprinted
+  // with its shield lowered. #189 released a tick later and hit it from behind.
+  const engaged: number[] = [];
+  await using fixture = reflexFixture(async (targetId) => {
+    engaged.push(targetId);
+    fixture.bot.entities[targetId]!.isValid = false;
+    return died(targetId);
+  });
+  const shooter = (id: number, x: number, drawing: boolean) =>
+    Object.assign(hostile(id, "skeleton", x), {
+      heldItem: { name: "bow" }, metadata: { 8: drawing ? 1 : 0 },
+      headYaw: x < 0 ? -Math.PI / 2 : Math.PI / 2, pitch: 0,
+    });
+  fixture.bot.entities[7] = shooter(7, 5, false);
+  fixture.bot.entities[8] = shooter(8, -11, true);
+  fixture.bot.entities[9] = shooter(9, 12, false);
+  fixture.tick();
+  assert.ok(await until(() => fixture.recorded().length > 0));
+  assert.deepEqual(engaged, [7, 8], "the drawing shooter is fought; the idle one beyond contact is left");
+  assert.deepEqual(fixture.outcomes()[0].killedTargetIds, [7, 8]);
+});
+
 test("ending the original melee contact cannot drop the owner while another fuse needs clearance", async () => {
   let engaging = false;
   await using fixture = reflexFixture((targetId, signal) => new Promise(resolve => {
