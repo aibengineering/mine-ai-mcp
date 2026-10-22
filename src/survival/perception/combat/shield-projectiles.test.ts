@@ -320,3 +320,37 @@ test("a walking guard counts a close draw as covered only where its arrow will e
   bot.entity.velocity.set(0, -0.0784, 0);
   assert.equal(observeProjectileDefence(bot)!.aligned, true);
 });
+test("a draw from a skeleton knocked above the bot is aimed at it although its reported pitch is level", () => {
+  // skeleton-arena-crossfire, xfire-base 2026-10-22T02-16-05-470Z (t00006),
+  // 452 ms before an unblocked arrow from #52. The bot's swing had knocked #52
+  // 0.64 blocks into the air; it kept drawing with its head on the bot, but
+  // the server reports a skeleton's pitch as level almost always (0 in
+  // 15,429 of 15,575 recorded samples, with the bot 5 to 35 degrees below),
+  // and a level line from that eye passes over the bot's head. The draw was read as aimed elsewhere and the guard turned to #51
+  // and #53, eight blocks off.
+  const { bot } = fixture();
+  delete bot.entities[8];
+  bot.entity.position.set(3.1885, -60, -3.5236);
+  bot.entity.velocity.set(0.0028, -0.0784, 0);
+  bot.entity.yaw = -1.3456;
+  const skeleton = (id: number, position: Vec3, headYaw: number) => {
+    bot.entities[id] = {
+      id, name: "skeleton", kind: "Hostile mobs", isValid: true, height: 1.99, width: 0.6,
+      position, velocity: new Vec3(0, 0, 0),
+      heldItem: { name: "bow" }, metadata: { 8: 1 }, headYaw, pitch: 0,
+    } as unknown as Bot["entity"];
+  };
+  skeleton(51, new Vec3(9.0256, -60, 2.8149), 0.7363);
+  skeleton(52, new Vec3(4.1573, -59.364, -6.7), 2.8716);
+  skeleton(53, new Vec3(9.4133, -60, -1.7036), 1.2763);
+  const defence = observeProjectileDefence(bot)!;
+  assert.ok(defence.windingUp.some((entity) => entity.id === 52), "the airborne skeleton's draw is aimed at the bot");
+  const toward = bot.entities[52]!.position.minus(bot.entity.position);
+  const heading = defence.facing.minus(bot.entity.position);
+  const cosine = (toward.x * heading.x + toward.z * heading.z) / Math.hypot(toward.x, toward.z) / Math.hypot(heading.x, heading.z);
+  assert.ok(cosine >= Math.cos((70 * Math.PI) / 180), "the shield covers the nearest drawn bow");
+
+  // A pitch the server did report still places the aim.
+  bot.entities[52]!.pitch = Math.PI / 4;
+  assert.ok(!observeProjectileDefence(bot)!.windingUp.some((entity) => entity.id === 52), "a draw aimed above the bot");
+});
