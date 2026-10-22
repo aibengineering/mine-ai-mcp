@@ -13,7 +13,7 @@ description: >-
   to the exit without digging. Every pen must
   survive and finish its errand; Transit must keep its health with no
   regeneration, and Mixed must leave the passage clear of fire. The open-ground
-  crossing past wither skeletons is known-failing/combat/cover-crossing-hunt.
+  crossing past wither skeletons is combat/cover-crossing-hunt.
 
 world:
   type: flat

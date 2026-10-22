@@ -6,6 +6,7 @@ import { Vec3 } from "vec3";
 import { botFixture } from "../../../test-support/bot.js";
 import { projectileReachesBody } from "../../positioning/combat/exposure.js";
 import { confirmShieldBlock, observeProjectileDefence, projectileShieldFacing, shieldFacing } from "../../weapons/shield-facing.js";
+import { arrowFlight, trackArrowFlights } from "./arrow-flight.js";
 import { CombatPerception } from "./observations.js";
 import { arrowImpact, arrowImpactInTicks, incomingShieldProjectiles, isIncomingArrow } from "./shield-projectiles.js";
 
@@ -319,4 +320,141 @@ test("a walking guard counts a close draw as covered only where its arrow will e
   // heading still covers it.
   bot.entity.velocity.set(0, -0.0784, 0);
   assert.equal(observeProjectileDefence(bot)!.aligned, true);
+});
+test("a draw from a skeleton knocked above the bot is aimed at it although its reported pitch is level", () => {
+  // skeleton-arena-crossfire, xfire-base 2026-10-22T02-16-05-470Z (t00006),
+  // 452 ms before an unblocked arrow from #52. The bot's swing had knocked #52
+  // 0.64 blocks into the air; it kept drawing with its head on the bot, but
+  // the server reports a skeleton's pitch as level almost always (0 in
+  // 15,429 of 15,575 recorded samples, with the bot 5 to 35 degrees below),
+  // and a level line from that eye passes over the bot's head. The draw was read as aimed elsewhere and the guard turned to #51
+  // and #53, eight blocks off.
+  const { bot } = fixture();
+  delete bot.entities[8];
+  bot.entity.position.set(3.1885, -60, -3.5236);
+  bot.entity.velocity.set(0.0028, -0.0784, 0);
+  bot.entity.yaw = -1.3456;
+  const skeleton = (id: number, position: Vec3, headYaw: number) => {
+    bot.entities[id] = {
+      id, name: "skeleton", kind: "Hostile mobs", isValid: true, height: 1.99, width: 0.6,
+      position, velocity: new Vec3(0, 0, 0),
+      heldItem: { name: "bow" }, metadata: { 8: 1 }, headYaw, pitch: 0,
+    } as unknown as Bot["entity"];
+  };
+  skeleton(51, new Vec3(9.0256, -60, 2.8149), 0.7363);
+  skeleton(52, new Vec3(4.1573, -59.364, -6.7), 2.8716);
+  skeleton(53, new Vec3(9.4133, -60, -1.7036), 1.2763);
+  const defence = observeProjectileDefence(bot)!;
+  assert.ok(defence.windingUp.some((entity) => entity.id === 52), "the airborne skeleton's draw is aimed at the bot");
+  const toward = bot.entities[52]!.position.minus(bot.entity.position);
+  const heading = defence.facing.minus(bot.entity.position);
+  const cosine = (toward.x * heading.x + toward.z * heading.z) / Math.hypot(toward.x, toward.z) / Math.hypot(heading.x, heading.z);
+  assert.ok(cosine >= Math.cos((70 * Math.PI) / 180), "the shield covers the nearest drawn bow");
+
+  // A pitch the server did report still places the aim.
+  bot.entities[52]!.pitch = Math.PI / 4;
+  assert.ok(!observeProjectileDefence(bot)!.windingUp.some((entity) => entity.id === 52), "a draw aimed above the bot");
+});
+test("a shield block retires the arrow it stopped, so the guard turns to the next one", () => {
+  // skeleton-arena-crossfire, xfire-base2 2026-10-22T02-23-30-756Z (t00010).
+  // Arrow #75 from skeleton #68, eight blocks south, met the shield and the
+  // server confirmed the block (entity status 29) 167 ms before arrow #76
+  // from skeleton #67, five blocks east, landed. The server sends no new
+  // position for a deflected arrow for several ticks, so #75's flight was
+  // still extrapolated from its launch, one tick from the body, and stayed
+  // the most urgent shot: the guard kept facing south on the next send and
+  // turned east one tick too late.
+  const { bot } = fixture();
+  delete bot.entities[8];
+  bot.entity.id = 63;
+  bot.entity.position.set(5.1134, -60, -5.4886);
+  bot.entity.velocity.set(0, -0.0784, 0);
+  bot.entity.yaw = 2.4871;
+  const north = { id: 75, name: "arrow", isValid: true, width: 0.5, height: 0.5, metadata: [],
+    position: new Vec3(3.5222, -58.36, 2.3871), velocity: new Vec3(0.2351, 0.095, -1.5271) } as unknown as Bot["entity"];
+  const east = { id: 76, name: "arrow", isValid: true, width: 0.5, height: 0.5, metadata: [],
+    position: new Vec3(10.5807, -58.36, -6.7), velocity: new Vec3(-1.4656, 0.0613, 0.2519) } as unknown as Bot["entity"];
+  bot.entities[75] = north;
+  bot.entities[76] = east;
+  // Launch observations as old as they were when the block was confirmed.
+  let age = 246;
+  using _flights = trackArrowFlights(bot, () => performance.now() - age);
+  bot._client.emit("spawn_entity", { entityId: 75 });
+  age = 46;
+  bot._client.emit("spawn_entity", { entityId: 76 });
+  assert.equal(observeProjectileDefence(bot)!.projectiles[0]!.entity, north, "before the block, #75 lands first");
+
+  bot._client.emit("entity_status", { entityId: 63, entityStatus: 29 });
+  const defence = observeProjectileDefence(bot)!;
+  assert.deepEqual(defence.projectiles.map(({ entity }) => entity.id), [76]);
+  assert.ok(defence.facing.x > bot.entity.position.x + 0.5, "the guard faces the arrow still in flight");
+  // A later observation of the deflected arrow replaces the retired flight.
+  north.position.set(4.6428, -58.3737, -4.8888);
+  north.velocity.set(-0.0223, -0.0395, 0.1451);
+  bot._client.emit("sync_entity_position", { entityId: 75 });
+  assert.equal(arrowFlight(bot, north).velocity.z, 0.1451);
+});
+/** The largest angle between the facing and any of these points, in degrees. */
+function widestBearing(origin: Vec3, facing: Vec3, points: readonly Vec3[]): number {
+  const look = facing.minus(origin);
+  return Math.max(...points.map((point) => {
+    const toward = point.minus(origin);
+    const cosine = (look.x * toward.x + look.z * toward.z) / Math.hypot(look.x, look.z) / Math.hypot(toward.x, toward.z);
+    return (Math.acos(Math.max(-1, Math.min(1, cosine))) * 180) / Math.PI;
+  }));
+}
+test("a guard between two swordsmen 144 degrees apart faces between them, inside the vanilla half-circle", () => {
+  // cover-crossing-hunt, xfire-cover1 2026-10-22T02-57-25-071Z (t00011), 138
+  // ms before an unblocked swing: wither skeleton #144, just struck and
+  // knocked back, 1.7 blocks west, and #145, 2.1 blocks south-east, stand
+  // 144 degrees apart. Vanilla 1.21.4 blocks any source in front of the head
+  // yaw, within 90 degrees either side; the guard's own 70-degree cone could
+  // not hold both, so it turned fully onto the nearer #144, and #145 swung
+  // into the bot's back from 144 degrees off.
+  const bot = botFixture({ position: new Vec3(0.5, -60, 8.9096), groundY: -61 });
+  bot.entity.yaw = 2.3798;
+  const swordsman = (id: number, position: Vec3) => ({
+    id, name: "wither_skeleton", kind: "Hostile mobs", type: "hostile", isValid: true, width: 0.7, height: 2.4,
+    position, velocity: new Vec3(0, 0, 0), heldItem: { name: "stone_sword" }, metadata: [], headYaw: 0, pitch: 0,
+  }) as unknown as Bot["entity"];
+  bot.entities[144] = swordsman(144, new Vec3(-1.0214, -60, 8.1993));
+  bot.entities[145] = swordsman(145, new Vec3(1.5256, -60, 10.7747));
+  const facing = shieldFacing(bot, bot.entities[145]!, new Set());
+  const widest = widestBearing(bot.entity.position, facing, [bot.entities[144]!.position, bot.entities[145]!.position]);
+  assert.ok(widest < 85, `both swordsmen are in front of the shield (widest ${widest.toFixed(0)} degrees)`);
+
+  // Directly behind each other, no facing can hold both: the nearer is faced.
+  bot.entities[145]!.position.set(2.5, -60, 9.6);
+  const behind = shieldFacing(bot, bot.entities[145]!, new Set());
+  assert.ok(widestBearing(bot.entity.position, behind, [bot.entities[144]!.position]) < 1);
+});
+test("two arrows landing a tick apart on opposite faces are held between, inside the vanilla half-circle", () => {
+  // skeleton-arena-crossfire, xfire-fix2 2026-10-22T02-46-37-408Z (t00007),
+  // 186 ms before an unblocked arrow. Skeletons #170 and #171 released in the
+  // same tick. #173 will enter the body's south-east face in three ticks and
+  // #174 the north face in four, 167 degrees apart. The guard held #173's
+  // contact alone; #174 landed a tick after #173's block, too soon to turn.
+  const { bot } = fixture();
+  delete bot.entities[8];
+  bot.entity.position.set(-1.7239, -60, 0.0417);
+  bot.entity.velocity.set(0.0242, -0.0784, -0.0019);
+  bot.entity.yaw = -2.3169;
+  const arrow = (id: number, position: Vec3, velocity: Vec3) => {
+    bot.entities[id] = { id, name: "arrow", isValid: true, width: 0.5, height: 0.5, metadata: [], position, velocity } as unknown as Bot["entity"];
+  };
+  arrow(173, new Vec3(2.1111, -58.3446, 2.3883), new Vec3(-1.3984, -0.0673, -0.7629));
+  arrow(174, new Vec3(2.0962, -58.204, -2.5938), new Vec3(-1.3805, 0.0019, 0.6692));
+  const defence = observeProjectileDefence(bot, 0, 5000)!;
+  assert.deepEqual(defence.projectiles.map(({ entity }) => entity.id), [173, 174]);
+  assert.equal(defence.heldProjectileId, 173);
+  const widest = widestBearing(bot.entity.position, defence.facing, defence.projectiles.map(({ contact }) => contact));
+  assert.ok(widest < 90, `both contacts are in front of the shield (widest ${widest.toFixed(0)} degrees)`);
+});
+test("a block confirmed with no arrow at the body retires nothing", () => {
+  const { bot, arrow } = fixture();
+  bot.entity.id = 1;
+  using _flights = trackArrowFlights(bot, () => performance.now());
+  bot._client.emit("spawn_entity", { entityId: arrow.id });
+  bot._client.emit("entity_status", { entityId: 1, entityStatus: 29 });
+  assert.equal(incomingShieldProjectiles(bot)[0], arrow, "an arrow five ticks out is still coming");
 });

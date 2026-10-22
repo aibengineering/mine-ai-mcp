@@ -10,7 +10,12 @@ description: >-
   third run arrived untouched); the legacy run of 2026-10-19 did not arrive
   and took nine arrows, ending at 17. This is the
   walled section of combat/skeleton-crossfire-navigation, split out until
-  crossfire from three sides is guarded.
+  crossfire from three sides is guarded. Seven guard faults fixed on
+  2026-10-22 took it from 15 passes in 20 to 19 in 22. Every failure left
+  is two arrows from different skeletons landing one or two ticks apart,
+  their entry points on the body 150 to 180 degrees apart: no single
+  heading blocks both, and the turn made once the first block is confirmed
+  reaches the server a tick too late for the second.
 
 world:
   type: flat

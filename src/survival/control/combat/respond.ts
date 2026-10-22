@@ -1,5 +1,6 @@
 import type { Bot } from "mineflayer";
 import { type NavigationRuntime } from "../../../navigation/index.js";
+import { bowDrawAimedAtBot } from "../../perception/combat/attention.js";
 import { defendsOnContact, inDefensiveContact } from "../../perception/combat/contact.js";
 import { decideFightMovement } from "../../policy/combat/decision.js";
 import { recoveryHealth } from "../../policy/combat/health.js";
@@ -36,6 +37,12 @@ type Entity = Parameters<Bot["attack"]>[0];
  * - shooters, creepers, endermen - are taken in turn while they are still a
  * threat and the bot is still fit to fight. Under defend_only the fight was
  * never a pursuit, so it ends with its target as before.
+ *
+ * A shooter drawing at the bot is in contact by the decision's own measure,
+ * wherever it stands. Handed back instead, the resumed request lowers the
+ * shield and walks on while that arrow is still to come: in
+ * skeleton-arena-crossfire (xfire-fix1 t00007) skeleton #189, eleven blocks
+ * off, released a tick after the kill and hit the sprinting bot from behind.
  */
 function nextGroupTarget(
   bot: Bot,
@@ -47,8 +54,11 @@ function nextGroupTarget(
   if (policy.engagement === "defend_only" || needsCombatRecovery(bot.health, policy.engage_min_health)) return null;
   return (
     request.threats
-      .filter((threat) => threat.distance <= HOSTILE_CONTACT_RANGE || context.attackerIds.has(threat.id))
-      .map((threat) => bot.entities[threat.id])
+      .map((threat) => ({ threat, entity: bot.entities[threat.id] }))
+      .filter(({ threat, entity }) =>
+        threat.distance <= HOSTILE_CONTACT_RANGE || context.attackerIds.has(threat.id) ||
+        (entity !== undefined && bowDrawAimedAtBot(bot, entity)))
+      .map(({ entity }) => entity)
       .filter(
         (entity): entity is Entity =>
           entity !== undefined &&

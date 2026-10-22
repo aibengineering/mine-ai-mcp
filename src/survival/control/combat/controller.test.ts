@@ -455,6 +455,42 @@ test("a kill hands the guard over raised while the partner is closing", async ()
   }
 });
 
+test("a kill hands the guard over raised while another shooter draws at the bot", async () => {
+  // skeleton-arena-crossfire, xfire-fix1 2026-10-22T02-33-59-604Z (t00007):
+  // skeleton #191 died while #189 drew at the bot from eleven blocks. The
+  // release lowered the shield, and #189 released a tick later; a guard raised
+  // after that blocks only five ticks on, about when the arrow lands.
+  for (const drawing of [true, false]) {
+    const fixture = combatFixture(["iron_sword", "shield"], { targetDistance: 2 });
+    const { bot, target, script } = fixture;
+    // A drawn bow is aimed at a body, not a point.
+    Object.assign(bot.entity, { width: 0.6, height: 1.8 });
+    bot.entities[8] = {
+      ...target, id: 8, name: "skeleton", kind: "Hostile mobs", height: 1.99, position: new Vec3(-11, 64, 0),
+      heldItem: { name: "bow" }, metadata: { 8: drawing ? 1 : 0 }, headYaw: -Math.PI / 2, pitch: 0,
+    } as unknown as Entity;
+    let killed = false;
+    let lowered = 0;
+    script.onAttack = () => {
+      bot.emit("entityDead", target);
+      killed = true;
+    };
+    const deactivate = bot.deactivateItem;
+    bot.deactivateItem = () => {
+      if (killed) lowered++;
+      deactivate();
+    };
+    const result = await createCombatController(bot, navigationFixture()).engage(
+      target.id,
+      new AbortController().signal,
+      "hold",
+    );
+    assert.equal(result.kind, "died");
+    assert.equal(lowered > 0, !drawing, drawing ? "the drawn bow keeps the guard up" : "an idle shooter releases it");
+    stopCombatFixtureClocks();
+  }
+});
+
 for (const lavaBesideCube of [true, false])
   test(`a pursued cube below ${lavaBesideCube ? "at a lava shore is not followed off the shelf" : "away from lava is still approached"}`, async () => {
     // The 2026-10-20 basalt hunt: a cube bounced off the shelf, the approach
