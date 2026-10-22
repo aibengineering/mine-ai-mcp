@@ -1031,6 +1031,84 @@ test("evade refreshes a completed route when a newly observed cube is still in c
   assert.ok(result.finalDistances.every((entry) => entry.distance >= 36));
 });
 
+/**
+ * Plays `[body, hostile]` x/z pairs one physics tick each through the first
+ * route of an evade from the CubeEvade pen, and records whether that route was
+ * stopped for the hostile and at which pair.
+ */
+async function evadeThrough(
+  name: string,
+  start: { x: number; z: number },
+  ticks: [number, number, number, number][],
+  body = { x: 200.5, z: 0.5 },
+) {
+  const stops: string[] = [];
+  await using fixture = reflexFixture(
+    async (targetId) => died(targetId),
+    async ({ stopSignal }) => {
+      if (stops.length === 0) {
+        fixture.bot.entity.velocity = new Vec3(0.15, -0.08, 0);
+        for (const [index, [bx, bz, hx, hz]] of ticks.entries()) {
+          fixture.bot.entity.position = new Vec3(bx, 64, bz);
+          fixture.bot.entities[7]!.position = new Vec3(hx, 64, hz);
+          fixture.bot.emit("physicsTick");
+          if (stopSignal?.aborted) {
+            stops.push(`${String(stopSignal.reason)} at tick ${index}`);
+            return { status: "stopped", reason: String(stopSignal.reason), elapsedMs: 1 };
+          }
+        }
+        stops.push("not stopped");
+      }
+      // The next search, pricing the hostile where it now is, leads away.
+      fixture.bot.entity.position = new Vec3(260, 64, 4.5);
+      return { status: "completed", elapsedMs: 1 };
+    },
+  );
+  fixture.bot.health = 11;
+  fixture.bot.entity.position = new Vec3(body.x, 64, body.z);
+  fixture.bot.entities[7] = Object.assign(hostile(7, name, start.x), { position: new Vec3(start.x, 64, start.z) });
+  const directive = observeHostileResponse(fixture.bot, fixture.observer.threats);
+  assert.equal(directive.kind, "evade");
+  const result = await respondDirectly(fixture, directive);
+  return { stops, outcome: result.outcome };
+}
+
+test("an evade stops and searches again before it runs into a cube knocked along its route", async () => {
+  // combat/evade, CubeEvade, cube-ab-base 2026-10-22T03-38 (t00012), every
+  // other tick from 1.87 s: sprinting east with the small cube, knocked onto
+  // the route and along it by the retreat strikes, sliding to rest ahead. It
+  // struck the body at 1.8 blocks 33 ms after the last of these.
+  const { stops, outcome } = await evadeThrough("magma_cube", { x: 204.5, z: 0.5 }, [
+    [208.17, -4.52, 210.69, -3.87],
+    [208.73, -4.52, 211.13, -3.82],
+    [209.29, -4.51, 211.86, -3.74],
+    [209.85, -4.51, 211.86, -3.74],
+    [210.41, -4.51, 211.98, -3.73],
+  ]);
+  assert.deepEqual(stops, ["Hostile #7 closed on the route ahead. at tick 2"]);
+  assert.equal(outcome, "safe_separation");
+});
+
+test("an evade does not stop for a walker coming at it from ahead", async () => {
+  // Stopping beside a closing wither skeleton stood WitherEvade still for a
+  // second until it was struck to death (cube-proof3 t00004). Running on is
+  // the defence there.
+  const { stops, outcome } = await evadeThrough(
+    "wither_skeleton",
+    { x: 211.2, z: -4.0 },
+    [
+      [208.17, -4.52, 211.0, -4.0],
+      [208.45, -4.52, 210.8, -4.0],
+      [208.73, -4.52, 210.6, -4.1],
+      [209.01, -4.52, 210.4, -4.1],
+      [209.29, -4.51, 210.2, -4.2],
+    ],
+    { x: 207.9, z: -4.5 },
+  );
+  assert.deepEqual(stops, ["not stopped"]);
+  assert.equal(outcome, "safe_separation");
+});
+
 test("a cube killed during retreat does not fail separation against its last position", async () => {
   await using fixture = reflexFixture(
     async (targetId) => died(targetId),
