@@ -11,10 +11,12 @@ import { exactBlockGoal, itemPickupGoal, nearEntityGoal, nearGoal } from "../goa
 import type { PlannedStep } from "../movements/movement.js";
 import { createMovementCatalogue, type MovementCatalogue } from "../movements/catalogue.js";
 import { createMovementPolicy } from "../movements/policy.js";
+import { createMovements } from "../runtime.js";
 import type { NavigationObservation } from "../world/world.js";
 import { createNavigator } from "./navigator.js";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { botFixture } from "../../test-support/bot.js";
 import {
   countingTelemetry,
   FakeNavigationBot,
@@ -791,6 +793,51 @@ test("a run pushed back to where it began reports no progress after three routes
   assert.equal(outcome.failure.reason, "repeated_execution_checkpoint");
   assert.match(outcome.failure.observation, /3 executed routes in a row/);
   assert.equal(executed, 3);
+});
+
+test("lava arriving beside a committed route replans it before the bot walks past", async () => {
+  // pathfinder/flowing-lava-course, Spreader (lava-proof t00001): a cup's lava
+  // landed at 332,-59,0 beside the route already committed through 332,-1. It
+  // touched no cell the route read, so nothing replanned, and the bot walked
+  // on past lava that fills 332,-1 on its next update. Here lava lands beside
+  // the third cell of a straight walk while the first step is under way. Spent
+  // lava (the Collector's, beside the cell it was digging from) refuses no
+  // step, and the route walks on.
+  const lavaState = botFixture().registry.blocksByName.lava!.minStateId;
+  const walk = async (level: number) => {
+    const world = flatWorld();
+    const classified: string[] = [];
+    const reasons: string[] = [];
+    class LandingBot extends FakeNavigationBot {
+      landed = false;
+      override async prepareMovement(step: PlannedStep) {
+        if (!this.landed) {
+          this.landed = true;
+          world.load(
+            { x: -2, y: 63, z: 1 },
+            { stateId: lavaState + level, collisionShapes: [], traits: { empty: true, liquid: "lava", damaging: true } },
+          );
+        }
+        return super.prepareMovement(step);
+      }
+    }
+    const bot = new LandingBot();
+    bot.current = observation(-5);
+    const navigator = createNavigator({
+      world,
+      bot,
+      telemetry: onEvent((event) => {
+        if (event.kind === "search_started") reasons.push(event.reason);
+        if (event.kind === "world_change") classified.push(event.classification);
+      }),
+    });
+    const policy = createMovements(botFixture(), { allowDigging: false, scaffolding: false, allowSprinting: false });
+    const outcome = await settle(navigator, { goal: exactBlockGoal({ x: 5, y: 63, z: 0 }), policy });
+    assert.equal(outcome.kind, "completed");
+    return { classified, replanned: reasons.includes("world_changed") };
+  };
+  assert.deepEqual(await walk(8), { classified: ["invalidating"], replanned: true }, "a falling column landed");
+  assert.deepEqual(await walk(6), { classified: ["irrelevant"], replanned: false }, "spent lava");
 });
 
 test("repeated start invalidation settles as planning_stalled and releases the navigation owner", async (t) => {

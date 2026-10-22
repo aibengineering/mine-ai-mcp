@@ -22,16 +22,42 @@ export function withinItemPickupReach(
 const BODY_HALF_WIDTH = 0.3;
 
 /**
+ * How much further from a damaging neighbour the body's edge keeps. A walk
+ * released inside its brake still coasts: one closing on a drop beside lava
+ * released at 0.08 a tick and slid 0.03 past its point into the lava.
+ */
+export const PICKUP_HAZARD_CLEARANCE = 0.2;
+
+/** The faces of a stance cell whose neighbour the body must stay clear of. */
+export interface PickupHazards {
+  readonly west: boolean;
+  readonly east: boolean;
+  readonly north: boolean;
+  readonly south: boolean;
+}
+
+const NO_HAZARDS: PickupHazards = Object.freeze({ west: false, east: false, north: false, south: false });
+
+/**
  * Where in a stance cell the body comes nearest an item without leaving the
- * cell: its centre moved toward the item and kept a body's half width inside.
+ * cell: its centre moved toward the item and kept a body's half width inside,
+ * and a further clearance from any face whose neighbour damages on contact.
  */
 export function nearestPickupPoint(
   feet: BlockPosition,
   item: Pick<EntityObservation, "position">,
+  hazards: PickupHazards = NO_HAZARDS,
 ): Position3 {
-  const clamp = (value: number, low: number) =>
-    Math.min(Math.max(value, low + BODY_HALF_WIDTH), low + 1 - BODY_HALF_WIDTH);
-  return { x: clamp(item.position.x, feet.x), y: feet.y, z: clamp(item.position.z, feet.z) };
+  const clamp = (value: number, low: number, lowHazard: boolean, highHazard: boolean) =>
+    Math.min(
+      Math.max(value, low + BODY_HALF_WIDTH + (lowHazard ? PICKUP_HAZARD_CLEARANCE : 0)),
+      low + 1 - BODY_HALF_WIDTH - (highHazard ? PICKUP_HAZARD_CLEARANCE : 0),
+    );
+  return {
+    x: clamp(item.position.x, feet.x, hazards.west, hazards.east),
+    y: feet.y,
+    z: clamp(item.position.z, feet.z, hazards.north, hazards.south),
+  };
 }
 
 /**

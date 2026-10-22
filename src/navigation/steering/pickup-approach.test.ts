@@ -32,6 +32,63 @@ test("an arrival off the centre of a reaching cell closes on the item without le
   assert.equal(Object.values(controls).some(Boolean), false, "controls released");
 });
 
+test("closing on a drop beside lava keeps the body's momentum out of the lava cell", async () => {
+  // pathfinder/flowing-lava-course, Collector, 2026-10-22 (bisect-df85fa5
+  // t00001): the obsidian's drop lay at 400.125,-0.947, reached from the floor
+  // cell 401,-54,0 whose west neighbour 400,-54,0 had filled with spent lava.
+  // The approach steered for x 401.3, flush with that cell, released inside its
+  // 0.05 brake still moving 0.08 a tick, and the body slid to x 401.27: its
+  // edge 0.03 into the lava. Burning, the collect returned failed at health 16.
+  const controls: Record<string, boolean> = {};
+  const item = { id: 7, name: "item", position: new Vec3(400.125, -54, -0.9475), width: 0.25, height: 0.25 };
+  const entities: Record<number, unknown> = { 7: item };
+  const bot = botFixture(
+    {
+      position: new Vec3(401.593, -54, 0.4549),
+      entities,
+      groundY: -55,
+      blocks: { "400,-54,0": "lava", "401,-54,-1": "bedrock", "401,-53,-1": "bedrock" },
+    },
+    { setControlState: (control: string, state: boolean) => { controls[control] = state; } },
+  );
+  const walk = stepIntoPickupReach(bot, 7);
+  // Ground walking as Mineflayer integrates it: a tenth of a block of
+  // acceleration while a control is held, and 0.546 of the velocity kept
+  // each tick. Yaw 0 puts left at -x and forward at -z; the bedrock north of
+  // the cell stops the body at z 0.3.
+  const velocity = { x: 0, z: 0 };
+  let nearestLava = Infinity;
+  let taken = false;
+  for (let tick = 0; tick < 25 && !taken; tick++) {
+    await nextTurn();
+    velocity.x = velocity.x * 0.546 + (controls.right ? 0.1 : 0) - (controls.left ? 0.1 : 0);
+    velocity.z = velocity.z * 0.546 + (controls.back ? 0.1 : 0) - (controls.forward ? 0.1 : 0);
+    bot.entity.position.x += velocity.x;
+    bot.entity.position.z = Math.max(0.3, bot.entity.position.z + velocity.z);
+    nearestLava = Math.min(nearestLava, bot.entity.position.x - 0.3 - 401);
+    // The server takes the item with a tenth of a block to spare.
+    const reach = 0.3 + 1 + item.width / 2 - 0.1;
+    if (
+      Math.abs(bot.entity.position.x - item.position.x) < reach &&
+      Math.abs(bot.entity.position.z - item.position.z) < reach
+    ) {
+      delete entities[7];
+      taken = true;
+    }
+    bot.emit("physicsTick");
+  }
+  // Let the released body coast to rest.
+  for (let tick = 0; tick < 10; tick++) {
+    velocity.x *= 0.546;
+    bot.entity.position.x += velocity.x;
+    nearestLava = Math.min(nearestLava, bot.entity.position.x - 0.3 - 401);
+  }
+  assert.ok(nearestLava >= 0, `the body's edge reached ${(-nearestLava).toFixed(3)} into the lava cell`);
+  assert.equal(taken, true, `the server took the item; the body reached x ${bot.entity.position.x.toFixed(3)}`);
+  assert.equal(await walk, true);
+  assert.equal(Object.values(controls).some(Boolean), false, "controls released");
+});
+
 test("closing on a drop against flowing water holds on until the item is taken", async () => {
   // collect/waterfall-oak, LiveCollector, 2026-10-22: the bottom log's drop
   // lay at x 0.875 in its cell, and the bot stood at x -0.57 in the flowing

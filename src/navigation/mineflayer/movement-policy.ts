@@ -330,6 +330,16 @@ const OPENS_INTO_LIQUID: PolicyDecision = {
   reason: BREAK_OPENS_INTO_LIQUID,
 };
 const AVOIDED_BITS = TRAIT_DAMAGING | TRAIT_LAVA;
+const LAVA_FLOWS_IN: PolicyDecision = {
+  kind: "prohibited",
+  reason: "lava beside this cell can flow into it on its next update",
+};
+const SIDES = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+] as const;
 
 export function createMineflayerMovementPolicy(
   bot: Bot,
@@ -409,6 +419,32 @@ export function createMineflayerMovementPolicy(
     (observation.bits & AVOIDED_BITS) !== 0 ||
     (observation.kind === "loaded" && avoidedStates[observation.stateId] === 1);
 
+  // Whether lava beside a cell enters it on its next update. Spreading lava
+  // advances a cell every 30 ticks, and a route replanned as it spreads would
+  // otherwise skirt its front through the cells it fills next: a bot held up
+  // by a stall arrived as one filled and burned. The fire reflex already flees
+  // such a cell; a route must not walk into one. A flow spreads sideways while
+  // it has levels to lose (two a step in the overworld, one in the Nether), as
+  // a source or a falling column where it lands does; a flow over a drop or
+  // over flowing lava runs down instead, so a falling stream beside a bridge
+  // never spreads at the bridge's height.
+  const lavaState = bot.registry.blocksByName.lava!.minStateId;
+  const lavaFlowsInto = (world: WorldView, x: number, y: number, z: number): boolean => {
+    const decay = bot.game.dimension === "the_nether" ? 1 : 2;
+    for (const [dx, dz] of SIDES) {
+      const beside = world.blockAt(x + dx, y, z + dz);
+      if ((beside.bits & TRAIT_LAVA) === 0 || beside.kind !== "loaded") continue;
+      const level = beside.stateId - lavaState;
+      if (level > 0 && level < 8 && level + decay >= 8) continue;
+      const below = world.blockAt(x + dx, y - 1, z + dz);
+      if (below.kind === "loaded") {
+        if (below.traits.liquid === "lava" ? level !== 0 : below.traits.empty && below.traits.liquid === null) continue;
+      }
+      return true;
+    }
+    return false;
+  };
+
   const policy = createMovementPolicy({
     allowDigging: options.allowDigging ?? true,
     allowPlacing: scaffolding,
@@ -450,6 +486,8 @@ export function createMineflayerMovementPolicy(
         const observation = world.blockAt(x, y + dy, z);
         if (avoids(observation)) return AVOIDED_STEP;
       }
+      // The cell and the head above it.
+      for (let dy = 0; dy <= 1; dy += 1) if (lavaFlowsInto(world, x, y + dy, z)) return LAVA_FLOWS_IN;
       return ALLOWED_STEP;
     },
   });

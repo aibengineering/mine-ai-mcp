@@ -81,6 +81,11 @@ const DAMAGING = new Set([
   "powder_snow",
 ]);
 
+/** Whether a block of this name damages a body that touches it, lava included. */
+export function damagesOnContact(name: string): boolean {
+  return name === "lava" || DAMAGING.has(name);
+}
+
 function traits(block: MineflayerBlock): BlockTraits {
   const empty = block.boundingBox === "empty";
   const liquid = block.name === "water" ? "water" : block.name === "lava" ? "lava" : null;
