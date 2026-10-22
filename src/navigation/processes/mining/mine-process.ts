@@ -12,7 +12,8 @@ import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../../world/block-visib
 import { droppedItemCount, droppedItemName } from "../../../world/item-pickup.js";
 import { stepIntoPickupReach } from "../../steering/pickup-approach.js";
 import type { useItemAt } from "../../../world/item-use.js";
-import { isLiquidSource, sourceInSight, USE_RAY_REACH } from "../../../world/liquid.js";
+import { isAir } from "../../../world/block-classification.js";
+import { HORIZONTAL, isLiquidSource, sourceInSight, USE_RAY_REACH } from "../../../world/liquid.js";
 import { findLoadedBlockPositions } from "../../../world/loaded-block-scan.js";
 import type { PlaceIntoCell } from "../../../world/placement.js";
 import { excavateGoal } from "../../goals/excavate.js";
@@ -1078,6 +1079,38 @@ async function waitForProcessTick(bot: Bot, signal?: AbortSignal): Promise<void>
   signal?.throwIfAborted();
 }
 
+/**
+ * How long a mined cell may stay open to the water above or beside it: water
+ * flows into an opened cell five ticks after the update, and the client sees
+ * it a tick or two after the server.
+ */
+const MINED_CELL_FLOOD_TICKS = 10;
+
+/**
+ * Wait for water to flow into the cells this run has mined beneath or beside it.
+ *
+ * A route is planned against the world as it stands, and a mined floor under
+ * water is air until the water above falls into it. The planner swims only
+ * through water, so it finds no way down into that pocket. In
+ * collect/underwater-sand the drop of a sand block broken from beside it lay in
+ * its hole, below the reach of a body on the floor; the pickup route was
+ * planned 60 ms after the break, while the hole was still air, and its only
+ * stance was under the floor, reached by leaving the pool over a rim it could
+ * not climb back. The water arrived 240 ms after the break.
+ */
+async function letMinedCellsFlood(bot: Bot, targeting: MineTargeting, signal?: AbortSignal): Promise<void> {
+  const opening = () =>
+    targeting.broken.some((position) => {
+      const cell = asVec3(position);
+      if (!isAir(bot.blockAt(cell))) return false;
+      return (
+        bot.blockAt(cell.offset(0, 1, 0))?.name === "water" ||
+        HORIZONTAL.some((offset) => isLiquidSource(bot, bot.blockAt(cell.plus(offset)), "water"))
+      );
+    });
+  for (let tick = 0; tick < MINED_CELL_FLOOD_TICKS && opening(); tick += 1) await waitForProcessTick(bot, signal);
+}
+
 export async function mine(bot: Bot, request: MineRequest): Promise<MineResult> {
   const targeting = new MineTargeting(bot, request);
   const drive = request.route;
@@ -1190,6 +1223,8 @@ async function runRoute(
   targeting: MineTargeting,
   drive: Navigate,
 ): Promise<NavigationResult> {
+  // A block broken in reach just before this leg may still be open to its water.
+  await letMinedCellsFlood(bot, targeting, request.signal);
   const enough = new AbortController();
   const poll = setInterval(() => {
     if (targeting.isSatisfied()) enough.abort("the requested quantity is in the inventory");
@@ -1246,9 +1281,10 @@ async function runRoute(
           await waitForProcessTick(bot, signal);
         }
 
-        return targeting.isSatisfied() || targeting.broken.length >= request.maximumBreaks
-          ? { kind: "completed" }
-          : { kind: "continue" };
+        if (targeting.isSatisfied() || targeting.broken.length >= request.maximumBreaks) return { kind: "completed" };
+        // The route plans on from here against the world as it now stands.
+        await letMinedCellsFlood(bot, targeting, signal);
+        return { kind: "continue" };
       },
       onCalculationFailure: async ({ failure, observation, signal }) => {
         const failedTarget = targeting.closestTarget(observation.position);
