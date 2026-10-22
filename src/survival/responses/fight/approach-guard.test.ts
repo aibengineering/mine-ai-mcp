@@ -4,6 +4,8 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../../test-support/bot.js";
 import { flatWorld } from "../../../test-support/navigation.js";
+import type { EndermanFight } from "./enderman.js";
+import { runMeleeTurn } from "./melee-turn.js";
 import { FightMovement } from "./movement.js";
 import { FightWeapons } from "./weapons.js";
 import type { FightScene } from "./scene.js";
@@ -95,4 +97,48 @@ test("an approach stopped for an arrow sends the guard's facing on that tick, no
     `the yaw sent this tick (${bot.entity.yaw.toFixed(2)}) covers the arrow`);
   assert.ok(decisions.some((event) => event.stage === "stop_requested"));
   assert.equal(await approach, null);
+});
+
+test("an approach keeps its shield up while an arrow in flight passes within its stride", async () => {
+  // skeleton-arena-crossfire, xfire-base 2026-10-22T02-16-05-470Z (t00006),
+  // 183 ms before the second hit. The bot stands still beside its quarry,
+  // skeleton #52, shield raised for 33 ticks. Arrow #59 from skeleton #53,
+  // eight blocks east, passes 0.8 blocks south of the standing body, so no
+  // projectile was incoming and the approach went unguarded: it lowered the
+  // shield and sprinted south-east, into the arrow's line. Raised again
+  // three ticks before contact, the shield was not ready.
+  const skeleton = (id: number, position: Vec3) => ({
+    id, name: "skeleton", kind: "Hostile mobs", type: "hostile", isValid: true, width: 0.6, height: 1.99,
+    position, velocity: new Vec3(0, 0, 0), heldItem: { name: "bow" }, metadata: { 8: 0 }, headYaw: 0, pitch: 0,
+  }) as unknown as Entity;
+  const quarry = skeleton(52, new Vec3(5.6788, -60, -6.7));
+  const bot = botFixture({
+    position: new Vec3(3.1297, -60, -3.0775), groundY: -61,
+    entities: {
+      51: skeleton(51, new Vec3(11.0234, -60, 2.7549)), 52: quarry, 53: skeleton(53, new Vec3(11.1943, -60, -2.9702)),
+      59: {
+        id: 59, name: "arrow", isValid: true, width: 0.5, height: 0.5, metadata: [],
+        position: new Vec3(11.1247, -58.36, -2.9048), velocity: new Vec3(-1.5936, 0.0606, -0.1984),
+      } as unknown as Entity,
+    },
+  });
+  bot.entity.yaw = -1.6022;
+  const scene = {
+    bot, target: quarry, requestedTarget: quarry, dead: new Set<number>(), movement: "pursue", holdsGround: false,
+    position: { plan: null }, request: { ground: null }, signal: new AbortController().signal, settled: () => false,
+    footingRecovery: { needed: false }, navigation: { world: flatWorld() }, elapsedTicks: 0, hoverWaitStartedAt: null,
+    policy: { combat: { melee: true, bow: false, shield: true } },
+    perception: { resolvedIds: new Set<number>(), attackerIds: new Set<number>(), read: () => [] },
+    execution: { run: async (_phase: string, effect: () => Promise<unknown>) => effect() },
+    reportDecision: () => {},
+  } as unknown as FightScene;
+  const weapons = new FightWeapons(scene, { recoverFooting: async () => {}, returnToCover: () => false });
+  const approaches: boolean[] = [];
+  const locomotion = {
+    volleyStop: { reason: "ranged volley needs combat facing", when: () => false },
+    approach: async (guarded: boolean) => { approaches.push(guarded); return null; },
+  } as unknown as FightMovement;
+  const loadout = { kind: "melee", weapon: { name: "iron_sword" }, shield: { name: "shield" }, cooldownTicks: 13 } as const;
+  await runMeleeTurn(scene, weapons, locomotion, {} as EndermanFight, loadout as unknown as Parameters<typeof runMeleeTurn>[4]);
+  assert.deepEqual(approaches, [true], "the approach walks behind the raised shield");
 });

@@ -10,7 +10,7 @@ import { hasExposedBody } from "../../../world/entity-visibility.js";
 import { isRangedAttacker, positionThreat } from "../../perception/combat/observations.js";
 import { arrowImpact, incomingShieldProjectiles } from "../../perception/combat/shield-projectiles.js";
 import { arrowFlight } from "../../perception/combat/arrow-flight.js";
-import { retreatGuardLimit } from "../../weapons/projectile-guard.js";
+import { RETREAT_PROJECTILE_ALLOWANCE, retreatGuardLimit } from "../../weapons/projectile-guard.js";
 import { observeProjectileDefence } from "../../weapons/shield-facing.js";
 import { isThreat } from "../../perception/combat/threats.js";
 import { permittedCombatItems } from "../../policy/combat/permissions.js";
@@ -417,6 +417,18 @@ export class FightWeapons {
       hasMeleeKnockbackRoom(this.scene.navigation.world, feet, this.scene.target.position)
     );
   };
+  /**
+   * An arrow in flight that misses the standing body can still meet it once
+   * the bot moves. An approach that lowers its shield sprints about 1.4 blocks
+   * in the five ticks a raised shield needs before it blocks, so a shot within
+   * the retreat's two-block warning keeps the approach guarded. Unguarded, the
+   * approach's own stop sees the arrow only once the stride carries the body
+   * into its line, too late to ready the shield (skeleton-arena-crossfire,
+   * xfire-base t00006: arrow #59 passed 0.8 blocks off the standing bot and
+   * hit three ticks after the sprint began).
+   */
+  readonly projectileWithinStride = (): boolean =>
+    incomingShieldProjectiles(this.scene.bot, RETREAT_PROJECTILE_ALLOWANCE).length > 0;
   readonly volleyActive = (): boolean => {
     // A blaze can retain its charge behind terrain. Guarding that flag
     // stopped every turn toward an approach dig, then retried the same dig.

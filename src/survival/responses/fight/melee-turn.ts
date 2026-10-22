@@ -96,7 +96,8 @@ export async function runMeleeTurn(
       return { ...scene.result("unreachable"), observation: QUARRY_AT_LAVA_SHORE };
     const volley = guarded && isRangedAttacker(scene.target) ? locomotion.volleyStop : null;
     const stopped = await locomotion.approach(
-      guarded && (weapons.projectileDefence() !== null || weapons.volleyActive() || meleeThreatInReach(scene)),
+      guarded && (weapons.projectileDefence() !== null || weapons.volleyActive() || weapons.projectileWithinStride() ||
+        meleeThreatInReach(scene)),
       {
         get reason() { return volley?.when() ? volley.reason : QUARRY_AT_LAVA_SHORE; },
         when: () => (volley?.when() ?? false) || followsQuarryDownToLava(scene),
