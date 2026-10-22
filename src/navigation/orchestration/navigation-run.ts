@@ -227,6 +227,8 @@ export class NavigationRun {
   readonly #visitedFeet = new Set<number>();
   /** What the committed route being walked depends on. */
   #routeDependencies: ReadonlySet<number> = new Set<number>();
+  /** The committed route's steps not yet completed. */
+  #remainingSteps: readonly PlannedStep[] = [];
   #routeExecutor: RouteExecutor | undefined;
   /** The search running alongside the route being walked, held so settlement can stop and drain it. */
   #pending: PendingContinuation | null = null;
@@ -271,7 +273,19 @@ export class NavigationRun {
     // Only a committed route owns an execution dependency worth stopping.
     // Every selected step checks its concrete preconditions again before it
     // moves, so an old search result cannot execute stale world assumptions.
-    const classification = this.context.ledger.classify(change, this.#routeDependencies, Date.now());
+    let classification = this.context.ledger.classify(change, this.#routeDependencies, Date.now());
+    // Lava arriving beside the route reads none of its cells, but can make
+    // a step one the policy refuses, as one the lava flows into on its next
+    // update. A route committed before the lava came is planned again rather
+    // than walked past it: a cup's lava landed beside 332,-1 as the bot ran for
+    // it. Spent lava refuses nothing, so a dig beside it carries on.
+    if (
+      classification === "irrelevant" &&
+      change.after.kind === "loaded" &&
+      change.after.traits.liquid === "lava" &&
+      this.#lavaRefusesRoute(change.position)
+    )
+      classification = "invalidating";
     this.#events.emit({ kind: "world_change", classification, change });
     // A conflicting change settles its own expectation in the ledger, and the
     // executor waiting on that expectation sees it there. Only an unrelated
@@ -756,6 +770,7 @@ export class NavigationRun {
     this.#lastMovementFailure = null;
     this.#executed = true;
     this.#routeDependencies = plan.dependencies;
+    this.#remainingSteps = plan.steps;
     this.#events.emit({
       kind: "route_committed",
       planId: plan.id,
@@ -821,6 +836,8 @@ export class NavigationRun {
    */
   #onStepCompleted(goal: ActiveGoal, plan: RoutePlan, step: PlannedStep, arrival: BlockPosition): StepDecision {
     this.#events.emit({ kind: "step_completed", stepId: step.id, movement: step.kind });
+    const completed = plan.steps.indexOf(step);
+    if (completed >= 0) this.#remainingSteps = plan.steps.slice(completed + 1);
     this.#visitedFeet.add(blockKey(arrival));
     const revised = this.#resolveGoal(this.context.bot.observe(), arrival);
     if (revised.kind === "invalid") return "goal_revised";
@@ -969,5 +986,14 @@ export class NavigationRun {
   }
   #failed(failure: NavigationFailure): NavigationSettlement {
     return { kind: "failed", failure };
+  }
+  /** Whether lava that arrived at `at` lies beside a step still to walk that the policy now refuses. */
+  #lavaRefusesRoute(at: BlockPosition): boolean {
+    return this.#remainingSteps.some(
+      ({ to }) =>
+        Math.abs(at.x - to.x) + Math.abs(at.z - to.z) === 1 &&
+        (at.y === to.y || at.y === to.y + 1) &&
+        this.#policy.decideStep(to.x, to.y, to.z, this.context.world).kind === "prohibited",
+    );
   }
 }
