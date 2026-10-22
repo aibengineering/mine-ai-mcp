@@ -5,7 +5,8 @@ import ts from "typescript";
 /** Production imports relative to one module root, including whether they can run code. */
 export function sourceImports(root: string, directory: string) {
   return readdirSync(join(root, directory), { recursive: true, encoding: "utf8" })
-    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"))
+    // `*.test-support.ts` sits beside the tests it serves and is left out of the build like them.
+    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.endsWith(".test-support.ts"))
     .flatMap((file) => {
       const path = join(root, directory, file);
       const source = ts.createSourceFile(path, readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true);

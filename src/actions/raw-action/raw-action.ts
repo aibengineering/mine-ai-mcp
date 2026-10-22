@@ -7,7 +7,6 @@ import {
   RAW_ACTION,
   RAW_ACTION_DESCRIPTION,
   parseRawActionRequest,
-  rawActionAnnotations,
   rawActionInputSchema,
   rawActionResultSchema,
   type RawActionRequest,
@@ -453,7 +452,11 @@ export function createRawAction(bot: Bot) {
     resultSchema: rawActionResultSchema,
     formatResult: formatRawActionResult,
     execution: { kind: "task" },
-    annotations: rawActionAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     parse: parseRawActionRequest,
     execute: (request, context) => executeRawAction(bot, request, context),
   });

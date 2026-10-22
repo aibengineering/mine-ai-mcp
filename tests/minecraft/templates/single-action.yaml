@@ -1,0 +1,21 @@
+# Shared by fixtures that arrange their own world. It supplies only the
+# Minecraft version, the viewer mod and the default single-action client; a
+# fixture with a custom driver replaces `client` whole.
+# Mod paths resolve from this file; client paths resolve from the fixture
+# directory, tests/minecraft/scenarios/<category>/.
+minecraft:
+  version: "1.21.4"
+
+spectator:
+  mods:
+    - { id: blockhighlighter, path: ../../../.mine-labs/mods/blockhighlighter.jar }
+  systemProperties:
+    # The viewer follows the feed belonging to its currently connected game server.
+    blockhighlighter.serverPortOffset: "10000"
+
+client:
+  command: bun
+  cwd: ../..
+  args:
+    - client-host.ts
+    - drivers/single-action.ts

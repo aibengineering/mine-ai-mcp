@@ -1,31 +1,23 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import test from "node:test";
-import type { Bot } from "mineflayer";
-import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import { createMovements, type NavigationRuntime } from "../../navigation/index.js";
+import { botFixture } from "../../test-support/bot.js";
 import { recoverEyeDrop } from "./recover-eye.js";
 
 function fixture() {
-  let count = 15;
-  const bot = Object.assign(new EventEmitter(), {
-    registry: minecraftData("1.21.4"),
-    entity: { position: new Vec3(0, 64, 0), effects: {} },
-    entities: {},
-    inventory: Object.assign(new EventEmitter(), {
-      items: () => [{ name: "ender_eye", count, stackSize: 64 }],
-      emptySlotCount: () => 35,
-    }),
-  }) as unknown as Bot;
+  const eyes = { name: "ender_eye", count: 15, stackSize: 64 };
+  const bot = botFixture({ position: { x: 0, y: 64, z: 0 }, items: [eyes] });
   createMovements(bot); // Install the runtime inventory observer before measuring pickup cleanup.
   const inventoryListeners = bot.inventory.listenerCount("updateSlot");
   const item = { id: 90, position: new Vec3(12, 64, 0), getDroppedItem: () => ({ name: "ender_eye" }) };
   const addDrop = () => { bot.entities[item.id] = item as never; bot.emit("itemDrop", item as never); };
-  const collect = () => { count++; delete bot.entities[item.id]; bot.inventory.emit("updateSlot", 36, null, null); };
-  return { bot, item, addDrop, collect, inventoryListeners, count: () => count };
+  const collect = () => { eyes.count++; delete bot.entities[item.id]; bot.inventory.emit("updateSlot", 36, null, null); };
+  return { bot, item, addDrop, collect, inventoryListeners, count: () => eyes.count };
 }
 const endpoint = new Vec3(12, 72, 0);
+/** Settle windows short enough that a test can let them lapse for real. */
+const settleMs = { drop: 20, itemGone: 20, pickup: 20 };
 
 test("recovers delayed native item metadata and requires inventory gain", async () => {
   const f = fixture();
@@ -46,7 +38,9 @@ test("a shattered eye or unrelated distant drop does not start a route", async (
   const f = fixture();
   f.item.position = new Vec3(28, 64, 0); f.addDrop();
   const nav = { navigate: async () => { assert.fail("No matching drop exists."); } } as unknown as NavigationRuntime;
-  assert.equal(await recoverEyeDrop(f.bot, nav, endpoint), undefined);
+  // The drop's metadata may still arrive; recovery gives it the drop window before leaving.
+  const recovery = recoverEyeDrop(f.bot, nav, endpoint, undefined, settleMs);
+  assert.equal(await recovery, undefined);
   assert.equal(f.count(), 15);
   assert.equal(f.bot.listenerCount("itemDrop"), 0);
 });
@@ -54,7 +48,8 @@ test("a shattered eye or unrelated distant drop does not start a route", async (
 test("unreachable eye recovery returns without claiming inventory gain", async () => {
   const f = fixture(); f.addDrop();
   const nav = { navigate: async () => ({ status: "stopped", reason: "no safe path", elapsedMs: 1 }) } as unknown as NavigationRuntime;
-  assert.equal((await recoverEyeDrop(f.bot, nav, endpoint))?.kind, "not_collected");
+  const recovery = await recoverEyeDrop(f.bot, nav, endpoint, undefined, settleMs);
+  assert.equal(recovery?.kind, "not_collected");
   assert.equal(f.count(), 15);
 });
 

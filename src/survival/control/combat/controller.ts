@@ -14,7 +14,7 @@ import { EndCombat, type EndCombatResult } from "../../responses/end/execute.js"
 import { FootingRecovery } from "../../responses/footing.js";
 import { SurvivalPolicyState } from "../../state/survival-policy.js";
 import { type SurvivalResources } from "../../state/resources.js";
-import type { CombatController, CombatDecision, CombatEngagement, CombatOutcome } from "./contract.js";
+import type { CombatController, CombatDecision, CombatEngagement, CombatOutcome, EngageOptions } from "./contract.js";
 import { CombatExecution, type CombatExecutionSnapshot } from "./execution.js";
 import { secureCombatHandoff, type CombatHandoff } from "./handoff.js";
 import { emptyCombatEvidence, runMobEngagement } from "./mob.js";
@@ -156,7 +156,12 @@ export function createCombatController(
       if (active === engagement) active = null;
     }
   }
-  async function engage(targetId: number, signal: AbortSignal, movement: "pursue" | "hold"): Promise<CombatOutcome> {
+  async function engage(
+    targetId: number,
+    signal: AbortSignal,
+    movement: "pursue" | "hold",
+    options: EngageOptions = {},
+  ): Promise<CombatOutcome> {
     if (active)
       return { ...emptyCombatEvidence(targetId, "failed"), observation: "Combat controller is already engaged." };
     signal.throwIfAborted();
@@ -192,6 +197,7 @@ export function createCombatController(
           policyUse = value;
         },
       },
+      options,
     );
     const engagement = { kind: "mob" as const, targetId, controller, outcome };
     active = engagement;

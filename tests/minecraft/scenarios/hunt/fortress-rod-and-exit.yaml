@@ -1,0 +1,73 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Hunt one native blaze rod in the generated fortress of seed 20260906, where
+  two blazes hold the raised stair room and a wither skeleton stands on the
+  bridge between them and the bot, then return to the surveyed western bridge
+  exit and stay alive there for five more seconds. This is the legacy
+  fortress-sortie. The run-14 room of seed -5335131384818472281, with its live
+  spawner and bridge crossfire (fortress-rod-and-exit, -pair- and -bridge-),
+  fails today and lives in known-failing/hunt/fortress-rod-and-exit-run14.yaml.
+
+# Surveyed on 2026-10-20: the bridge corridor runs at feet y 60 along
+# z 269-271 from x -493 to -409, and the stair room rises to y 66.
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: 20260906
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: false
+
+# Loaded but held still until a second after the hunt is requested.
+entities:
+  - { type: blaze, pos: [-414.5, 66, 269.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: blaze, pos: [-415.5, 66, 271.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+  - { type: wither_skeleton, pos: [-422.5, 60, 270.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["fortress_trial"]}' }
+
+schedule:
+  - { afterTicks: 20, run: "execute as @e[tag=fortress_trial] run data merge entity @s {NoAI:0b}" }
+
+players:
+  - name: FortressBot
+    pos: [-432.5, 60, 270.5]
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: golden_boots
+      offhand: shield
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/nether-expedition.ts]
+params:
+  idleWithinTicks: 200
+  actions:
+    - { action: collect_mob_drop, input: { mob_name: blaze, drop_name: blaze_rod, count: 1 } }
+    - { action: navigate, input: { x: -452, y: 60, z: 270, range: 1 } }
+  # Five seconds with the reflexes still live, for fire already in flight.
+  holdTicks: 100
+
+goal:
+  kind: all
+  timeout: 300
+  goals:
+    - { kind: hasItem, who: FortressBot, item: blaze_rod, count: 1 }
+    - { kind: reach, who: FortressBot, pos: [-451.5, 60, 270.5], radius: 2 }
+    - { kind: survive, who: FortressBot, seconds: 1 }
+    - { kind: health, who: FortressBot, health: 1 }
+    - { kind: completion, who: FortressBot }

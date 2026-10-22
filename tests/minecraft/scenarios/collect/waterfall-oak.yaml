@@ -1,0 +1,315 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Collect the six logs of an oak standing beside a waterfall, at three copies of the live
+  incident's bank two hundred blocks apart, with regeneration off. LiveCollector starts where
+  the live bot stood, carrying dirt, and must take all six within two minutes; it used to take
+  five and then walk off exploring. The waterfall reached the stance from which the route broke
+  the last log, the body floated off its grass floor, and a dig priced at three seconds took
+  fifteen and outlived its confirmation four times, so the log was given up; a body afloat over
+  its stance's floor now lands on it before digging. Approach starts on the north
+  bank of a copy whose falling column runs down the cliff to the bank, giving the live
+  level-four flow at the trunk, and must isolate it with carried dirt and take all six within two
+  minutes: the incident was a multi-minute stall at this tree. NoMaterial starts where the live
+  bot stood and carries nothing, so it may take only the dry logs and must then report the
+  missing isolation material as a partial result near the tree, rather than flooding or searching
+  on. All three stay at full health.
+
+# The bank geometry was read from the live site; (56,64,27) maps to (0,-58,0),
+# and is copied 200 and 400 blocks east. The waterfall's source is the water block
+# at the top of the cliff. As the legacy fixtures' preparation did, the flow
+# settles for 100 ticks and each bot is then put back at its start, standing
+# in the settled current, before it is asked.
+
+reset:
+  - "fill -12 -60 -12 12 -42 12 air"
+  - "fill 188 -60 -12 212 -42 12 air"
+  - "fill 388 -60 -12 412 -42 12 air"
+
+geometry:
+  # LiveCollector's site: the live bank.
+  - fill: { block: stone, from: [-12, -61, -12], to: [12, -61, 12] }
+  - fill: { block: stone, from: [5, -60, -5], to: [10, -54, 5] }
+  - setblock: { block: stone, at: [4, -54, -4] }
+  - setblock: { block: stone, at: [4, -54, -3] }
+  - setblock: { block: stone, at: [4, -54, -2] }
+  - setblock: { block: grass_block, at: [3, -54, 2] }
+  - setblock: { block: dirt, at: [4, -54, 2] }
+  - setblock: { block: grass_block, at: [1, -54, 3] }
+  - fill: { block: dirt, from: [2, -54, 3], to: [4, -54, 3] }
+  - fill: { block: dirt, from: [-1, -54, 4], to: [4, -54, 4] }
+  - fill: { block: dirt, from: [3, -55, 2], to: [4, -55, 2] }
+  - fill: { block: dirt, from: [1, -55, 3], to: [4, -55, 3] }
+  - setblock: { block: copper_ore, at: [-1, -55, 4] }
+  - fill: { block: dirt, from: [0, -55, 4], to: [4, -55, 4] }
+  - fill: { block: dirt, from: [3, -56, 2], to: [4, -56, 2] }
+  - fill: { block: dirt, from: [1, -56, 3], to: [2, -56, 3] }
+  - fill: { block: stone, from: [3, -56, 3], to: [4, -56, 3] }
+  - setblock: { block: stone, at: [-1, -56, 4] }
+  - setblock: { block: dirt, at: [0, -56, 4] }
+  - fill: { block: gravel, from: [1, -56, 4], to: [3, -56, 4] }
+  - setblock: { block: stone, at: [4, -56, 4] }
+  - setblock: { block: dirt, at: [3, -57, 2] }
+  - setblock: { block: stone, at: [4, -57, 2] }
+  - setblock: { block: grass_block, at: [0, -57, 3] }
+  - setblock: { block: dirt, at: [1, -57, 3] }
+  - fill: { block: stone, from: [2, -57, 3], to: [4, -57, 3] }
+  - fill: { block: stone, from: [-2, -57, 4], to: [4, -57, 4] }
+  - setblock: { block: grass_block, at: [0, -58, 1] }
+  - setblock: { block: grass_block, at: [2, -58, 2] }
+  - fill: { block: stone, from: [3, -58, 2], to: [4, -58, 2] }
+  - setblock: { block: dirt, at: [0, -58, 3] }
+  - fill: { block: stone, from: [1, -58, 3], to: [4, -58, 3] }
+  - fill: { block: stone, from: [-2, -58, 4], to: [4, -58, 4] }
+  - fill: { block: grass_block, from: [3, -59, -4], to: [4, -59, -4] }
+  - fill: { block: grass_block, from: [3, -59, -3], to: [4, -59, -3] }
+  - fill: { block: grass_block, from: [2, -59, -2], to: [4, -59, -2] }
+  - fill: { block: grass_block, from: [2, -59, -1], to: [4, -59, -1] }
+  - fill: { block: grass_block, from: [1, -59, 0], to: [3, -59, 0] }
+  - setblock: { block: dirt, at: [4, -59, 0] }
+  - fill: { block: grass_block, from: [1, -59, 1], to: [4, -59, 1] }
+  - setblock: { block: grass_block, at: [1, -59, 2] }
+  - setblock: { block: dirt, at: [2, -59, 2] }
+  - fill: { block: stone, from: [3, -59, 2], to: [4, -59, 2] }
+  - fill: { block: grass_block, from: [-3, -59, 3], to: [-1, -59, 3] }
+  - setblock: { block: dirt, at: [0, -59, 3] }
+  - fill: { block: stone, from: [1, -59, 3], to: [4, -59, 3] }
+  - fill: { block: grass_block, from: [-4, -59, 4], to: [-3, -59, 4] }
+  - fill: { block: stone, from: [-2, -59, 4], to: [4, -59, 4] }
+  - fill: { block: grass_block, from: [0, -60, -4], to: [2, -60, -4] }
+  - fill: { block: dirt, from: [3, -60, -4], to: [4, -60, -4] }
+  - fill: { block: grass_block, from: [0, -60, -3], to: [2, -60, -3] }
+  - fill: { block: dirt, from: [3, -60, -3], to: [4, -60, -3] }
+  - fill: { block: grass_block, from: [0, -60, -2], to: [1, -60, -2] }
+  - fill: { block: dirt, from: [2, -60, -2], to: [4, -60, -2] }
+  - setblock: { block: grass_block, at: [-1, -60, -1] }
+  - fill: { block: dirt, from: [0, -60, -1], to: [4, -60, -1] }
+  - fill: { block: grass_block, from: [-2, -60, 0], to: [-1, -60, 0] }
+  - fill: { block: dirt, from: [0, -60, 0], to: [4, -60, 0] }
+  - fill: { block: grass_block, from: [-3, -60, 1], to: [-1, -60, 1] }
+  - fill: { block: dirt, from: [0, -60, 1], to: [4, -60, 1] }
+  - fill: { block: grass_block, from: [-4, -60, 2], to: [-1, -60, 2] }
+  - fill: { block: dirt, from: [1, -60, 2], to: [2, -60, 2] }
+  - fill: { block: stone, from: [3, -60, 2], to: [4, -60, 2] }
+  - setblock: { block: grass_block, at: [-4, -60, 3] }
+  - fill: { block: dirt, from: [-3, -60, 3], to: [0, -60, 3] }
+  - fill: { block: stone, from: [1, -60, 3], to: [4, -60, 3] }
+  - fill: { block: dirt, from: [-4, -60, 4], to: [-3, -60, 4] }
+  - fill: { block: stone, from: [-2, -60, 4], to: [4, -60, 4] }
+  - fill: { block: oak_leaves, from: [-2, -56, -1], to: [2, -54, 3] }
+  - fill: { block: oak_leaves, from: [-1, -53, 0], to: [1, -53, 2] }
+  - fill: { block: oak_log, from: [0, -59, 1], to: [0, -54, 1] }
+  - setblock: { block: water, at: [4, -54, 0] }
+  # NoMaterial's site: the live bank.
+  - fill: { block: stone, from: [188, -61, -12], to: [212, -61, 12] }
+  - fill: { block: stone, from: [205, -60, -5], to: [210, -54, 5] }
+  - setblock: { block: stone, at: [204, -54, -4] }
+  - setblock: { block: stone, at: [204, -54, -3] }
+  - setblock: { block: stone, at: [204, -54, -2] }
+  - setblock: { block: grass_block, at: [203, -54, 2] }
+  - setblock: { block: dirt, at: [204, -54, 2] }
+  - setblock: { block: grass_block, at: [201, -54, 3] }
+  - fill: { block: dirt, from: [202, -54, 3], to: [204, -54, 3] }
+  - fill: { block: dirt, from: [199, -54, 4], to: [204, -54, 4] }
+  - fill: { block: dirt, from: [203, -55, 2], to: [204, -55, 2] }
+  - fill: { block: dirt, from: [201, -55, 3], to: [204, -55, 3] }
+  - setblock: { block: copper_ore, at: [199, -55, 4] }
+  - fill: { block: dirt, from: [200, -55, 4], to: [204, -55, 4] }
+  - fill: { block: dirt, from: [203, -56, 2], to: [204, -56, 2] }
+  - fill: { block: dirt, from: [201, -56, 3], to: [202, -56, 3] }
+  - fill: { block: stone, from: [203, -56, 3], to: [204, -56, 3] }
+  - setblock: { block: stone, at: [199, -56, 4] }
+  - setblock: { block: dirt, at: [200, -56, 4] }
+  - fill: { block: gravel, from: [201, -56, 4], to: [203, -56, 4] }
+  - setblock: { block: stone, at: [204, -56, 4] }
+  - setblock: { block: dirt, at: [203, -57, 2] }
+  - setblock: { block: stone, at: [204, -57, 2] }
+  - setblock: { block: grass_block, at: [200, -57, 3] }
+  - setblock: { block: dirt, at: [201, -57, 3] }
+  - fill: { block: stone, from: [202, -57, 3], to: [204, -57, 3] }
+  - fill: { block: stone, from: [198, -57, 4], to: [204, -57, 4] }
+  - setblock: { block: grass_block, at: [200, -58, 1] }
+  - setblock: { block: grass_block, at: [202, -58, 2] }
+  - fill: { block: stone, from: [203, -58, 2], to: [204, -58, 2] }
+  - setblock: { block: dirt, at: [200, -58, 3] }
+  - fill: { block: stone, from: [201, -58, 3], to: [204, -58, 3] }
+  - fill: { block: stone, from: [198, -58, 4], to: [204, -58, 4] }
+  - fill: { block: grass_block, from: [203, -59, -4], to: [204, -59, -4] }
+  - fill: { block: grass_block, from: [203, -59, -3], to: [204, -59, -3] }
+  - fill: { block: grass_block, from: [202, -59, -2], to: [204, -59, -2] }
+  - fill: { block: grass_block, from: [202, -59, -1], to: [204, -59, -1] }
+  - fill: { block: grass_block, from: [201, -59, 0], to: [203, -59, 0] }
+  - setblock: { block: dirt, at: [204, -59, 0] }
+  - fill: { block: grass_block, from: [201, -59, 1], to: [204, -59, 1] }
+  - setblock: { block: grass_block, at: [201, -59, 2] }
+  - setblock: { block: dirt, at: [202, -59, 2] }
+  - fill: { block: stone, from: [203, -59, 2], to: [204, -59, 2] }
+  - fill: { block: grass_block, from: [197, -59, 3], to: [199, -59, 3] }
+  - setblock: { block: dirt, at: [200, -59, 3] }
+  - fill: { block: stone, from: [201, -59, 3], to: [204, -59, 3] }
+  - fill: { block: grass_block, from: [196, -59, 4], to: [197, -59, 4] }
+  - fill: { block: stone, from: [198, -59, 4], to: [204, -59, 4] }
+  - fill: { block: grass_block, from: [200, -60, -4], to: [202, -60, -4] }
+  - fill: { block: dirt, from: [203, -60, -4], to: [204, -60, -4] }
+  - fill: { block: grass_block, from: [200, -60, -3], to: [202, -60, -3] }
+  - fill: { block: dirt, from: [203, -60, -3], to: [204, -60, -3] }
+  - fill: { block: grass_block, from: [200, -60, -2], to: [201, -60, -2] }
+  - fill: { block: dirt, from: [202, -60, -2], to: [204, -60, -2] }
+  - setblock: { block: grass_block, at: [199, -60, -1] }
+  - fill: { block: dirt, from: [200, -60, -1], to: [204, -60, -1] }
+  - fill: { block: grass_block, from: [198, -60, 0], to: [199, -60, 0] }
+  - fill: { block: dirt, from: [200, -60, 0], to: [204, -60, 0] }
+  - fill: { block: grass_block, from: [197, -60, 1], to: [199, -60, 1] }
+  - fill: { block: dirt, from: [200, -60, 1], to: [204, -60, 1] }
+  - fill: { block: grass_block, from: [196, -60, 2], to: [199, -60, 2] }
+  - fill: { block: dirt, from: [201, -60, 2], to: [202, -60, 2] }
+  - fill: { block: stone, from: [203, -60, 2], to: [204, -60, 2] }
+  - setblock: { block: grass_block, at: [196, -60, 3] }
+  - fill: { block: dirt, from: [197, -60, 3], to: [200, -60, 3] }
+  - fill: { block: stone, from: [201, -60, 3], to: [204, -60, 3] }
+  - fill: { block: dirt, from: [196, -60, 4], to: [197, -60, 4] }
+  - fill: { block: stone, from: [198, -60, 4], to: [204, -60, 4] }
+  - fill: { block: oak_leaves, from: [198, -56, -1], to: [202, -54, 3] }
+  - fill: { block: oak_leaves, from: [199, -53, 0], to: [201, -53, 2] }
+  - fill: { block: oak_log, from: [200, -59, 1], to: [200, -54, 1] }
+  - setblock: { block: water, at: [204, -54, 0] }
+  # Approach's site, the same bank.
+  - fill: { block: stone, from: [388, -61, -12], to: [412, -61, 12] }
+  - fill: { block: stone, from: [405, -60, -5], to: [410, -54, 5] }
+  - setblock: { block: stone, at: [404, -54, -4] }
+  - setblock: { block: stone, at: [404, -54, -3] }
+  - setblock: { block: stone, at: [404, -54, -2] }
+  - setblock: { block: grass_block, at: [403, -54, 2] }
+  - setblock: { block: dirt, at: [404, -54, 2] }
+  - setblock: { block: grass_block, at: [401, -54, 3] }
+  - fill: { block: dirt, from: [402, -54, 3], to: [404, -54, 3] }
+  - fill: { block: dirt, from: [399, -54, 4], to: [404, -54, 4] }
+  - fill: { block: dirt, from: [403, -55, 2], to: [404, -55, 2] }
+  - fill: { block: dirt, from: [401, -55, 3], to: [404, -55, 3] }
+  - setblock: { block: copper_ore, at: [399, -55, 4] }
+  - fill: { block: dirt, from: [400, -55, 4], to: [404, -55, 4] }
+  - fill: { block: dirt, from: [403, -56, 2], to: [404, -56, 2] }
+  - fill: { block: dirt, from: [401, -56, 3], to: [402, -56, 3] }
+  - fill: { block: stone, from: [403, -56, 3], to: [404, -56, 3] }
+  - setblock: { block: stone, at: [399, -56, 4] }
+  - setblock: { block: dirt, at: [400, -56, 4] }
+  - fill: { block: gravel, from: [401, -56, 4], to: [403, -56, 4] }
+  - setblock: { block: stone, at: [404, -56, 4] }
+  - setblock: { block: dirt, at: [403, -57, 2] }
+  - setblock: { block: stone, at: [404, -57, 2] }
+  - setblock: { block: grass_block, at: [400, -57, 3] }
+  - setblock: { block: dirt, at: [401, -57, 3] }
+  - fill: { block: stone, from: [402, -57, 3], to: [404, -57, 3] }
+  - fill: { block: stone, from: [398, -57, 4], to: [404, -57, 4] }
+  - setblock: { block: grass_block, at: [400, -58, 1] }
+  - setblock: { block: grass_block, at: [402, -58, 2] }
+  - fill: { block: stone, from: [403, -58, 2], to: [404, -58, 2] }
+  - setblock: { block: dirt, at: [400, -58, 3] }
+  - fill: { block: stone, from: [401, -58, 3], to: [404, -58, 3] }
+  - fill: { block: stone, from: [398, -58, 4], to: [404, -58, 4] }
+  - fill: { block: grass_block, from: [403, -59, -4], to: [404, -59, -4] }
+  - fill: { block: grass_block, from: [403, -59, -3], to: [404, -59, -3] }
+  - fill: { block: grass_block, from: [402, -59, -2], to: [404, -59, -2] }
+  - fill: { block: grass_block, from: [402, -59, -1], to: [404, -59, -1] }
+  - fill: { block: grass_block, from: [401, -59, 0], to: [403, -59, 0] }
+  - setblock: { block: dirt, at: [404, -59, 0] }
+  - fill: { block: grass_block, from: [401, -59, 1], to: [404, -59, 1] }
+  - setblock: { block: grass_block, at: [401, -59, 2] }
+  - setblock: { block: dirt, at: [402, -59, 2] }
+  - fill: { block: stone, from: [403, -59, 2], to: [404, -59, 2] }
+  - fill: { block: grass_block, from: [397, -59, 3], to: [399, -59, 3] }
+  - setblock: { block: dirt, at: [400, -59, 3] }
+  - fill: { block: stone, from: [401, -59, 3], to: [404, -59, 3] }
+  - fill: { block: grass_block, from: [396, -59, 4], to: [397, -59, 4] }
+  - fill: { block: stone, from: [398, -59, 4], to: [404, -59, 4] }
+  - fill: { block: grass_block, from: [400, -60, -4], to: [402, -60, -4] }
+  - fill: { block: dirt, from: [403, -60, -4], to: [404, -60, -4] }
+  - fill: { block: grass_block, from: [400, -60, -3], to: [402, -60, -3] }
+  - fill: { block: dirt, from: [403, -60, -3], to: [404, -60, -3] }
+  - fill: { block: grass_block, from: [400, -60, -2], to: [401, -60, -2] }
+  - fill: { block: dirt, from: [402, -60, -2], to: [404, -60, -2] }
+  - setblock: { block: grass_block, at: [399, -60, -1] }
+  - fill: { block: dirt, from: [400, -60, -1], to: [404, -60, -1] }
+  - fill: { block: grass_block, from: [398, -60, 0], to: [399, -60, 0] }
+  - fill: { block: dirt, from: [400, -60, 0], to: [404, -60, 0] }
+  - fill: { block: grass_block, from: [397, -60, 1], to: [399, -60, 1] }
+  - fill: { block: dirt, from: [400, -60, 1], to: [404, -60, 1] }
+  - fill: { block: grass_block, from: [396, -60, 2], to: [399, -60, 2] }
+  - fill: { block: dirt, from: [401, -60, 2], to: [402, -60, 2] }
+  - fill: { block: stone, from: [403, -60, 2], to: [404, -60, 2] }
+  - setblock: { block: grass_block, at: [396, -60, 3] }
+  - fill: { block: dirt, from: [397, -60, 3], to: [400, -60, 3] }
+  - fill: { block: stone, from: [401, -60, 3], to: [404, -60, 3] }
+  - fill: { block: dirt, from: [396, -60, 4], to: [397, -60, 4] }
+  - fill: { block: stone, from: [398, -60, 4], to: [404, -60, 4] }
+  - fill: { block: oak_leaves, from: [398, -56, -1], to: [402, -54, 3] }
+  - fill: { block: oak_leaves, from: [399, -53, 0], to: [401, -53, 2] }
+  - fill: { block: oak_log, from: [400, -59, 1], to: [400, -54, 1] }
+  - setblock: { block: water, at: [404, -54, 0] }
+
+# Keep the Approach copy's falling column against the cliff until it reaches
+# the bank, rather than spilling sideways one block above it.
+setup:
+  - "fill 403 -57 -1 403 -54 1 stone"
+  - "fill 404 -57 -1 404 -54 -1 stone"
+  - "fill 404 -57 1 404 -54 1 stone"
+
+schedule:
+  - afterTicks: 100
+    run:
+      - "tp LiveCollector 0.36 -58 0.48"
+      - "tp NoMaterial 200.36 -58 0.48"
+      - "tp Approach 400.36 -59 -2.5"
+
+players:
+  - name: LiveCollector
+    pos: [0.36, -58, 0.48]
+    inventory: [{ item: dirt, count: 24 }]
+  - name: NoMaterial
+    pos: [200.36, -58, 0.48]
+  - name: Approach
+    pos: [400.36, -59, -2.5]
+    inventory: [{ item: dirt, count: 24 }]
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  players:
+    LiveCollector:
+      waitTicks: 110
+      actions:
+        - { action: collect_block, input: { block_name: logs, count: 6, scaffold: true } }
+    NoMaterial:
+      waitTicks: 110
+      actions:
+        - action: collect_block
+          input: { block_name: logs, count: 6, scaffold: true }
+          expect: { status: partial, errorContains: "liquid isolation needs" }
+    Approach:
+      waitTicks: 110
+      actions:
+        - { action: collect_block, input: { block_name: logs, count: 6, scaffold: true } }
+
+tick:
+  - "gamemode spectator @a[name=!LiveCollector,name=!NoMaterial,name=!Approach,gamemode=!spectator]"
+
+goal:
+  kind: all
+  # Six barehand logs need tens of seconds; two minutes exposes the reported stall.
+  timeout: 120
+  goals:
+    - { kind: hasItem, who: LiveCollector, item: oak_log, count: 6 }
+    - { kind: health, who: LiveCollector, health: 20 }
+    - { kind: completion, who: LiveCollector }
+    - { kind: hasItem, who: Approach, item: oak_log, count: 6 }
+    - { kind: health, who: Approach, health: 20 }
+    - { kind: completion, who: Approach }
+    # Some dry logs, never all six, and the stop happens beside the tree.
+    - { kind: hasItem, who: NoMaterial, item: oak_log, count: 1, max: 5 }
+    - { kind: reach, who: NoMaterial, pos: [200.5, -59, 1.5], radius: 16 }
+    - { kind: health, who: NoMaterial, health: 20 }
+    - { kind: completion, who: NoMaterial }

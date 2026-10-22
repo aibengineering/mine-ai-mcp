@@ -5,6 +5,15 @@ import { formatPolicyReminder, formatProtocol, formatForegroundStatus } from "./
 import type { SurvivalStatus } from "../survival/evidence/contract.js";
 import { DEFAULT_SURVIVAL_POLICY } from "../survival/policy/contract.js";
 
+type Snapshot = ReturnType<RequestProgress["snapshot"]>;
+
+/** A quiet wait over `progress`: no time, travel or change beyond what the snapshot carries. */
+const wait = (progress: Snapshot) => ({ from: progress.sampledAt, to: progress.sampledAt, elapsedMs: 1000, suspendedMs: 0,
+  distanceTravelledBlocks: 0, reflexDistanceBlocks: 0, checkpointDelta: {}, toolChanges: [], combatResources: progress.combatResources,
+  reflexActivity: progress.reflexActivity });
+/** A running mob-drop collection with no structured request. */
+const live = (progress: Snapshot) => ({ actionId: "hunt", action: "collect_mob_drop", progress, request: null });
+
 test("large build objectives summarize cells without losing current progress or modifying structured evidence", () => {
   const cells = Array.from({ length: 100 }, (_, index) => ({ x: index % 5, y: 71 + Math.floor(index / 25), z: 153 + Math.floor(index / 5) % 5, blockName: index < 80 ? "cobblestone" : "air" }));
   const progress = new RequestProgress({ dimension: "overworld", x: 0, y: 72, z: 155 }).snapshot();
@@ -40,11 +49,7 @@ test("combat resource totals and waiter-local changes are visible in Markdown", 
   measured.combatResource({ kind: "arrow_fired" });
   measured.combatResource({ kind: "durability_used", slot: 36, item: "iron_sword", before: 4, now: 5 });
   const progress = measured.snapshot();
-  const markdown = formatProtocol({ state: "pending", wakeReason: "timeout", actionId: "hunt", progress: {
-    actionId: "hunt", action: "collect_mob_drop", progress, request: null,
-  }, duringWait: { from: progress.sampledAt, to: progress.sampledAt, elapsedMs: 1000, suspendedMs: 0,
-    distanceTravelledBlocks: 0, reflexDistanceBlocks: 0, checkpointDelta: {}, toolChanges: [], combatResources: progress.combatResources, reflexActivity: [] },
-  });
+  const markdown = formatProtocol({ state: "pending", wakeReason: "timeout", actionId: "hunt", progress: live(progress), duringWait: wait(progress) });
   assert.ok(markdown.includes("**Combat resources during this wait:** Arrows fired: 1; durability used: iron\\_sword slot 36: 4 → 5."));
 });
 
@@ -56,11 +61,8 @@ test("reflex activity separates policy-withheld responses from other exclusions 
   measured.reflexActivity({ kind: "entered", state: { kind: "withheld", reflex: "hostile", name: "evade", exclusion: "answered", detail: "3" } });
   measured.reflexActivity({ kind: "entered", state: { kind: "combat_phase", reflex: "combat", name: "approach", exclusion: null, detail: null } });
   const progress = measured.snapshot();
-  const markdown = formatProtocol({ state: "pending", wakeReason: "timeout", actionId: "hunt", progress: {
-    actionId: "hunt", action: "collect_mob_drop", progress, request: null,
-  }, duringWait: { from: progress.sampledAt, to: progress.sampledAt, elapsedMs: 1000, suspendedMs: 0,
-    distanceTravelledBlocks: 0, reflexDistanceBlocks: 0, checkpointDelta: {}, toolChanges: [], combatResources: progress.combatResources,
-    reflexActivity: progress.reflexActivity.map((state) => ({ ...state, activeMs: 1500 })) },
+  const markdown = formatProtocol({ state: "pending", wakeReason: "timeout", actionId: "hunt", progress: live(progress),
+    duringWait: { ...wait(progress), reflexActivity: progress.reflexActivity.map((state) => ({ ...state, activeMs: 1500 })) },
   });
   assert.match(markdown, /\*\*Reflexes:\*\* responses: hostile fight ×1 \(\d+ms\); withheld by policy: hostile hide ×1 \(\d+ms\) by hide; withheld otherwise: hostile evade ×1 \(\d+ms\) answered 3; combat phases: approach ×1 \(\d+ms\)\./);
   assert.match(markdown, /\*\*Reflexes during this wait:\*\* responses: hostile fight ×1 \(1\.5s\);/);
@@ -79,10 +81,6 @@ test("the survival policy reminder appears only when combat or a policy refusal 
     vitals: { health: 20, food: 20, air: null, inWater: false },
     runtime: { liveness: "observed_in_process", observedAt: 1, physicsObservedAt: 1 },
   } satisfies SurvivalStatus;
-  const wait = (progress: typeof quiet) => ({ from: progress.sampledAt, to: progress.sampledAt, elapsedMs: 1000, suspendedMs: 0,
-    distanceTravelledBlocks: 0, reflexDistanceBlocks: 0, checkpointDelta: {}, toolChanges: [], combatResources: progress.combatResources,
-    reflexActivity: progress.reflexActivity });
-  const live = (progress: typeof quiet) => ({ actionId: "hunt", action: "collect_mob_drop", progress, request: null });
   assert.doesNotMatch(formatProtocol({ state: "pending", wakeReason: "timeout", actionId: "hunt", progress: live(quiet), duringWait: wait(quiet), survival }), /Survival policy in effect/);
   measured.reflexActivity({ kind: "entered", state: { kind: "response", reflex: "hostile_reflex", name: "evade", exclusion: null, detail: null } });
   const fought = measured.snapshot();

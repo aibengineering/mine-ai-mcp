@@ -1,6 +1,5 @@
-template: ../../templates/flat-single-action.yaml
+template: ../../templates/flat-single-action-no-regen.yaml
 
-name: vine-chasm-parkour
 tags: [regression]
 description: >-
   Reproduce incident bd95619b from 2026-09-13: a parkour route treated a free-hanging vine
@@ -20,16 +19,6 @@ description: >-
 # on — so the jump is the cheapest route on offer until it is refused, and the
 # stairway round is longer. Drifting off the column lands on that same ledge
 # five blocks down, so only the health reading separates the two arrivals.
-
-world:
-  type: flat
-  time: noon
-  gamerules:
-    doDaylightCycle: false
-    doMobSpawning: false
-    keepInventory: true
-    naturalRegeneration: false
-    randomTickSpeed: 0
 
 reset:
   - "fill -12 -61 -12 16 -38 14 air"

@@ -1,0 +1,106 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Four idle bots, one per pen and 100 blocks apart, under blaze fire and
+  requesting nothing. Twenty seconds of native volleys from a blaze 26 blocks
+  out, beyond passive observation range, are survived with a sword alone and
+  survived without losing any health in armour with a bow, sword and shield.
+  A bot sealed in a nether-brick cell beside a held blaze stays put at full
+  health with every wall standing for 660 ticks, longer than the former
+  thirty-second hide cooldown, then kills the blaze once the fixture opens a
+  wall. And a held blaze is killed although a slow small fireball is already in
+  flight, instead of spinning on guarded-approach retries while the projectile
+  stays observed.
+
+# Pens on a 100-block grid, beyond a blaze's 48-block follow range.
+#   x:    0          100        200            300
+#   z 0:  SwordOnly  FullKit    ClosedCover    Projectile
+geometry:
+  # ClosedCover: a 3x3 nether-brick shell with a 1x1 column of air inside.
+  - fill: { block: nether_bricks, from: [199, -60, -1], to: [201, -58, 1] }
+  - fill: { block: air, from: [200, -60, 0], to: [200, -59, 0] }
+  # Projectile: the nether-brick floor of the absorbed fixture.
+  - fill: { block: nether_bricks, from: [284, -61, -16], to: [316, -61, 16] }
+
+entities:
+  - { type: blaze, pos: [26.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_sword"]}' }
+  - { type: blaze, pos: [126.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_kit"]}' }
+  - { type: blaze, pos: [205.5, -60, 0.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_cover"]}' }
+  - { type: blaze, pos: [305.5, -60, 0.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_projectile"]}' }
+
+schedule:
+  # A real small fireball crossing the projectile pen toward the bot, slow
+  # enough to ready a shield. It stays observed while the bot approaches.
+  - { afterTicks: 0, run: "summon minecraft:small_fireball 300.5 -59 8.5 {Motion:[0.0d,0.0d,-0.05d]}" }
+  # The absorbed fixtures watched the distant blazes for twenty seconds.
+  - { afterTicks: 400, run: "kill @e[type=blaze,tag=pen_sword]" }
+  - { afterTicks: 400, run: "kill @e[type=blaze,tag=pen_kit]" }
+  # Open the cell's east wall, between the bot and the blaze.
+  - { afterTicks: 660, run: "fill 201 -60 0 201 -59 0 minecraft:air" }
+
+players:
+  - name: SwordOnly
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+  - name: FullKit
+    pos: [100.5, -60, 0.5]
+    equipment:
+      { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: golden_boots, offhand: shield }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+  - name: ClosedCover
+    pos: [200.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+  - name: Projectile
+    pos: [300.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+
+params:
+  # The closed cover's 660 ticks plus the fight once it opens.
+  waitTicks: 1100
+
+tick:
+  - "gamemode spectator @a[name=!SwordOnly,name=!FullKit,name=!ClosedCover,name=!Projectile,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: survive, who: SwordOnly, seconds: 1 }
+    - { kind: completion, who: SwordOnly }
+
+    - { kind: health, who: FullKit, health: 20 }
+    - { kind: survive, who: FullKit, seconds: 1 }
+    - { kind: completion, who: FullKit }
+
+    # Never hurt, never dug out: the three closed walls and the cap stand.
+    - { kind: kill, who: ClosedCover, target: blaze, tag: pen_cover }
+    - { kind: health, who: ClosedCover, health: 20 }
+    - kind: blocksAt
+      who: ClosedCover
+      block: nether_bricks
+      positions:
+        - [199, -60, 0]
+        - [199, -59, 0]
+        - [200, -60, -1]
+        - [200, -59, -1]
+        - [200, -60, 1]
+        - [200, -59, 1]
+        - [200, -58, 0]
+    - { kind: survive, who: ClosedCover, seconds: 1 }
+    - { kind: completion, who: ClosedCover }
+
+    - { kind: kill, who: Projectile, target: blaze, tag: pen_projectile }
+    - { kind: survive, who: Projectile, seconds: 1 }
+    - { kind: completion, who: Projectile }

@@ -16,11 +16,11 @@ export async function runRangedTurn(
 ): Promise<CombatOutcome | null> {
   const shot = await weapons.shoot(loadout.shield);
   if (shot === "windup_limit") {
-    if (scene.movement === "pursue" && scene.position.canEstablish) {
-      const established = await locomotion.positionEffect(cover.establishCover);
+    if (scene.movement === "pursue" && cover.maySearchCover) {
+      const established = await locomotion.positionEffect(cover.searchCover);
       if (established.kind === "interrupted") return null;
       const stopped = established.value;
-      if (!stopped || (stopped.kind === "unreachable" && scene.position.canEstablish)) return null;
+      if (!stopped || (stopped.kind === "unreachable" && cover.maySearchCover)) return null;
     }
     return scene.guardLimit();
   }

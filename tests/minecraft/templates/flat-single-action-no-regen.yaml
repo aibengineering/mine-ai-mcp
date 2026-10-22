@@ -1,0 +1,15 @@
+# The flat arena with natural regeneration off, so a fixture's health goal
+# measures damage the action avoided rather than damage the player healed back.
+# Everything else comes from flat-single-action.yaml. Mine Labs replaces `world`
+# whole, so this repeats the flat world's other settings.
+template: ./flat-single-action.yaml
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0

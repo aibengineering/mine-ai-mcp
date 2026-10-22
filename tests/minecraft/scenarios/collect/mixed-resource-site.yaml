@@ -1,10 +1,11 @@
 template: ../../templates/flat-single-action.yaml
-name: mixed-resource-site
 tags: [acceptance]
 description: >-
   Collect coal, iron, copper, diamonds, cobblestone, dirt and clay from one small
   worksite. Exposed veins, a stepped copper bank and a clay shoreline exercise
   tool selection, uneven approaches and materials that drop several items per block.
+  Finally cut a cobweb hanging three blocks above the floor with a sword for its string;
+  the regression completed empty excavation steps under the web instead of breaking it.
 
 geometry:
   # Hide the flat world's dirt layers so the dirt request exercises the terrace.
@@ -28,6 +29,8 @@ geometry:
   # Leave a one-block bank: ordinary clay collection must not spend earlier
   # collections sealing water, which would invalidate the final inventory goals.
   - fill: { block: water, from: [4, -60, 11], to: [7, -60, 11] }
+  # A cobweb overhead, three blocks above the standing height (cobweb-overhead).
+  - setblock: { block: cobweb, at: [-3, -56, -3] }
 
 players:
   - name: Actor
@@ -35,6 +38,7 @@ players:
     inventory:
       - { item: iron_pickaxe, count: 1 }
       - { item: iron_shovel, count: 1 }
+      - { item: iron_sword, count: 1 }
 
 client:
   command: bun
@@ -49,6 +53,7 @@ params:
     - { action: collect_block, input: { block_name: stone, count: 4, scaffold: false } }
     - { action: collect_block, input: { block_name: dirt, count: 4, scaffold: false } }
     - { action: collect_block, input: { block_name: clay, count: 8, scaffold: false } }
+    - { action: collect_block, input: { block_name: cobweb, count: 1, scaffold: false } }
 
 goal:
   kind: all
@@ -61,4 +66,6 @@ goal:
     - { kind: hasItem, item: cobblestone, count: 4 }
     - { kind: hasItem, item: dirt, count: 4 }
     - { kind: hasItem, item: clay_ball, count: 8 }
+    - { kind: hasItem, item: string, count: 1 }
+    - { kind: blockAt, block: air, pos: [-3, -56, -3] }
     - { kind: completion }

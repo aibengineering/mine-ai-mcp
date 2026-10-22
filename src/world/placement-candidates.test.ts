@@ -15,13 +15,15 @@ test("finds supported flat footprints without placing through the player", () =>
 
   const candidates = findFlatPlacementCandidates(bot, [new Vec3(0, 0, 0), new Vec3(1, 0, 0)], 1);
 
-  assert.ok(candidates.length > 0);
+  assert.ok(candidates.length > 0, "the stone floor supports some footprint");
   assert.equal(
     candidates.some((origin) => origin.equals(new Vec3(1, 64, 0))),
     false,
+    "a footprint from (1, 64, 0) would place through the player's body",
   );
   assert.equal(
     candidates.every((origin) => origin.y === 64),
     true,
+    "every footprint rests on the floor at y 63",
   );
 });

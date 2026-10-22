@@ -87,12 +87,15 @@ export async function escapeFire(
         for (const cell of fireContactCells(bot)) await extinguishFireAt(bot, cell, signal, true);
         if (!isInFire(bot)) continue;
       }
+      // A burning body released on the lip of its bank still overhangs the
+      // cell it left, and from there that cell lies under any straight way to
+      // water. Release from the bank itself, where water beside it is in reach.
       if (
         !inLava &&
         !inFire &&
         bot.entity.onGround &&
         reason === "contact" &&
-        (!target || bot.blockAt(target)?.name !== "water")
+        (!target || (bot.blockAt(target)?.name !== "water" && bot.entity.position.distanceTo(target) < 0.4))
       )
         return "escaped";
       if (!target) return "blocked";

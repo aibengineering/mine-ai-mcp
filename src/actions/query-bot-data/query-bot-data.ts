@@ -6,8 +6,6 @@ import {
   QUERY_BOT_DATA_MAX_ROWS,
   QUERY_BOT_DATA,
   QUERY_BOT_DATA_DESCRIPTION,
-  parseQueryBotDataInput,
-  queryBotDataAnnotations,
   queryBotDataInputSchema,
   botDataQueryResultSchema,
   queryBotDataResultSchema,
@@ -73,8 +71,8 @@ export function createQueryBotDataAction(botData: SqlBotData, syncStatus?: () =>
     resultSchema: queryBotDataResultSchema,
     formatResult: formatQueryBotDataResult,
     execution: { kind: "information" },
-    annotations: queryBotDataAnnotations,
-    parse: parseQueryBotDataInput,
+    annotations: { openWorldHint: false },
+    parse: (input: unknown) => queryBotDataInputSchema.parse(input ?? {}),
     execute: async (request, context) => {
       syncStatus?.();
       return {

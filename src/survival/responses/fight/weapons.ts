@@ -10,7 +10,7 @@ import { hasExposedBody } from "../../../world/entity-visibility.js";
 import { isRangedAttacker, positionThreat } from "../../perception/combat/observations.js";
 import { arrowImpact, incomingShieldProjectiles } from "../../perception/combat/shield-projectiles.js";
 import { arrowFlight } from "../../perception/combat/arrow-flight.js";
-import { retreatGuardLimit } from "../../weapons/projectile-guard.js";
+import { RETREAT_PROJECTILE_ALLOWANCE, retreatGuardLimit } from "../../weapons/projectile-guard.js";
 import { observeProjectileDefence } from "../../weapons/shield-facing.js";
 import { isThreat } from "../../perception/combat/threats.js";
 import { permittedCombatItems } from "../../policy/combat/permissions.js";
@@ -19,7 +19,9 @@ import { aimPoint } from "../../weapons/aim.js";
 import { bowTrajectory, clearBowTrajectory } from "../../weapons/bow-trajectory.js";
 import {
   BOW_DRAW_TICKS,
+  ensureOffHandShield,
   equipCombatLoadout,
+  holdsShield,
   MELEE_RANGE,
   selectCombatLoadout,
   selectMeleeLoadout,
@@ -264,7 +266,7 @@ export class FightWeapons {
     this.scene.signal.throwIfAborted();
     return true;
   };
-  readonly shoot = async (shield: Item | null): Promise<GuardOutcome | "shot" | "obstructed"> =>
+  readonly shoot = async (shield: Item | null): Promise<GuardOutcome | "shot" | "obstructed" | "melee_imminent"> =>
     this.scene.execution.run("shoot", async () => {
       if (!this.hasClearShot()) return "obstructed";
       const guardIfUnsafe = async (remaining: number, stage: string) => {
@@ -286,6 +288,9 @@ export class FightWeapons {
         }
         const interrupted = await guardIfUnsafe(BOW_DRAW_TICKS - drawn, "drawing");
         if (interrupted) return interrupted;
+        // An attacker that closed during the draw: leaving this scope cancels
+        // the draw, and the next turn raises the guard against it.
+        if (shield && this.meleeOutpacesDraw()) return "melee_imminent";
         if (!(await this.aimBow())) return "obstructed";
         await waitForPhysicsTicks(this.scene.bot, 1, this.scene.signal);
       }
@@ -327,12 +332,30 @@ export class FightWeapons {
       return true;
     });
   };
-  readonly loadoutFrom = (feet: Vec3) => {
+  readonly #available = () =>
     // Endermen evade arrows by teleporting; a carried bow cannot answer this target.
-    const available = permittedCombatItems(
-      combatItemsForTarget(this.scene.bot, this.scene.target),
-      this.scene.policy.combat,
-    ).filter((item) => this.scene.target.name !== "enderman" || item.name !== "bow");
+    permittedCombatItems(combatItemsForTarget(this.scene.bot, this.scene.target), this.scene.policy.combat)
+      .filter((item) => this.scene.target.name !== "enderman" || item.name !== "bow");
+  /**
+   * Another walking attacker would swing while a bow is drawn.
+   *
+   * A draw lowers the shield for twenty ticks, and the shield blocks only five
+   * ticks after it rises again. An attacker inside melee imminence (in reach,
+   * or closing within the shield's readiness) covers that ground long before
+   * the arrow leaves. The quarry's own distance already chooses its weapon;
+   * this is everyone else. In creeper-navigation's Cave pen (creeper2
+   * 2026-10-22T01-39-20-451Z-t00004) the bot drew at skeleton #24 twice with
+   * zombie #26 imminent and was hit at both releases, 20 to 17 and 14 to 11;
+   * t00007 drew the same way. A chosen firing position keeps its bow, as it
+   * does against the quarry: the position, not the guard, answers contact.
+   */
+  readonly meleeOutpacesDraw = (): boolean =>
+    this.scene.policy.combat.melee &&
+    this.scene.policy.combat.shield &&
+    !this.scene.position.plan &&
+    this.scene.perception.read().some((threat) => threat.meleeImminent && threat.id !== this.scene.target.id);
+  readonly loadoutFrom = (feet: Vec3) => {
+    const available = this.#available();
     if (this.scene.position.plan || this.scene.movement === "hold") {
       const eye = feet.offset(0, STANDING_EYE_HEIGHT, 0);
       // Holding a position forbids chasing. The six-block open-ground
@@ -360,10 +383,16 @@ export class FightWeapons {
     }
     return selectCombatLoadout(available, this.scene.target.position.minus(feet));
   };
-  readonly currentLoadout = () => this.loadoutFrom(this.scene.bot.entity.position);
+  /** The loadout for this tick: a shielded sword instead of a bow while another attacker closes. */
+  readonly currentLoadout = (): CombatLoadout => {
+    const loadout = this.loadoutFrom(this.scene.bot.entity.position);
+    if (loadout.kind !== "bow" || !loadout.shield || !this.meleeOutpacesDraw()) return loadout;
+    const guarded = selectMeleeLoadout(this.#available());
+    return guarded.weapon && guarded.shield ? guarded : loadout;
+  };
   /** A commanded guard is not proof that the off-hand item survived a hit. */
   readonly maintainGuard = async (): Promise<void> => {
-    if (!this.itemUse.shieldRaised || this.scene.bot.inventory.slots[45]?.name === "shield") return;
+    if (!this.itemUse.shieldRaised || holdsShield(this.scene.bot)) return;
     this.itemUse.invalidateShield();
     this.scene.signal.throwIfAborted();
     await this.raiseGuard();
@@ -371,12 +400,9 @@ export class FightWeapons {
   readonly raiseGuard = async () => {
     if (!this.scene.policy.combat.shield) return;
     const shield = this.currentLoadout().shield;
-    if (!shield || (this.itemUse.shieldRaised && this.scene.bot.inventory.slots[45]?.name === "shield")) return;
+    if (!shield || (this.itemUse.shieldRaised && holdsShield(this.scene.bot))) return;
     return this.scene.execution.run("guard", async () => {
-      if (shield && this.scene.bot.inventory.slots[45]?.name !== "shield") {
-        await this.scene.bot.equip(shield, "off-hand");
-        this.itemUse.invalidateShield();
-      }
+      if (await ensureOffHandShield(this.scene.bot, shield)) this.itemUse.invalidateShield();
       this.scene.signal.throwIfAborted();
       await this.itemUse.raiseShield();
     });
@@ -391,6 +417,18 @@ export class FightWeapons {
       hasMeleeKnockbackRoom(this.scene.navigation.world, feet, this.scene.target.position)
     );
   };
+  /**
+   * An arrow in flight that misses the standing body can still meet it once
+   * the bot moves. An approach that lowers its shield sprints about 1.4 blocks
+   * in the five ticks a raised shield needs before it blocks, so a shot within
+   * the retreat's two-block warning keeps the approach guarded. Unguarded, the
+   * approach's own stop sees the arrow only once the stride carries the body
+   * into its line, too late to ready the shield (skeleton-arena-crossfire,
+   * xfire-base t00006: arrow #59 passed 0.8 blocks off the standing bot and
+   * hit three ticks after the sprint began).
+   */
+  readonly projectileWithinStride = (): boolean =>
+    incomingShieldProjectiles(this.scene.bot, RETREAT_PROJECTILE_ALLOWANCE).length > 0;
   readonly volleyActive = (): boolean => {
     // A blaze can retain its charge behind terrain. Guarding that flag
     // stopped every turn toward an approach dig, then retried the same dig.

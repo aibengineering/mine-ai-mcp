@@ -10,12 +10,13 @@
 import { ExecutionScope } from "../execution/execution-scope.js";
 import { Diving } from "./diving.js";
 import type { Bot } from "mineflayer";
-import { cloudExposure, readDragonCloudHazards } from "../world/dragon-hazards.js";
+import { cloudExposure, JUMP_CLEARANCE, readDragonCloudHazards, type DragonCloud } from "../world/dragon-hazards.js";
 import { breakBlockInPlace, type BreakBlockInPlace } from "./execution/in-place-break.js";
 import { MineflayerBot, installNetherVinePhysics, mineflayerBotSurface } from "./mineflayer/bot.js";
 import { createMineflayerMovementPolicy, type MineflayerMovementPolicyOptions } from "./mineflayer/movement-policy.js";
 import { MineflayerWorldView } from "./mineflayer/world.js";
-import type { WorldView } from "./world/world.js";
+import type { Position3, WorldView } from "./world/world.js";
+import type { MovementKind } from "./movements/movement.js";
 import type { MovementPolicy } from "./movements/policy.js";
 import { runNavigation, type Navigate, type NavigationResult } from "./navigate.js";
 import { createNavigator } from "./orchestration/navigator.js";
@@ -54,6 +55,42 @@ export interface NavigationRuntime extends AsyncDisposable {
 
 export function createMovements(bot: Bot, options?: MineflayerMovementPolicyOptions): MovementPolicy {
   return createMineflayerMovementPolicy(bot, options);
+}
+
+const JUMPS: ReadonlySet<MovementKind> = new Set(["step_up", "pillar", "jump", "sprint_jump", "parkour"]);
+
+/**
+ * `movements`, refusing any step that stands, or any jump that rises, deeper
+ * in observed dragon breath than the route's `start` already does. A cloud
+ * lying on the tread above can clear a standing head by a fraction of a block
+ * while the step-up to that cell lifts the head into it.
+ */
+export function avoidingObservedBreath(movements: MovementPolicy, clouds: readonly DragonCloud[], start: Position3): MovementPolicy {
+  const initialExposure = new Map(clouds.map((c) => [c.id, cloudExposure(c, start)]));
+  const deeper = (feet: Position3, clearance = 0) =>
+    clouds.some((cloud) => cloudExposure(cloud, feet, clearance) > (initialExposure.get(cloud.id) ?? 0));
+  return {
+    ...movements,
+    get scaffold() {
+      return movements.scaffold;
+    },
+    decideStep(x, y, z, view) {
+      const base = movements.decideStep(x, y, z, view);
+      if (base.kind === "prohibited") return base;
+      if (deeper({ x: x + 0.5, y, z: z + 0.5 }))
+        return { kind: "prohibited", reason: "Observed dragon breath occupies this step" };
+      return base;
+    },
+    decideMovement(kind, from, to) {
+      const base = movements.decideMovement?.(kind, from, to) ?? { kind: "allowed" };
+      if (base.kind === "prohibited" || !JUMPS.has(kind)) return base;
+      const dx = to.x - from.x, dz = to.z - from.z;
+      for (const t of [0, 0.5, 1])
+        if (deeper({ x: from.x + 0.5 + dx * t, y: from.y, z: from.z + 0.5 + dz * t }, JUMP_CLEARANCE))
+          return { kind: "prohibited", reason: "The jump would rise into observed dragon breath" };
+      return base;
+    },
+  };
 }
 
 /** Build the navigation runtime for one connected Mineflayer bot. */
@@ -155,25 +192,8 @@ export function createNavigationRuntime(bot: Bot): NavigationRuntime {
         // fireball radius. Ordinary cloud growth must not cancel each step.
         const clouds = readDragonCloudHazards(bot);
         const start = bot.entity.position.floored().offset(0.5, 0, 0.5);
-        const initialExposure = new Map(clouds.map((c) => [c.id, cloudExposure(c, start)]));
         const movements: MovementPolicy =
-          clouds.length === 0
-            ? options.movements
-            : {
-                ...options.movements,
-                get scaffold() {
-                  return options.movements.scaffold;
-                },
-                decideStep(x, y, z, view) {
-                  const base = options.movements.decideStep(x, y, z, view);
-                  if (base.kind === "prohibited") return base;
-                  for (const cloud of clouds) {
-                    if (cloudExposure(cloud, { x: x + 0.5, y, z: z + 0.5 }) > (initialExposure.get(cloud.id) ?? 0))
-                      return { kind: "prohibited", reason: "Observed dragon breath occupies this step" };
-                  }
-                  return base;
-                },
-              };
+          clouds.length === 0 ? options.movements : avoidingObservedBreath(options.movements, clouds, start);
         // Cloud appearance, removal, or growth changes safety without a block change. Rebuild
         // this same requested route after physical release, unless its caller
         // stopped it or a defensive takeover cancelled the action.
@@ -247,7 +267,7 @@ export function createNavigationRuntime(bot: Bot): NavigationRuntime {
     },
     setStepFieldProvider: (provider) => navigator.setStepFieldProvider(provider),
     get active() {
-      return diving.active || navigator.active !== null;
+      return diving.active || navigator.running;
     },
     onEvent(listener) {
       listeners.add(listener);

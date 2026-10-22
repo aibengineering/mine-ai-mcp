@@ -18,6 +18,11 @@ test("defaults to persistent personal bot data, and to no unrestricted JavaScrip
   assert.equal(parseHostOptions(["--debug-execute-javascript"]).debugExecuteJavaScript, true);
 });
 
+test("keeps full-speed item use unless vanilla item-use movement is requested", () => {
+  assert.equal(parseHostOptions([]).vanillaItemUseMovement, false);
+  assert.equal(parseHostOptions(["--vanilla-item-use-movement"]).vanillaItemUseMovement, true);
+});
+
 test("temporary bot data has no meaningless persistent root", () => {
   const options = parseHostOptions([
     "--bot-data-persistence",

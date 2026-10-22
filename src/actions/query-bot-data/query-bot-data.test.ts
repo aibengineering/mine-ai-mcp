@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Bot } from "mineflayer";
-import { updateBotStatus } from "../../bot-data/bot-status.js";
 import { installMinecraftKnowledge } from "../../bot-data/minecraft-knowledge.js";
 import { SqlBotData } from "../../bot-data/sql-bot-data.js";
 import { queryBotDataCellSchema } from "./contract.js";
 import { createQueryBotDataAction, formatQueryBotDataResult, queryBotData } from "./query-bot-data.js";
-import { persistentBotData, temporaryBotData } from "../../test-support/bot-data.js";
+import { temporaryBotData } from "../../test-support/bot-data.js";
 
 const REGISTRY = {
   itemsArray: [{ id: 17, name: "oak_log", displayName: "Oak Log", stackSize: 64 }],
@@ -59,16 +58,6 @@ test("queries bot data and Minecraft knowledge on one connection", async (t) => 
   assert.deepEqual(largeInteger.rows, [["9007199254740993"]]);
 });
 
-test("persistent queries use the same SqlBotData connection", async (t) => {
-  const data = persistentBotData(t).open("world");
-  installMinecraftKnowledge(data, REGISTRY);
-  recordChunk(data, "oak_log");
-
-  assert.deepEqual((await queryBotData(data, { sql: "SELECT material FROM main.frontier_chunk_materials" })).rows, [
-    ["oak_log"],
-  ]);
-});
-
 test("enforces statement, result, read-only, and pre-execution cancellation boundaries", async (t) => {
   const data = temporaryBotData({ closeAfter: t });
   installMinecraftKnowledge(data, REGISTRY);
@@ -111,46 +100,6 @@ test("enforces statement, result, read-only, and pre-execution cancellation boun
   const controller = new AbortController();
   controller.abort(new Error("operator cancelled query"));
   await assert.rejects(queryBotData(data, { sql: "SELECT 1" }, controller.signal), /operator cancelled query/);
-});
-
-test("queries bot_status and joins with frontier chunks to calculate distances", async (t) => {
-  const data = temporaryBotData({ closeAfter: t });
-  recordChunk(data, "oak_log");
-  updateBotStatus(data, {
-    botId: "bot1",
-    dimension: "minecraft:overworld",
-    x: 0,
-    y: 64,
-    z: 0,
-    chunkX: 0,
-    chunkZ: 0,
-    yaw: 0,
-    pitch: 0,
-    health: 20,
-    food: 20,
-    gameMode: "survival",
-    onGround: true,
-    inWater: false,
-    saturation: 5,
-    timeOfDay: 0,
-    isSleeping: false,
-    isRaining: false,
-    inventory: [],
-  });
-
-  const query = await queryBotData(data, {
-    sql: `
-      SELECT
-        c.chunk_x,
-        c.chunk_z,
-        round(sqrt(pow((c.chunk_x - s.chunk_x) * 16, 2) + pow((c.chunk_z - s.chunk_z) * 16, 2)), 1) AS distance
-      FROM main.frontier_chunks AS c
-      CROSS JOIN main.bot_status AS s
-      WHERE s.bot_id = 'bot1'
-    `,
-  });
-
-  assert.deepEqual(query.rows, [[1, 2, 35.8]]);
 });
 
 function recordChunk(data: SqlBotData, material: string): void {

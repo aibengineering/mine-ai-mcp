@@ -1,0 +1,124 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Four idle bots stand at the east edge of small netherrack perches sixteen
+  blocks above a lava lake, one pen each, and request nothing. An enderman
+  angry at the bot arrives on the west lip of a 3x3 shelf, against an
+  unshielded bot and a shielded one; a large magma cube lands on the same lip;
+  and a bow skeleton shoots at an unshielded bot on a one-wide bridge from a
+  platform eight blocks west. Every hit pushes the bot east, toward the lava.
+  Each bot must end alive on its perch: run 16's EnderSeeker was knocked off
+  this shelf by an enderman after a failed fighting stance and died in the lava
+  (incident 1379b59d, 2026-09-08).
+
+# The recorded run-16 arena, translated into four pens 100 blocks apart: a
+# lava lake (y 22 to 31 on a netherrack floor) under each perch at y 46, the
+# bot at its recorded offset in the perch's east cell. Arrival points are the
+# recorded ones; the mobs start there, angry, when the trial starts.
+#   x:    0           100
+#   z 0:  EnderLedge  EnderShield
+#   z100: CubeLedge   SkeletonBridge
+geometry:
+  - fill: { block: netherrack, from: [-9, 21, -9], to: [11, 21, 9] }
+  - fill: { block: lava, from: [-9, 22, -9], to: [11, 31, 9] }
+  - fill: { block: netherrack, from: [-2, 46, -2], to: [0, 46, 0] }
+  - fill: { block: netherrack, from: [91, 21, -9], to: [111, 21, 9] }
+  - fill: { block: lava, from: [91, 22, -9], to: [111, 31, 9] }
+  - fill: { block: netherrack, from: [98, 46, -2], to: [100, 46, 0] }
+  - fill: { block: netherrack, from: [-9, 21, 91], to: [11, 21, 109] }
+  - fill: { block: lava, from: [-9, 22, 91], to: [11, 31, 109] }
+  - fill: { block: netherrack, from: [-2, 46, 98], to: [0, 46, 100] }
+  # The bridge runs north-south through the bot's cell; the skeletons' platform
+  # stands eight blocks west of it.
+  - fill: { block: netherrack, from: [91, 21, 91], to: [111, 21, 109] }
+  - fill: { block: lava, from: [91, 22, 91], to: [111, 31, 109] }
+  - fill: { block: netherrack, from: [100, 46, 95], to: [100, 46, 105] }
+  - fill: { block: netherrack, from: [91, 46, 98], to: [94, 46, 103] }
+
+entities:
+  # AngryAt is each bot's offline UUID, fixed by its name (see the README).
+  - type: enderman
+    pos: [-0.7, 47, 0.61474899858322]
+    nbt: '{PersistenceRequired:1b,AngerTime:600,AngryAt:[I;1343804564,-451264867,-1486598829,-2143451527],Tags:["pen_ender"]}'
+  - type: enderman
+    pos: [99.3, 47, 0.61474899858322]
+    nbt: '{PersistenceRequired:1b,AngerTime:600,AngryAt:[I;924069900,-1627901537,-2001625830,-525091492],Tags:["pen_shield"]}'
+  - type: magma_cube
+    pos: [-0.95, 47, 100.61474899858322]
+    nbt: '{Size:3,PersistenceRequired:1b,Tags:["pen_cube"]}'
+  - type: skeleton
+    pos: [92.5, 47, 100.61474899858322]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_bridge"]}'
+
+# A bot anywhere below its perch's surface, even for a tick, sets a marker
+# block the goals can see: the absorbed fixtures required y to stay at 47.
+# (A selector volume runs from y to y + dy + 1, so this one ends at 47.)
+schedule:
+  - when: "entity @a[name=EnderLedge,x=-12,y=21,z=-12,dx=24,dy=25,dz=24]"
+    run: "setblock 0 60 10 minecraft:red_wool"
+  - when: "entity @a[name=EnderShield,x=88,y=21,z=-12,dx=24,dy=25,dz=24]"
+    run: "setblock 100 60 10 minecraft:red_wool"
+  - when: "entity @a[name=CubeLedge,x=-12,y=21,z=88,dx=24,dy=25,dz=24]"
+    run: "setblock 0 60 110 minecraft:red_wool"
+  - when: "entity @a[name=SkeletonBridge,x=88,y=21,z=88,dx=24,dy=25,dz=24]"
+    run: "setblock 100 60 110 minecraft:red_wool"
+
+players:
+  - name: EnderLedge
+    pos: [0.46562212492836, 47, 0.61474899858322]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: cobblestone, count: 64 }
+  - name: EnderShield
+    pos: [100.46562212492836, 47, 0.61474899858322]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: shield, count: 1 }
+  - name: CubeLedge
+    pos: [0.46562212492836, 47, 100.61474899858322]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: cobblestone, count: 64 }
+  - name: SkeletonBridge
+    pos: [100.46562212492836, 47, 100.61474899858322]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: cobblestone, count: 64 }
+
+params:
+  # Twenty seconds of arrival, melee cooldowns and delayed lava damage.
+  waitTicks: 440
+
+tick:
+  - "gamemode spectator @a[name=!EnderLedge,name=!EnderShield,name=!CubeLedge,name=!SkeletonBridge,gamemode=!spectator]"
+
+# Lava is death, so `survive` is the lava witness, and the marker catches a bot
+# that dropped below its perch's surface at any moment. Where it stands at the
+# end is its own business: the bots carry cobblestone, and the first runs ended
+# on blocks they placed east of the shelf, and one on a bridge of its own 26
+# blocks out over the lava, all at y 47.
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: blockAt, who: EnderLedge, pos: [0, 60, 10], block: air }
+    - { kind: survive, who: EnderLedge, seconds: 1 }
+    - { kind: completion, who: EnderLedge }
+
+    - { kind: blockAt, who: EnderShield, pos: [100, 60, 10], block: air }
+    - { kind: survive, who: EnderShield, seconds: 1 }
+    - { kind: completion, who: EnderShield }
+
+    - { kind: blockAt, who: CubeLedge, pos: [0, 60, 110], block: air }
+    - { kind: survive, who: CubeLedge, seconds: 1 }
+    - { kind: completion, who: CubeLedge }
+
+    - { kind: blockAt, who: SkeletonBridge, pos: [100, 60, 110], block: air }
+    - { kind: survive, who: SkeletonBridge, seconds: 1 }
+    - { kind: completion, who: SkeletonBridge }

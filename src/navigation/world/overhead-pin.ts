@@ -12,8 +12,8 @@
  * 2026-09-12: a hunt fell through a tilting big dripleaf into a one-deep pool,
  * the leaf reset flat above it, and the bot was held at the leaf's underside
  * less the crouch height for the rest of the request while navigation retried
- * the same step from the same cell. `scenarios/flat/hunt/dripleaf-pool-trap.yaml`
- * reproduces it.
+ * the same step from the same cell. The dripleaf pens of
+ * `tests/minecraft/scenarios/hunt/awkward-quarry.yaml` reproduce it.
  *
  * The condition is read from geometry rather than from the packet stream: the
  * 1.8-block column over the feet overlaps a collision box that begins above

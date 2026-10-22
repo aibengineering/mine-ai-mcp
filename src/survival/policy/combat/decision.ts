@@ -190,6 +190,20 @@ export function decideCombatResponse(facts: CombatDecisionFacts, purpose: Combat
 
   const hurtBadly = health < policy.critical_health;
   if (!(hurtBadly ? threats.length > 0 : contacts.some((threat) => threat.inContact))) return { kind: "none" };
+  // An enderman teleports to its target, so withdrawal cannot separate from
+  // one; it only turns the bot's back to the next blow. Without a shelter to
+  // recover in, a wounded bot with a shield holds its ground behind it
+  // instead. In nether-idle-survival (combat-diag2 19-52-26-113Z and three
+  // more), CliffBot at 6.9 health evaded an enderman for ten to fifteen
+  // seconds, was caught every time, and died in four runs of five.
+  const pursuer =
+    !hideAvailable && policy.shield && facts.shield && policy.melee
+      ? contacts.find(
+          (threat) =>
+            threat.name === "enderman" && threat.relationship.defend && threat.inContact && !fightAnswered(threat.id),
+        )
+      : undefined;
+  if (pursuer && health < policy.engage_min_health) return { kind: "fight", targetId: pursuer.id, threats };
   if (hurtBadly)
     return hideAvailable && !answered.has("recovery") ? { kind: "hide", threats, reason: "hurt" } : evade("hurt");
   if (!policy.melee && !policy.bow) return evade("withdraw");

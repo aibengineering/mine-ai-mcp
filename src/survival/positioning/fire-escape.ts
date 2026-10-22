@@ -3,7 +3,7 @@ import { Vec3 } from "vec3";
 import { isHeadPassable, isPassable, isSafeSupport, type WorldView } from "../../navigation/index.js";
 import { cellIntersectsBody } from "../../utils/geometry.js";
 import { advancingLavaAt } from "../../world/lava-flow.js";
-import { isInFire, isInLava } from "../perception/body.js";
+import { isBurning, isInFire, isInLava } from "../perception/body.js";
 
 /** A local escape borrows navigation's live world and block geometry. */
 export interface FireEscapeDeparture {
@@ -20,8 +20,8 @@ export function clearFireEscape(
   world: WorldView,
   target: Vec3,
   departure: FireEscapeDeparture = fireEscapeDeparture(bot),
+  start: Vec3 = bot.entity.position,
 ): boolean {
-  const start = bot.entity.position;
   const { inLava } = departure;
   const body = { position: departure.position, width: bot.entity.width ?? 0.6, height: bot.entity.height ?? 1.8 };
   const radius = body.width / 2;
@@ -105,5 +105,21 @@ export function nearbyFireEscape(bot: Bot, world: WorldView, reason: FireEscapeR
         else if (needsDryEscape && isPassable(feet) && isSafeSupport(floor)) dry.push(point);
       }
   const nearest = (a: Vec3, b: Vec3) => a.distanceTo(bot.entity.position) - b.distanceTo(bot.entity.position);
-  return [...water.sort(nearest), ...dry.sort(nearest)].find((point) => clearFireEscape(bot, world, point)) ?? null;
+  const swim = water.sort(nearest).find((point) => clearFireEscape(bot, world, point));
+  if (swim) return swim;
+  const banks = dry.sort(nearest).filter((point) => clearFireEscape(bot, world, point));
+  const bank = banks[0];
+  if (!bank || !(isInLava(bot) || isInFire(bot) || isBurning(bot))) return bank ?? null;
+  // Leaving lava or fire leaves a burn, fifteen health from lava, that only
+  // water ends. Half a block more of lava swimming costs about one more
+  // four-point lava hit, so a bank up to that much beyond the nearest, with
+  // water a step away, is the better way out. Equally near banks would
+  // otherwise be taken in scan order.
+  const reach = bank.distanceTo(bot.entity.position) + WATER_BANK_PREFERENCE;
+  const toWater = (from: Vec3) =>
+    water.some((point) => clearFireEscape(bot, world, point, { position: from, inLava: false }, from));
+  return banks.find((point) => point.distanceTo(bot.entity.position) <= reach && toWater(point)) ?? bank;
 }
+
+/** How much farther than the nearest bank a bank with water beside it may be. */
+const WATER_BANK_PREFERENCE = 0.5;

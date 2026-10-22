@@ -1,0 +1,35 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance]
+description: >-
+  Collect four sand from the bed of a three-deep pool, starting at its surface. The bot must dive,
+  mine and surface for air as it needs, and finish with the sand and full health; regeneration is
+  off, so drowning damage at any point fails the trial. Covers the single-block underwater
+  collection and the longer collection that needs breathing stops.
+
+reset:
+  - "fill -5 -61 -5 9 -50 5 air"
+
+geometry:
+  # A stone basin whose water is three deep over a row of four sand blocks.
+  - fill: { block: stone, from: [-5, -61, -5], to: [9, -58, 5] }
+  - fill: { block: water, from: [-4, -60, -4], to: [8, -58, 4] }
+  - fill: { block: sand, from: [0, -61, 0], to: [3, -61, 0] }
+
+players:
+  - name: Actor
+    pos: [0.5, -58, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+
+params:
+  action: collect_block
+  input: { block_name: sand, count: 4, scaffold: false }
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, item: sand, count: 4 }
+    - { kind: health, health: 20 }
+    - { kind: completion }

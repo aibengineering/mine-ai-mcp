@@ -9,7 +9,7 @@ import { readProjectileSpawn } from "./projectile-spawn.js";
 import { isCreeper } from "./creepers.js";
 import { canBeBystander, isHostile } from "./threats.js";
 import { trackArrowFlights } from "./arrow-flight.js";
-import { bowReleaseInTicks, trackBowDraws } from "./bow-timing.js";
+import { bowDrawHeldOnBot, bowReleaseInTicks, trackBowDraws } from "./bow-timing.js";
 import { CreeperClearance } from "./creepers.js";
 type Entity = Parameters<Bot["attack"]>[0];
 const RANGED_SPECIES = new Set(["blaze"]);
@@ -94,7 +94,7 @@ export function meleeImminent(bot: Bot, entity: Entity): boolean {
  * the mob is winding up, and whether the bot is what it is winding up at.
  */
 export function isWindingUpAtBot(bot: Bot, entity: Entity): boolean {
-  if (hasBow(entity)) return bowDrawAimedAtBot(bot, entity);
+  if (hasBow(entity)) return bowDrawAimedAtBot(bot, entity) || bowDrawHeldOnBot(bot, entity);
   return isWindingUp(bot, entity);
 }
 

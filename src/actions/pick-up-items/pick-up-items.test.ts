@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { recordLastDeath } from "../../bot-data/index.js";
+import { recordEvent } from "../../bot-data/index.js";
 import { botFixture } from "../../test-support/bot.js";
 import { temporaryBotData } from "../../test-support/bot-data.js";
 import { createDiscardedItems } from "../../world/discarded-items.js";
@@ -28,12 +28,11 @@ test("death recovery returns its named no-record refusal with schema-valid curre
 test("death recovery refuses another dimension before asking navigation to move", async (t) => {
   const bot = botFixture();
   const data = temporaryBotData({ closeAfter: t });
-  recordLastDeath(data, {
-    botId: bot.username,
-    dimension: "the_nether",
-    position: { x: 30.5, y: 70, z: -4.5 },
+  recordEvent(data, bot.username, {
+    type: "player_death",
     observedAt: new Date().toISOString(),
-    cause: "fell from a high place",
+    summary: `${bot.username} died.`,
+    payload: { dimension: "the_nether", position: { x: 30.5, y: 70, z: -4.5 }, cause: "fell from a high place" },
   });
   let navigated = false;
   const action = createPickUpItemsAction(
@@ -56,12 +55,11 @@ test("death recovery refuses another dimension before asking navigation to move"
 test("stale death refusal preserves the retained recovery facts", async (t) => {
   const bot = botFixture();
   const data = temporaryBotData({ closeAfter: t });
-  recordLastDeath(data, {
-    botId: bot.username,
-    dimension: bot.game.dimension,
-    position: { x: 12.5, y: 64, z: 8.5 },
+  recordEvent(data, bot.username, {
+    type: "player_death",
     observedAt: new Date(Date.now() - 301_000).toISOString(),
-    cause: null,
+    summary: `${bot.username} died.`,
+    payload: { dimension: bot.game.dimension, position: { x: 12.5, y: 64, z: 8.5 }, cause: null },
   });
   const action = createPickUpItemsAction(bot, {} as never, data, createDiscardedItems());
   const lifetime = new AbortController();

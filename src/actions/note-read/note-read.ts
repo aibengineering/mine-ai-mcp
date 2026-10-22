@@ -9,7 +9,6 @@ import {
   NOTE_READ_DESCRIPTION,
   noteReadInputSchema,
   noteReadResultSchema,
-  parseNoteReadRequest,
   type NoteReadRequest,
   type NoteReadResult,
 } from "./contract.js";
@@ -22,6 +21,14 @@ export const latestNotesQuery = defineSqlQuery({
   parseRow: parseBotNote,
 });
 
+/**
+ * note_read is the narrow form of query_bot_data, but it does not run through
+ * that action's implementation: query_bot_data caps a result at 100 rows and
+ * 64 KiB and answers with bare columns and rows, while note_read returns up to
+ * `n` typed notes through a bound, registered query. Routing one through the
+ * other would change what note_read returns, so the two share the bot-data
+ * connection and nothing more.
+ */
 export function createNoteReadAction(
   data: SqlBotData,
   botId: string,
@@ -33,7 +40,7 @@ export function createNoteReadAction(
     description: NOTE_READ_DESCRIPTION,
     inputSchema: noteReadInputSchema,
     resultSchema: noteReadResultSchema,
-    parse: parseNoteReadRequest,
+    parse: (input: unknown) => noteReadInputSchema.parse(input ?? {}),
     execution: { kind: "information" },
     annotations: { destructiveHint: false, idempotentHint: true, openWorldHint: false },
     queries: [latestNotesQuery],

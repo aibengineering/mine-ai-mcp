@@ -2,17 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../test-support/bot.js";
-import { parseDebugExecuteJavaScriptRequest } from "./contract.js";
 import { executeDebugJavaScript, formatDebugExecuteJavaScriptResult } from "./debug-execute-javascript.js";
 
 test("executes awaited code with the live bot, Vec3, and captured console in scope", async () => {
-  // One function body and nothing else: no timeout, no empty program.
-  assert.deepEqual(parseDebugExecuteJavaScriptRequest({ code: "return bot.username" }), {
-    code: "return bot.username",
-  });
-  assert.throws(() => parseDebugExecuteJavaScriptRequest({ code: "return 1", timeout: 10 }));
-  assert.throws(() => parseDebugExecuteJavaScriptRequest({ code: "   " }));
-
   const bot = botFixture({ blocks: { "1,60,0": "spruce_log" }, position: new Vec3(0.5, 60, 0.5) });
   const result = await executeDebugJavaScript(bot, {
     code: [

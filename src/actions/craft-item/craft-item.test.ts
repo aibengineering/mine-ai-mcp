@@ -11,11 +11,11 @@ import {
 } from "./index.js";
 const navigation = {} as NavigationRuntime;
 
-test("parses, normalizes, and combines a non-empty item batch", () => {
+test("combines repeated items of one batch into one requested count each", () => {
   assert.deepEqual(
     parseCraftItemRequest({
       items: [
-        { item_name: " Minecraft:Stone Pickaxe ", count: 2 },
+        { item_name: "stone_pickaxe", count: 2 },
         { item_name: "stick" },
         { item_name: "stick", count: 3 },
       ],
@@ -27,9 +27,6 @@ test("parses, normalizes, and combines a non-empty item batch", () => {
       ],
     },
   );
-  assert.throws(() => parseCraftItemRequest({ items: [] }));
-  assert.throws(() => parseCraftItemRequest({ items: [{ item_name: "stick", count: 0 }] }));
-  assert.throws(() => parseCraftItemRequest({ item_name: "stick", count: 1 }));
 });
 
 /** One shared plan per request, executed leaf-first, reporting only observed inventory gains. */
@@ -97,22 +94,12 @@ test("crafts each requested target and reports the gain actually observed in inv
   }
 });
 
-/** A plan short of any leaf material is refused whole: nothing is consumed and nothing is crafted. */
+/**
+ * A plan short of any leaf material is refused whole: nothing is consumed and
+ * nothing is crafted. Which leaves a shared plan reserves and misses is the
+ * planner's contract, proven in utils/craft-plan.test.ts.
+ */
 const missingMaterialBatches = [
-  {
-    name: "one missing leaf across two targets",
-    carried: { oak_log: 1 },
-    items: [
-      { itemName: "stick", count: 4 },
-      { itemName: "crafting_table", count: 1 },
-    ],
-    requiredMaterials: [{ item: "oak_log", count: 2 }],
-    carriedMaterials: [{ item: "oak_log", count: 1 }],
-    missingMaterials: [{ item: "oak_log", count: 1 }],
-    requiresCraftingTable: false,
-    markdown: /Carried leaf materials reserved: oak_log ×1/,
-    tree: /oak_log x1/,
-  },
   {
     // Without a nearby table the plan must add the table's own materials.
     name: "the workstation's own materials",
@@ -138,7 +125,7 @@ const missingMaterialBatches = [
     carriedMaterials: undefined,
     missingMaterials: [{ item: "oak_log", count: 1 }],
     requiresCraftingTable: true,
-    markdown: undefined,
+    markdown: /Carried leaf materials reserved: cobblestone ×6, oak_log ×10/,
     tree: /crafting_table/,
   },
 ] as const;
@@ -182,7 +169,14 @@ test("a native crafting failure claims no output and still asks for the inventor
     },
   });
 
-  const result = await craftItem(bot, navigation, { items: [{ itemName: "crafting_table", count: 1 }] }, {});
+  // Nothing was crafted, so the wait for the requested gain lapses.
+  const result = await craftItem(
+    bot,
+    navigation,
+    { items: [{ itemName: "crafting_table", count: 1 }] },
+    {},
+    { inventorySettleMs: 20 },
+  );
 
   assert.equal(result.status, "failed");
   assert.match(

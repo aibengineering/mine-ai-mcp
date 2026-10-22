@@ -1,6 +1,5 @@
-template: ../../templates/flat-single-action.yaml
+template: ../../templates/flat-single-action-no-regen.yaml
 
-name: pillar-descent-over-lava
 tags: [reliability]
 description: >-
   Descend a one-block-wide pillar above lava by mining underfoot. With no shaft walls to
@@ -23,16 +22,6 @@ description: >-
 # The plinth is one column wide on purpose. A three-wide landing would catch a
 # bot that drifted off near the bottom and let the run pass on the strength of
 # the last few blocks.
-
-world:
-  type: flat
-  time: noon
-  gamerules:
-    doDaylightCycle: false
-    doMobSpawning: false
-    keepInventory: true
-    naturalRegeneration: false
-    randomTickSpeed: 0
 
 reset:
   - "fill -14 -62 -14 14 -40 14 air"

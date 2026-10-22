@@ -108,10 +108,9 @@ function testBot(
     left.name === right.name &&
     (left.metadata ?? 0) === (right.metadata ?? 0) &&
     JSON.stringify(left.nbt ?? null) === JSON.stringify(right.nbt ?? null);
-  return botFixture(
+  const bot = botFixture(
     { username: "StorageBot", position: { x: 0, y: 64, z: 0 } },
     {
-      inventory: { count: (itemType: number) => carried[registry.items[itemType]!.name] ?? 0 },
       blockAt: (cell: Vec3) =>
         cell.y === 65 ? { name: "air", position: cell, shapes: [], boundingBox: "empty" } : block,
       openContainer: async () => container.window,
@@ -142,11 +141,13 @@ function testBot(
       },
     },
   );
+  // Carried counts by name, read through the window's own count as the transfer checks do.
+  bot.inventory.count = (itemType: number) => carried[registry.items[itemType]!.name] ?? 0;
+  return bot;
 }
 
 const testDependencies = {
   navigate: async () => ({ status: "completed", elapsedMs: 0 }),
-  createMovements: () => ({}),
   now: () => new Date("2026-08-24T00:00:00.000Z"),
 } as unknown as UseContainerDependencies;
 

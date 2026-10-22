@@ -34,7 +34,6 @@ export type {
   BreakBlockInPlaceOptions,
   BreakBlockInPlaceResult,
 } from "./execution/in-place-break.js";
-export { SupportedPositionController } from "./execution/supported-position-controller.js";
 export { setSneaking } from "./mineflayer/sneak.js";
 export { enterPortal, portalApproachGoal, type PortalBlock } from "./processes/portal-entry.js";
 export { createNavigationRuntime, createMovements } from "./runtime.js";
@@ -45,7 +44,6 @@ export { hasSupportedCorridor } from "./world/block-geometry.js";
 export { isPassable, isHeadPassable, isSafeSupport } from "./world/block-geometry.js";
 
 // The navigation transaction.
-export { DEFAULT_CONTINUATION_SEARCH_LIMITS, DEFAULT_SEARCH_LIMITS } from "./navigate.js";
 export type { Navigate, NavigateOptions, NavigationResult } from "./navigate.js";
 export { describeCalculationFailure, type NavigationCalculationFailure } from "./orchestration/process-events.js";
 
@@ -69,10 +67,9 @@ export {
 export { packKey, type BlockPosition, type WorldView } from "./world/world.js";
 
 // Movement policy: what a route may do, and what it costs.
-export { STANDARD_SCAFFOLD_ITEMS, TERRAIN_BREAK_PENALTY } from "./mineflayer/movement-policy.js";
+export { TERRAIN_BREAK_PENALTY } from "./mineflayer/movement-policy.js";
 export { observeMineflayerBlock } from "./mineflayer/world.js";
 export type { MineflayerBlock } from "./mineflayer/world.js";
-export { BREAK_OPENS_INTO_LIQUID } from "./movements/policy.js";
 export type { MovementPolicy } from "./movements/policy.js";
 export type { StepField, StepFieldProvider } from "./step-field.js";
 

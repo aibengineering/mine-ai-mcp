@@ -1,6 +1,5 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const DROP_ITEM = "drop_item" as const;
@@ -9,7 +8,7 @@ export const DROP_ITEM_DESCRIPTION =
   "Each named item is tossed stack by stack and verified gone from the inventory. Worn armour and the off-hand are never " +
   "dropped, and the held item only with allow_equipped. With in_a_hole, dig a dry two-block-deep hole beside the bot " +
   "(excavating a wall opening underground when needed), verify the items landed below pickup height, then plug the hole " +
-  "with a carried block and step back from it so a later collect_block does not walk straight into the pit. Cannot combine in_a_hole with to_player. " +
+  "with a carried block other than the items dropped, and step back from it so a later collect_block does not walk straight into the pit. Cannot combine in_a_hole with to_player. " +
   "To free inventory space, prefer depositing into a chest with use_container: dropped items despawn after five " +
   "minutes, can be taken by anyone, and may be picked straight back up by this bot. Drop only when no container is in " +
   "reach, when carrying the items to one is not worth the trip, or when the items are genuinely rubbish. " +
@@ -56,7 +55,7 @@ export const dropItemInputSchema = z
       .boolean()
       .default(false)
       .describe(
-        "Create a dry, enclosed disposal pit below pickup height beside the bot, digging a wall opening if needed, then toss into it. Afterwards the pit is plugged with a carried block and the bot steps back from it. Fails without tossing if adjacent terrain cannot safely contain the pit. Cannot be combined with to_player.",
+        "Create a dry, enclosed disposal pit below pickup height beside the bot, digging a wall opening if needed, then toss into it. Afterwards the pit is plugged with a carried block other than the items dropped, and the bot steps back from it. Fails without tossing if adjacent terrain cannot safely contain the pit. Cannot be combined with to_player.",
       ),
   })
   .refine((value) => !value.in_a_hole || value.to_player === undefined, {
@@ -107,7 +106,7 @@ export const dropRecipientSchema = z.strictObject({
 });
 
 export const holeClosureSchema = z.strictObject({
-  /** Carried block used to plug the hole; null when nothing placeable was carried. */
+  /** Carried block used to plug the hole, never one being dropped; null when nothing placeable was carried. */
   item: z.string().nullable(),
   /** Blocks placed into the hole's shaft above the discards. */
   placed: z.number().int(),
@@ -137,14 +136,6 @@ export type DropRecipient = z.output<typeof dropRecipientSchema>;
 export type HoleClosure = z.output<typeof holeClosureSchema>;
 export type DropItemEvidence = z.output<typeof dropItemEvidenceSchema>;
 export type DropItemResult = z.output<typeof dropItemResultSchema>;
-export type DropItemOutput = ActionOutput<typeof DROP_ITEM, DropItemResult>;
-
-export const dropItemAnnotations = {
-  // Dropped items despawn and can be taken by anyone; this is not undoable.
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: false,
-} satisfies ToolAnnotations;
 
 export const dropItemOutcomes = {
   notCarried: (item: string) => `[DROP_NOT_CARRIED] No ${item} is carried.`,

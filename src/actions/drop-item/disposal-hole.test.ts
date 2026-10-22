@@ -1,28 +1,24 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import test from "node:test";
 import type { Bot } from "mineflayer";
-import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import { blockClass } from "../../navigation/mineflayer/world.js";
 import { createMovementPolicy } from "../../navigation/movements/policy.js";
+import { botFixture, registry, type FakeStack } from "../../test-support/bot.js";
 import { prepareDisposalHole, observeHoleDrops, sealDisposalHole, snapshotDroppedCounts } from "./disposal-hole.js";
 
-const registry = minecraftData("1.21.4");
 const Block = blockClass({ registry } as Pick<Bot, "registry">);
 
-function ground(carried: { name: string; count: number }[] = []) {
+/** Dirt below y 64 and air above, as real Prismarine blocks, with every cell the test changes by name. */
+function ground(carried: FakeStack[] = []) {
   const changed = new Map<string, string>();
-  const bot = {
-    registry,
-    entity: { position: new Vec3(0.5, 64, 0.5), onGround: true },
-    inventory: { items: () => carried },
-    blockAt(position: Vec3) {
+  const bot = botFixture({
+    items: carried,
+    blocks: (position) => {
       const name = changed.get(position.toString()) ?? (position.y < 64 ? "dirt" : "air");
-      return Block.fromStateId(registry.blocksByName[name]!.defaultState, 0);
+      return Block.fromStateId(registry.blocksByName[name]!.defaultState, 0) as never;
     },
-    lookAt: async () => {},
-  } as unknown as Bot;
+  });
   return { bot, changed };
 }
 
@@ -96,6 +92,31 @@ test("an empty hand leaves the hole open without failing the drop", async () => 
   assert.match(seal.error ?? "", /DROP_HOLE_OPEN/);
 });
 
+test("the plug never spends the item the request is discarding", async () => {
+  // disposal-holes, Full: with all 36 slots full, the hole's stone spoil
+  // cannot be picked up while digging. Whether it is in hand by the plug is a
+  // race with the toss that frees slots; seven of eight trials plugged with
+  // netherrack instead, and ended one or two short of the 2048 the request
+  // left carried.
+  const { bot, changed } = ground([
+    { name: "diamond_pickaxe", count: 1 },
+    { name: "netherrack", count: 64 },
+  ]);
+  for (const y of [62, 63]) changed.set(new Vec3(1, y, 0).toString(), "air");
+  const placed: { cell: Vec3; item: string }[] = [];
+
+  const open = await sealDisposalHole(bot, new Vec3(1, 62, 0), fakePlacement(changed, placed), {}, new Set(["netherrack"]));
+
+  assert.equal(open.placed, 0);
+  assert.match(open.error ?? "", /DROP_HOLE_OPEN.*other than the items discarded/);
+  assert.equal(bot.inventory.items().find((item) => item.name === "netherrack")?.count, 64);
+
+  (bot.inventory.items() as unknown as FakeStack[]).push({ name: "cobblestone", count: 2, type: registry.itemsByName.cobblestone!.id });
+  const spoil = await sealDisposalHole(bot, new Vec3(1, 62, 0), fakePlacement(changed, placed), {}, new Set(["netherrack"]));
+
+  assert.deepEqual(spoil, { item: "cobblestone", placed: 2 }, "the spoil, once picked up, still plugs it");
+});
+
 test("hole preparation refuses liquid beside its shaft without digging", async () => {
   const { bot, changed } = ground();
   for (const [x, z] of [
@@ -161,7 +182,7 @@ test("a tunnel wall is excavated above an enclosed disposal pit", async () => {
 
 test("hole evidence counts merged stack growth and ignores existing items", async () => {
   const entity = { id: 1, position: new Vec3(1.5, 62, 0.5), getDroppedItem: () => ({ name: "dirt", count: 2 }) };
-  const bot = Object.assign(new EventEmitter(), { entities: { 1: entity } }) as unknown as Bot;
+  const bot = botFixture({ entities: { 1: entity } });
   const baseline = snapshotDroppedCounts(bot);
   entity.getDroppedItem = () => ({ name: "dirt", count: 12 });
   assert.equal(

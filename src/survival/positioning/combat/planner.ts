@@ -61,6 +61,12 @@ function homes(world: WorldView, origin: Vec3, steps: number): Vec3[] {
   return [...found.values()];
 }
 
+/** Supported cells within `steps` that already have a ceiling over the head:
+ * the only cells an existing roof can protect at no material cost. */
+export function roofedHomes(world: WorldView, origin: Vec3, steps: number): Vec3[] {
+  return homes(world, origin, steps).filter((cell) => missingProtection(world, [cell.offset(0, 2, 0)])?.length === 0);
+}
+
 export type RoofOpening =
   | { readonly kind: "protection" }
   | { readonly kind: "provoke"; readonly targetEye: Vec3; readonly eyeHeight: number }
@@ -118,6 +124,31 @@ export function roofLurePath(world: WorldView, cell: Vec3, target: Vec3, placeme
     frontier = next;
   }
   return best;
+}
+
+/** The shortest level walk from under a roof to ground open to the sky, where
+ * a quarry three blocks tall can stand beside the bot. A tall mob pathing to a
+ * bot under a low roof stops at the reachable node nearest the bot's cell; a
+ * cell behind the roof's own wall can tie with its mouth, and from there no
+ * footing is nearer, so the walk toward it finds nothing. */
+export function roofExitPath(world: WorldView, cell: Vec3, steps = 4): Vec3[] {
+  if (isPassable(world.blockAt(cell.x, cell.y + 2, cell.z))) return [];
+  const visited = new Set([cell.toString()]);
+  let frontier: Vec3[][] = [[cell]];
+  for (let depth = 0; depth < steps; depth++) {
+    const next: Vec3[][] = [];
+    for (const path of frontier)
+      for (const side of PROTECTION_SIDES) {
+        const at = path.at(-1)!.plus(side);
+        if (visited.has(at.toString()) || !standingCell(world, at)) continue;
+        visited.add(at.toString());
+        const extended = [...path, at];
+        if (isPassable(world.blockAt(at.x, at.y + 2, at.z))) return extended;
+        next.push(extended);
+      }
+    frontier = next;
+  }
+  return [];
 }
 
 /** A fighting shelter needs either a swing or a reversible bait path to a swing.

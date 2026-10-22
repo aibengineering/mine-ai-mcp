@@ -27,7 +27,6 @@ import { defineAction, type ActionContext } from "../action.js";
 import { unconfirmedCount } from "../markdown.js";
 import {
   parsePlaceBlockRequest,
-  placeBlockAnnotations,
   placeBlockOutcomes,
   placeBlockOutcomesNearby,
   PLACE_BLOCK,
@@ -50,15 +49,25 @@ const SUPPORT_DIRECTIONS = [
   { offset: new Vec3(0, 1, 0), face: new Vec3(0, -1, 0) },
 ] as const;
 
+/**
+ * The engine this action drives: the route to the cell and the two placement
+ * primitives, which a test replaces with a fake world. The movement policy is
+ * not among them: `createMovements` is pure, so the action builds it for real.
+ */
 export interface PlaceBlockDependencies {
-  readonly createMovements: typeof createMovements;
   readonly navigate: Navigate;
   readonly placeBlock: (bot: Bot, placement: Parameters<typeof placeBlock>[1]) => Promise<BlockPlacementResult>;
   readonly placeNearby: typeof placeCarriedBlockNearby;
+  /**
+   * How long the placed block's slot gets to show the item gone. Production
+   * omits it for the shared receipt window; a test shortens it so an
+   * unconfirmed count lapses for real.
+   */
+  readonly inventorySettleMs?: number;
 }
 
 function productionDependencies(navigate: Navigate): PlaceBlockDependencies {
-  return { createMovements, navigate, placeBlock, placeNearby: placeCarriedBlockNearby };
+  return { navigate, placeBlock, placeNearby: placeCarriedBlockNearby };
 }
 
 function coordinates(position: Vec3): { x: number; y: number; z: number } {
@@ -141,7 +150,7 @@ async function approachTarget(
     },
   };
   return dependencies.navigate({
-    movements: dependencies.createMovements(bot),
+    movements: createMovements(bot),
     goal,
     signal: context.signal,
   });
@@ -171,7 +180,10 @@ async function placeNearby(
           true,
           // The block update resolved the placement; the slot that loses the
           // block is broadcast after it.
-          await settleInventoryCount(bot, request.blockName, inventoryBefore - 1, { signal: context.signal }),
+          await settleInventoryCount(bot, request.blockName, inventoryBefore - 1, {
+            signal: context.signal,
+            timeoutMs: dependencies.inventorySettleMs,
+          }),
         ),
       };
     case "failed":
@@ -195,7 +207,16 @@ async function placeNearby(
   }
 }
 
-/** Place one carried block, at the exact cell asked for or on a cell chosen nearby, and report only what was observed. */
+/**
+ * Place one carried block, at the exact cell asked for or on a cell chosen nearby, and report only what was observed.
+ *
+ * With a target this is a one-cell build_structure, yet it keeps its own path:
+ * build_structure reports a structure audit with BUILD_* refusals, walks to
+ * the cell lowest-first and never places into a cell that would seal the bot
+ * in, while place_block reports the support face, the confirmed inventory count
+ * and PLACE_* refusals. Proxying would change both what is refused and what is
+ * reported, so the two share only the world's placement primitive.
+ */
 export async function executePlaceBlock(
   bot: Bot,
   request: PlaceBlockRequest,
@@ -326,7 +347,10 @@ export async function executePlaceBlock(
       targetBlock.name,
       support,
       true,
-      await settleInventoryCount(bot, request.blockName, inventoryBefore - 1, { signal: context.signal }),
+      await settleInventoryCount(bot, request.blockName, inventoryBefore - 1, {
+        signal: context.signal,
+        timeoutMs: dependencies.inventorySettleMs,
+      }),
     ),
   };
 }
@@ -367,7 +391,11 @@ export function createPlaceBlockAction(
     resultSchema: placeBlockResultSchema,
     formatResult: formatPlaceBlockResult,
     execution: { kind: "task", prepare: () => prepareBotForMovement(bot, navigation) },
-    annotations: placeBlockAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     parse: parsePlaceBlockRequest,
     execute: (request, context) => executePlaceBlock(bot, request, context, dependencies),
   });

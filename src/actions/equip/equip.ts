@@ -3,7 +3,6 @@ import type { Bot } from "mineflayer";
 import { isDeepStrictEqual } from "node:util";
 import { defineAction, type ActionContext } from "../action.js";
 import {
-  equipAnnotations,
   equipOutcomes,
   parseEquipRequest,
   EQUIP,
@@ -163,7 +162,12 @@ export function createEquipAction(bot: Bot) {
     resultSchema: equipResultSchema,
     formatResult: formatEquipResult,
     execution: { kind: "task" },
-    annotations: equipAnnotations,
+    annotations: {
+      destructiveHint: false,
+      // A swap changes the source slot, so repeating an explicit selection can select another copy.
+      idempotentHint: false,
+      openWorldHint: false,
+    },
     parse: parseEquipRequest,
     execute: (request, context) => equip(bot, request, context),
   });

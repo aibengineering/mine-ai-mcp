@@ -1,0 +1,57 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression, slow]
+description: >-
+  The first design of end-crystals-every-method on seed 8675309: the melee
+  pillar on the two lowest exposed towers, then the melee staircase on the
+  next two, a bow on the rest and on one caged crystal, and the staircase on
+  the other caged crystal. Each crystal gets at most five requests while
+  view_status still lists it. The staircase alone clears all ten towers, and
+  so does the whole fight without pillars, but a staircase climbed after the
+  pillars fails intermittently: on 2026-10-20 this order failed in two of four
+  runs, and once more where only the caged staircase followed the pillars (25 cells left, "2
+  passes changed nothing", then refused in 8 ms four times). Run 1: the
+  staircase at -41.5,92,-0.5 stopped when a dragon shelter lost its footing
+  ([END_SHELTER_STOPPED]), then twice returned [CRYSTAL_STAIRCASE_INCOMPLETE]
+  with its route search at the 2000 ms compute limit. Run 3: the first
+  staircase after the pillars, at 33.5,89,-24.5, was refused at once, five
+  times, with [CRYSTAL_STAIRCASE_INCOMPLETE] "no path found after 0 ms
+  compute; visited 7 nodes" while the bot stood on open ground beside the
+  fountain. Even passing runs hit the 2000 ms route-search limit on the way
+  down from a pillar or a staircase.
+
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+
+players:
+  - name: DragonFighter
+    pos: [12.5, 64, 0.5]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: diamond_sword }
+      - { item: diamond_pickaxe }
+      - { item: bow }
+      - { item: arrow, count: 128 }
+      - { item: cooked_beef, count: 64 }
+      - { item: end_stone, count: 640 }
+      - { item: water_bucket }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/end-fight.ts]
+params:
+  arranged: { crystals: 10 }
+  crystals: { plan: pillar_then_staircase, attempts: 5 }
+
+goal:
+  kind: all
+  timeout: 2400
+  goals:
+    - { kind: entityCount, entity: end_crystal, max: 0 }
+    - { kind: survive, who: DragonFighter, seconds: 1 }
+    - { kind: completion, who: DragonFighter }

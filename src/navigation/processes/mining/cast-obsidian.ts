@@ -19,7 +19,7 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { asVec3, cellKey } from "../../../utils/index.js";
 import { STANDING_EYE_HEIGHT } from "../../../world/block-visibility.js";
-import { isLiquidSource } from "../../../world/liquid.js";
+import { isLiquidSource, sourceFeeding } from "../../../world/liquid.js";
 import {
   countFormations,
   HORIZONTAL,
@@ -46,6 +46,12 @@ export const CAST_REACH = 2;
 const EXPOSING_BREAKS = 3;
 /** The scoop is retried once: the poured cell spends a moment under its own flow. */
 const SCOOP_ATTEMPTS = 2;
+/**
+ * How long the flow a scooped pour leaves behind may take to drain. An unfed
+ * flow recedes one level per five ticks, so seven levels drain inside three
+ * seconds.
+ */
+const RECEDE_TIMEOUT_TICKS = 60;
 
 /** The physical effects a cast needs, which the mine request already owns. */
 export interface CastPhysics {
@@ -150,6 +156,33 @@ async function scoopBack(bot: Bot, physics: CastPhysics, aim: PourAim): Promise<
 }
 
 /**
+ * Wait for the flow a scooped pour left on the pool to drain off it.
+ *
+ * Taking the source back does not take its spread back: the cells it flowed
+ * over stay wet for a second or more of scheduled water updates. Until they
+ * drain, every block the pour formed has water on a face, and a bot with no
+ * building block and a full bucket is told the obsidian needs liquid isolation
+ * it cannot provide. collect/obsidian-in-rock's LevelCaster was refused all six
+ * that way, with flow levels 1 to 4 above them, and the same six were mineable
+ * 0.3 s later. Flow that another source still feeds is not this pour's to wait
+ * for; the target rule judges it.
+ */
+async function recedePouredFlow(bot: Bot, sources: readonly BlockPosition[], signal?: AbortSignal): Promise<void> {
+  const faces = [new Vec3(0, 1, 0), new Vec3(0, -1, 0), ...HORIZONTAL];
+  const wet = () =>
+    sources.some((source) =>
+      faces.some((face) => {
+        const cell = asVec3(source).plus(face);
+        return bot.blockAt(cell)?.name === "water" && sourceFeeding(bot, cell, "water") === null;
+      }),
+    );
+  for (let tick = 0; tick < RECEDE_TIMEOUT_TICKS && wet(); tick += 1) {
+    await bot.waitForTicks(1);
+    signal?.throwIfAborted();
+  }
+}
+
+/**
  * One pour onto one pool, from where the bot already stands. The loop calls
  * this and then rescans; whatever obsidian appeared is an ordinary target.
  *
@@ -204,11 +237,14 @@ export async function castOntoPool(
     // Water spreads for a while and turns every source it reaches; counting the
     // obsidian is this step's evidence that the pour was worth anything.
     const after = await settledFormations(bot, aim.landing, physics.signal);
+    const waterRecovered = await scoopBack(bot, physics, aim);
+    // The caller judges what formed as soon as this returns: let it dry first.
+    if (waterRecovered) await recedePouredFlow(bot, sources, physics.signal);
     return {
       kind: "cast",
       landing: aim.landing,
       obsidianFormed: Math.max(0, after.obsidian - before.obsidian),
-      waterRecovered: await scoopBack(bot, physics, aim),
+      waterRecovered,
     };
   } finally {
     releaseStance();

@@ -1,0 +1,166 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Navigate under water at full health, and refuse what cannot be done safely. Six pens: a
+  four-deep pool visited at the seabed, the surface, midwater and around a pillar holding
+  depth; the same pool with glass dropped onto the route at depth, which must be replanned
+  and still arrived at; a dive capped by glass dropped over the target column, after which
+  the bot must still reach the surface unhurt; a seabed sealed under a stone shelf; a
+  twelve-deep seabed beyond the air budget; and a sea whose only way into an air pocket is
+  a dirt plug under water, which must not be breached. Each refusal leaves the bot unhurt.
+
+# Every leg is checked once it settles: a successful leg at its cell (range
+# 0.1), and every leg, refused or not, at full health. Seabed and midwater
+# arrivals are checked as soon as navigate returns, as the legacy divers were:
+# once the action releases the body, it sinks or floats. A surfacing waits
+# five seconds while the breath reflex refills the air it owns the body for. Regeneration is
+# off, so drowning shows. The host waits for landing, and a body floating in
+# open water never lands, so the divers start where the legacy divers settled
+# before their trials began: on the seabed, under water (the breath reflex
+# lifts them to the surface before the request starts). DeepDiver starts on a
+# step two blocks under its surface. Each pen ends on a step one block under the
+# surface, head in the air, because the runtime and its breath reflex close
+# when a pen's driver returns.
+reset:
+  - "fill -5 -60 -5 9 -50 5 air"
+  - "fill 95 -60 -5 109 -50 5 air"
+  - "fill 195 -60 -5 209 -50 5 air"
+  - "fill 295 -60 -5 309 -50 5 air"
+  - "fill 395 -60 -5 409 -40 5 air"
+  - "fill 498 -63 -2 506 -50 2 air"
+
+geometry:
+  # Diver: a four-deep pool with a stone pillar to turn around at midwater.
+  - fill: { block: stone, from: [-5, -61, -5], to: [9, -57, 5] }
+  - fill: { block: water, from: [-4, -60, -4], to: [8, -57, 4] }
+  - fill: { block: stone, from: [1, -60, 1], to: [1, -58, 1] }
+  - setblock: { block: stone, at: [-4, -59, 0] }
+  - fill: { block: stone, from: [-4, -59, 1], to: [-3, -58, 3] }
+
+  # Replanner: the same pool; glass fills two cells of the obvious route once
+  # the bot heads east at depth.
+  - fill: { block: stone, from: [95, -61, -5], to: [109, -57, 5] }
+  - fill: { block: water, from: [96, -60, -4], to: [108, -57, 4] }
+  - setblock: { block: stone, at: [96, -59, 0] }
+  - fill: { block: stone, from: [96, -59, 1], to: [97, -58, 3] }
+
+  # Backstop: the same pool; glass caps the surface over the seabed target's
+  # column once the bot dives below y -58.6.
+  - fill: { block: stone, from: [195, -61, -5], to: [209, -57, 5] }
+  - fill: { block: water, from: [196, -60, -4], to: [208, -57, 4] }
+  - setblock: { block: stone, at: [196, -59, 0] }
+  - fill: { block: stone, from: [196, -59, 1], to: [197, -58, 3] }
+
+  # ShelfDiver: a stone shelf seals the lower two layers under one of water.
+  - fill: { block: stone, from: [295, -61, -5], to: [309, -57, 5] }
+  - fill: { block: water, from: [296, -60, -4], to: [308, -57, 4] }
+  - fill: { block: stone, from: [296, -58, -4], to: [308, -58, 4] }
+
+  # DeepDiver: a twelve-deep pool.
+  - fill: { block: stone, from: [395, -61, -5], to: [409, -49, 5] }
+  - fill: { block: water, from: [396, -60, -4], to: [408, -49, 4] }
+  - setblock: { block: stone, at: [396, -51, 0] }
+  - fill: { block: stone, from: [396, -51, 1], to: [397, -50, 3] }
+
+  # PocketDiver (ocean-to-air-pocket): a shallow sea over bedrock, a shaft down
+  # from it, and an air pocket whose only entrance is a two-block dirt plug
+  # beside the shaft. Bedrock rules out a dry detour or another way in.
+  - fill: { block: bedrock, from: [498, -63, -2], to: [506, -55, 2] }
+  - fill: { block: air, from: [499, -55, -1], to: [505, -55, 1] }
+  - fill: { block: water, from: [499, -56, -1], to: [505, -56, 1] }
+  - fill: { block: water, from: [500, -60, 0], to: [500, -56, 0] }
+  - fill: { block: dirt, from: [501, -60, 0], to: [501, -59, 0] }
+  - fill: { block: air, from: [502, -60, 0], to: [502, -58, 0] }
+  - fill: { block: air, from: [503, -59, 0], to: [504, -58, 0] }
+
+schedule:
+  - when: "entity @a[name=Replanner,x=101.5,y=-62,z=-5,dx=8,dy=3.4,dz=10]"
+    run: "fill 102 -60 0 102 -59 0 glass"
+  - when: "entity @a[name=Backstop,x=196,y=-62,z=-5,dx=13,dy=2.4,dz=10]"
+    run: "fill 199 -56 -1 201 -56 1 glass"
+
+players:
+  - { name: Diver, pos: [0.5, -60, 0.5] }
+  - { name: Replanner, pos: [100.5, -60, 0.5] }
+  - { name: Backstop, pos: [200.5, -60, 0.5] }
+  - { name: ShelfDiver, pos: [300.5, -57, 0.5] }
+  - { name: DeepDiver, pos: [396.5, -50, 0.5] }
+  # Sinks down the shaft to the plug before the trial starts, as the legacy
+  # diver did.
+  - name: PocketDiver
+    pos: [500.5, -56, 0.5]
+    inventory:
+      - { item: diamond_shovel, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+
+tick:
+  - "gamemode spectator @a[name=!Diver,name=!Replanner,name=!Backstop,name=!ShelfDiver,name=!DeepDiver,name=!PocketDiver,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  players:
+    Diver:
+      legs:
+        - { target: [0, -60, 0], range: 0.1, settleTicks: 0, label: "Seabed" }
+        - { target: [0, -57, 0], range: 0.1, settleTicks: 100, label: "Surface from the seabed" }
+        - { target: [0, -59, 0], range: 0.1, settleTicks: 0, label: "Midwater" }
+        - { target: [2, -59, 2], range: 0.1, settleTicks: 0, label: "Turn round the pillar at depth" }
+        - { target: [2, -57, 2], range: 0.1, settleTicks: 100, label: "Surface after the turn" }
+        - { target: [-4, -57, 1], range: 0.1, label: "Rest on the shallow step" }
+    Replanner:
+      legs:
+        - { target: [100, -60, 0], range: 0.1, settleTicks: 0, label: "Seabed" }
+        - { target: [103, -59, 0], range: 0.1, settleTicks: 0, label: "Midwater past glass dropped on the route" }
+        - { target: [103, -57, 0], range: 0.1, settleTicks: 100, label: "Surface" }
+        - { target: [96, -57, 1], range: 0.1, label: "Rest on the shallow step" }
+    Backstop:
+      legs:
+        # Glass caps the surface over the seabed column once the bot dives
+        # below y -58.6. Capping the column changes how the dive can end: any
+        # settled status, or the breath backstop taking the body over, will
+        # do, so long as the bot is unhurt and surfaces afterwards.
+        - { target: [200, -60, 0], range: 0.1, settleTicks: 100, label: "Seabed under a column capped mid-dive", expect: { status: [succeeded, partial, failed] }, takeover: "[BREATH]" }
+        - { target: [203, -57, 2], range: 0.1, settleTicks: 100, label: "Surface beside the cap" }
+        - { target: [196, -57, 1], range: 0.1, label: "Rest on the shallow step" }
+    ShelfDiver:
+      legs:
+        - { target: [300, -59, 0], range: 0.1, label: "Refuse the sealed water under the shelf", expect: { status: failed } }
+    DeepDiver:
+      legs:
+        - { target: [400, -60, 0], range: 0.1, label: "Refuse a seabed beyond the air budget", expect: { status: failed } }
+        - { target: [396, -49, 1], range: 0.1, label: "Rest on the shallow step" }
+    PocketDiver:
+      legs:
+        # The breath reflex takes the bot up the shaft after the refusal; let it
+        # finish before asking for the shallow sea.
+        - { target: [503, -59, 0], range: 0.1, dig: true, scaffold: true, settleTicks: 200, label: "Refuse to breach the dirt plug into the air pocket", expect: { status: failed } }
+        - { target: [502, -56, 0], range: 0.1, label: "Back up the shaft into the shallow sea" }
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: Diver, pos: [-3.5, -57, 1.5], radius: 1.5 }
+    - { kind: health, who: Diver, health: 20 }
+    - { kind: completion, who: Diver }
+    - { kind: reach, who: Replanner, pos: [96.5, -57, 1.5], radius: 1.5 }
+    - { kind: blocksAt, block: glass, positions: [[102, -60, 0], [102, -59, 0]] }
+    - { kind: health, who: Replanner, health: 20 }
+    - { kind: completion, who: Replanner }
+    - { kind: reach, who: Backstop, pos: [196.5, -57, 1.5], radius: 1.5 }
+    - { kind: blockAt, pos: [200, -56, 0], block: glass }
+    - { kind: health, who: Backstop, health: 20 }
+    - { kind: completion, who: Backstop }
+    - { kind: health, who: ShelfDiver, health: 20 }
+    - { kind: completion, who: ShelfDiver }
+    - { kind: health, who: DeepDiver, health: 20 }
+    - { kind: completion, who: DeepDiver }
+    - { kind: blocksAt, block: dirt, positions: [[501, -60, 0], [501, -59, 0]] }
+    - { kind: health, who: PocketDiver, health: 20 }
+    - { kind: completion, who: PocketDiver }
+    - { kind: survive, seconds: 1 }

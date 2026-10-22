@@ -1,0 +1,52 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance, regression, slow]
+description: >-
+  Destroy all ten native crystals on seed 8675309, every method owning at least
+  one: the melee staircase on one caged crystal, a bow on the other and on the
+  six highest exposed ones, and last the melee pillar on the two lowest exposed
+  towers. A staircase climbed after a pillar fails today; that order is held in
+  known-failing/combat/end-crystals-pillar-then-staircase.yaml. The bot carries end stone and no
+  other block, so the pillar also guards the regression at 96e0a60, when the
+  scaffold allowlist left end stone out and an end-stone-only pillar could not
+  start (legacy scaffold-end-stone). A broken method leaves its crystal
+  standing.
+
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+
+players:
+  - name: DragonFighter
+    pos: [12.5, 64, 0.5]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: diamond_sword }
+      - { item: diamond_pickaxe }
+      - { item: bow }
+      - { item: arrow, count: 128 }
+      - { item: cooked_beef, count: 64 }
+      - { item: end_stone, count: 640 }
+      - { item: water_bucket }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/end-fight.ts]
+params:
+  arranged: { crystals: 10 }
+  # Methods follow observed cages and heights. Each crystal gets at most five
+  # requests while view_status still lists it: a bow through a cage missed
+  # twice before its third arrow struck (run 2026-10-20T09-03-10).
+  crystals: { plan: every_method, attempts: 5 }
+
+goal:
+  kind: all
+  timeout: 2400
+  goals:
+    - { kind: entityCount, entity: end_crystal, max: 0 }
+    - { kind: survive, who: DragonFighter, seconds: 1 }
+    - { kind: completion, who: DragonFighter }

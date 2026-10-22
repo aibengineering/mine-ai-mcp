@@ -1,0 +1,47 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression]
+description: >-
+  Collect ten obsidian for a portal and recover the water bucket on seed
+  8675309, starting at the surface column 8.5,64,-19.5. Fails today: the
+  collection is cancelled after about 140 seconds with a runtime failure,
+  "[BREATH] surface at air 20", after "Navigation dive budget failed; the
+  breath backstop rescued the bot": the route to the obsidian dives and runs
+  out of its breath budget. The other two verified locations stay green in
+  collect/cast-obsidian.
+# Split from collect/cast-obsidian, which absorbed the three locations of
+# verification/obsidian/cast-obsidian. The legacy verify run never settled this
+# location either (its client timed out waiting for a server tick under load).
+# Failing runs: 2026-10-20T06-44-31-283Z (cast-obsidian@1) and
+# 2026-10-20T07-03-43-678Z (.mine-labs/other).
+world:
+  type: default
+  seed: 8675309
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+  difficulty: peaceful
+players:
+  - name: Collector
+    pos: [8.5, 64, -19.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: water_bucket, count: 1 }
+      - { item: cobblestone, count: 32 }
+params:
+  action: collect_block
+  input: { block_name: obsidian, count: 10 }
+goal:
+  kind: all
+  timeout: 900
+  goals:
+    - { kind: hasItem, who: Collector, item: obsidian, count: 10 }
+    - { kind: hasItem, who: Collector, item: water_bucket, count: 1 }
+    - { kind: survive, who: Collector, seconds: 1 }
+    - { kind: completion, who: Collector }

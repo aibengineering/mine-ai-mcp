@@ -1,6 +1,4 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import type { ActionOutput } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const USE_CONTAINER = "use_container" as const;
@@ -221,13 +219,6 @@ export const useContainerResultSchema = z.discriminatedUnion("status", [
 ]);
 
 export type UseContainerResult = z.output<typeof useContainerResultSchema>;
-export type UseContainerOutput = ActionOutput<typeof USE_CONTAINER, UseContainerResult>;
-
-export const useContainerAnnotations = {
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: true,
-} satisfies ToolAnnotations;
 
 function itemList(items: readonly string[]): string {
   return items.join(", ");

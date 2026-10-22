@@ -69,7 +69,6 @@ export interface RouteExecutionRequest {
   readonly plan: RoutePlan;
   readonly stepStarted: (step: PlannedStep) => void;
   readonly phase: (step: PlannedStep, phase: MovementPhase) => void;
-  readonly effectConfirmed: (operation: Exclude<PlannedOperation, { kind: "move" }>) => void;
   readonly stepCompleted: (step: PlannedStep, arrival: BlockPosition) => StepDecision;
 }
 
@@ -395,7 +394,6 @@ export class RouteExecutor {
       };
     }
     this.#state = { kind: "starting_step", stepIndex };
-    this.request.effectConfirmed(operation);
     return null;
   }
 

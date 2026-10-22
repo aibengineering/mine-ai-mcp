@@ -1,18 +1,23 @@
-template: ../../templates/collect/single-action.yaml
+template: ../../templates/single-action.yaml
 
-name: netherrack-bank
-tags: [acceptance]
+tags: [acceptance, regression]
 description: >-
-  Collect 32 fast-breaking netherrack while reachable drops accumulate on lower
-  ledges. Verify full health and at most 64 of the bank's 565 blocks removed;
-  mining most of the bank cannot pass on the final inventory count alone.
+  Collect 32 fast-breaking netherrack from a controlled bank carved into native
+  Nether terrain, while reachable drops accumulate on lower ledges. The dense
+  native netherrack in every loaded chunk is what the block scan walked during
+  live request 124 (2026-09-08), when collection stalled physics for seconds at
+  a time. Verify full health and at most 64 of the bank's 565 blocks removed;
+  mining most of the bank cannot pass on the final inventory count alone. The
+  physics-gap timing itself is pinned by src/world/loaded-block-scan.test.ts.
 
-minecraft:
-  version: "1.21.4"
-
+# Seed and coordinates of the legacy netherrack-loaded-scan fixture. The bank
+# sits in a 13-block air pocket so its own blocks are the only reachable
+# netherrack, while the surrounding generated terrain fills the scan.
 world:
-  type: flat
-  time: noon
+  type: default
+  dimension: the_nether
+  seed: "-5335131384818472281"
+  difficulty: peaceful
   gamerules:
     doDaylightCycle: false
     doMobSpawning: false
@@ -20,19 +25,19 @@ world:
     randomTickSpeed: 0
 
 reset:
-  - "fill -6 -60 -6 6 -48 6 air"
+  - "fill -6 60 -6 6 72 6 air"
 
 geometry:
-  - fill: { block: bedrock, from: [-6, -60, -6], to: [6, -60, 6] }
-  - fill: { block: netherrack, from: [-4, -59, -4], to: [4, -53, 4] }
-  - fill: { block: air, from: [0, -56, 0], to: [0, -55, 0] }
+  - fill: { block: air, from: [-6, 60, -6], to: [6, 72, 6] }
+  - fill: { block: bedrock, from: [-6, 60, -6], to: [6, 60, 6] }
+  - fill: { block: netherrack, from: [-4, 61, -4], to: [4, 67, 4] }
+  - fill: { block: air, from: [0, 64, 0], to: [0, 65, 0] }
 
 players:
   - name: Collector
-    pos: [0.5, -56, 0.5]
+    pos: [0.5, 64, 0.5]
     inventory:
       - { item: diamond_pickaxe, count: 1 }
-
 
 client:
   command: bun
@@ -56,5 +61,8 @@ goal:
     - kind: health
       who: Collector
       health: 20
+    - kind: survive
+      who: Collector
+      seconds: 1
     - kind: completion
       who: Collector

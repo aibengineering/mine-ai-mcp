@@ -1,6 +1,4 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { type ActionOutput } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const BUILD_STRUCTURE = "build_structure" as const;
@@ -166,13 +164,6 @@ export const buildStructureResultSchema = z.discriminatedUnion("status", [
 
 export type StructureAudit = z.output<typeof structureAuditSchema>;
 export type BuildStructureResult = z.output<typeof buildStructureResultSchema>;
-export type BuildStructureOutput = ActionOutput<typeof BUILD_STRUCTURE, BuildStructureResult>;
-
-export const buildStructureAnnotations = {
-  destructiveHint: true,
-  idempotentHint: true,
-  openWorldHint: true,
-} satisfies ToolAnnotations;
 
 export const buildStructureOutcomes = {
   unknownBlock: (blockName: string) => `[BUILD_UNKNOWN_BLOCK] Minecraft has no block named ${blockName}.`,

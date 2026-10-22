@@ -1,0 +1,122 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Mine beside, under and inside water in five pens two hundred blocks apart, staying unhurt with
+  regeneration off. RoofMiner starts on a stone roof over a two-deep water pocket and must take
+  the dry stone five blocks away, leaving the roof intact (dry-mining-aquifer-roof). WallMiner
+  collects stone beside a glass-walled water source without flooding its dry work area
+  (dry-mining-water-wall). FloatMiner takes an exact stone face from inside a two-deep pool, where
+  the mining stance is floating; the regression arrived there twenty times without digging
+  (stone-from-water). StreamMiner starts in a stream and takes three stone from its bed,
+  isolating the flow (stone-in-flowing-water). PlugCollector takes an exact log under flowing
+  water while carrying 64 logs and some dirt; spending a carried log as the plug leaves it one
+  log short of 65 (preserve-collected-water-plug).
+
+reset:
+  - "fill -8 -63 -8 8 -50 8 air"
+  - "fill 192 -61 -8 208 -50 8 air"
+  - "fill 388 -60 -12 412 -45 12 air"
+  - "fill 592 -61 -8 608 -50 8 air"
+  - "fill 790 -59 -10 812 -40 10 air"
+
+geometry:
+  # RoofMiner: glass replaces the flat layers. The roof cell (1,-60,0) is the
+  # only stone under the bot and covers a two-deep water pocket; the dry
+  # alternative stands on the glass five blocks west.
+  - fill: { block: glass, from: [-7, -63, -7], to: [7, -60, 7] }
+  - fill: { block: water, from: [1, -62, 0], to: [1, -61, 0] }
+  - setblock: { block: stone, at: [1, -60, 0] }
+  - setblock: { block: stone, at: [-4, -59, 0] }
+  # WallMiner: the stone's east face is a water source held in a glass cup.
+  - fill: { block: glass, from: [193, -61, -7], to: [207, -60, 7] }
+  - setblock: { block: stone, at: [201, -59, 0] }
+  - setblock: { block: glass, at: [202, -59, -1] }
+  - setblock: { block: glass, at: [202, -59, 1] }
+  - setblock: { block: glass, at: [203, -59, 0] }
+  - setblock: { block: water, at: [202, -59, 0] }
+  # FloatMiner: a two-deep pool on glass with one stone face inside it.
+  - fill: { block: glass, from: [395, -61, -5], to: [405, -61, 5] }
+  - fill: { block: water, from: [396, -60, -4], to: [404, -59, 4] }
+  - setblock: { block: stone, at: [401, -59, 0] }
+  # StreamMiner: three stone in the floor of a stream fed from a raised source.
+  - fill: { block: glass, from: [593, -61, -7], to: [607, -60, 7] }
+  - fill: { block: stone, from: [601, -60, -1], to: [601, -60, 1] }
+  - fill: { block: glass, from: [603, -59, 0], to: [603, -58, 0] }
+  - setblock: { block: water, at: [603, -57, 0] }
+  # PlugCollector: a log in a bedrock floor with a source on the cell beside
+  # it, so flowing water covers the log.
+  - fill: { block: bedrock, from: [790, -63, -10], to: [812, -60, 10] }
+  - setblock: { block: oak_log, at: [802, -60, 0] }
+  - setblock: { block: water, at: [803, -59, 0] }
+
+players:
+  - name: RoofMiner
+    pos: [1.5, -59, 0.5]
+    inventory: [{ item: iron_pickaxe, count: 1 }]
+  - name: WallMiner
+    pos: [200.5, -59, 0.5]
+    inventory: [{ item: iron_pickaxe, count: 1 }, { item: dirt, count: 24 }]
+  - name: FloatMiner
+    pos: [400.5, -59, 0.5]
+    inventory: [{ item: iron_pickaxe, count: 1 }]
+  - name: StreamMiner
+    pos: [600.5, -59, 0.5]
+    inventory: [{ item: iron_pickaxe, count: 1 }, { item: dirt, count: 32 }]
+  - name: PlugCollector
+    pos: [800.5, -59, 0.5]
+    inventory: [{ item: oak_log, count: 64 }, { item: dirt, count: 8 }]
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+# The waits let the arranged flows settle around the bot before it is asked,
+# as the legacy fixtures' preparation did; the idle runtime holds it meanwhile.
+params:
+  players:
+    RoofMiner:
+      actions:
+        - { action: collect_block, input: { block_name: stone, count: 1, scaffold: true } }
+    WallMiner:
+      waitTicks: 60
+      actions:
+        - { action: collect_block, input: { block_name: stone, count: 1, scaffold: true } }
+    FloatMiner:
+      actions:
+        - { action: collect_block, input: { block_name: stone, count: 1, x: 401, y: -59, z: 0, scaffold: false } }
+    StreamMiner:
+      waitTicks: 60
+      actions:
+        - { action: collect_block, input: { block_name: stone, count: 3, scaffold: true } }
+    PlugCollector:
+      waitTicks: 100
+      actions:
+        - { action: collect_block, input: { block_name: logs, count: 1, x: 802, y: -60, z: 0, scaffold: false } }
+
+tick:
+  - "gamemode spectator @a[name=!RoofMiner,name=!WallMiner,name=!FloatMiner,name=!StreamMiner,name=!PlugCollector,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 200
+  goals:
+    - { kind: blockAt, block: stone, pos: [1, -60, 0] }
+    - { kind: hasItem, who: RoofMiner, item: cobblestone, count: 1 }
+    - { kind: health, who: RoofMiner, health: 20 }
+    - { kind: completion, who: RoofMiner }
+    # Water let past the mined stone would spread across the glass floor here.
+    - { kind: blocksAt, block: air, positions: [[200, -59, 0], [199, -59, 0], [200, -59, 1], [200, -59, -1]] }
+    - { kind: hasItem, who: WallMiner, item: cobblestone, count: 1 }
+    - { kind: health, who: WallMiner, health: 20 }
+    - { kind: completion, who: WallMiner }
+    - { kind: hasItem, who: FloatMiner, item: cobblestone, count: 1 }
+    - { kind: health, who: FloatMiner, health: 20 }
+    - { kind: completion, who: FloatMiner }
+    - { kind: hasItem, who: StreamMiner, item: cobblestone, count: 3 }
+    - { kind: health, who: StreamMiner, health: 20 }
+    - { kind: completion, who: StreamMiner }
+    - { kind: hasItem, who: PlugCollector, item: oak_log, count: 65 }
+    - { kind: health, who: PlugCollector, health: 20 }
+    - { kind: completion, who: PlugCollector }

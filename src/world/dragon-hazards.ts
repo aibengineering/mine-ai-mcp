@@ -11,6 +11,9 @@ export interface DragonCloud {
   readonly radius: number;
 }
 
+/** How far a jump lifts the body above its take-off cell (vanilla peaks near 1.25). */
+export const JUMP_CLEARANCE = 1.3;
+
 /** Vanilla cloud damage checks a horizontal radius and a half-block-high box. */
 export function cloudExposure(cloud: DragonCloud, feet: Position3, jumpClearance = 0): number {
   if (feet.y >= cloud.y + 0.5 || feet.y + 1.8 + jumpClearance <= cloud.y) return 0;
@@ -42,6 +45,27 @@ export function readDragonCloudHazards(bot: Bot): DragonCloud[] {
     ...cloud,
     radius: cloud.radius === 5 ? 5 : Math.max(7, cloud.radius),
   }));
+}
+
+/**
+ * Native breath lying on the floor beside the feet: within a step of their
+ * height and reaching the neighbouring cells. Navigation refuses every step
+ * that enters it, yet a body standing a block above its floor is not exposed,
+ * so no escape runs and only the breath's going reopens the routes.
+ */
+export function breathBesideFeet(bot: Bot, feet: Position3): DragonCloud[] {
+  return readDragonCloudHazards(bot).filter((cloud) =>
+    Math.abs(cloud.y - feet.y) <= 2 && Math.hypot(feet.x - cloud.x, feet.z - cloud.z) < cloud.radius + 1.3);
+}
+
+/**
+ * Native breath that a body standing in any of `stances` would be inside:
+ * navigation refuses each such step, so a route through them stays closed
+ * until the breath goes, wherever the bot itself stands.
+ */
+export function breathOverStances(bot: Bot, stances: readonly Position3[]): DragonCloud[] {
+  return readDragonCloudHazards(bot).filter((cloud) =>
+    stances.some((feet) => cloudExposure(cloud, { x: feet.x + 0.5, y: feet.y, z: feet.z + 0.5 }) > 0));
 }
 
 /** Native roar (phase 7) precedes flaming (5); the cloud spawns ten ticks

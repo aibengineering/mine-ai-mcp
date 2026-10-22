@@ -1,15 +1,13 @@
 import { portalCheckpointSchema } from "../checkpoint-schemas.js";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { createMovements, type NavigationRuntime } from "../../navigation/index.js";
+import type { NavigationRuntime } from "../../navigation/index.js";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
 import { useItemAt } from "../../world/index.js";
 import { PLAYER_HALF_WIDTH } from "../../world/player-physics.js";
 import { defineAction, type ActionContext } from "../action.js";
 import { approachPortalBlock, type ActivatePortalDependencies } from "./approach.js";
 import {
-  activatePortalAnnotations,
-  parseActivatePortalRequest,
   ACTIVATE_PORTAL,
   ACTIVATE_PORTAL_DESCRIPTION,
   activatePortalInputSchema,
@@ -252,7 +250,6 @@ export function createActivatePortalAction(
   bot: Bot,
   navigation: NavigationRuntime,
   dependencies: ActivatePortalDependencies = {
-    createMovements,
     navigate: navigation.navigate,
     useItem: useItemAt,
   },
@@ -264,8 +261,8 @@ export function createActivatePortalAction(
     inputSchema: activatePortalInputSchema,
     resultSchema: activatePortalResultSchema,
     formatResult: formatActivatePortalResult,
-    annotations: activatePortalAnnotations,
-    parse: parseActivatePortalRequest,
+    annotations: { destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    parse: (input) => activatePortalInputSchema.parse(input ?? {}),
     execution: { kind: "resumable_task", prepare: () => prepareBotForMovement(bot, navigation) },
     begin: (request) => (context) => activatePortal(bot, request, context, dependencies),
   });

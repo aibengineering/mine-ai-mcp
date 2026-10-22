@@ -1,6 +1,5 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 
 export const DEBUG_EXECUTE_JAVASCRIPT = "debug_execute_javascript" as const;
 
@@ -32,21 +31,5 @@ export const debugExecuteJavaScriptResultSchema = actionResultSchema({
   execution: debugExecutionEvidenceSchema,
 });
 
-export const debugExecuteJavaScriptAnnotations = {
-  title: DEBUG_EXECUTE_JAVASCRIPT,
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: true,
-} satisfies ToolAnnotations;
-
-export type DebugExecuteJavaScriptInput = z.input<typeof debugExecuteJavaScriptInputSchema>;
 export type DebugExecuteJavaScriptRequest = z.output<typeof debugExecuteJavaScriptInputSchema>;
 export type DebugExecuteJavaScriptResult = z.output<typeof debugExecuteJavaScriptResultSchema>;
-export type DebugExecuteJavaScriptOutput = ActionOutput<
-  typeof DEBUG_EXECUTE_JAVASCRIPT,
-  DebugExecuteJavaScriptResult
->;
-
-export function parseDebugExecuteJavaScriptRequest(raw: unknown): DebugExecuteJavaScriptRequest {
-  return debugExecuteJavaScriptInputSchema.parse(raw);
-}

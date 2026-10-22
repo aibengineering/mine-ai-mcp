@@ -1,0 +1,191 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Seven idle bots, one per pen and 100 blocks apart, beside mobs that are not
+  their enemies, or that they provoked; nothing is requested. At 7 health a bot
+  leaves a spider standing in full sky light alone and keeps its cobblestone
+  (2026-09-04: it hid all morning from a sunlit spider). A pumpkin-headed bot
+  neither strikes nor is hurt by an enderman angry at a pig beside it for the
+  whole minute (until 2026-10-21 the reflex fought it whenever the enderman's
+  idle look-at-player goal turned its head onto the bot), and a gold-booted
+  bot beside a piglin attacking a hoglin is not hurt either. A calm enderman
+  five blocks off is left alone at full health (treating it as a threat cost a
+  mining trip its iron). A wounded bot whose shelter wall is filled by a
+  neutral piglin never strikes it to clear the cell. An enderman the bot itself
+  provoked, and a piglin it provoked while standing in fire (aggression
+  overlapping source-less fire damage), are survived.
+
+# Noon, so the spider's cell is in full sky light. The enderman and skeleton
+# pens are roofed four blocks up: endermen would teleport out of the sun, and
+# the skeleton would burn.
+#   x:    0          100           200          300
+#   z 0:  Sunlit     EnderOther    PiglinWall   EnderCalm
+#   z100: EnderAngry PiglinProbe   PiglinBys
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+geometry:
+  - fill: { block: stone, from: [88, -56, -12], to: [112, -56, 12] }
+  - fill: { block: stone, from: [188, -56, -12], to: [216, -56, 12] }
+  - fill: { block: stone, from: [288, -56, -12], to: [312, -56, 12] }
+  - fill: { block: stone, from: [-12, -56, 88], to: [12, -56, 112] }
+  # PiglinProbe: a 49x49 stone ring four high. An evade from the chasing
+  # piglin otherwise ran sixty blocks and on into the neighbouring pens.
+  - fill: { block: stone, from: [76, -60, 76], to: [124, -57, 76] }
+  - fill: { block: stone, from: [76, -60, 124], to: [124, -57, 124] }
+  - fill: { block: stone, from: [76, -60, 77], to: [76, -57, 123] }
+  - fill: { block: stone, from: [124, -60, 77], to: [124, -57, 123] }
+
+entities:
+  # Held still in the open, so the pen measures the daylight rule rather than
+  # the spider's wandering.
+  - { type: spider, pos: [15.5, -60, 0.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_sunlit"]}' }
+  # An enderman angry at a held 1024-health pig, an anger that outlasts the
+  # watched window and is never at the bot. (The absorbed fixture's victim was
+  # a zombie, a hostile the reflex may fight in its own right.)
+  - type: pig
+    pos: [106, -60, -2]
+    nbt: '{NoAI:1b,UUID:[I;7,7,7,7],PersistenceRequired:1b,Health:1024f,attributes:[{id:"minecraft:max_health",base:1024.0}],Tags:["pen_other"]}'
+  - { type: enderman, pos: [103, -60, -2], nbt: '{PersistenceRequired:1b,AngerTime:2400,AngryAt:[I;7,7,7,7],Tags:["pen_other"]}' }
+  # A neutral piglin filling the shelter's north wall cell, and a held
+  # skeleton in sight, which below the hide bar is contact and triggers the
+  # hide. Overworld piglins need the immunity to stay piglins.
+  - { type: piglin, pos: [200.5, -60, -0.1], nbt: '{NoAI:1b,IsImmuneToZombification:1b,PersistenceRequired:1b,Tags:["pen_wall"]}' }
+  - type: skeleton
+    pos: [212.5, -60, 0.5]
+    nbt: '{NoAI:1b,PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_wall"]}'
+  # Well inside the eight-block contact boundary.
+  - { type: enderman, pos: [305.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_calm"]}' }
+  - { type: enderman, pos: [5.5, -60, 100.5], nbt: '{PersistenceRequired:1b,Tags:["pen_angry"]}' }
+  - type: piglin
+    pos: [101.5, -60, 100.5]
+    nbt: '{IsImmuneToZombification:1b,PersistenceRequired:1b,HandItems:[{id:"minecraft:golden_sword",count:1},{}],Tags:["pen_probe"]}'
+  - type: hoglin
+    pos: [206.5, -60, 100.5]
+    nbt: '{NoAI:1b,IsImmuneToZombification:1b,PersistenceRequired:1b,Tags:["pen_bys_other"]}'
+  - type: piglin
+    pos: [203.5, -60, 100.5]
+    nbt: '{IsImmuneToZombification:1b,PersistenceRequired:1b,HandItems:[{id:"minecraft:golden_sword",count:1},{}],Tags:["pen_bys"]}'
+
+schedule:
+  # The pig cannot hurt the enderman and nothing else is near it, so any loss
+  # from its 40 health is a blow from the bot, recorded as a marker block.
+  - when: "entity @e[type=enderman,tag=pen_other,nbt=!{Health:40.0f}]"
+    run: "setblock 100 -50 20 minecraft:red_wool"
+  # The bots' own provocations, dealt in their names.
+  - { afterTicks: 1, run: "damage @e[type=enderman,tag=pen_angry,limit=1] 1 minecraft:player_attack by EnderAngry" }
+  - afterTicks: 1
+    run:
+      - "damage @e[type=piglin,tag=pen_probe,limit=1] 1 minecraft:player_attack by PiglinProbe"
+      - "setblock 100 -60 100 minecraft:fire"
+  # The piglin turns on the hoglin, which regenerates so the quarrel lasts.
+  - afterTicks: 1
+    run:
+      - "damage @e[type=piglin,tag=pen_bys,limit=1] 1 minecraft:mob_attack by @e[type=hoglin,tag=pen_bys_other,limit=1]"
+      - "effect give @e[type=hoglin,tag=pen_bys_other] minecraft:regeneration infinite 10 true"
+  # The wall piglin cannot retaliate (it is held still), so a blow on it is
+  # recorded as a tag the goals can count: full health is 16.
+  - when: "entity @e[type=piglin,tag=pen_wall,nbt=!{Health:16.0f}]"
+    run: "tag @e[type=piglin,tag=pen_wall] add struck"
+
+players:
+  - name: SunlitBot
+    pos: [0.5, -60, 0.5]
+    health: 7
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 16 }
+  - name: EnderOther
+    pos: [100.5, -60, 0.5]
+    equipment: { head: carved_pumpkin, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 64 }
+  - name: PiglinWall
+    pos: [200.5, -60, 0.5]
+    health: 7
+    equipment:
+      { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: golden_boots, offhand: shield }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 73 }
+      - { item: cooked_beef, count: 30 }
+  - name: EnderCalm
+    pos: [300.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: EnderAngry
+    pos: [0.5, -60, 100.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: PiglinProbe
+    pos: [100.5, -60, 100.5]
+    equipment:
+      { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: golden_boots, offhand: shield }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 128 }
+      - { item: bread, count: 16 }
+  - name: PiglinBys
+    pos: [200.5, -60, 100.5]
+    equipment: { feet: golden_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+params:
+  waitTicks: 1200
+
+tick:
+  - "gamemode spectator @a[name=!SunlitBot,name=!EnderOther,name=!PiglinWall,name=!EnderCalm,name=!EnderAngry,name=!PiglinProbe,name=!PiglinBys,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: entityCount, who: SunlitBot, entity: spider, tag: pen_sunlit, min: 1 }
+    - { kind: hasItem, who: SunlitBot, item: cobblestone, count: 16 }
+    - { kind: survive, who: SunlitBot, seconds: 1 }
+    - { kind: completion, who: SunlitBot }
+
+    - { kind: health, who: EnderOther, health: 20 }
+    - { kind: blockAt, who: EnderOther, pos: [100, -50, 20], block: air }
+    - { kind: entityCount, who: EnderOther, entity: enderman, tag: pen_other, min: 1 }
+    - { kind: survive, who: EnderOther, seconds: 1 }
+    - { kind: completion, who: EnderOther }
+
+    - { kind: entityCount, who: PiglinWall, entity: piglin, tag: pen_wall, min: 1 }
+    - { kind: entityCount, who: PiglinWall, entity: piglin, tag: struck, max: 0 }
+    - { kind: survive, who: PiglinWall, seconds: 1 }
+    - { kind: completion, who: PiglinWall }
+
+    - { kind: health, who: EnderCalm, health: 20 }
+    - { kind: entityCount, who: EnderCalm, entity: enderman, tag: pen_calm, min: 1 }
+    - { kind: survive, who: EnderCalm, seconds: 1 }
+    - { kind: completion, who: EnderCalm }
+
+    - { kind: survive, who: EnderAngry, seconds: 1 }
+    - { kind: completion, who: EnderAngry }
+
+    - { kind: survive, who: PiglinProbe, seconds: 1 }
+    - { kind: completion, who: PiglinProbe }
+
+    - { kind: health, who: PiglinBys, health: 20 }
+    - { kind: entityCount, who: PiglinBys, entity: piglin, tag: pen_bys, min: 1 }
+    - { kind: entityCount, who: PiglinBys, entity: hoglin, tag: pen_bys_other, min: 1 }
+    - { kind: survive, who: PiglinBys, seconds: 1 }
+    - { kind: completion, who: PiglinBys }

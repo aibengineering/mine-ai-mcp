@@ -48,7 +48,7 @@ function fakeBot(placed: Record<string, Placed>, feet = new Vec3(0.5, 64, 0.5)) 
 
 test("a view needs at least one of find, box, or cells, dedupes names, and defaults the limit", () => {
   assert.throws(() => parseViewBlocksRequest({}), /needs find, box, or cells/);
-  const parsed = parseViewBlocksRequest({ find: { block_names: ["Obsidian", "minecraft:obsidian", "lava"] } });
+  const parsed = parseViewBlocksRequest({ find: { block_names: ["obsidian", "obsidian", "lava"] } });
   assert.deepEqual(parsed.find, { blockNames: ["obsidian", "lava"], limit: 12 });
   assert.equal(parsed.box, null);
   assert.deepEqual(parsed.cells, []);

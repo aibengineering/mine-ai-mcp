@@ -20,7 +20,7 @@ import {
   type LocateStrongholdResult,
 } from "./contract.js";
 import { strongholdSupplies } from "./supplies.js";
-import { recoverEyeDrop } from "./recover-eye.js";
+import { recoverEyeDrop, type EyeRecoverySettleMs } from "./recover-eye.js";
 import { StrongholdEyeFlights } from "./throw-eye.js";
 import { StrongholdThrows } from "./throw-store.js";
 import { direction, triangulate, type Bearing } from "./triangulation.js";
@@ -55,11 +55,20 @@ function* survey(center: { x: number; z: number }, radius: number) {
   }
 }
 
+export interface LocateStrongholdOptions {
+  /**
+   * Settle windows for recovering a thrown eye's drop. Production omits them;
+   * a test shortens them so a drop that never appears lapses for real.
+   */
+  readonly eyeRecoverySettleMs?: EyeRecoverySettleMs;
+}
+
 export function createLocateStrongholdAction(
   bot: Bot,
   navigation: NavigationRuntime,
   data: SqlBotData,
   flights: StrongholdEyeFlights,
+  options: LocateStrongholdOptions = {},
 ) {
   return defineAction({
     checkpointSchema: strongholdCheckpointSchema,
@@ -89,7 +98,7 @@ export function createLocateStrongholdAction(
           : "";
       return `${location}${journey}\n\nRecommended loadout (carried/target): ${supplies}.${next}\n\nPhase: ${result.phase}. Search: ${result.searchId}. Saved throws: ${result.throwIds.length} in stronghold_throws.${result.status === "succeeded" ? "" : `\n\n${result.error}`}`;
     },
-    begin: (request) => (context) => locate(bot, navigation, data, flights, request, context),
+    begin: (request) => (context) => locate(bot, navigation, data, flights, request, context, options),
   });
 }
 
@@ -100,6 +109,7 @@ async function locate(
   flights: StrongholdEyeFlights,
   request: LocateStrongholdRequest,
   context: ActionContext,
+  options: LocateStrongholdOptions,
 ): Promise<LocateStrongholdResult> {
   const dimension = bot.game.dimension;
   const store = new StrongholdThrows(data, bot.username, dimension, request.search_id);
@@ -176,7 +186,7 @@ async function locate(
       !(latest.state === "observed" && latest.end_json.y < latest.start_json.y - 1)
     )
       throw new Error("The observed eye flight supplied neither a horizontal bearing nor a descending local estimate.");
-    await recoverEyeDrop(bot, navigation, latest.end_json, context.signal);
+    await recoverEyeDrop(bot, navigation, latest.end_json, context.signal, options.eyeRecoverySettleMs);
     assertActive();
   };
   try {
@@ -194,7 +204,7 @@ async function locate(
     // local drop before departing or returning the saved estimate.
     const resumed = store.read().at(-1);
     if (resumed?.state === "observed" && resumed.end_json) {
-      await recoverEyeDrop(bot, navigation, resumed.end_json, context.signal);
+      await recoverEyeDrop(bot, navigation, resumed.end_json, context.signal, options.eyeRecoverySettleMs);
       assertActive();
     }
     while (true) {

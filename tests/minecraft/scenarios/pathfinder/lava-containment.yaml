@@ -1,15 +1,10 @@
-template: ../../templates/flat-single-action.yaml
-name: lava-containment
+template: ../../templates/flat-single-action-no-regen.yaml
 tags: [regression]
 description: >-
   Excavate through two sealed chambers while preserving overhead and lateral lava
   containment. The lateral case guards a bug where excavation checked above a
   block but missed lava beside it. Both chambers require the longer safe route;
   finish with full health and the dangerous shortcut walls intact.
-world:
-  type: flat
-  time: noon
-  gamerules: { doDaylightCycle: false, doMobSpawning: false, keepInventory: true, naturalRegeneration: false, randomTickSpeed: 0 }
 reset:
   - "fill -8 -62 -12 46 -48 12 air"
 geometry:

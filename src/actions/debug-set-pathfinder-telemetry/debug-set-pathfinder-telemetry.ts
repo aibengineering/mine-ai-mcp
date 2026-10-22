@@ -5,7 +5,6 @@ import {
   DEBUG_SET_PATHFINDER_TELEMETRY_DESCRIPTION,
   debugSetPathfinderTelemetryInputSchema,
   debugSetPathfinderTelemetryResultSchema,
-  parseDebugSetPathfinderTelemetryRequest,
   type DebugSetPathfinderTelemetryResult,
 } from "./contract.js";
 
@@ -35,7 +34,7 @@ export function createDebugSetPathfinderTelemetryAction(
       idempotentHint: true,
       openWorldHint: false,
     },
-    parse: parseDebugSetPathfinderTelemetryRequest,
+    parse: (input: unknown) => debugSetPathfinderTelemetryInputSchema.parse(input ?? {}),
     execute: async (request) => {
       if (request.enabled && unsubscribe === null) {
         unsubscribe = pathfinder.onEvent((event) => {

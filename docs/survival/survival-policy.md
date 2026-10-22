@@ -143,8 +143,7 @@ automatic menu regardless because of its hunger effect.
 Revoking a meal's permission stops its active bite and waits for physical
 release before the policy edit reports settled. Combat recovery owners also
 reconcile food-rule changes. An unrelated combat edit leaves an ordinary
-hunger-reflex meal running. Historical `combat_policy` events remain readable
-alongside new `survival_policy` events without changing the stored history.
+hunger-reflex meal running.
 
 See the [policy contract](../../src/survival/policy/contract.ts) and
 [policy state](../../src/survival/state/survival-policy.ts).

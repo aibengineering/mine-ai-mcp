@@ -8,58 +8,19 @@
  * deprecates for everything except advanced protocol work.
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 import { DEBUG_EXECUTE_JAVASCRIPT } from "../actions/debug-execute-javascript/contract.js";
 import type { Action, ActionOutput, ActionResult, RuntimeFailure } from "../actions/index.js";
 import { VIEW_STATUS } from "../actions/view-status/contract.js";
 import type { ActionRequestInput, ActionResponseInput } from "../bot-data/action-call-log.js";
-import { notificationSummarySchema, type NotificationSummary } from "../bot-data/event-log.js";
+import type { NotificationSummary } from "../bot-data/event-log.js";
 import type { ActionRunner } from "../session/action-runner.js";
-import { formatNotifications } from "./notifications.js";
+import { mcpReply, recordReply, replyOutputSchema, requestMetaSchema } from "./reply.js";
 import type { SurvivalStatus } from "../survival/evidence/contract.js";
 import { formatSurvivalStatus } from "../survival/evidence/format.js";
 import type { AsyncActions } from "../session/async-actions.js";
 import { foregroundStatusSchema, isForeground, registerAsyncTools } from "./async-tools.js";
 import { formatFinalProgress, formatForegroundStatus } from "./async-format.js";
 import { ReferenceToolCatalogue } from "./tool-catalogue.js";
-
-const rationaleSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(200)
-  .describe("One sentence explaining why this action advances the current goal, based on observed facts.");
-
-const responseFormatSchema = z
-  .enum(["markdown", "json"])
-  .default("markdown")
-  .describe("Response representation. Defaults to markdown; use json for structuredContent without duplicate text.");
-
-type ResponseFormat = "markdown" | "json";
-
-type McpResponse<Name extends string, Result extends ActionResult> =
-  | {
-      content: [{ type: "text"; text: string }];
-      // The same text again: a client that renders structuredContent whenever it
-      // is present showed an empty envelope for every markdown call.
-      structuredContent: { response: { format: "markdown"; markdown: string } };
-      isError: boolean;
-    }
-  | {
-      // Empty when the action settled, so JSON callers are not sent the same
-      // evidence twice; a failure still puts its reason here, because that is
-      // where an MCP client reads an error from.
-      content: [] | [{ type: "text"; text: string }];
-      structuredContent: {
-        response: { format: "json"; data: ActionOutput<Name, Result> };
-        notifications: NotificationSummary;
-      };
-      isError: boolean;
-    };
-
-function parseResponseFormat(value: unknown): ResponseFormat {
-  return responseFormatSchema.parse(value);
-}
 
 interface ActionRuntime {
   status?(): { survival: SurvivalStatus };
@@ -73,24 +34,6 @@ interface ActionRuntime {
 
 function isRuntimeFailure(result: ActionResult | RuntimeFailure): result is RuntimeFailure {
   return "kind" in result && result.kind === "runtime_failure";
-}
-
-function mcpOutputSchema<Name extends string, Result extends ActionResult>(
-  action: Action<Name, unknown, Result>,
-) {
-  return z.strictObject({
-    response: z.discriminatedUnion("format", [
-      z.strictObject({ format: z.literal("markdown"), markdown: z.string() }),
-      z.strictObject({
-        format: z.literal("json"),
-        data: action.outputSchema,
-      }),
-    ]),
-    // The SDK accepts only object-root output schemas. This field is present in
-    // JSON mode and omitted when the same summary is rendered into Markdown.
-    notifications: notificationSummarySchema.optional(),
-    ...(action.name === VIEW_STATUS ? { foreground: foregroundStatusSchema.optional() } : {}),
-  });
 }
 
 /**
@@ -109,28 +52,14 @@ function failureText<Name extends string, Result extends ActionResult>(
   return `${output.action} ${result.status}: ${reason}`;
 }
 
-function response<Name extends string, Result extends ActionResult>(
+/** The Markdown account of one action output, before any notifications. */
+function formatOutput<Name extends string, Result extends ActionResult>(
   action: Action<Name, unknown, Result>,
   output: ActionOutput<Name, Result>,
-  format: ResponseFormat,
-  notifications: NotificationSummary,
-): McpResponse<Name, Result> {
+): string {
   const result = output.result;
-  // A partial result kept some ground; only a total stop is reported as an error.
-  const isError = result.status === "failed" || result.status === "cancelled";
-  if (format === "json") {
-    return {
-      content: isError ? [{ type: "text", text: failureText(output) }] : [],
-      structuredContent: {
-        response: { format: "json", data: action.outputSchema.parse(output) },
-        notifications,
-      },
-      isError,
-    };
-  }
-
   const body = isRuntimeFailure(result) ? `**Runtime failure:** ${result.error}` : action.formatResult(result);
-  const sections = [
+  return [
     `## \`${output.action}\``,
     `**Status:** ${result.status}  `,
     `**Duration:** ${output.durationMs} ms`,
@@ -140,20 +69,8 @@ function response<Name extends string, Result extends ActionResult>(
     body,
     ...(output.progress ? [formatFinalProgress(output.progress, output.request)] : []),
     ...(output.survival ? [formatSurvivalStatus(output.survival)] : []),
-    ...(!output.survival && output.survivalPolicy?.constraint
-      ? [`**Survival limitation:** ${output.survivalPolicy.constraint}`]
-      : []),
-  ];
-  const notificationNotice = formatNotifications(notifications);
-  if (notificationNotice) sections.push(notificationNotice);
-  const markdown = sections.join("\n\n");
-  return {
-    content: [{ type: "text", text: markdown }],
-    structuredContent: { response: { format: "markdown", markdown } },
-    isError,
-  };
+  ].join("\n\n");
 }
-
 
 function serverInstructions(runtime: ActionRuntime, username: string): string {
   const instructions = [
@@ -193,45 +110,54 @@ export function createMinecraftMcpServer(runtime: ActionRuntime, username: strin
   const tools = options.outputSchemaReferences !== false ? new ReferenceToolCatalogue(server) : server;
 
   for (const action of runtime.actions) {
-    if (runtime.asyncActions && (isForeground(action) || action.name === "cancel_foreground_action")) continue;
-    const inputSchema = action.inputSchema.safeExtend({
-      rationale: rationaleSchema,
-      response_format: responseFormatSchema,
-    });
-    const structuredOutputSchema = mcpOutputSchema(action);
+    if (runtime.asyncActions && isForeground(action)) continue;
     tools.registerTool(
       action.name,
       {
         description: action.description,
-        inputSchema,
-        outputSchema: structuredOutputSchema,
+        inputSchema: action.inputSchema.safeExtend(requestMetaSchema.shape),
+        outputSchema: replyOutputSchema(
+          action.outputSchema,
+          action.name === VIEW_STATUS ? { foreground: foregroundStatusSchema.optional() } : {},
+        ),
         annotations: action.annotations,
       },
-      async ({ rationale, response_format, ...input }, extra) => {
+      async ({ rationale: givenRationale, response_format: givenFormat, ...input }, extra) => {
         const requestedAt = new Date().toISOString();
-        const acceptedRationale = rationaleSchema.parse(rationale);
-        const format = parseResponseFormat(response_format);
+        const { rationale, response_format: format } = requestMetaSchema.parse({
+          rationale: givenRationale,
+          response_format: givenFormat,
+        });
         // Persist before admission so another connection can observe the action
         // as pending for its entire execution.
         const requestId = runtime.recordActionRequest({
           actionName: action.name,
-          rationale: acceptedRationale,
+          rationale,
           requestedAt,
-          request: { ...input, rationale: acceptedRationale, response_format: format },
+          request: { ...input, rationale, response_format: format },
         });
         const output = await runtime.run(action, input, extra.signal, requestId);
-        const rendered = response(action, output, format, runtime.notificationSummary());
+        // A partial result kept some ground; only a total stop is reported as an error.
+        const isError = output.result.status === "failed" || output.result.status === "cancelled";
+        const rendered = mcpReply(format, {
+          data: () => action.outputSchema.parse(output),
+          isError,
+          markdown: () => formatOutput(action, output),
+          failure: () => failureText(output),
+          notifications: runtime.notificationSummary(),
+        });
         const foreground = action.name === VIEW_STATUS ? runtime.asyncActions?.status() : undefined;
         const reply = (() => {
           if (!foreground) return rendered;
-          if (format === "markdown") {
-            const markdown = `${"markdown" in rendered.structuredContent.response ? rendered.structuredContent.response.markdown : ""}\n\n${formatForegroundStatus(foreground)}`;
+          if (rendered.structuredContent.response.format === "markdown") {
+            const markdown = `${rendered.structuredContent.response.markdown}\n\n${formatForegroundStatus(foreground)}`;
             return { ...rendered, content: [{ type: "text" as const, text: markdown }], structuredContent: { response: { format: "markdown" as const, markdown } } };
           }
           return { ...rendered, structuredContent: { ...rendered.structuredContent, foreground } };
         })();
-        try {
-          runtime.recordActionResponse({
+        recordReply(
+          runtime,
+          {
             requestId,
             respondedAt: new Date().toISOString(),
             durationMs: output.durationMs,
@@ -240,15 +166,9 @@ export function createMinecraftMcpServer(runtime: ActionRuntime, username: strin
             // which a markdown reply carries only as prose: the call log is
             // read afterwards by people and scripts asking what actually happened.
             response: { ...reply, result: output.result, interruptions: output.interruptions ?? [] },
-          });
-        } catch (cause) {
-          // Persistence is auxiliary evidence. Never replace an observed action
-          // result with a retryable MCP failure after the action has already run.
-          const error = cause instanceof Error ? cause.stack || cause.message : String(cause);
-          process.stderr.write(
-            `[mine-ai-mcp] Could not record response for request ${requestId} (${action.name}): ${error}\n`,
-          );
-        }
+          },
+          action.name,
+        );
         return reply;
       },
     );
@@ -258,10 +178,7 @@ export function createMinecraftMcpServer(runtime: ActionRuntime, username: strin
     survivalStatus: () => runtime.status?.().survival,
     notificationSummary: () => runtime.notificationSummary(), recordActionRequest: (input) => runtime.recordActionRequest(input),
     recordActionResponse: (input) => runtime.recordActionResponse(input),
-  }, (action, output) => {
-    const reply = response(action, output, "markdown", { unreadCount: 0 });
-    return "markdown" in reply.structuredContent.response ? reply.structuredContent.response.markdown : "";
-  });
+  }, formatOutput);
 
   if (tools instanceof ReferenceToolCatalogue) tools.publish();
 

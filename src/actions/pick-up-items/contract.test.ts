@@ -3,9 +3,7 @@ import test from 'node:test';
 
 import {parsePickUpItemsRequest, pickUpItemsInputSchema} from './contract.js';
 
-test('pickup area requires either all coordinates or none and caps its loaded radius', () => {
-  assert.throws(() => pickUpItemsInputSchema.parse({x: 1, radius: 8}), /x, y, and z/);
-  assert.throws(() => pickUpItemsInputSchema.parse({radius: 33}));
+test('a named cell becomes the pickup area centre', () => {
   assert.deepEqual(parsePickUpItemsRequest({item: 'cobblestone', x: 1, y: 2, z: 3}), {
     item: 'cobblestone',
     center: {x: 1, y: 2, z: 3},

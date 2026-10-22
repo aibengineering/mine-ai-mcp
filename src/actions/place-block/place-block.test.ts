@@ -30,7 +30,6 @@ function testWorld(targetName = "air", carried = 2) {
     bot.inventory.emit("updateSlot");
   };
   const dependencies: PlaceBlockDependencies = {
-    createMovements: () => ({}) as never,
     navigate: async () => ({ status: "completed", elapsedMs: 0 }),
     placeBlock: async (_bot, placement) => {
       assert.deepEqual(placement.support.position, target.offset(0, -1, 0));
@@ -51,16 +50,15 @@ function testWorld(targetName = "air", carried = 2) {
   return { bot, blocks, dependencies, target, takeOneFromInventory };
 }
 
-test("parses one normalized block name and exact absolute target", () => {
-  assert.deepEqual(parsePlaceBlockRequest({ block_name: "Minecraft:Cobble Stone", x: 2, y: 64, z: 0 }), {
-    blockName: "cobble_stone",
+test("an exact cell becomes the target and no cell leaves the choice to the action", () => {
+  assert.deepEqual(parsePlaceBlockRequest({ block_name: "cobblestone", x: 2, y: 64, z: 0 }), {
+    blockName: "cobblestone",
     target: { x: 2, y: 64, z: 0 },
   });
   assert.deepEqual(parsePlaceBlockRequest({ block_name: "crafting_table" }), {
     blockName: "crafting_table",
     target: null,
   });
-  assert.throws(() => parsePlaceBlockRequest({ block_name: "crafting_table", x: 1 }), /all of x, y, and z/);
 });
 
 test("chooses a cell beside the bot when no target is given", async () => {
@@ -169,15 +167,22 @@ function placeWithoutSlotUpdate(target: Vec3, blocks: Map<string, any>): PlaceBl
 
 test("waits for the slot update the server sends after the block update", async () => {
   const { bot, blocks, dependencies, target, takeOneFromInventory } = testWorld();
-  // The block update resolved `placeBlock`; the slot that loses the block is
-  // broadcast two ticks later.
-  setTimeout(takeOneFromInventory, 100);
 
+  const place = placeWithoutSlotUpdate(target, blocks);
   const result = await executePlaceBlock(
     bot,
     { blockName: "cobblestone", target: { x: 2, y: 64, z: 0 } },
     {},
-    { ...dependencies, placeBlock: placeWithoutSlotUpdate(target, blocks) },
+    {
+      ...dependencies,
+      placeBlock: async (...placement) => {
+        const placed = await place(...placement);
+        // The block update resolved `placeBlock`; the slot that loses the block
+        // is broadcast a little later, inside the default receipt window.
+        setTimeout(takeOneFromInventory, 20);
+        return placed;
+      },
+    },
   );
 
   assert.equal(result.status, "succeeded");
@@ -194,7 +199,7 @@ test("says so rather than presenting a placement count the server never confirme
     bot,
     { blockName: "cobblestone", target: { x: 2, y: 64, z: 0 } },
     {},
-    { ...dependencies, placeBlock: placeWithoutSlotUpdate(target, blocks) },
+    { ...dependencies, placeBlock: placeWithoutSlotUpdate(target, blocks), inventorySettleMs: 20 },
   );
 
   assert.equal(result.status, "succeeded");

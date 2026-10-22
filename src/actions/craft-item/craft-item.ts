@@ -1,6 +1,5 @@
 import { craftCheckpointSchema } from "../checkpoint-schemas.js";
 import type { Bot } from "mineflayer";
-import { observeInventoryProgress } from "../progress.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { planCraftingFromInventory, type CraftPreparation, type CraftTarget } from "../../utils/craft-plan.js";
 import type { Position3 } from "../../utils/index.js";
@@ -11,7 +10,6 @@ import { defineAction, type ActionContext } from "../action.js";
 import { markdownCodeBlock, unconfirmedCount } from "../markdown.js";
 import { formatWorkstation, useTemporaryWorkstation, workstationOperations } from "../temporary-workstation.js";
 import {
-  craftItemAnnotations,
   craftItemOutcomes,
   parseCraftItemRequest,
   CRAFT_ITEM,
@@ -25,6 +23,15 @@ import {
 import { prepareCraftingStation } from "./crafting-station.js";
 
 type FailedCraftPreparation = Exclude<CraftPreparation, { readonly kind: "ready" }>;
+
+export interface CraftItemOptions {
+  /**
+   * How long each requested gain, and the table made or placed for the batch,
+   * gets to show in the inventory. Production omits it for the shared receipt
+   * window; a test shortens it so a gain that never arrives lapses for real.
+   */
+  readonly inventorySettleMs?: number;
+}
 
 interface ResolvedCraftItem extends CraftTarget {
   readonly inventoryBefore: number;
@@ -101,22 +108,43 @@ function preparationFailureResult(
   };
 }
 
+/** Current carried achievement can decrease; it is never a count of attempted effects. */
+function observeCraftProgress(context: ActionContext, bot: Bot, targets: readonly { itemName: string; count: number }[]): void {
+  const items = targets.map(({ itemName, count }) => ({ item: itemName, requested: count, initial: carriedCount(bot, itemName) }));
+  context.observeProgress?.(() => {
+    const checkpoint = craftCheckpointSchema.parse({ phase: "crafting", items: items.map((item) => {
+      const current = carriedCount(bot, item.item);
+      return { ...item, current, gained: current - item.initial };
+    }) });
+    return {
+      baseline: items,
+      checkpoint,
+      completion: {
+        kind: "current",
+        observed: checkpoint.items.every((item) => item.gained >= item.requested),
+        owes: "All requested net item gains are still carried after crafting and workstation cleanup.",
+      },
+    };
+  });
+}
+
 /** Plan the complete batch before consuming anything, then settle every requested inventory gain. */
 export async function craftItem(
   bot: Bot,
   navigation: NavigationRuntime,
   request: CraftItemRequest,
   context: ActionContext,
+  options: CraftItemOptions = {},
 ): Promise<CraftItemResult> {
-  observeInventoryProgress(context, bot, request.items, () => "crafting", "All requested net item gains are still carried after crafting and workstation cleanup.");
-  if (!request.temporaryWorkstation) return craftBatch(bot, request, context);
+  observeCraftProgress(context, bot, request.items);
+  if (!request.temporaryWorkstation) return craftBatch(bot, request, context, options);
   const tablesBefore = carriedCount(bot, "crafting_table");
   const result = await useTemporaryWorkstation(
     bot,
     "crafting_table",
     context,
     workstationOperations(bot, navigation),
-    (table) => craftBatch(bot, request, context, table),
+    (table) => craftBatch(bot, request, context, options, table),
     (error) => ({
       status: "failed",
       error,
@@ -147,6 +175,7 @@ async function craftBatch(
   bot: Bot,
   request: CraftItemRequest,
   context: ActionContext,
+  options: CraftItemOptions,
   providedTable?: WorldBlock,
 ): Promise<CraftItemResult> {
   context.signal?.throwIfAborted();
@@ -183,7 +212,10 @@ async function craftBatch(
   if (initialPlan.kind !== "ready") return preparationFailureResult(initialPlan, { items: requestedItems });
   const station = providedTable
     ? { kind: "ready" as const, craftingTable: providedTable, usedCarriedTable: 0, craftingTablePlaced: undefined }
-    : await prepareCraftingStation(bot, items, initialPlan.plan.requiresCraftingTable, context.signal);
+    : await prepareCraftingStation(bot, items, initialPlan.plan.requiresCraftingTable, {
+      signal: context.signal,
+      timeoutMs: options.inventorySettleMs,
+    });
   if (station.kind === "plan_failed") {
     const failure = preparationFailureResult(station.preparation, { items: requestedItems });
     return {
@@ -233,7 +265,7 @@ async function craftBatch(
         bot,
         name,
         inventoryBefore + count - (name === "crafting_table" ? usedCarriedTable : 0),
-        { signal: context.signal },
+        { signal: context.signal, timeoutMs: options.inventorySettleMs },
       ),
     })),
   );
@@ -299,7 +331,7 @@ export function formatCraftItemResult(result: CraftItemResult): string {
   return lines.join("\n");
 }
 
-export function createCraftItemAction(bot: Bot, navigation: NavigationRuntime) {
+export function createCraftItemAction(bot: Bot, navigation: NavigationRuntime, options: CraftItemOptions = {}) {
   return defineAction({
     checkpointSchema: craftCheckpointSchema,
     name: CRAFT_ITEM,
@@ -308,8 +340,12 @@ export function createCraftItemAction(bot: Bot, navigation: NavigationRuntime) {
     resultSchema: craftItemResultSchema,
     formatResult: formatCraftItemResult,
     execution: { kind: "task" },
-    annotations: craftItemAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
     parse: parseCraftItemRequest,
-    execute: (request, context) => craftItem(bot, navigation, request, context),
+    execute: (request, context) => craftItem(bot, navigation, request, context, options),
   });
 }

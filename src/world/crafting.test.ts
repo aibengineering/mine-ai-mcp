@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import test from "node:test";
-import { craftingBot } from "../test-support/crafting.js";
+import type { Bot } from "mineflayer";
+import { craftingBot, craftingRegistry } from "../test-support/crafting.js";
 import { planCraftingFromInventory } from "../utils/craft-plan.js";
 import { executeCraftPlan } from "./crafting.js";
 
@@ -31,5 +33,30 @@ for (const carried of capacityControls) {
       completedSteps: 1,
     });
     assert.deepEqual(craftCalls, ["oak_planks"]);
+  });
+}
+
+// flat/craft/recipe-remainders: a honey block from four honey bottles hands
+// back four glass bottles. With 35 stacks of cobblestone and the bottles
+// filling all 36 slots, Minecraft's own recipe delta needs two free slots
+// after the bottles are spent and only one exists, so the craft is refused
+// before any click rather than letting the inventory toss a remainder.
+const nativeRecipes = (createRequire(import.meta.url)("prismarine-recipe") as (registry: unknown) => {
+  Recipe: { find(itemType: number, metadata: null): ReturnType<Bot["recipesAll"]> };
+})(craftingRegistry).Recipe;
+for (const [cobblestone, refused] of [[35 * 64, true], [34 * 64, false]] as const) {
+  test(`container remainders count toward room: honey block with ${cobblestone} cobblestone is ${refused ? "refused" : "crafted"}`, async () => {
+    const { bot, craftCalls, counts } = craftingBot({ cobblestone, honey_bottle: 4 });
+    const honey = nativeRecipes.find(craftingRegistry.itemsByName.honey_block!.id, null)[0]!;
+    const result = await executeCraftPlan(bot, [{ recipe: honey, applications: 1 }], null);
+    if (refused) {
+      assert.equal(result.kind, "failed");
+      assert.match(String(result.kind === "failed" ? result.cause : ""), /execution needs inventory room/);
+      assert.deepEqual(craftCalls, []);
+      assert.equal(counts.get(craftingRegistry.itemsByName.honey_bottle!.id), 4);
+    } else {
+      assert.deepEqual(result, { kind: "completed", completedSteps: 1 });
+      assert.equal(counts.get(craftingRegistry.itemsByName.glass_bottle!.id), 4);
+    }
   });
 }

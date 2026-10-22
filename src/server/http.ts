@@ -171,33 +171,23 @@ export function createMinecraftMcpHttpApplication(
     }
   });
 
-  app.get("/mcp", async (request, response) => {
-    const sessionId = request.headers["mcp-session-id"];
-    if (typeof sessionId !== "string" || !transports.has(sessionId)) {
-      response.status(sessionId ? 404 : 400).send("Missing or invalid MCP session.");
-      return;
-    }
-    const record = transports.get(sessionId)!;
-    record.lastActiveAt = Date.now();
-    await record.transport.handleRequest(request, response);
-  });
-
-  app.delete("/mcp", async (request, response) => {
-    const sessionId = request.headers["mcp-session-id"];
-    if (typeof sessionId !== "string" || !transports.has(sessionId)) {
-      response.status(sessionId ? 404 : 400).send("Missing or invalid MCP session.");
-      return;
-    }
-    const record = transports.get(sessionId)!;
-    record.lastActiveAt = Date.now();
-    await record.transport.handleRequest(request, response);
-  });
+  // A GET opens a session's server-to-client stream and a DELETE ends the
+  // session; either way the transport does the work once the session is found.
+  for (const method of ["get", "delete"] as const) {
+    app[method]("/mcp", async (request, response) => {
+      const sessionId = request.headers["mcp-session-id"];
+      if (typeof sessionId !== "string" || !transports.has(sessionId)) {
+        response.status(sessionId ? 404 : 400).send("Missing or invalid MCP session.");
+        return;
+      }
+      const record = transports.get(sessionId)!;
+      record.lastActiveAt = Date.now();
+      await record.transport.handleRequest(request, response);
+    });
+  }
 
   return {
     app,
-    get clientSessionCount(): number {
-      return transports.size;
-    },
     async close(): Promise<void> {
       clearInterval(idleReaper);
       const records = [...transports.values()];

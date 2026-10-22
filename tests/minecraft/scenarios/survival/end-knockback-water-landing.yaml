@@ -1,0 +1,64 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression, slow]
+description: >-
+  A native TNT blast knocks the bot off a glass block 41 blocks above an End
+  platform. The fall alone is lethal, so the idle runtime must pour its water
+  before landing, take no fall damage, and pick the water back up. Guards the
+  native-knockback bucket save that the legacy bucket-native-knockback fixture
+  replayed; the forecast itself is pinned in water-landing.test.ts.
+
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  difficulty: normal
+  gamerules: { doMobSpawning: false, naturalRegeneration: false }
+
+# A clear column over an end-stone floor at y 58, east of the island centre.
+# Fills stay under the 32768-block command limit.
+geometry:
+  - fill: { block: air, from: [65, 59, -16], to: [100, 77, 16] }
+  - fill: { block: air, from: [65, 78, -16], to: [100, 96, 16] }
+  - fill: { block: air, from: [65, 97, -16], to: [100, 115, 16] }
+  - fill: { block: end_stone, from: [65, 58, -16], to: [100, 58, 16] }
+  - setblock: { block: glass, at: [76, 99, 0] }
+  - setblock: { block: glass, at: [79, 99, 0] }
+
+setup:
+  - "kill @e[type=enderman]"
+
+players:
+  - name: BucketBot
+    pos: [79.5, 100, 0.5]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: iron_pickaxe }
+      - { item: water_bucket }
+
+# The dragon would swoop at a bot standing in the open; its removal and the
+# blast both happen at the start. TNT three blocks west, fuse 20 ticks.
+schedule:
+  - { when: "entity @e[type=ender_dragon]", run: "kill @e[type=ender_dragon]" }
+  - { afterTicks: 0, run: "summon tnt 76.5 100 0.5 {fuse:20}" }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/idle.ts]
+params:
+  waitTicks: 200
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    # On the floor, so the blast really threw it off the glass.
+    - { kind: reach, who: BucketBot, pos: [85.5, 59, 0.5], radius: 16 }
+    - { kind: hasItem, who: BucketBot, item: water_bucket, count: 1 }
+    - { kind: hasItem, who: BucketBot, item: bucket, count: 0, max: 0 }
+    # Regeneration is off. The blast alone leaves 5.45 in diamond armour (run
+    # 2026-10-20); any fall damage on top of it, even half a heart, goes below.
+    - { kind: health, who: BucketBot, health: 5 }
+    - { kind: survive, who: BucketBot, seconds: 1 }
+    - { kind: completion, who: BucketBot }

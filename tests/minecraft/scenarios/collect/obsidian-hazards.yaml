@@ -1,14 +1,18 @@
-template: ../../templates/collect/single-action.yaml
+template: ../../templates/single-action.yaml
 
-name: obsidian-hazards
 tags: [regression]
 description: >-
-  Collect all three existing obsidian blocks with no bucket: seal the lava beside one,
-  isolate flowing water above another, and approach the third beneath a stone lip.
-  Guards the Run 10 lava/water refusals and the cave regression that repeatedly arrived
-  at an occluded mining stance. All three blocks must be recovered without injury or death.
+  Collect obsidian that lava and water guard, in four pens two hundred blocks apart. The first
+  collector takes all three existing obsidian blocks with no bucket: seal the lava beside one,
+  isolate flowing water above another, and approach the third beneath a stone lip. Guards the
+  Run 10 lava/water refusals and the cave regression that repeatedly arrived at an occluded mining
+  stance. The second takes a single block with water above it and lava beside it, with no bucket,
+  plugging the water before the long dig (obsidian-drain-before-mining). The third takes ten from a
+  ring around a lava lake, where every block has a lava face (Run 10 found 107 loaded and mined
+  none). The fourth takes six from a slab that a water source on its centre keeps covered in
+  flowing water (the third link of Run 10, refused because liquid was above). Every pen must
+  collect its count and survive; the first two also keep full health with regeneration off.
 
-minecraft: { version: "1.21.4" }
 world:
   type: flat
   time: noon
@@ -17,7 +21,11 @@ world:
     doMobSpawning: false
     naturalRegeneration: false
     randomTickSpeed: 0
-reset: ["fill -8 -59 -10 30 -40 10 air"]
+reset:
+  - "fill -8 -59 -10 30 -40 10 air"
+  - "fill 194 -61 -5 210 -54 5 air"
+  - "fill 380 -59 -20 420 -40 20 air"
+  - "fill 580 -59 -20 620 -40 20 air"
 
 geometry:
   # A thick floor keeps water preparation within stone rather than opening a dirt basement.
@@ -32,6 +40,27 @@ geometry:
   - fill: { block: stone, from: [24, -59, -1], to: [25, -58, 1] }
   - setblock: { block: obsidian, at: [24, -60, 0] }
   - setblock: { block: lava, at: [25, -60, 0] }
+  # Drain pen (obsidian-drain-before-mining, translated 200 east): a water
+  # source above the only obsidian and lava beside it, and no bucket.
+  - fill: { block: stone, from: [195, -61, -4], to: [209, -60, 4] }
+  - setblock: { block: obsidian, at: [202, -60, 0] }
+  - setblock: { block: water, at: [203, -59, 0] }
+  - setblock: { block: lava, at: [202, -60, 1] }
+  # Lake pen (obsidian-lake, translated 400 east): the ring stands in the
+  # stone floor around the pool, so each block has lava on one side and stone
+  # on the others, and a missed seal would let the lake into the mined cell.
+  - fill: { block: stone, from: [380, -61, -20], to: [420, -60, 20] }
+  - fill: { block: lava, from: [405, -60, -3], to: [411, -60, 3] }
+  - fill: { block: obsidian, from: [404, -60, -4], to: [412, -60, -4] }
+  - fill: { block: obsidian, from: [404, -60, 4], to: [412, -60, 4] }
+  - fill: { block: obsidian, from: [404, -60, -4], to: [404, -60, 4] }
+  - fill: { block: obsidian, from: [412, -60, -4], to: [412, -60, 4] }
+  # Slab pen (obsidian-under-water, translated 600 east): the slab is level
+  # with a thick floor and one source on its centre keeps a shallow flow over
+  # all of it. There is no lava to seal: only the liquid above stands in the way.
+  - fill: { block: stone, from: [580, -63, -20], to: [620, -60, 20] }
+  - fill: { block: obsidian, from: [604, -60, -2], to: [608, -60, 2] }
+  - setblock: { block: water, at: [606, -59, 0] }
 
 players:
   - name: Collector
@@ -39,14 +68,43 @@ players:
     inventory:
       - { item: diamond_pickaxe, count: 1 }
       - { item: cobblestone, count: 32 }
+  - name: DrainMiner
+    pos: [200.5, -59, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+  - name: LakeCollector
+    pos: [400, -59, 0]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
+  - name: SlabCollector
+    pos: [600, -59, 0]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 32 }
 
 params:
-  action: collect_block
-  input: { block_name: obsidian, count: 3, scaffold: false }
+  players:
+    Collector:
+      action: collect_block
+      input: { block_name: obsidian, count: 3, scaffold: false }
+    DrainMiner:
+      action: collect_block
+      input: { block_name: obsidian, count: 1, scaffold: false }
+    LakeCollector:
+      action: collect_block
+      input: { block_name: obsidian, count: 10, scaffold: false }
+    SlabCollector:
+      action: collect_block
+      input: { block_name: obsidian, count: 6, scaffold: false }
+
+tick:
+  - "gamemode spectator @a[name=!Collector,name=!DrainMiner,name=!LakeCollector,name=!SlabCollector,gamemode=!spectator]"
 
 goal:
   kind: all
-  timeout: 180
+  timeout: 420
   goals:
     # There are exactly three obsidian blocks and no water bucket for casting alternatives.
     - { kind: hasItem, who: Collector, item: obsidian, count: 3 }
@@ -56,3 +114,15 @@ goal:
     - { kind: health, who: Collector, health: 20 }
     - { kind: survive, who: Collector, seconds: 1 }
     - { kind: completion, who: Collector }
+    # The drain pen's only obsidian, taken without injury.
+    - { kind: hasItem, who: DrainMiner, item: obsidian, count: 1 }
+    - { kind: blockAt, block: air, pos: [202, -60, 0] }
+    - { kind: health, who: DrainMiner, health: 20 }
+    - { kind: completion, who: DrainMiner }
+    # Completion must not be earned by respawning with keepInventory.
+    - { kind: hasItem, who: LakeCollector, item: obsidian, count: 10 }
+    - { kind: survive, who: LakeCollector, seconds: 1 }
+    - { kind: completion, who: LakeCollector }
+    - { kind: hasItem, who: SlabCollector, item: obsidian, count: 6 }
+    - { kind: survive, who: SlabCollector, seconds: 1 }
+    - { kind: completion, who: SlabCollector }

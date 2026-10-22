@@ -1,0 +1,76 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression]
+description: >-
+  Collect three iron ore from a seam eleven blocks down and two east of the start, a steep
+  excavation, and deposit the raw iron in the surface chest; then tunnel through the hill
+  into a cavern, collect three gold ore from its exposed seam and deposit the raw gold in the
+  same chest. Inspect the chest for exactly those two stacks. Guards the jumping-placement
+  livelock that left a collection pending in the shaft, and the return journeys from both
+  depths to a surface container.
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -14 -59 -14 26 -37 14 air"
+
+geometry:
+  # A grass-capped stone hill with no prepared entrance.
+  - fill: { block: stone, from: [-12, -59, -12], to: [24, -45, 12] }
+  - fill: { block: grass_block, from: [-12, -45, -12], to: [24, -45, 12] }
+  # Iron seam almost directly beneath the start: eleven down, two east.
+  - fill: { block: iron_ore, from: [2, -56, -1], to: [2, -56, 1] }
+  # A natural-sized cavern 8 to 18 east, with a gold seam exposed on its far wall.
+  # The ores differ so each request names one seam.
+  - fill: { block: air, from: [8, -57, -4], to: [18, -52, 4] }
+  - fill: { block: gold_ore, from: [19, -56, -1], to: [19, -56, 1] }
+  - setblock: { block: chest, at: [-4, -44, 0] }
+
+players:
+  - name: Miner
+    pos: [0.5, -44, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+
+tick:
+  - "gamemode spectator @a[name=!Miner,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/preserve-storage.ts]
+params:
+  steps:
+    - label: Iron from the steep shaft
+      action: collect_block
+      input: { block_name: iron_ore, count: 3, scaffold: true }
+    - label: Deposit the iron at the surface
+      action: use_container
+      input: { operation: deposit, x: -4, y: -44, z: 0, items: [{ item_name: raw_iron, count: 3 }] }
+    - label: Gold from the cavern seam
+      action: collect_block
+      input: { block_name: gold_ore, count: 3, scaffold: true }
+    - label: Deposit the gold at the surface
+      action: use_container
+      input: { operation: deposit, x: -4, y: -44, z: 0, items: [{ item_name: raw_gold, count: 3 }] }
+  protected_container: { x: -4, y: -44, z: 0 }
+  expected_contents:
+    - { slot: 0, item: raw_iron, count: 3 }
+    - { slot: 1, item: raw_gold, count: 3 }
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: blockAt, pos: [-4, -44, 0], block: chest }
+    - { kind: hasItem, who: Miner, item: raw_iron, count: 0, max: 0 }
+    - { kind: hasItem, who: Miner, item: raw_gold, count: 0, max: 0 }
+    - { kind: completion, who: Miner }

@@ -39,23 +39,15 @@ export const unreadEventsPageQuery = defineSqlQuery({
     ORDER BY event_id
     LIMIT ?
   `,
-  parseRow: (row) => {
-    const payload: unknown = JSON.parse(String(row.payload_json));
-    return botEventSchema.parse({
+  parseRow: (row) =>
+    botEventSchema.parse({
       eventId: row.event_id,
       botId: row.bot_id,
       type: row.event_type,
       observedAt: row.observed_at,
       summary: row.summary,
-      // Encounters recorded before explosions were counted read back as none.
-      payload:
-        row.event_type === "hostile_encounter"
-          ? { explosions: 0, ...(payload as object) }
-          : row.event_type === "player_death"
-            ? { cause: null, ...(payload as object) }
-            : payload,
-    });
-  },
+      payload: JSON.parse(String(row.payload_json)),
+    }),
 });
 
 export const remainingEventsQuery = defineSqlQuery({
@@ -144,39 +136,8 @@ function formatEvent(event: BotEvent): string {
         `- Evidence: ${JSON.stringify(evidence)}`,
       ].join("\n");
     }
-    case "combat_engagement": {
-      const { execution, state, targetId, targetDistance, bodyOwner, outcome, observation } = event.payload;
-      return [
-        `### Event ${event.eventId}: combat ${state}`,
-        `- Engagement: ${execution.progress.engagementId}`,
-        `- Target: ${targetId}; distance: ${targetDistance?.toFixed(1) ?? "unobserved"}`,
-        `- Body owner: ${bodyOwner}; phase: ${execution.phase}`,
-        `- Awaiting: ${execution.expected}`,
-        `- Without objective progress: ${Math.round(execution.progress.inactiveMs)} ms`,
-        `- Attack attempts: ${execution.attacks}; confirmed target hits: ${execution.progress.confirmedTargetHits}`,
-        `- Defensive hits: ${execution.progress.confirmedDefensiveHits}; completed volleys: ${execution.progress.completedVolleys}`,
-        ...(outcome ? [`- Outcome: ${outcome}`] : []),
-        ...(observation ? [`- Observation: ${observation}`] : []),
-      ].join("\n");
-    }
-    case "combat_policy":
-      return `### Event ${event.eventId}: combat policy (historical)
-${event.summary}
-Revision: ${event.payload.revision}
-${JSON.stringify(event.payload.override)}
-Constraint: ${event.payload.constraint ?? "none"}`;
-    case "survival_policy":
-      return `### Event ${event.eventId}: survival policy
-${event.summary}
-Revision: ${event.payload.revision}
-Overrides: ${JSON.stringify(event.payload.overrides)}
-Constraint: ${event.payload.constraint ?? "none"}`;
-    case "dragon_reflex":
-      return `### Event ${event.eventId}: dragon escape\n- Observed: ${event.observedAt}\n- Outcome: ${event.payload.outcome}\n- Health: ${event.payload.healthBefore} → ${event.payload.healthAfter}\n- Interrupted: ${event.payload.interrupted?.action ?? "nothing; the bot was idle"}\n- Reason: ${event.payload.reason ?? "clear of the observed hazard"}`;
     case "stronghold_located":
       return `### Event ${event.eventId}: stronghold located\n- Observed: ${event.observedAt}\n- Search: ${event.payload.searchId}\n- Dimension: ${event.payload.dimension}\n- Portal frame: ${event.payload.confirmation.position.x}, ${event.payload.confirmation.position.y}, ${event.payload.confirmation.position.z}\n- Saved throws: ${event.payload.throwIds.join(", ") || "none; frame already loaded"}`;
-    case "fire_reflex":
-      return `### Event ${event.eventId}: fire escape\n- Observed: ${event.observedAt}\n- Outcome: ${event.payload.outcome}\n- Health: ${event.payload.healthBefore} → ${event.payload.healthAfter}\n- Interrupted: ${event.payload.interrupted?.action ?? "nothing; the bot was idle"}`;
     case "player_message":
       return [
         `### Event ${event.eventId}: player message`,
@@ -203,48 +164,6 @@ Constraint: ${event.payload.constraint ?? "none"}`;
         `- From: \`${event.payload.from}\``,
         `- To: \`${event.payload.to}\``,
         `- Arrived at: \`${event.payload.position.x}, ${event.payload.position.y}, ${event.payload.position.z}\``,
-      ].join("\n");
-    case "hostile_encounter":
-      return [
-        `### Event ${event.eventId}: hostile encounter`,
-        `- Observed: ${event.observedAt}`,
-        `- Response: ${event.payload.response}`,
-        `- Outcome: ${event.payload.outcome}`,
-        `- Interrupted: ${event.payload.interrupted ? `\`${event.payload.interrupted.action}\`` : "nothing; the bot was idle"}`,
-        `- Health: ${event.payload.healthBefore} → ${event.payload.healthAfter}`,
-        `- Threats: ${event.payload.threats.map((threat) => `\`${threat.name}#${threat.id}\``).join(", ")}`,
-        `- Killed target ids: ${event.payload.killedTargetIds.join(", ") || "none"}`,
-        `- Attacks: ${event.payload.attacks}`,
-        `- Combat styles: ${event.payload.combatStyles.join(" → ") || "none"}`,
-        `- Weapons used: ${event.payload.weaponsUsed.join(" → ") || "none"}`,
-        `- Target swings while shield was raised: ${event.payload.shieldRaisedSwings}`,
-        `- Bow draws met with a raised shield: ${event.payload.projectileGuards}`,
-        `- Explosions: ${event.payload.explosions}`,
-        ...(event.payload.hide
-          ? [
-              `- Hide: dug ${event.payload.hide.dug} down${event.payload.hide.walled > 0 ? `, walled in with ${event.payload.hide.walled} blocks` : ""}, ${event.payload.hide.capped ? "capped the hole" : "left it open"}${event.payload.hide.ate ? `, ate ${event.payload.hide.ate}` : ""}${event.payload.hide.swings > 0 ? `, ${event.payload.hide.swings} swings at what fell in` : ""}; hunger after ${event.payload.hide.hungerAfter}`,
-            ]
-          : []),
-        `- Bot ended at: ${event.payload.finalPosition.x.toFixed(1)}, ${event.payload.finalPosition.y.toFixed(1)}, ${event.payload.finalPosition.z.toFixed(1)}`,
-        `- Reason: ${event.payload.reason}`,
-      ].join("\n");
-    case "hunger_reflex":
-      return [
-        `### Event ${event.eventId}: ate without being asked`,
-        `- Observed: ${event.observedAt}`,
-        `- Food: ${event.payload.food}${event.payload.consumed ? "" : " (not consumed)"}`,
-        `- Hunger: ${event.payload.hungerBefore} → ${event.payload.hungerAfter}; saturation ${event.payload.saturationBefore.toFixed(1)} → ${event.payload.saturationAfter.toFixed(1)}`,
-        `- Interrupted: ${event.payload.interrupted ? `\`${event.payload.interrupted.action}\`, resumed afterwards` : "nothing; the bot was idle"}`,
-        ...(event.payload.error ? [`- Error: ${event.payload.error}`] : []),
-      ].join("\n");
-    case "breath_reflex":
-      return [
-        `### Event ${event.eventId}: surfacing attempt`,
-        `- Observed: ${event.observedAt}`,
-        `- Outcome: ${event.summary}`,
-        `- Air: ${event.payload.airBefore} → ${event.payload.airAfter} of 20; health ${event.payload.healthBefore.toFixed(1)} → ${event.payload.healthAfter.toFixed(1)}`,
-        ...(event.payload.dug > 0 ? [`- Dug through ${event.payload.dug} roof block(s) on the way up`] : []),
-        `- Interrupted: ${event.payload.interrupted ? `\`${event.payload.interrupted.action}\`` : "nothing; the bot was idle"}`,
       ].join("\n");
   }
 }

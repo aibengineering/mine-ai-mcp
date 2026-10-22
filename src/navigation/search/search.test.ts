@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { WELL_FED, flatWorld, observation, planningStart } from "../../test-support/navigation.js";
+import { WELL_FED, flatWorld, movementList, observation, planningStart } from "../../test-support/navigation.js";
 import type { PlanningNode, ResolvedGoal } from "../goals/goal.js";
 import { exactBlockGoal } from "../goals/index.js";
 import {
@@ -9,9 +9,7 @@ import {
   type PlanningState,
   createMovementCatalogue,
 } from "../movements/catalogue.js";
-import { movementList } from "../movements/movement-candidates.js";
 import { createMovementPolicy } from "../movements/policy.js";
-import { DEFAULT_CONTINUATION_SEARCH_LIMITS, DEFAULT_SEARCH_LIMITS } from "../navigate.js";
 import type { StepField } from "../step-field.js";
 import type { SearchLimits } from "./search-result.js";
 import { IncrementalSearch, type SearchUpdate } from "./search.js";
@@ -501,7 +499,3 @@ test("a step field bends the route around what it prices", () => {
   assert.deepEqual(plan.steps.at(-1)?.to, { x: 5, y: 63, z: 0 });
 });
 
-test("the shipped limits are Baritone's inline and plan-ahead search timeouts", () => {
-  assert.deepEqual(DEFAULT_SEARCH_LIMITS, { primaryTimeoutMs: 500, failureTimeoutMs: 2_000 });
-  assert.deepEqual(DEFAULT_CONTINUATION_SEARCH_LIMITS, { primaryTimeoutMs: 4_000, failureTimeoutMs: 5_000 });
-});

@@ -14,7 +14,8 @@ export type CombatLoadout =
       readonly cooldownTicks: number;
     };
 
-const OFF_HAND_SLOT = 45;
+/** Mineflayer's window slot for the off-hand. */
+export const OFF_HAND_SLOT = 45;
 /** An empty hand's attack speed is four attacks per second. */
 const EMPTY_HAND_COOLDOWN_TICKS = 5;
 /**
@@ -100,11 +101,22 @@ export function carriesRangedWeapon(bot: Bot): boolean {
   return usableBow(readCombatItems(bot)) !== null;
 }
 
+/** Whether the off-hand holds a shield, as the window last reported it. */
+export function holdsShield(bot: Bot): boolean {
+  return bot.inventory.slots[OFF_HAND_SLOT]?.name === "shield";
+}
+
+/** Move a carried shield to the off-hand unless one is already there. True
+ * when it equipped, since a caller holding a raised guard must then re-raise. */
+export async function ensureOffHandShield(bot: Bot, shield: Item): Promise<boolean> {
+  if (holdsShield(bot)) return false;
+  await bot.equip(shield, "off-hand");
+  return true;
+}
+
 /** Equip the shield first, then the selected weapon; null deliberately empties the hand. */
 export async function equipCombatLoadout(bot: Bot, loadout: CombatLoadout): Promise<void> {
-  if (loadout.shield && bot.inventory.slots[OFF_HAND_SLOT]?.name !== "shield") {
-    await bot.equip(loadout.shield, "off-hand");
-  }
+  if (loadout.shield) await ensureOffHandShield(bot, loadout.shield);
   if (loadout.weapon) {
     if (bot.heldItem?.name !== loadout.weapon.name) await bot.equip(loadout.weapon, "hand");
   } else if (bot.heldItem) {

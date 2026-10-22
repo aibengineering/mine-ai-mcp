@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { RequestEvidence } from "./request.js";
 import type { Facts } from "../survival/state/answered.js";
-import { toolChanges, toolSnapshotSchema, type ToolSnapshot } from "../world/tool-tiers.js";
+import { toolChangeSchema, toolChanges, toolSnapshotSchema, type ToolSnapshot } from "../world/tool-tiers.js";
 
 export const progressPositionSchema = z.strictObject({
   dimension: z.string(), x: z.number().finite(), y: z.number().finite(), z: z.number().finite(),
@@ -221,8 +221,22 @@ function factsObject(value: Facts | undefined): value is { readonly [name: strin
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+/**
+ * What changed across one wait, as a pending wait reply publishes it. The
+ * reply's output schema is strict, so `progressChange` is typed by this
+ * schema: a field added to one but not the other fails to compile rather
+ * than failing the reply's parse at run time.
+ */
+export const progressChangeSchema = z.strictObject({
+  from: z.string(), to: z.string(), elapsedMs: z.number(), suspendedMs: z.number(),
+  distanceTravelledBlocks: z.number(), reflexDistanceBlocks: z.number(), combatResources: combatResourcesSchema,
+  reflexActivity: reflexActivitySchema,
+  checkpointDelta: z.record(z.string(), z.number()), toolChanges: z.array(toolChangeSchema),
+});
+export type ProgressChange = z.output<typeof progressChangeSchema>;
+
 /** Each waiter owns its baseline; reading never changes another observer's interval. */
-export function progressChange(before: Progress, after: Progress, initial: RequestEvidence | null, final: RequestEvidence | null) {
+export function progressChange(before: Progress, after: Progress, initial: RequestEvidence | null, final: RequestEvidence | null): ProgressChange {
   const first = initial?.checkpoint;
   const last = final?.checkpoint;
   const checkpointDelta: Record<string, number> = {};

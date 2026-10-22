@@ -16,9 +16,7 @@ import { isBedBlock, placeCarriedBed } from "./bed-placement.js";
 import {
   SLEEP,
   SLEEP_DESCRIPTION,
-  parseSleepRequest,
   sleepResultSchema,
-  sleepAnnotations,
   sleepInputSchema,
   sleepOutcomes,
   type SleepResult,
@@ -411,8 +409,8 @@ export function createSleepAction(bot: Bot, navigation: NavigationRuntime) {
     resultSchema: sleepResultSchema,
     formatResult: formatSleepResult,
     execution: { kind: "task" },
-    annotations: sleepAnnotations,
-    parse: parseSleepRequest,
+    annotations: { openWorldHint: false },
+    parse: (input) => sleepInputSchema.parse(input ?? {}),
     execute: (request, context) => {
       const timeBefore = bot.time.timeOfDay;
       context.observeProgress?.(() => ({ baseline: { timeOfDay: timeBefore },

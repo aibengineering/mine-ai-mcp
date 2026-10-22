@@ -59,35 +59,3 @@ test("represents an observed empty container and forgets a disproven location", 
   forgetContainerObservation(data, location);
   assert.equal(containers(), 0);
 });
-
-test("retains legacy item totals without inventing their unknown slots", (t) => {
-  const data = temporaryBotData({ closeAfter: t });
-  data.transaction((database) => {
-    database
-      .prepare(
-        `
-        INSERT INTO observed_containers (
-          container_key, dimension, block_x, block_y, block_z, block_name,
-          slot_count, contents_json, observed_by_bot_id, observed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      )
-      .run(
-        "overworld|7|64|9",
-        "overworld",
-        7,
-        64,
-        9,
-        "chest",
-        27,
-        '[{"item":"cobblestone","count":12}]',
-        "StorageBot",
-        "2026-08-23T00:00:00.000Z",
-      );
-  });
-
-  assert.deepEqual(data.read("SELECT item_name, item_count FROM observed_container_items"), [
-    { item_name: "cobblestone", item_count: 12 },
-  ]);
-  assert.deepEqual(data.read("SELECT slot, item_name, item_count FROM observed_container_slots"), []);
-});

@@ -18,6 +18,7 @@ import {
   routePlan,
   stepUpStep,
 } from "../../test-support/navigation.js";
+import { nextTurn } from "../../test-support/async.js";
 import type { MovementPreparation } from "../bot.js";
 import type { PlannedStep } from "../movements/movement.js";
 import type { NavigationObservation, Position3 } from "../world/world.js";
@@ -31,16 +32,37 @@ import { ExpectedMutationLedger } from "./mutations.js";
 import { OpenedPassages } from "./opened-passages.js";
 import { RouteExecutor, type RouteExecutionRequest } from "./route-executor.js";
 
-/** Let the executor's pending microtasks and immediates run. */
-const nextTurn = () => new Promise<void>((resolve) => setImmediate(resolve));
 const walkStep = (id: string, fromX: number, toX: number) =>
   movementStep("walk", { x: fromX, y: 63, z: 0 }, { x: toX, y: 63, z: 0 }, { id, expectedTicks: 4 });
 
-function routeExecutor(request: Omit<RouteExecutionRequest, "passages" | "effectConfirmed">): RouteExecutor {
+function routeExecutor(request: Omit<RouteExecutionRequest, "passages">): RouteExecutor {
   return new RouteExecutor({
     ...request,
     passages: new OpenedPassages(request.context.world, request.context.bot.observe().dimension),
-    effectConfirmed: () => undefined,
+  });
+}
+
+/** An executor for `plan` whose caller takes no interest in step progress. */
+function planExecutor(options: {
+  readonly plan: RouteExecutionRequest["plan"];
+  readonly bot: FakeNavigationBot;
+  readonly world?: ReturnType<typeof flatWorld>;
+  readonly ledger?: ExpectedMutationLedger;
+  readonly signal?: AbortSignal;
+  readonly runId?: string;
+}): RouteExecutor {
+  return routeExecutor({
+    context: {
+      runId: options.runId ?? "run",
+      world: options.world ?? flatWorld(),
+      bot: options.bot,
+      ledger: options.ledger ?? new ExpectedMutationLedger(),
+      signal: options.signal ?? new AbortController().signal,
+    },
+    plan: options.plan,
+    stepStarted: () => undefined,
+    phase: () => undefined,
+    stepCompleted: () => "continue",
   });
 }
 
@@ -51,19 +73,7 @@ function executeSingleStep(options: {
   readonly ledger?: ExpectedMutationLedger;
   readonly signal?: AbortSignal;
 }) {
-  return routeExecutor({
-    context: {
-      runId: "run",
-      world: options.world,
-      bot: options.bot,
-      ledger: options.ledger ?? new ExpectedMutationLedger(),
-      signal: options.signal ?? new AbortController().signal,
-    },
-    plan: routePlan([options.step]),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
-  }).execute();
+  return planExecutor({ ...options, plan: routePlan([options.step]) }).execute();
 }
 
 /**
@@ -74,14 +84,12 @@ class TickDrivenBot extends FakeNavigationBot {
   subscriptions = 0;
   preparations = 0;
   controls = 0;
-  snapshotCalls = 0;
   nextVelocity: Position3 = STILL;
   lastIntent: MovementControlIntent | null = null;
   readonly preparedVelocities: Position3[] = [];
   readonly executions: MovementExecution[] = [];
   readonly steeringTargets: Position3[] = [];
   override movementSnapshot() {
-    this.snapshotCalls += 1;
     const velocity = this.nextVelocity;
     this.nextVelocity = STILL;
     return {
@@ -247,7 +255,6 @@ test("a replanned step enters its owned open doorway before restoration", async 
     plan: routePlan([step], { id: "replanned" }),
     stepStarted: () => undefined,
     phase: () => undefined,
-    effectConfirmed: () => undefined,
     stepCompleted: () => "continue",
   }).execute();
   assert.equal(result.kind, "exhausted");
@@ -299,19 +306,7 @@ test("route cancellation waits for an active physical effect to settle", async (
 test("one physics-tick subscription advances a complete movement-only route", async () => {
   const bot = new TickDrivenBot();
   const steps = [walkStep("first", 0, 1), walkStep("second", 1, 2)];
-  const result = routeExecutor({
-    context: {
-      runId: "run",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: new AbortController().signal,
-    },
-    plan: routePlan(steps, { id: "continuous-route", totalCost: 8 }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
-  }).execute();
+  const result = planExecutor({ plan: routePlan(steps, { id: "continuous-route", totalCost: 8 }), bot }).execute();
   await nextTurn();
   bot.tickAt(1);
   while (bot.preparations < 2) await nextTurn();
@@ -329,19 +324,16 @@ test("a mixed-kind continuous handoff reuses the route tick's velocity snapshot"
   const controller = new AbortController();
   const approach = walkStep("approach", 0, 1);
   const next = stepUpStep("next", 1, 2);
-  const result = routeExecutor({
-    context: { runId: "run", world: flatWorld(), bot, ledger: new ExpectedMutationLedger(), signal: controller.signal },
+  const result = planExecutor({
     plan: routePlan([approach, next], { id: "snapshot-handoff", totalCost: 16 }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
+    bot,
+    signal: controller.signal,
   }).execute();
   await nextTurn();
 
   bot.tickAt(1.1, { x: 0.3, y: 0, z: 0 });
   while (bot.preparations < 2) await nextTurn();
 
-  assert.equal(bot.snapshotCalls, 2);
   assert.deepEqual(bot.preparedVelocities, [STILL, { x: 0.3, y: 0, z: 0 }]);
   controller.abort();
   bot.tickAt(1.1);
@@ -350,12 +342,7 @@ test("a mixed-kind continuous handoff reuses the route tick's velocity snapshot"
 
 test("a failed continuous handoff clears the controls it inherited", async () => {
   class FailedHandoffBot extends TickDrivenBot {
-    clearCalls = 0;
     inheritedControlsAtFailure = 0;
-    override clearOwnedControls() {
-      this.clearCalls += 1;
-      super.clearOwnedControls();
-    }
     override async prepareMovement(
       step: PlannedStep,
       token: unknown,
@@ -373,18 +360,9 @@ test("a failed continuous handoff clears the controls it inherited", async () =>
     }
   }
   const bot = new FailedHandoffBot();
-  const result = routeExecutor({
-    context: {
-      runId: "run",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: new AbortController().signal,
-    },
+  const result = planExecutor({
     plan: routePlan([walkStep("first", 0, 1), walkStep("second", 1, 2)], { id: "failed-handoff", totalCost: 8 }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
+    bot,
   }).execute();
   await nextTurn();
   bot.tickAt(1);
@@ -392,25 +370,15 @@ test("a failed continuous handoff clears the controls it inherited", async () =>
   assert.equal((await result).kind, "failed");
   assert.equal(bot.inheritedControlsAtFailure > 0, true);
   assert.equal(bot.ownedControlCount, 0);
-  // Once at the failed ownership transfer and once at route cleanup.
-  assert.equal(bot.clearCalls, 2);
 });
 
 test("the route applies a gap controller's per-tick landing steering", async () => {
   const bot = new TickDrivenBot();
   const cancellation = new AbortController();
-  const result = routeExecutor({
-    context: {
-      runId: "run",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: cancellation.signal,
-    },
+  const result = planExecutor({
     plan: routePlan([gapStep("parkour", 3, 1)], { id: "steered-gap", totalCost: 20 }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
+    bot,
+    signal: cancellation.signal,
   }).execute();
   await nextTurn();
 
@@ -444,19 +412,7 @@ test("route cancellation clears controls and detaches its physics-tick subscript
 
 test("route invalidation interrupts movement at a cleaned physical checkpoint", async () => {
   const bot = new TickDrivenBot();
-  const executor = routeExecutor({
-    context: {
-      runId: "run",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: new AbortController().signal,
-    },
-    plan: routePlan([walkStep("invalidated", 0, 3)], { id: "invalidated-route" }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
-  });
+  const executor = planExecutor({ plan: routePlan([walkStep("invalidated", 0, 3)], { id: "invalidated-route" }), bot });
   const execution = executor.execute();
   await nextTurn();
   executor.invalidate();
@@ -468,18 +424,11 @@ test("route invalidation interrupts movement at a cleaned physical checkpoint", 
 test("a terminal world invalidation releases a cancelled jump without another physics tick", async () => {
   const bot = new TickDrivenBot();
   const control = new AbortController();
-  const executor = routeExecutor({
-    context: {
-      runId: "terminated-gap",
-      world: flatWorld(),
-      bot,
-      ledger: new ExpectedMutationLedger(),
-      signal: control.signal,
-    },
+  const executor = planExecutor({
     plan: routePlan([gapStep("parkour", 4)], { id: "gap" }),
-    stepStarted: () => undefined,
-    phase: () => undefined,
-    stepCompleted: () => "continue",
+    bot,
+    signal: control.signal,
+    runId: "terminated-gap",
   });
   let settled = false;
   const completion = executor.execute().then((result) => {

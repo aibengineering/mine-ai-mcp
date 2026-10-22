@@ -1,0 +1,117 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance]
+description: >-
+  Four idle bots stand on glass pillar tops that vanish together at the start:
+  5 blocks above an End-stone floor, 80 blocks up with the only water bucket
+  in a storage slot, 40 blocks above a one-cell hole five deep, and 40 blocks
+  up with the body's edge over a one-block step. Nothing is requested; the
+  runtime's fall reflex must pour water under each landing and scoop it back.
+  With regeneration off, full health proves no fall damage, even the two
+  points a five-block drop costs, and a filled bucket proves the water was
+  reclaimed.
+
+# One pen per fall, 100 blocks apart, so no poured water or drifting body
+# reaches another pen. Each pen has its own End-stone floor at y -60 (players
+# land at -59). The pillar tops are single glass blocks; the schedule removes
+# all four on the first tick, as the legacy driver's /setblock did once the
+# runtime was up.
+reset:
+  - "fill -10 -59 -10 310 26 10 air"
+
+geometry:
+  # Fall5: the five-block threshold, where vanilla fall damage begins to bite.
+  - fill: { block: end_stone, from: [-8, -60, -8], to: [8, -60, 8] }
+  - setblock: { block: glass, at: [0, -55, 0] }
+  # Fall80Storage: the tallest fall, with the bucket outside the hotbar.
+  - fill: { block: end_stone, from: [92, -60, -8], to: [108, -60, 8] }
+  - setblock: { block: glass, at: [100, 20, 0] }
+  # Hole40: a 5x5 End-stone block with a one-cell shaft five deep under the
+  # pillar, so the pour has to land at the bottom of the hole.
+  - fill: { block: end_stone, from: [192, -60, -8], to: [208, -60, 8] }
+  - fill: { block: end_stone, from: [198, -59, -2], to: [202, -55, 2] }
+  - fill: { block: air, from: [200, -59, 0], to: [200, -55, 0] }
+  - setblock: { block: glass, at: [200, -20, 0] }
+  # Edge40: a step one block higher begins at x 301. The body's edge at
+  # x 300.95 + 0.3 lands on it while the centre is still above the lower floor.
+  - fill: { block: end_stone, from: [292, -60, -8], to: [308, -60, 8] }
+  - fill: { block: end_stone, from: [301, -59, -5], to: [308, -59, 5] }
+  - setblock: { block: glass, at: [300, -20, 0] }
+
+players:
+  - name: Fall5
+    pos: [0.5, -54, 0.5]
+    inventory:
+      - { item: water_bucket, count: 1 }
+  - name: Fall80Storage
+    pos: [100.5, 21, 0.5]
+    # Nine items fill the hotbar first, so the water bucket is given into
+    # storage slot 9; the reflex has to fetch it from there.
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: paper, count: 1 }
+      - { item: string, count: 1 }
+      - { item: stick, count: 1 }
+      - { item: feather, count: 1 }
+      - { item: bone, count: 1 }
+      - { item: flint, count: 1 }
+      - { item: leather, count: 1 }
+      - { item: book, count: 1 }
+      - { item: water_bucket, count: 1 }
+  - name: Hole40
+    pos: [200.5, -19, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: water_bucket, count: 1 }
+  - name: Edge40
+    pos: [300.95, -19, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: water_bucket, count: 1 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/idle.ts]
+params:
+  # An 80-block fall lasts about three seconds; the rest covers the scoop.
+  waitTicks: 200
+
+schedule:
+  - afterTicks: 0
+    run:
+      - "setblock 0 -55 0 air"
+      - "setblock 100 20 0 air"
+      - "setblock 200 -20 0 air"
+      - "setblock 300 -20 0 air"
+
+tick:
+  - "gamemode spectator @a[name=!Fall5,name=!Fall80Storage,name=!Hole40,name=!Edge40,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    # Each reach proves the body fell to its floor; health 20 proves it landed
+    # unhurt; the single water bucket proves the poured water came back.
+    - { kind: reach, who: Fall5, pos: [0.5, -59, 0.5], radius: 2 }
+    - { kind: health, who: Fall5, health: 20 }
+    - { kind: hasItem, who: Fall5, item: water_bucket, count: 1 }
+    - { kind: survive, who: Fall5, seconds: 1 }
+    - { kind: completion, who: Fall5 }
+    - { kind: reach, who: Fall80Storage, pos: [100.5, -59, 0.5], radius: 4 }
+    - { kind: health, who: Fall80Storage, health: 20 }
+    - { kind: hasItem, who: Fall80Storage, item: water_bucket, count: 1 }
+    - { kind: survive, who: Fall80Storage, seconds: 1 }
+    - { kind: completion, who: Fall80Storage }
+    # The shaft is one cell wide: anywhere within 1.5 of its floor is inside it.
+    - { kind: reach, who: Hole40, pos: [200.5, -59, 0.5], radius: 1.5 }
+    - { kind: health, who: Hole40, health: 20 }
+    - { kind: hasItem, who: Hole40, item: water_bucket, count: 1 }
+    - { kind: survive, who: Hole40, seconds: 1 }
+    - { kind: completion, who: Hole40 }
+    - { kind: reach, who: Edge40, pos: [300.95, -59, 0.5], radius: 4 }
+    - { kind: health, who: Edge40, health: 20 }
+    - { kind: hasItem, who: Edge40, item: water_bucket, count: 1 }
+    - { kind: survive, who: Edge40, seconds: 1 }
+    - { kind: completion, who: Edge40 }

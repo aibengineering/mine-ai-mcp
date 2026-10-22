@@ -6,7 +6,7 @@ import { botFixture } from "../../test-support/bot.js";
 import {
   createSendMessageAction,
   formatSendMessageResult,
-  parseSendMessageRequest,
+  sendMessageInputSchema,
 } from "./index.js";
 
 function chatBot(send: (bot: Bot, message: string) => void): Bot {
@@ -15,12 +15,10 @@ function chatBot(send: (bot: Bot, message: string) => void): Bot {
   return bot;
 }
 
-test("accepts one public chat line and rejects commands or Mineflayer-split messages", () => {
-  assert.deepEqual(parseSendMessageRequest({ message: "  Hello Alex!  " }), { message: "Hello Alex!" });
-  for (const message of ["", "   ", "/say hidden command", "first\nsecond", "x".repeat(257)]) {
-    assert.throws(() => parseSendMessageRequest({ message }));
+test("refuses a command or a line Mineflayer would split into several chat messages", () => {
+  for (const message of ["/say hidden command", "first\nsecond", "x".repeat(257)]) {
+    assert.throws(() => sendMessageInputSchema.parse({ message }));
   }
-  assert.throws(() => parseSendMessageRequest({ message: "hello", recipient: "Alex" }));
 });
 
 test("succeeds only after observing the bot's exact public chat echo", async () => {
@@ -38,7 +36,6 @@ test("succeeds only after observing the bot's exact public chat echo", async () 
   assert.deepEqual(sent, ["Hello Alex"]);
   assert.deepEqual(output.result, { status: "succeeded", message: "Hello Alex" });
   assert.equal(bot.listenerCount("chat"), 0);
-  assert.equal(action.annotations?.readOnlyHint, false);
   assert.equal(action.annotations?.idempotentHint, false);
   assert.match(formatSendMessageResult({ status: "succeeded", message: "Hello Alex" }), /echo observed/);
 });

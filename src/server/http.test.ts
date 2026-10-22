@@ -31,11 +31,14 @@ async function host(t: TestContext, health = () => ({ connected: true })) {
   await once(listener, "listening");
   const address = listener.address();
   assert.ok(address && typeof address === "object");
-  return { application, url: `http://127.0.0.1:${address.port}` };
+  const url = `http://127.0.0.1:${address.port}`;
+  /** Open MCP client sessions, as the health report publishes them. */
+  const clientSessions = async () => ((await (await fetch(`${url}/health`)).json()) as { clientSessions: number }).clientSessions;
+  return { application, url, clientSessions };
 }
 
 test("independent HTTP clients can disconnect without closing another client's runtime access", async (t) => {
-  const { application, url } = await host(t);
+  const { application, url, clientSessions } = await host(t);
   const first = new Client({ name: "first", version: "1" });
   const second = new Client({ name: "second", version: "1" });
   const firstTransport = new StreamableHTTPClientTransport(new URL(`${url}/mcp`));
@@ -43,14 +46,14 @@ test("independent HTTP clients can disconnect without closing another client's r
   try {
     await first.connect(firstTransport);
     await second.connect(secondTransport);
-    assert.equal(application.clientSessionCount, 2);
+    assert.equal(await clientSessions(), 2);
     assert.deepEqual((await first.listTools()).tools.map((tool) => tool.name), ["observe"]);
     await firstTransport.terminateSession();
-    assert.equal(application.clientSessionCount, 1);
+    assert.equal(await clientSessions(), 1);
     const result = await second.callTool({ name: "observe", arguments: {} });
     assert.deepEqual(result.content, [{ type: "text", text: "runtime available" }]);
     await application.close();
-    assert.equal(application.clientSessionCount, 0);
+    assert.equal(await clientSessions(), 0);
     assert.equal((await fetch(`${url}/mcp`, {
       headers: { "mcp-session-id": secondTransport.sessionId! },
     })).status, 404);

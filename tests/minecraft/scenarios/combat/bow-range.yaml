@@ -1,0 +1,141 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance]
+description: >-
+  Five blaze hunts with a bow, shield and arrows and nothing else to fight with,
+  each against a pinned blaze at a different range: eight blocks, twenty-four,
+  thirty-two beneath a stone roof slab that blocks the straight shot, three
+  blocks off and four up, and fourteen blocks from a one-block stone ledge with
+  nothing to build a backstop from, where the raised shield has to come down
+  before the bow can draw. Every pen must kill its blaze and collect the rod it
+  carries within a budget of six arrows, unhurt.
+
+# One pen per range, two hundred blocks apart, so no hunt sees another's blaze.
+# Every blaze is pinned (no AI, no gravity): this is about where the arrows go,
+# not about a fight. Each holds a rod with a drop chance above one, so a kill
+# always yields exactly one and the hunt can succeed on its own terms.
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -8 -60 -8 40 -50 8 air"
+  - "fill 192 -60 -8 240 -50 8 air"
+  - "fill 392 -60 -8 440 -50 8 air"
+  - "fill 592 -60 -8 640 -50 8 air"
+  - "fill 792 -60 -8 840 -50 8 air"
+
+geometry:
+  # Curved: the roof slab between bot and blaze, two blocks above the ground.
+  - fill: { block: stone, from: [406, -58, -2], to: [418, -58, 2] }
+  # Ledge: one stone block three up; the bot stands on it with nowhere to step.
+  - setblock: { block: stone, at: [800, -58, 0] }
+
+entities:
+  - type: blaze
+    pos: [8.5, -60, 0.5]
+    nbt: '{NoAI:1b,NoGravity:1b,PersistenceRequired:1b,Tags:["close"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  - type: blaze
+    pos: [224.5, -60, 0.5]
+    nbt: '{NoAI:1b,NoGravity:1b,PersistenceRequired:1b,Tags:["flat24"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  - type: blaze
+    pos: [432.5, -60, 0.5]
+    nbt: '{NoAI:1b,NoGravity:1b,PersistenceRequired:1b,Tags:["curved"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  - type: blaze
+    pos: [603.5, -56, 0.5]
+    nbt: '{NoAI:1b,NoGravity:1b,PersistenceRequired:1b,Tags:["elevated"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  - type: blaze
+    pos: [814.5, -57, 0.5]
+    nbt: '{NoAI:1b,NoGravity:1b,PersistenceRequired:1b,Tags:["ledge"],HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+
+players:
+  - name: BowClose
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+  - name: BowFlat24
+    pos: [200.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+  - name: BowCurved
+    pos: [400.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+  - name: BowElevated
+    pos: [600.5, -60, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+  - name: BowLedge
+    pos: [800.5, -57, 0.5]
+    inventory:
+      - { item: shield, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+
+# A blaze in contact range can have the hostile reflex holding the body
+# before any request; each hunt is asked for once, when nothing does.
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  players:
+    BowClose: &hunt
+      idleWithinTicks: 400
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: blaze, drop_name: blaze_rod, count: 1 } }
+    BowFlat24: *hunt
+    BowCurved: *hunt
+    BowElevated: *hunt
+    BowLedge: *hunt
+
+tick:
+  - "gamemode spectator @a[name=!BowClose,name=!BowFlat24,name=!BowCurved,name=!BowElevated,name=!BowLedge,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: kill, target: blaze, tag: close }
+    - { kind: hasItem, who: BowClose, item: blaze_rod, count: 1 }
+    # Six shots is the budget the original trajectory fixtures enforced.
+    - { kind: hasItem, who: BowClose, item: arrow, count: 58 }
+    - { kind: health, who: BowClose, health: 20 }
+    - { kind: completion, who: BowClose }
+    - { kind: kill, target: blaze, tag: flat24 }
+    - { kind: hasItem, who: BowFlat24, item: blaze_rod, count: 1 }
+    - { kind: hasItem, who: BowFlat24, item: arrow, count: 58 }
+    - { kind: health, who: BowFlat24, health: 20 }
+    - { kind: completion, who: BowFlat24 }
+    - { kind: kill, target: blaze, tag: curved }
+    - { kind: hasItem, who: BowCurved, item: blaze_rod, count: 1 }
+    - { kind: hasItem, who: BowCurved, item: arrow, count: 58 }
+    - { kind: health, who: BowCurved, health: 20 }
+    - { kind: completion, who: BowCurved }
+    - { kind: kill, target: blaze, tag: elevated }
+    - { kind: hasItem, who: BowElevated, item: blaze_rod, count: 1 }
+    - { kind: hasItem, who: BowElevated, item: arrow, count: 58 }
+    - { kind: health, who: BowElevated, health: 20 }
+    - { kind: completion, who: BowElevated }
+    - { kind: kill, target: blaze, tag: ledge }
+    - { kind: hasItem, who: BowLedge, item: blaze_rod, count: 1 }
+    - { kind: hasItem, who: BowLedge, item: arrow, count: 26 }
+    - { kind: health, who: BowLedge, health: 20 }
+    - { kind: completion, who: BowLedge }

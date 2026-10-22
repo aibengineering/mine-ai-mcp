@@ -1,13 +1,17 @@
-template: ../../templates/flat-single-action.yaml
+template: ../../templates/flat-single-action-no-regen.yaml
 
-name: gauntlet-lava-parkour
 tags: [acceptance, reliability]
 description: >-
   Chain gap crossings and ascents at their maximum reach over an open lava bed. Repeated
   runs expose marginal takeoffs: a missed landing causes measurable damage. Continue
-  through full-block step-ups, a controlled drop, a magma detour and a closed door.
-  Verify each named arrival at full health without digging or scaffolding. Preserves
-  obstacle-course-parkour and the original maximum-reach lava gauntlet.
+  through full-block step-ups, a controlled drop, a magma detour and a closed door, then
+  pillar hops that must stop on single pads (one flanked by magma), a hop across one lava
+  cell from soul sand, a sprinted step-up onto a one-wide corner that turns along a shelf,
+  and a lane of fire and soul fire, one cell of it ignited mid-route, crossed without
+  contact. Verify each named arrival at full health without digging or scaffolding.
+  Preserves obstacle-course-parkour, the original maximum-reach lava gauntlet,
+  short-jump-edge-landing, ascending-jump-magma-landing, soul-sand-lava-hop (EnderSeeker's
+  2026-09-08 death), momentum-step-up-corner and fire-route.
 
 # Every opening gap is spanned at the maximum reach of the movement that
 # has to cross it, and everything under the course is lava, so a short jump is
@@ -25,6 +29,11 @@ description: >-
 #   parkour rise  3 blocks + 1 up
 #   diagonal ascent, three isolated treads with no cardinal alternative
 #   drop          2 blocks onto the finish shelf
+#
+# The extension east of the door is a chain of single-purpose sections. Each
+# one fails as contact: coasting off a single pad, landing on magma, a short
+# soul-sand takeoff, an inherited eastward heading past the gold corner and any
+# step through fire all cost health, and this world does not regenerate.
 
 world:
   type: flat
@@ -35,20 +44,33 @@ world:
     keepInventory: true
     naturalRegeneration: false
     randomTickSpeed: 0
+    # Fire must stay exactly where the fixture puts it: it neither spreads nor
+    # burns out, so the fire goals show the bot went around it.
+    doFireTick: false
 
 reset:
-  - "fill -9 -64 -6 43 -46 10 air"
+  - "fill -9 -64 -6 13 -46 39 air"
+  - "fill 14 -64 -6 36 -46 39 air"
+  - "fill 37 -64 -6 59 -46 39 air"
+  - "fill 60 -64 -6 82 -46 39 air"
 
 geometry:
   # Sealed basin. The lava is a single layer in a bedrock tray so it cannot
   # spread and generate block updates that would replan the route from under
   # the bot mid-jump.
-  - fill: { block: bedrock, from: [-6, -63, -3], to: [41, -63, 7] }
-  - fill: { block: bedrock, from: [-6, -62, -3], to: [-6, -50, 7] }
-  - fill: { block: bedrock, from: [41, -62, -3], to: [41, -50, 7] }
-  - fill: { block: bedrock, from: [-6, -62, -3], to: [41, -50, -3] }
-  - fill: { block: bedrock, from: [-6, -62, 7], to: [41, -50, 7] }
-  - fill: { block: lava, from: [-5, -62, -2], to: [40, -62, 6] }
+  - fill: { block: bedrock, from: [-6, -63, -3], to: [79, -63, 36] }
+  # Arena walls: bedrock up to knee height marks them; above that they continue
+  # as barrier, as unbreakable and as tall but invisible, so a spectator outside
+  # the arena can watch.
+  - fill: { block: bedrock, from: [-6, -62, -3], to: [-6, -60, 36] }
+  - fill: { block: bedrock, from: [79, -62, -3], to: [79, -60, 36] }
+  - fill: { block: bedrock, from: [-6, -62, -3], to: [79, -60, -3] }
+  - fill: { block: bedrock, from: [-6, -62, 36], to: [79, -60, 36] }
+  - fill: { block: barrier, from: [-6, -59, -3], to: [-6, -50, 36] }
+  - fill: { block: barrier, from: [79, -59, -3], to: [79, -50, 36] }
+  - fill: { block: barrier, from: [-6, -59, -3], to: [79, -50, -3] }
+  - fill: { block: barrier, from: [-6, -59, 36], to: [79, -50, 36] }
+  - fill: { block: lava, from: [-5, -62, -2], to: [78, -62, 35] }
 
   # Landing pads are one block deep on purpose. A wider pad lets a four-block
   # parkour jump swallow the shorter gaps whole, and the course stops testing
@@ -81,8 +103,11 @@ geometry:
   # Original finish shelf, two blocks below the last tread: checkpoint one.
   - fill: { block: emerald_block, from: [16, -58, 2], to: [20, -58, 4] }
   # Enclose the extension so the door remains the only way to its finish.
-  - fill: { block: bedrock, from: [20, -62, 1], to: [36, -50, 1] }
-  - fill: { block: bedrock, from: [20, -62, 5], to: [36, -50, 5] }
+  # Corridor walls, visible to one block above the walkway (y=-58) and barrier above.
+  - fill: { block: bedrock, from: [20, -62, 1], to: [36, -57, 1] }
+  - fill: { block: bedrock, from: [20, -62, 5], to: [36, -57, 5] }
+  - fill: { block: barrier, from: [20, -56, 1], to: [36, -50, 1] }
+  - fill: { block: barrier, from: [20, -56, 5], to: [36, -50, 5] }
   - setblock: { block: blue_concrete, at: [21, -57, 3] }
   - setblock: { block: blue_concrete, at: [22, -56, 3] }
   - fill: { block: blue_concrete, from: [23, -56, 3], to: [24, -56, 3] }
@@ -95,6 +120,64 @@ geometry:
   - setblock: { block: "oak_door[facing=east,half=lower,hinge=left,open=false,powered=false]", at: [30, -57, 4] }
   - setblock: { block: "oak_door[facing=east,half=upper,hinge=left,open=false,powered=false]", at: [30, -56, 4] }
   - fill: { block: emerald_block, from: [31, -58, 2], to: [35, -58, 4] }
+
+  # Pillar hops (short-jump-edge-landing, ascending-jump-magma-landing). First
+  # a walkway out of the door corridor and a two-block jump onto a single pad
+  # with lava all round it. A two-block drop south leaves that pad.
+  - fill: { block: blue_concrete, from: [36, -58, 3], to: [38, -58, 3] }
+  - setblock: { block: bedrock, at: [40, -58, 3] }
+  - fill: { block: blue_concrete, from: [40, -60, 4], to: [45, -60, 4] }
+  - fill: { block: blue_concrete, from: [45, -60, 5], to: [45, -60, 6] }
+  # Then a two-wide pillar top entered from the side, so there is no run-up,
+  # and an ascending two-block jump over a magma block onto a single pad with
+  # magma beyond it. Each pad is its own checkpoint, so the body has to stop
+  # on it; a two-block drop south leaves the upper pad.
+  - fill: { block: bedrock, from: [44, -60, 7], to: [45, -60, 7] }
+  - setblock: { block: magma_block, at: [46, -60, 7] }
+  - setblock: { block: bedrock, at: [47, -59, 7] }
+  - setblock: { block: magma_block, at: [48, -59, 7] }
+  - setblock: { block: blue_concrete, at: [47, -61, 8] }
+
+  # Soul-sand lip (soul-sand-lava-hop): two soul-sand pads in a lava pool at
+  # their own level, one lava cell apart. Soul sand's top is 1/8 below the
+  # navigation node and below the lava's surface, so a body overlapping a lava
+  # cell from soul sand is in it. Tall bedrock walls hold the pool, two cells
+  # clear of every pad, and causeways enter and leave it through doorways.
+  - fill: { block: bedrock, from: [43, -62, 9], to: [56, -62, 19] }
+  - fill: { block: bedrock, from: [43, -61, 9], to: [56, -57, 19] }
+  - fill: { block: air, from: [44, -60, 10], to: [55, -57, 18] }
+  - fill: { block: lava, from: [44, -61, 10], to: [55, -61, 18] }
+  - fill: { block: soul_sand, from: [45, -61, 12], to: [48, -61, 16] }
+  - fill: { block: soul_sand, from: [50, -61, 12], to: [53, -61, 16] }
+  - fill: { block: blue_concrete, from: [47, -61, 9], to: [47, -61, 11] }
+  - fill: { block: air, from: [47, -60, 9], to: [47, -59, 9] }
+  - fill: { block: blue_concrete, from: [52, -61, 17], to: [52, -61, 19] }
+  - fill: { block: air, from: [52, -60, 19], to: [52, -59, 19] }
+
+  # Momentum corner (momentum-step-up-corner): a turn onto a seven-cell runway,
+  # a step-up onto a one-wide gold corner over lava with no support beyond it,
+  # and a one-wide shelf turning south. Retaining the runway's eastward
+  # controls after the step-up carries the bot into lava.
+  - fill: { block: blue_concrete, from: [52, -61, 20], to: [58, -61, 20] }
+  - setblock: { block: gold_block, at: [59, -60, 20] }
+  - fill: { block: emerald_block, from: [59, -60, 21], to: [59, -60, 26] }
+  # Block the diagonal step-up from the runway straight onto the shelf, so the
+  # route must enter the gold corner first.
+  - fill: { block: bedrock, from: [58, -60, 21], to: [58, -59, 21] }
+
+  # Fire lane (fire-route): fire on netherrack and soul fire on soul soil on the
+  # lane's centre line, with room to pass either side. Three more fire cells
+  # are ignited across the line once the bot passes the first fire.
+  - fill: { block: soul_soil, from: [59, -60, 27], to: [75, -60, 33] }
+  - setblock: { block: netherrack, at: [64, -60, 30] }
+  - setblock: { block: fire, at: [64, -59, 30] }
+  - setblock: { block: soul_fire, at: [69, -59, 30] }
+  - fill: { block: netherrack, from: [72, -60, 29], to: [72, -60, 31] }
+
+schedule:
+  - when: "entity @a[name=GauntletBot,x=67,y=-61,z=26,dx=12,dy=4,dz=8]"
+    run: "fill 72 -59 29 72 -59 31 fire keep"
+
 players:
   - name: GauntletBot
     pos: [-4.5, -59, 0.5]
@@ -105,27 +188,37 @@ tick:
 client:
   command: bun
   cwd: ../..
-  args: [client-host.ts, drivers/navigate-route.ts]
+  args: [client-host.ts, drivers/pathfinder-course.ts]
 params:
   legs:
     - { target: [19, -57, 3], range: 1.5, label: "Maximum gaps and diagonal ascent" }
     - { target: [26, -57, 3], range: 0, label: "Full-block step-ups and controlled drop" }
     - { target: [34, -57, 4], range: 0, label: "Magma detour and door activation" }
+    - { target: [40, -57, 3], range: 0, label: "Pillar hops: two-block jump onto a single pad" }
+    - { target: [47, -58, 7], range: 0, label: "Pillar hops: ascending jump between magma" }
+    - { target: [51, -60, 14], range: 0, label: "Soul-sand lip: hop one lava cell" }
+    - { target: [59, -59, 24], range: 0, label: "Momentum corner: step-up and turn along the shelf" }
+    - { target: [60, -59, 30], range: 0, label: "Fire lane: enter on the centre line" }
+    - { target: [75, -59, 30], range: 0, label: "Fire lane: pass fire, soul fire and new fire" }
 
 goal:
   kind: all
-  timeout: 150
+  timeout: 240
   goals:
     - kind: reach
       who: GauntletBot
-      pos: [34.5, -57, 4.5]
+      pos: [75.5, -59, 30.5]
       radius: 0.75
-    # Full health is the whole point. Anything less means it touched the lava,
-    # which on this course means a landing was missed.
+    # Full health is the whole point. Anything less means it touched lava,
+    # magma or fire, which on this course means a landing or detour was missed.
     - kind: health
       who: GauntletBot
       health: 20
     - kind: completion
       who: GauntletBot
     - { kind: blocksAt, block: oak_door, positions: [[30, -57, 4], [30, -56, 4]] }
+    - { kind: blocksAt, block: magma_block, positions: [[27, -58, 2], [28, -58, 2], [29, -58, 2], [46, -60, 7], [48, -59, 7]] }
+    # The fires are still burning: the bot went round them, not through them.
+    - { kind: blocksAt, block: fire, positions: [[64, -59, 30], [72, -59, 29], [72, -59, 30], [72, -59, 31]] }
+    - { kind: blockAt, pos: [69, -59, 30], block: soul_fire }
     - { kind: survive, who: GauntletBot, seconds: 1 }

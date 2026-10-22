@@ -1,0 +1,141 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Scaffold with carried cobbled deepslate, a default scaffold material, and come back down
+  unhurt. Six pens: bridge a seven-wide sealed lava trench; build a five-high pillar from an
+  isolated pad; pillar eight up beside a two-block ledge and step onto it; cross a lava gap
+  whose parkour arc would strike a soul-soil block in the fourth cell above the takeoff; and
+  build towers thirty blocks up, once straight up from under a birch canopy and once eight
+  columns diagonally away, then climb back down to the start. Guards the 1 September 2026
+  stranding on a tower the bot could not descend.
+
+# Every pen carries only cobbled deepslate to place, so each placed-block goal
+# also shows the material came from the survival policy's default list, and an
+# iron pickaxe to dig back down a tower. Navigation may dig and scaffold, as the
+# legacy fixtures allowed. Regeneration is off: a head-bonked parkour or a bad
+# pillar handoff ends in lava or a fall and costs health at the checkpoint.
+reset:
+  - "fill -3 -62 -2 12 -45 2 air"
+  - "fill 94 -61 -6 106 -50 6 air"
+  - "fill 196 -61 -4 206 -48 4 air"
+  - "fill 292 -64 -5 310 -46 5 air"
+  - "fill 392 -60 -8 408 -20 8 air"
+  - "fill 492 -60 -8 512 -20 12 air"
+
+geometry:
+  # Bridge (netherrack-bridge): a bedrock-walled trench, lava two below the
+  # walking level, seven cells between the start and end platforms.
+  - fill: { block: bedrock, from: [-2, -62, -1], to: [11, -45, -1] }
+  - fill: { block: bedrock, from: [-2, -62, 1], to: [11, -45, 1] }
+  - fill: { block: bedrock, from: [-2, -62, 0], to: [-2, -45, 0] }
+  - fill: { block: bedrock, from: [11, -62, 0], to: [11, -45, 0] }
+  - fill: { block: lava, from: [-1, -62, 0], to: [10, -62, 0] }
+  - fill: { block: bedrock, from: [-1, -60, 0], to: [0, -60, 0] }
+  - fill: { block: bedrock, from: [8, -60, 0], to: [10, -60, 0] }
+
+  # Pillar (pillar-tower, scaffold-cobbled-deepslate): an isolated 3x3 pad.
+  - fill: { block: stone, from: [99, -60, -1], to: [101, -60, 1] }
+
+  # Ledge (pillar-short-ledge-handoff): a two-block stone ledge nine up.
+  - fill: { block: bedrock, from: [196, -61, -4], to: [206, -61, 4] }
+  - fill: { block: stone, from: [201, -52, 0], to: [202, -52, 0] }
+
+  # Low ceiling (parkour-low-ceiling): netherrack shelves over a lava pool, and
+  # soul soil where the recorded Nether jump put the player's head, at feet
+  # plus 1.249 in the fourth cell above the takeoff.
+  - fill: { block: bedrock, from: [293, -63, -4], to: [309, -62, 4] }
+  - fill: { block: lava, from: [294, -61, -3], to: [308, -61, 3] }
+  - fill: { block: netherrack, from: [295, -55, 0], to: [300, -55, 0] }
+  - fill: { block: netherrack, from: [304, -60, 0], to: [307, -55, 0] }
+  - setblock: { block: soul_soil, at: [303, -51, 0] }
+
+  # Canopy tower (tower-round-trip-canopy): the bot beside a birch trunk with
+  # the canopy two blocks above its head.
+  - fill: { block: birch_log, from: [400, -60, 0], to: [400, -55, 0] }
+  - fill: { block: "birch_leaves[persistent=true]", from: [398, -57, -2], to: [402, -56, 2] }
+  - fill: { block: "birch_leaves[persistent=true]", from: [399, -55, -1], to: [401, -55, 1] }
+
+players:
+  - name: Bridger
+    pos: [0.5, -59, 0.5]
+    inventory: [{ item: cobbled_deepslate, count: 64 }, { item: iron_pickaxe }]
+  - name: Pillar
+    pos: [100.5, -59, 0.5]
+    inventory: [{ item: cobbled_deepslate, count: 64 }, { item: iron_pickaxe }]
+  - name: LedgeClimber
+    pos: [200.5, -60, 0.5]
+    inventory: [{ item: cobbled_deepslate, count: 64 }, { item: iron_pickaxe }]
+  - name: CeilingJumper
+    pos: [295.5, -54, 0.5]
+    inventory: [{ item: cobbled_deepslate, count: 64 }, { item: iron_pickaxe }]
+  - name: CanopyTower
+    pos: [401.5, -60, 0.5]
+    inventory: [{ item: cobbled_deepslate, count: 64 }, { item: iron_pickaxe }]
+  - name: DiagonalTower
+    pos: [500.5, -60, 0.5]
+    inventory: [{ item: cobbled_deepslate, count: 64 }, { item: iron_pickaxe }]
+
+tick:
+  - "gamemode spectator @a[name=!Bridger,name=!Pillar,name=!LedgeClimber,name=!CeilingJumper,name=!CanopyTower,name=!DiagonalTower,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  players:
+    Bridger:
+      dig: true
+      scaffold: true
+      legs: [{ target: [9, -59, 0], range: 0.5, label: "Bridge the lava trench" }]
+    Pillar:
+      dig: true
+      scaffold: true
+      legs: [{ target: [100, -54, 0], range: 0.5, build: true, label: "Pillar five up from the pad" }]
+    LedgeClimber:
+      dig: true
+      scaffold: true
+      legs: [{ target: [202, -51, 0], range: 0.5, build: true, label: "Pillar beside the ledge and step onto it" }]
+    CeilingJumper:
+      dig: true
+      scaffold: true
+      legs: [{ target: [306, -54, 0], range: 0.5, label: "Cross the lava gap under the low soul-soil block" }]
+    CanopyTower:
+      dig: true
+      scaffold: true
+      legs:
+        - { target: [401, -30, 0], range: 1.5, build: true, label: "Tower thirty up from under the canopy" }
+        - { target: [401, -60, 0], range: 1.5, label: "Back down to the start" }
+    DiagonalTower:
+      dig: true
+      scaffold: true
+      legs:
+        - { target: [508, -30, 8], range: 1.5, build: true, label: "Tower thirty up, eight columns diagonally away" }
+        - { target: [500, -60, 0], range: 1.5, label: "Back down to the start" }
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: reach, who: Bridger, pos: [9.5, -59, 0.5], radius: 0.75 }
+    - { kind: blockAt, pos: [1, -60, 0], block: cobbled_deepslate }
+    - { kind: health, who: Bridger, health: 20 }
+    - { kind: completion, who: Bridger }
+    - { kind: reach, who: Pillar, pos: [100.5, -54, 0.5], radius: 0.7 }
+    - { kind: blocksAt, block: cobbled_deepslate, positions: [[100, -59, 0], [100, -57, 0], [100, -55, 0]] }
+    - { kind: health, who: Pillar, health: 20 }
+    - { kind: completion, who: Pillar }
+    - { kind: reach, who: LedgeClimber, pos: [202.5, -51, 0.5], radius: 0.7 }
+    - { kind: health, who: LedgeClimber, health: 20 }
+    - { kind: completion, who: LedgeClimber }
+    - { kind: reach, who: CeilingJumper, pos: [306.5, -54, 0.5], radius: 0.75 }
+    - { kind: health, who: CeilingJumper, health: 20 }
+    - { kind: completion, who: CeilingJumper }
+    - { kind: reach, who: CanopyTower, pos: [401.5, -60, 0.5], radius: 2.5 }
+    - { kind: health, who: CanopyTower, health: 20 }
+    - { kind: completion, who: CanopyTower }
+    - { kind: reach, who: DiagonalTower, pos: [500.5, -60, 0.5], radius: 2.5 }
+    - { kind: health, who: DiagonalTower, health: 20 }
+    - { kind: completion, who: DiagonalTower }
+    - { kind: survive, seconds: 1 }

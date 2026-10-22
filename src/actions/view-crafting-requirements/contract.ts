@@ -1,10 +1,9 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import {
+  craftingOutcomes,
   craftPlanEvidenceSchema,
   craftingRequestInputSchema,
-  parseCraftingRequest,
   type CraftingRequest,
 } from "../crafting.js";
 
@@ -14,7 +13,6 @@ export const VIEW_CRAFTING_REQUIREMENTS_DESCRIPTION =
 
 export const viewCraftingRequirementsInputSchema = craftingRequestInputSchema;
 export type ViewCraftingRequirementsRequest = CraftingRequest;
-export const parseViewCraftingRequirementsRequest = parseCraftingRequest;
 
 const requestedItemSchema = z.strictObject({
   item: z.string(),
@@ -31,20 +29,5 @@ export const viewCraftingRequirementsResultSchema = actionResultSchema({
 });
 
 export type ViewCraftingRequirementsResult = z.output<typeof viewCraftingRequirementsResultSchema>;
-export type ViewCraftingRequirementsOutput = ActionOutput<
-  typeof VIEW_CRAFTING_REQUIREMENTS,
-  ViewCraftingRequirementsResult
->;
 
-export const viewCraftingRequirementsAnnotations = {
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: false,
-} satisfies ToolAnnotations;
-
-export const viewCraftingRequirementsOutcomes = {
-  unknownItems: (items: readonly string[]) =>
-    `[UNKNOWN_CRAFT_ITEMS] Minecraft has no registry items named: ${items.join(", ")}.`,
-  plannerFailed: (items: readonly string[]) =>
-    `[CRAFT_PLAN_UNAVAILABLE] The recursive planner found recipes but could not produce concrete plans for: ${items.join(", ")}.`,
-} as const;
+export const viewCraftingRequirementsOutcomes = craftingOutcomes;

@@ -1,9 +1,7 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
-name: exploration-lava-shore-preference
 tags: [acceptance]
 description: Prefer the existing shore around a ten-block lava gap over spending netherrack on a direct bridge.
-minecraft: { version: "1.21.4" }
 world:
   type: flat
   time: noon

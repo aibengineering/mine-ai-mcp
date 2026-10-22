@@ -1,0 +1,68 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [known-failing, regression]
+description: >-
+  Ride a vine column that ends mid-descent, hand off to the column that picks up a block
+  over, and leave that column part-way down onto a side ledge, over a floor of lava. The
+  geometry of incident 97c795ac (2026-09-13). Fails today: the route plans a lateral step
+  onto the cell above the lower column's top vine and waits for a settled arrival there,
+  which a hanging body never reports. The body slides down the lower column for the whole
+  step deadline, past the ledge's exit, and the lava under the column's foot burns it.
+
+# The legacy vine-column-handoff fixture failed on the same handoff (a failed
+# walk step) but still arrived unhurt, because the slide ended on a floor. Here
+# the floor is lava and the way out is a ledge four blocks down the lower
+# column, so the stale step is visible as damage.
+#
+# fix-vine-column-handoff.patch in the triage notes makes entering the lower
+# column the walk's arrival, and the walk then completes, but this fixture
+# still fails with it (run 2026-10-20T06-59-48-379Z): the route's next step,
+# the climb from 3,-52 into 3,-53, starts with the feet already below 3,-53,
+# never observes its arrival, and the body slides on into the lava. A fix
+# has to hand the body to a step it has not already passed.
+reset:
+  - "fill -12 -61 -12 14 -36 12 air"
+
+geometry:
+  # A lava floor under everything, held in by the flat world's own ground.
+  - fill: { block: lava, from: [-12, -61, -12], to: [14, -61, 12] }
+
+  # The ledge, walked at y=-45, ending at x=1 with a run-up along it.
+  - fill: { block: stone, from: [-8, -46, -2], to: [1, -46, 2] }
+
+  # The upper column, ending at y=-52. Each vine is held by the wall north of
+  # it rather than by the vine above it, so the column survives being written.
+  - fill: { block: stone, from: [2, -52, -1], to: [2, -37, -1] }
+  - fill: { block: "vine[north=true]", from: [2, -52, 0], to: [2, -45, 0] }
+
+  # The lower column, picking up a block east at y=-53 and running down to the
+  # lava.
+  - fill: { block: stone, from: [3, -60, -1], to: [3, -53, -1] }
+  - fill: { block: "vine[north=true]", from: [3, -60, 0], to: [3, -53, 0] }
+
+  # The way out: a ledge east of the lower column, walked at y=-56.
+  - fill: { block: stone, from: [4, -57, -2], to: [8, -57, 2] }
+
+players:
+  - name: ColumnHandoffBot
+    pos: [-7.5, -45, 0.5]
+
+tick:
+  - "gamemode spectator @a[name=!ColumnHandoffBot,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  legs:
+    - { target: [6, -56, 0], range: 0, label: "Down the upper column, across to the lower one, out onto the ledge" }
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: reach, who: ColumnHandoffBot, pos: [6.5, -56, 0.5], radius: 0.75 }
+    - { kind: health, who: ColumnHandoffBot, health: 20 }
+    - { kind: completion, who: ColumnHandoffBot }
+    - { kind: survive, who: ColumnHandoffBot, seconds: 1 }

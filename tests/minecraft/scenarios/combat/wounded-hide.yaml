@@ -1,0 +1,211 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Eight wounded idle bots, one per pen and 100 blocks apart, hide or hold out
+  and recover with nothing requested. At 7 health the bot shelters and heals
+  to 12 in open ground under a pack with an archer (every death of the first
+  playthrough), on a platform four blocks up where digging would drop it (the
+  third playthrough's first death), and from a held spider at midnight (the
+  positive control for the daylight rule). Inside a 1x1 box it is already
+  sealed in, it stays sealed and heals without digging out (2026-09-04).
+  Beside a four-deep drop it walls in over the drop without leaving its cell,
+  and through nether roots and sprouts filling its wall cells. At 8 health with
+  a sword wither skeleton standing in the shelter cell it still recovers to 18.
+  An unarmed bot fighting two zombies and dropped to 11 health mid-fight
+  survives.
+
+# Midnight with natural regeneration switched on at the start: the hide holds
+# until food and regeneration bring the bot back to the fight bar.
+# The world declares it off so the wounds hold while Mine Labs arranges them;
+# the first schedule entry turns it on, as the absorbed drivers did once
+# their wound was in place. Fixtures sharing this world declare it again.
+#   x:    0           100          200           300
+#   z 0:  OpenHide    Platform     MoonSpider    Intruder
+#   z100: SealedIn    Cliff        Vegetation    FightYields
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+geometry:
+  # Platform: stone four blocks above the ground under the bot and its pack.
+  - fill: { block: stone, from: [88, -56, -12], to: [124, -56, 12] }
+  # SealedIn: a 3x3 stone shell with a 1x1 column of air inside it.
+  - fill: { block: stone, from: [-1, -60, 99], to: [1, -58, 101] }
+  - fill: { block: air, from: [0, -60, 100], to: [0, -59, 100] }
+  # Cliff: a four-deep drop beginning one cell east of the bot.
+  - fill: { block: air, from: [101, -63, 96], to: [105, -60, 104] }
+  # Vegetation: roots and sprouts on nylium in every side cell of the bot's.
+  - fill: { block: warped_nylium, from: [199, -61, 99], to: [201, -61, 101] }
+  - setblock: { at: [201, -60, 100], block: crimson_roots }
+  - setblock: { at: [199, -60, 100], block: warped_roots }
+  - setblock: { at: [200, -60, 99], block: nether_sprouts }
+  - setblock: { at: [200, -60, 101], block: warped_roots }
+
+entities:
+  # Walkers with one archer behind them: the pack the first playthrough met.
+  - type: skeleton
+    pos: [13.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_open"]}'
+  - { type: zombie, pos: [12.5, -60, -2.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_open"]}' }
+  - { type: zombie, pos: [12.5, -60, 3.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_open"]}' }
+  - type: skeleton
+    pos: [113.5, -55, 0.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_platform"]}'
+  - { type: zombie, pos: [112.5, -55, -2.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_platform"]}' }
+  - { type: zombie, pos: [112.5, -55, 3.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_platform"]}' }
+  # Held still, so the pen measures a decision about a hostile in sight.
+  - { type: spider, pos: [215.5, -60, 0.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_moon"]}' }
+  # Standing in the shelter's north side, armed and free to fight.
+  - type: wither_skeleton
+    pos: [300.5, -60, -0.1]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}],Tags:["pen_intruder"]}'
+  # Fifteen blocks off and unable to move: closed cover must prevent contact.
+  - { type: spider, pos: [15.5, -60, 100.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_sealed"]}' }
+  # Held hostiles in sight, which below the hide bar are contact: the trigger
+  # for the hide whose walls the next two pens are about.
+  - { type: spider, pos: [88.5, -60, 100.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_cliff"]}' }
+  - { type: spider, pos: [188.5, -60, 100.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_plants"]}' }
+  - { type: zombie, pos: [304.5, -60, 100.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_yield"]}' }
+  - { type: zombie, pos: [304.5, -60, 103.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_yield"]}' }
+
+schedule:
+  - { afterTicks: 0, run: "gamerule naturalRegeneration true" }
+  # Health lost mid-fight: whatever the zombies have left, 9 more.
+  - { afterTicks: 20, run: "damage FightYields 9 minecraft:magic" }
+
+players:
+  # The tools of a normal night: an iron pickaxe, some cobblestone and bread.
+  - name: OpenHide
+    pos: [0.5, -60, 0.5]
+    health: 7
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 16 }
+      - { item: bread, count: 4 }
+  - name: Platform
+    pos: [100.5, -55, 0.5]
+    health: 7
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 16 }
+      - { item: bread, count: 4 }
+  - name: MoonSpider
+    pos: [200.5, -60, 0.5]
+    health: 7
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: cobblestone, count: 16 }
+      - { item: bread, count: 4 }
+  - name: Intruder
+    pos: [300.5, -60, 0.5]
+    health: 8
+    equipment:
+      { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: golden_boots, offhand: shield }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 73 }
+      - { item: cooked_beef, count: 30 }
+  # No food, as in the live session: it regenerates until regeneration itself
+  # spends the bar below eighteen, which an observed run reached at 12.5.
+  - name: SealedIn
+    pos: [0.5, -60, 100.5]
+    health: 7
+    inventory:
+      - { item: iron_sword, count: 1 }
+  - name: Cliff
+    pos: [100.5, -60, 100.5]
+    health: 7
+    inventory:
+      - { item: cobblestone, count: 32 }
+  # Enough blocks to wall in rather than dig a shaft.
+  - name: Vegetation
+    pos: [200.5, -60, 100.5]
+    health: 7
+    inventory:
+      - { item: cobblestone, count: 16 }
+  - name: FightYields
+    pos: [300.5, -60, 100.5]
+    inventory:
+      - { item: dirt, count: 16 }
+      - { item: cooked_beef, count: 3 }
+
+params:
+  waitTicks: 2400
+
+tick:
+  - "gamemode spectator @a[name=!OpenHide,name=!Platform,name=!MoonSpider,name=!Intruder,name=!SealedIn,name=!Cliff,name=!Vegetation,name=!FightYields,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 200
+  goals:
+    - { kind: health, who: OpenHide, health: 12 }
+    - { kind: survive, who: OpenHide, seconds: 1 }
+    - { kind: completion, who: OpenHide }
+
+    - { kind: health, who: Platform, health: 12 }
+    - { kind: survive, who: Platform, seconds: 1 }
+    - { kind: completion, who: Platform }
+
+    - { kind: health, who: MoonSpider, health: 12 }
+    - { kind: survive, who: MoonSpider, seconds: 1 }
+    - { kind: completion, who: MoonSpider }
+
+    - { kind: health, who: Intruder, health: 18 }
+    - { kind: survive, who: Intruder, seconds: 1 }
+    - { kind: completion, who: Intruder }
+
+    # Still inside, cap intact, and healed by natural regeneration.
+    - { kind: blockAt, who: SealedIn, pos: [0, -58, 100], block: stone }
+    - { kind: health, who: SealedIn, health: 10 }
+    - { kind: survive, who: SealedIn, seconds: 1 }
+    - { kind: completion, who: SealedIn }
+
+    # The whole box around the start cell, east side standing over the drop.
+    - kind: blocksAt
+      who: Cliff
+      block: cobblestone
+      positions:
+        - [101, -60, 100]
+        - [101, -59, 100]
+        - [99, -60, 100]
+        - [99, -59, 100]
+        - [100, -60, 99]
+        - [100, -59, 99]
+        - [100, -60, 101]
+        - [100, -59, 101]
+        - [100, -58, 100]
+    - { kind: survive, who: Cliff, seconds: 1 }
+    - { kind: completion, who: Cliff }
+
+    # Every plant cell holds cobblestone, and so does the rest of the box.
+    - kind: blocksAt
+      who: Vegetation
+      block: cobblestone
+      positions:
+        - [201, -60, 100]
+        - [201, -59, 100]
+        - [199, -60, 100]
+        - [199, -59, 100]
+        - [200, -60, 99]
+        - [200, -59, 99]
+        - [200, -60, 101]
+        - [200, -59, 101]
+        - [200, -58, 100]
+    - { kind: survive, who: Vegetation, seconds: 1 }
+    - { kind: completion, who: Vegetation }
+
+    - { kind: survive, who: FightYields, seconds: 1 }
+    - { kind: completion, who: FightYields }

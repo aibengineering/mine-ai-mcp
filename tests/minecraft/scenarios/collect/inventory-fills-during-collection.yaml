@@ -1,11 +1,9 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
-name: inventory-fills-during-collection
 tags: [acceptance]
 description: >-
   Request four stone with room for only one more cobblestone. Collect that one,
   then return partial progress with INVENTORY_FULL, retaining the original items.
-minecraft: { version: "1.21.4" }
 world:
   type: flat
   time: noon
@@ -21,10 +19,6 @@ players:
       - { item: dirt, count: 2176 }
       - { item: diamond_pickaxe, count: 1 }
       - { item: cobblestone, count: 63 }
-client:
-  command: bun
-  cwd: ../..
-  args: [client-host.ts, drivers/single-action.ts]
 params:
   action: collect_block
   input: { block_name: stone, count: 4, scaffold: false }

@@ -8,6 +8,7 @@ import { TestEndCombat as EndCombat } from "../../../test-support/combat.js";
 import { PerchObservation } from "./perch.js";
 import { PerchPreparation } from "./perch-preparation.js";
 import { botFixture } from "../../../test-support/bot.js";
+import { physicsEveryMillisecond } from "../../../test-support/physics.js";
 
 import type { NavigationRuntime } from "../../../navigation/index.js";
 import type { FootingRecovery } from "../../responses/footing.js";
@@ -47,12 +48,12 @@ test("takeoff and cooldown observed during suspension cannot start a second perc
   bot.emit("entityUpdate", bot.entities[42]!);
   dragon.metadata[phase] = 5;
   bot.emit("physicsTick");
-  const physics = setInterval(() => bot.emit("physicsTick"), 1);
+  using _physics = physicsEveryMillisecond(bot);
   const result = await new EndCombat(bot, {} as NavigationRuntime, {} as FootingRecovery).perch(
     42,
     new AbortController().signal,
     observation,
-  ).finally(() => clearInterval(physics));
+  );
   assert.equal(result.outcome, "perch_ended");
   assert.equal(result.attacks, 1);
   assert.equal(result.healthBefore, 200);

@@ -1,0 +1,135 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Two skeleton hunts, one pen each. BoneGatherer collects three bones from a
+  field of six bow skeletons carrying a single arrow, so the hunt cannot
+  out-shoot the field and must close in behind its shield. SpareHunter hunts
+  one skeleton for its arrow wearing a shield one block from breaking, with a
+  spare in its pack: the first blocked arrow breaks the worn shield, and the
+  hunt must carry on behind the spare and finish holding the arrow. Each pen
+  must end with its drop, alive, and SpareHunter with exactly one shield left.
+
+# Regeneration on, as the bone hunt's original fixture had it: it carries food
+# so a long field fight is not a single damage budget. Nothing in either pen
+# asserts health.
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+# Pens two hundred blocks apart, beyond entity tracking, so neither hunt can
+# see the other's quarry.
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -16 -60 -24 30 -50 24 air"
+  - "fill 31 -60 -24 72 -50 24 air"
+  - "fill 184 -60 -16 224 -50 16 air"
+
+setup:
+  - "scoreboard objectives add pens dummy"
+  - "scoreboard players set #bones pens 0"
+  - "scoreboard players set #bones_settled pens 0"
+  - "scoreboard players set #arrows pens 0"
+  - "scoreboard players set #arrows_settled pens 0"
+
+entities:
+  # BoneGatherer's field, spread from twelve to fifty blocks out. Each kill
+  # drops exactly one bone: the native table drops none to two, so six kills
+  # could yield fewer than three (28 of 729 fields) and empty the field before
+  # the goal. One bone a kill keeps the native mean, three kills, and stops
+  # the loot table from failing the trial. The empty table also drops no
+  # arrows, so a kill never adds to the one-arrow budget.
+  - { type: skeleton, pos: [12.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [22.5, -60, 7.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [30.5, -60, -8.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [38.5, -60, 5.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [45.5, -60, -4.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  - { type: skeleton, pos: [50.5, -60, 9.5], nbt: '{PersistenceRequired:1b,Tags:["bones"],DeathLootTable:"minecraft:empty",HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:bone",count:1}],HandDropChances:[0.085f,2.0f]}' }
+  # SpareHunter's quarry. The off-hand arrow with a drop chance above one
+  # guarantees exactly one arrow per kill, so the loot table cannot fail the
+  # trial; skeleton-fired arrows cannot be picked up, so none can stand in.
+  - type: skeleton
+    pos: [209.5, -60, 0.5]
+    nbt: '{PersistenceRequired:1b,Tags:["spare"],HandItems:[{id:"minecraft:bow",count:1},{id:"minecraft:arrow",count:1}],HandDropChances:[0.0f,2.0f]}'
+
+players:
+  - name: BoneGatherer
+    pos: [0.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    # The shield stays in the pack, as it did for the original hunt: carrying
+    # one is what admits hostile quarry. One arrow is the ammunition budget.
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cooked_beef, count: 12 }
+      - { item: cobblestone, count: 24 }
+  - name: SpareHunter
+    pos: [200.5, -60, 0.5]
+    # Shield durability is 336, so damage 335 leaves one use: the first arrow it
+    # blocks breaks it.
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: iron_boots
+      offhand: "shield[damage=335]"
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+# A skeleton nine blocks off can draw the hostile reflex before any request;
+# each hunt is asked for once, when nothing holds the body.
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  players:
+    BoneGatherer:
+      idleWithinTicks: 400
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: skeleton, drop_name: bone, count: 3 } }
+    SpareHunter:
+      idleWithinTicks: 400
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: skeleton, drop_name: arrow, count: 1 } }
+
+tick:
+  - "gamemode spectator @a[name=!BoneGatherer,name=!SpareHunter,gamemode=!spectator]"
+  # A finished pen idles without reflexes while the other one works, and a
+  # hunt may return with quarry still standing (an arrow hunt can pick up the
+  # arrows shot at it). Once a pen has held its drop for ten seconds its hunt
+  # has handed off and returned, so its remaining skeletons are cleared rather
+  # than left to shoot an idle body. `clear ... 0` counts without removing.
+  - "execute store result score #bones pens run clear BoneGatherer minecraft:bone 0"
+  - "execute if score #bones pens matches 3.. run scoreboard players add #bones_settled pens 1"
+  - "execute store result score #arrows pens run clear SpareHunter minecraft:arrow 0"
+  - "execute if score #arrows pens matches 1.. run scoreboard players add #arrows_settled pens 1"
+
+schedule:
+  - { when: "score #bones_settled pens matches 200..", run: "kill @e[type=skeleton,tag=bones]" }
+  - { when: "score #arrows_settled pens matches 200..", run: "kill @e[type=skeleton,tag=spare]" }
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: hasItem, who: BoneGatherer, item: bone, count: 3 }
+    - { kind: survive, who: BoneGatherer, seconds: 1 }
+    - { kind: completion, who: BoneGatherer }
+    - { kind: hasItem, who: SpareHunter, item: arrow, count: 1 }
+    # The worn shield broke, so exactly the spare is left. Two would mean the
+    # first one never blocked anything; none, that the spare was lost too.
+    - { kind: hasItem, who: SpareHunter, item: shield, count: 1, max: 1 }
+    - { kind: survive, who: SpareHunter, seconds: 1 }
+    - { kind: completion, who: SpareHunter }

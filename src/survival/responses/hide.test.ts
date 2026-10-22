@@ -1,9 +1,9 @@
-import minecraftData from "minecraft-data";
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
+import { botFixture } from "../../test-support/bot.js";
 import { combatTestContext } from "../../test-support/combat.js";
 import { DEFAULT_COMBAT_POLICY } from "../policy/combat/contract.js";
 import { hideInPlace } from "./hide.js";
@@ -35,35 +35,32 @@ function botIn(options: {
   readonly equipError?: string;
 }): Bot {
   const events = new EventEmitter();
-  return {
-    on: (event: string, listener: () => void) => {
-      events.on(event, listener);
-      if (event === "physicsTick")
-        queueMicrotask(() => {
-          for (let i = 0; i < 30; i++) events.emit(event);
-        });
+  return botFixture(
+    { items: options.items?.map((item) => ({ ...item })) },
+    {
+      // Each subscription to physicsTick is answered with a burst of thirty
+      // ticks, so a hold's tick-counted waits lapse without a real clock.
+      on: (event: string, listener: () => void) => {
+        events.on(event, listener);
+        if (event === "physicsTick")
+          queueMicrotask(() => {
+            for (let i = 0; i < 30; i++) events.emit(event);
+          });
+      },
+      off: (event: string, listener: () => void) => events.off(event, listener),
+      health: options.health,
+      food: options.food ?? 20,
+      version: "1.21.4",
+      blockAt: options.blockAt,
+      world: { raycast: () => null },
+      clearControlStates: () => undefined,
+      deactivateItem: () => undefined,
+      _client: { write: () => undefined },
+      equip: async () => {
+        if (options.equipError) throw new Error(options.equipError);
+      },
     },
-    off: (event: string, listener: () => void) => events.off(event, listener),
-    health: options.health,
-    food: options.food ?? 20,
-    version: "1.21.4",
-    registry: minecraftData("1.21.4"),
-    game: { gameMode: "survival" },
-    heldItem: null,
-    entity: { id: 1, onGround: true, position: new Vec3(0.5, 64, 0.5), width: 0.6, height: 1.8 },
-    entities: {},
-    inventory: { items: () => options.items ?? [], slots: new Array(46).fill(null) },
-    world: { raycast: () => null },
-    blockAt: options.blockAt,
-    clearControlStates: () => undefined,
-    deactivateItem: () => undefined,
-    setControlState: () => undefined,
-    _client: { write: () => undefined },
-    equip: async () => {
-      if (options.equipError) throw new Error(options.equipError);
-    },
-    waitForTicks: async () => undefined,
-  } as unknown as Bot;
+  );
 }
 
 function hide(bot: Bot): ReturnType<typeof hideInPlace> {
@@ -95,6 +92,25 @@ test("soul-sand support uses the observed lower surface when centering a shelter
   assert.equal(result.kind, "failed");
   assert.match(result.error ?? "", /placement reached after valid soul-sand support/);
   assert.doesNotMatch(result.error ?? "", /solid floor/);
+});
+
+test("a body standing on an edge shelters over the block that holds it", async () => {
+  // The 2026-10-20 basalt handoff: the withdrawal stopped at x 172.04, its
+  // centre above air at x 172 and its footprint on the floor at x 171, and the
+  // hide refused for want of a floor (hunts-basalt-fix 2026-10-20T20-52-01-006Z-t00007).
+  const bot = botIn({
+    health: 20,
+    items: [{ name: "cobblestone", count: 32 }],
+    equipError: "placement reached over the supporting block",
+    blockAt: (position) => (position.y < 64 && position.x <= 0 ? stone() : air()),
+  });
+  bot.entity.position.set(1.04, 64, 0.5);
+  bot.setControlState = (_control, state) => {
+    if (state) bot.entity.position.set(0.5, 64, 0.5);
+  };
+  const result = await hide(bot);
+  assert.equal(result.kind, "failed");
+  assert.match(result.error ?? "", /placement reached over the supporting block/);
 });
 
 test("same-cell knockback into a planned wall recenters before continuing construction", async () => {
@@ -453,4 +469,102 @@ test("a sealed-in bot with nothing to eat and hunger below the regeneration bar 
   assert.equal(result.enclosed, true);
   assert.equal(result.ate, null);
   assert.match(result.error ?? "", /no food, and hunger 13 is below the regeneration bar/);
+});
+
+/**
+ * A cliff edge: ground for x <= 0, and east of the bot a drop of four cells.
+ * Blocks placed by the hide become solid where they land, and each placement
+ * spends one from the carried stack, as the server's slot update does.
+ */
+function botBesideDrop(blocks: number): { bot: Bot; placed: Vec3[] } {
+  const placed: Vec3[] = [];
+  const bot = botIn({
+    health: 7,
+    items: [{ name: "cobblestone", count: blocks }],
+    blockAt: (position) => {
+      if (placed.some((cell) => cell.equals(position))) return { ...(stone() as object), name: "cobblestone", position };
+      const ground = position.x <= 0 ? position.y < 64 : position.y < 60;
+      return ground ? { ...(stone() as object), position } : { ...(air() as object), position };
+    },
+  });
+  bot.placeBlock = async (support, face) => {
+    placed.push(support.position.plus(face));
+    const items = bot.inventory.items();
+    items[0]!.count -= 1;
+    if (items[0]!.count === 0) items.pop();
+  };
+  return { bot, placed };
+}
+
+/**
+ * Walling in over a drop costs eleven blocks: the floor extension the east
+ * wall stands on, the eight wall cells, the eave and the cap. The recorded
+ * wall-in-cliff fixture, carrying ten, spent every block inside its own box
+ * and reported the open shelter rather than stepping somewhere else or
+ * building beyond the cells around it.
+ */
+test("ten blocks beside a drop are spent on the shelter's own cells, and the open shelter is a failure", async () => {
+  const { bot, placed } = botBesideDrop(10);
+  const start = bot.entity.position.clone();
+
+  const result = await hide(bot);
+
+  assert.equal(result.kind, "failed");
+  assert.match(result.error ?? "", /still open/);
+  assert.equal(countCapBlocks(bot), 0, "every carried block was spent");
+  assert.equal(placed.length, 10);
+  for (const cell of placed) {
+    assert.ok(
+      Math.abs(cell.x) <= 1 && Math.abs(cell.z) <= 1 && cell.y >= 63 && cell.y <= 66,
+      `${cell} lies outside the shelter's own cells`,
+    );
+  }
+  assert.deepEqual(bot.entity.position, start, "the bot stayed in its cell");
+});
+
+test("a shelter shaft is not dug beside lava that would run into it", async () => {
+  // Recorded in cube1 2026-10-20T22-58-31-012Z t00002: cornered on the edge
+  // row of a two-thick basalt shelf in a lava lake at (226.44, -59, 5.5),
+  // the hide dug the basalt underfoot. Lava beside that block flows into the
+  // emptied cell, and the body drops into it.
+  const lava = (position: Vec3) => ({ name: "lava", boundingBox: "empty", shapes: [], hardness: 100, position });
+  const bot = botIn({
+    health: 11,
+    blockAt: (position) => {
+      if (position.y >= -59) return air();
+      if (position.z >= 6 && position.y >= -61) return lava(position);
+      return { ...(stone() as object), name: "basalt", position, digTime: () => 250 };
+    },
+  });
+  bot.entity.position = new Vec3(226.44, -59, 5.5);
+  bot.game = { gameMode: "survival" } as Bot["game"];
+  let digs = 0;
+  bot.dig = async () => {
+    digs++;
+  };
+  const result = await hide(bot);
+  assert.equal(digs, 0);
+  assert.equal(result.kind, "failed");
+});
+
+test("a shelter shaft that would take seconds per block is not dug under fire", async () => {
+  // Recorded in hunts-regress2 2026-10-20T22-39-36-467Z: the Cave pen at 9
+  // health in a stone tunnel at (204.44, -60, -1.6), carrying an iron sword
+  // and no pickaxe, swung at the stone floor for seven seconds with its
+  // shield down while a skeleton shot it three times. Breaking stone without
+  // a pickaxe takes 7.5 s.
+  const bot = botIn({
+    health: 9,
+    items: [{ name: "iron_sword", count: 1 }],
+    blockAt: (position) => (position.y >= -60 ? air() : { ...(stone() as object), position, digTime: () => 7500 }),
+  });
+  bot.entity.position = new Vec3(204.44, -60, -1.6);
+  bot.game = { gameMode: "survival" } as Bot["game"];
+  let digs = 0;
+  bot.dig = async () => {
+    digs++;
+  };
+  const result = await hide(bot);
+  assert.equal(digs, 0);
+  assert.equal(result.kind, "failed");
 });

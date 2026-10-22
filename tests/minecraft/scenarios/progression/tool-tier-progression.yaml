@@ -1,0 +1,132 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Progress from an empty inventory to one diamond on a cleared flat site, making every tool the
+  run uses at the lowest tier that can harvest with it. Bare hands take six logs from a fallen oak
+  whose crown hides its far end, eight dirt from a two-level terrace and eight clay from a
+  riverbank with water just past the patch. Wooden tools take twelve stone; stone tools take five
+  coal from the lower face of a hillside outcrop, five iron ore from a seam in a rough cut and
+  eight raw copper from a stepped slope. Three smelted iron make the iron pickaxe that takes the
+  diamond. Every stage must succeed, and the final inventory must hold each tool, the workstations
+  and the exact yields, at full health with regeneration off.
+
+# Flat geometry isolates the progression from random terrain, and the scan
+# radius around the site is cleared to the void so every collectable block
+# belongs to this fixture: the superflat's own dirt cannot answer for the
+# terrace. The single floor layer is polished andesite, which nothing requests.
+world:
+  type: flat
+  seed: 8675310
+  time: noon
+  difficulty: peaceful
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+
+reset:
+  - "fill -64 -64 -64 96 -40 64 air"
+
+geometry:
+  - fill: { block: polished_andesite, from: [-8, -60, -20], to: [72, -60, 20] }
+  # Fallen oak (fallen-oak): nine logs along the ground with the crown over its
+  # far end; six are requested.
+  - fill: { block: oak_leaves, from: [11, -59, -8], to: [14, -57, -4] }
+  - fill: { block: oak_log, from: [4, -59, -6], to: [12, -59, -6] }
+  # Two-level dirt terrace (dirt-terrace), grass on its upper step.
+  - fill: { block: dirt, from: [4, -59, -16], to: [10, -59, -8] }
+  - fill: { block: dirt, from: [7, -58, -15], to: [10, -58, -9] }
+  - fill: { block: grass_block, from: [7, -57, -15], to: [10, -57, -9] }
+  # The stone the wooden pickaxe takes, nearer the workstations than any hill.
+  - fill: { block: stone, from: [15, -59, -1], to: [18, -57, 1] }
+  # Coal outcrop (coal-outcrop): a seam on the hillside's lower face.
+  - fill: { block: stone, from: [25, -59, -5], to: [32, -54, 5] }
+  - fill: { block: coal_ore, from: [25, -58, -2], to: [25, -57, 2] }
+  - setblock: { block: coal_ore, at: [26, -58, 3] }
+  # Iron seam (iron-seam): five ores across a rough cut.
+  - fill: { block: stone, from: [25, -59, 9], to: [33, -54, 19] }
+  - setblock: { block: iron_ore, at: [25, -58, 12] }
+  - setblock: { block: iron_ore, at: [25, -57, 13] }
+  - setblock: { block: iron_ore, at: [25, -58, 14] }
+  - setblock: { block: iron_ore, at: [25, -57, 15] }
+  - setblock: { block: iron_ore, at: [25, -58, 16] }
+  # Copper slope (copper-slope): a broad vein on the slope's face.
+  - fill: { block: stone, from: [25, -59, -19], to: [33, -54, -9] }
+  - fill: { block: copper_ore, from: [25, -58, -16], to: [25, -57, -12] }
+  - setblock: { block: copper_ore, at: [26, -58, -11] }
+  - setblock: { block: diamond_ore, at: [44, -59, 0] }
+  # Clay shore (clay-shore): clay set in a dirt bank, water just beyond it.
+  - fill: { block: dirt, from: [50, -59, -5], to: [56, -59, 5] }
+  - fill: { block: clay, from: [52, -59, -3], to: [55, -59, 3] }
+  - fill: { block: water, from: [58, -59, -8], to: [66, -59, 8] }
+
+players:
+  - name: ProgressionBot
+    pos: [0, -59, 0]
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  actions:
+    # Bare hands.
+    - { action: collect_block, input: { block_name: logs, count: 6, scaffold: false } }
+    - { action: collect_block, input: { block_name: dirt, count: 8, scaffold: false } }
+    - { action: collect_block, input: { block_name: clay, count: 8, scaffold: false } }
+    # Wooden tier.
+    - { action: craft_item, input: { items: [{ item_name: crafting_table, count: 1 }] } }
+    - { action: place_block, input: { block_name: crafting_table, x: 2, y: -59, z: 3 } }
+    - action: craft_item
+      input: { items: [{ item_name: wooden_pickaxe, count: 1 }, { item_name: wooden_shovel, count: 1 }] }
+    - { action: collect_block, input: { block_name: crafting_table, x: 2, y: -59, z: 3, scaffold: false } }
+    - { action: collect_block, input: { block_name: stone, count: 12, scaffold: false } }
+    # Stone tier and the furnace.
+    - { action: navigate, input: { x: 2, y: -59, z: 3, range: 2, scaffold: false } }
+    - { action: place_block, input: { block_name: crafting_table, x: 2, y: -59, z: 3 } }
+    - action: craft_item
+      input: { items: [{ item_name: stone_pickaxe, count: 1 }, { item_name: stone_shovel, count: 1 }] }
+    - { action: craft_item, input: { items: [{ item_name: furnace, count: 1 }] } }
+    - { action: navigate, input: { x: 1, y: -59, z: 3, range: 0, scaffold: false } }
+    - { action: place_block, input: { block_name: furnace, x: 4, y: -59, z: 3 } }
+    - { action: collect_block, input: { block_name: crafting_table, x: 2, y: -59, z: 3, scaffold: false } }
+    - { action: collect_block, input: { block_name: coal_ore, count: 5, scaffold: false } }
+    - { action: collect_block, input: { block_name: iron_ore, count: 5, scaffold: false } }
+    - { action: collect_block, input: { block_name: copper_ore, count: 8, scaffold: false } }
+    # Iron tier.
+    - action: smelt_item
+      input: { item_name: raw_iron, count: 3, fuel_item_name: coal, x: 4, y: -59, z: 3 }
+    - { action: collect_block, input: { block_name: furnace, x: 4, y: -59, z: 3, scaffold: false } }
+    - { action: place_block, input: { block_name: crafting_table, x: 2, y: -59, z: 3 } }
+    - { action: craft_item, input: { items: [{ item_name: iron_pickaxe, count: 1 }] } }
+    - { action: collect_block, input: { block_name: crafting_table, x: 2, y: -59, z: 3, scaffold: false } }
+    - { action: collect_block, input: { block_name: diamond_ore, count: 1, scaffold: false } }
+
+tick:
+  - "gamemode spectator @a[name=!ProgressionBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 480
+  goals:
+    - { kind: hasItem, who: ProgressionBot, item: crafting_table, count: 1 }
+    - { kind: hasItem, who: ProgressionBot, item: furnace, count: 1 }
+    - { kind: hasItem, who: ProgressionBot, item: wooden_pickaxe, count: 1 }
+    - { kind: hasItem, who: ProgressionBot, item: wooden_shovel, count: 1 }
+    - { kind: hasItem, who: ProgressionBot, item: stone_pickaxe, count: 1 }
+    - { kind: hasItem, who: ProgressionBot, item: stone_shovel, count: 1 }
+    - { kind: hasItem, who: ProgressionBot, item: iron_pickaxe, count: 1 }
+    - { kind: hasItem, who: ProgressionBot, item: dirt, count: 8 }
+    - { kind: hasItem, who: ProgressionBot, item: clay_ball, count: 8 }
+    # Five coal less the one that smelted three raw iron.
+    - { kind: hasItem, who: ProgressionBot, item: coal, count: 4 }
+    - { kind: hasItem, who: ProgressionBot, item: raw_iron, count: 2 }
+    - { kind: hasItem, who: ProgressionBot, item: raw_copper, count: 8 }
+    - { kind: hasItem, who: ProgressionBot, item: diamond, count: 1 }
+    - { kind: health, who: ProgressionBot, health: 20 }
+    - { kind: completion, who: ProgressionBot }

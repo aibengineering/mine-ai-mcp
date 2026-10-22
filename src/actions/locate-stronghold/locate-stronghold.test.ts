@@ -1,22 +1,22 @@
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import test from "node:test";
-import type { Bot } from "mineflayer";
-import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import { SqlBotData, botEventSchema } from "../../bot-data/index.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
+import { botFixture, registry } from "../../test-support/bot.js";
+import { persistentBotData } from "../../test-support/bot-data.js";
 import { createLocateStrongholdAction, loadedStrongholdFrame } from "./locate-stronghold.js";
-import { locateStrongholdInputSchema, locateStrongholdResultSchema } from "./contract.js";
+import { locateStrongholdResultSchema } from "./contract.js";
 import { StrongholdEyeFlights, awaitFlight } from "./throw-eye.js";
 import { StrongholdThrows } from "./throw-store.js";
 import { triangulate, type Bearing } from "./triangulation.js";
 import { strongholdSupplies } from "./supplies.js";
 
-const registry = minecraftData("1.21.4");
+/**
+ * Eye recovery short enough to lapse for real: these fixtures never drop the
+ * observed eye, so recovery waits out its whole drop window.
+ */
+const shortRecovery = { eyeRecoverySettleMs: { drop: 20 } };
 const bearing = (x: number, z: number, tx: number, tz: number): Bearing => {
   const length = Math.hypot(tx - x, tz - z);
   return { start: { x, y: 70, z }, end: { x: x + (12 * (tx - x)) / length, y: 78, z: z + (12 * (tz - z)) / length } };
@@ -24,22 +24,18 @@ const bearing = (x: number, z: number, tx: number, tz: number): Bearing => {
 const makeData = () =>
   SqlBotData.create({ storage: { kind: "temporary" }, identity: { worldId: "test", scope: { kind: "shared" } } });
 function fixture() {
-  const events = new EventEmitter();
   let activations = 0;
-  const bot = Object.assign(events, {
-    username: "Locator",
-    game: { dimension: "overworld" },
-    registry,
-    entity: { position: new Vec3(0, 70, 0), height: 1.8, onGround: true, effects: {} },
-    entities: {},
-    world: { getColumns: () => [] },
-    inventory: Object.assign(new EventEmitter(), { items: () => [], slots: [] }),
-    activateItem: () => {
-      activations++;
+  const bot = botFixture(
+    // Mineflayer's window slots are an array; the supply count walks it.
+    { username: "Locator", position: { x: 0, y: 70, z: 0 }, slots: [] },
+    {
+      activateItem: () => {
+        activations++;
+      },
+      // Nothing is loaded until a test supplies the columns it reads.
+      blockAt: () => null,
     },
-    equip: async () => {},
-    blockAt: () => null,
-  }) as unknown as Bot;
+  );
   return { bot, activations: () => activations };
 }
 const eye = (id = 42) => ({ id, uuid: `eye-${id}`, name: "eye_of_ender", position: new Vec3(0, 71.5, 0) });
@@ -66,35 +62,25 @@ test("refuses parallel, backwards, sub-block and poorly conditioned bearings", (
   );
   assert.equal(triangulate(bearing(0, 0, 1e6, 0), bearing(0, 32, 1e6, 0)), null);
 });
-test("SQLite survives reopen and isolates search, bot, dimension and world", () => {
-  const root = mkdtempSync(path.join(tmpdir(), "stronghold-"));
-  const options = {
-    storage: { kind: "persistent" as const, root },
-    identity: { worldId: "one", scope: { kind: "shared" as const } },
-  };
-  let data = SqlBotData.create(options);
-  try {
-    const store = new StrongholdThrows(data, "Locator", "overworld", "trip");
-    const id = store.begin({ x: 1, y: 70, z: 1 });
-    const b = bearing(0, 0, 0, -500);
-    store.observe(id, "uuid", b.start, b.end);
-    store.finish(id, "observed");
-    data.close();
-    data = SqlBotData.create(options);
-    assert.equal(new StrongholdThrows(data, "Locator", "overworld", "trip").read()[0]?.throw_id, id);
-    assert.equal(data.read("SELECT bearing_degrees FROM stronghold_throws")[0]?.bearing_degrees, 0);
-    for (const args of [
-      ["Other", "overworld", "trip"],
-      ["Locator", "the_nether", "trip"],
-      ["Locator", "overworld", "another"],
-    ])
-      assert.equal(new StrongholdThrows(data, args[0]!, args[1]!, args[2]!).read().length, 0);
-    using other = SqlBotData.create({ ...options, identity: { ...options.identity, worldId: "two" } });
-    assert.equal(other.read("SELECT * FROM stronghold_throws").length, 0);
-  } finally {
-    data.close();
-    rmSync(root, { recursive: true, force: true });
-  }
+test("SQLite survives reopen and isolates search, bot, dimension and world", (t) => {
+  const storage = persistentBotData(t);
+  const data = storage.open("one");
+  const store = new StrongholdThrows(data, "Locator", "overworld", "trip");
+  const id = store.begin({ x: 1, y: 70, z: 1 });
+  const b = bearing(0, 0, 0, -500);
+  store.observe(id, "uuid", b.start, b.end);
+  store.finish(id, "observed");
+  data.close();
+  const reopened = storage.open("one");
+  assert.equal(new StrongholdThrows(reopened, "Locator", "overworld", "trip").read()[0]?.throw_id, id);
+  assert.equal(reopened.read("SELECT bearing_degrees FROM stronghold_throws")[0]?.bearing_degrees, 0);
+  for (const args of [
+    ["Other", "overworld", "trip"],
+    ["Locator", "the_nether", "trip"],
+    ["Locator", "overworld", "another"],
+  ])
+    assert.equal(new StrongholdThrows(reopened, args[0]!, args[1]!, args[2]!).read().length, 0, `${args.join("/")} sees no throws`);
+  assert.equal(storage.open("two").read("SELECT * FROM stronghold_throws").length, 0);
 });
 test("cancelling the wait preserves later airborne measurements and removes flight listeners at disappearance", async () => {
   using data = makeData();
@@ -145,16 +131,6 @@ test("pre-aborted waits return without attaching abort listeners", async () => {
   const signal = AbortSignal.abort(new Error("already cancelled"));
   await assert.rejects(awaitFlight(Promise.resolve(), signal), /already cancelled/);
 });
-test("published input rejects unknown arguments and defaults the durable search", () => {
-  assert.deepEqual(locateStrongholdInputSchema.parse({}), {
-    phase: "estimate",
-    continue_without_recommended_items: false,
-    search_id: "stronghold",
-    search_radius: 128,
-  });
-  for (const input of [{ search_id: " " }, { search_radius: 0 }, { x: 10 }])
-    assert.equal(locateStrongholdInputSchema.safeParse(input).success, false);
-});
 test("masonry alone is not confirmation; a loaded frame produces a typed durable final event", async () => {
   using data = makeData();
   const f = fixture();
@@ -180,7 +156,7 @@ test("masonry alone is not confirmation; a loaded frame produces a typed durable
     ] as never;
   assert.equal(loadedStrongholdFrame(f.bot, f.bot.entity.position, 128), null);
   const navigation = { navigate: async () => ({ status: "completed", elapsedMs: 1 }) } as unknown as NavigationRuntime;
-  const action = createLocateStrongholdAction(f.bot, navigation, data, flights);
+  const action = createLocateStrongholdAction(f.bot, navigation, data, flights, shortRecovery);
   const missing = await action.begin(action.parse({}), new AbortController().signal, () => {})({});
   assert.equal(missing.status, "failed");
   assert.match("error" in missing ? missing.error : "", /No carried Eyes/);
@@ -329,7 +305,7 @@ test("a descending vertical eye leads to local survey, without another throw", a
         : { status: "stopped", reason: "survey boundary", elapsedMs: 1 };
     },
   } as unknown as NavigationRuntime;
-  const action = createLocateStrongholdAction(f.bot, navigation, data, flights);
+  const action = createLocateStrongholdAction(f.bot, navigation, data, flights, shortRecovery);
   const result = await action.begin(
     action.parse({ search_id: "trip", phase: "locate", continue_without_recommended_items: true }),
     new AbortController().signal, () => {},

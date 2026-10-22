@@ -17,10 +17,10 @@ test("surface bobbing tolerates only a held swimmer in the same still-water colu
   assert.equal(isSurfaceBobbing(start, { ...current, stance: "airborne" }, world), true);
   assert.equal(isSurfaceBobbing({ ...start, stance: "airborne" }, current, world), false);
   for (const stance of ["supported", "climbing"] as const)
-    assert.equal(isSurfaceBobbing(start, { ...current, stance }, world), false);
+    assert.equal(isSurfaceBobbing(start, { ...current, stance }, world), false, stance);
   for (const position of [{ x: 1.01, y: 62, z: 0.5 }, { x: 0.7, y: 62, z: 0.5 },
     { x: 0.5, y: 60.5, z: 0.5 }, { x: 0.5, y: 63.1, z: 0.5 }])
-    assert.equal(isSurfaceBobbing(start, { ...current, position }, world), false);
+    assert.equal(isSurfaceBobbing(start, { ...current, position }, world), false, JSON.stringify(position));
   world.load({ x: 0, y: 62, z: 0 }, { stateId: 1, collisionShapes: [], traits: { liquid: "water", liquidSource: false } });
   assert.equal(isSurfaceBobbing(start, current, world), false);
 });

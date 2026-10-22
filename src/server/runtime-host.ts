@@ -4,8 +4,9 @@ import { attachHighlighter } from "@aibengineering/minecraft-block-highlighter";
 import mineflayer, { type Bot } from "mineflayer";
 import { once } from "node:events";
 import { createServer, type Server as HttpServer } from "node:http";
-import { BOT_PHYSICS_OPTIONS, assertBotPluginsLoaded, loadBotPlugins } from "../bot-capabilities.js";
+import { BOT_PHYSICS_OPTIONS, loadBotPlugins } from "../bot-capabilities.js";
 import {
+  botDataLogLine,
   deriveMinecraftBotDataIdentity,
   type BotDataScope,
   type MinecraftBotDataIdentity,
@@ -17,6 +18,7 @@ import { createMinecraftRuntime, type MinecraftRuntime } from "../runtime/minecr
 import type { HostOptions } from "./config.js";
 import { registerIncidentCaptureRoute } from "./incident-route.js";
 import { createMinecraftMcpServer } from "./mcp.js";
+import { processNotices, type OperatorNotices } from "./operator-notices.js";
 
 const DEBUG_CONNECTION_TIMEOUT_MS = 24 * 60 * 60 * 1_000;
 
@@ -70,7 +72,6 @@ async function connectBot(configuration: HostOptions): Promise<ConnectedBot> {
     };
     const spawned = () => {
       try {
-        assertBotPluginsLoaded(bot);
         if (capture.kind === "waiting") {
           throw new Error("Minecraft spawned before supplying its login packet for bot data.");
         }
@@ -127,7 +128,16 @@ export interface RuntimeHost extends AsyncDisposable {
   close(): Promise<void>;
 }
 
-export async function startRuntimeHost(source: SourceIdentity, configuration: HostOptions): Promise<RuntimeHost> {
+/**
+ * `notices` receives every line this host writes for its operator, including
+ * the bot-data store's lifecycle records, so they keep one route; production
+ * omits it and writes to the process streams.
+ */
+export async function startRuntimeHost(
+  source: SourceIdentity,
+  configuration: HostOptions,
+  notices: OperatorNotices = processNotices,
+): Promise<RuntimeHost> {
   await using resources = new AsyncDisposableStack();
   const { bot, identity } = resources.use(await connectBot(configuration));
   let connected = true;
@@ -144,7 +154,7 @@ export async function startRuntimeHost(source: SourceIdentity, configuration: Ho
       // Leave HTTP available to deliver pending failures and report the lost
       // connection. Closing SSE first strands the caller in SDK reconnection.
       // A new Minecraft connection requires an explicit service restart.
-      process.stderr.write(`[mine-ai-mcp] ${failure.message}\n`);
+      notices.stderr(`[mine-ai-mcp] ${failure.message}`);
     }
   };
   const endedDuringStartup = (reason: string) => connectionEnded(new Error(`Minecraft connection ended: ${reason}`));
@@ -177,12 +187,15 @@ export async function startRuntimeHost(source: SourceIdentity, configuration: Ho
   const botDataOptions = {
     storage: configuration.botData.storage,
     identity: { worldId: identity.worldId, scope },
+    // Beside the host's own stderr notices, as writeBotDataLog would put them.
+    log: (record) => notices.stderr(botDataLogLine(record)),
   } satisfies SqlBotDataOptions;
   const activeRuntime = resources.use(
     await createMinecraftRuntime(bot, {
       highlighter,
       botData: botDataOptions,
       debugExecuteJavaScript: configuration.debugExecuteJavaScript,
+      vanillaItemUseMovement: configuration.vanillaItemUseMovement,
       onDisconnect: (reason) => connectionEnded(new Error(reason)),
       incidents: {
         retention: configuration.incidentRetention,
@@ -239,7 +252,7 @@ export async function startRuntimeHost(source: SourceIdentity, configuration: Ho
         };
       },
       clientIdleTimeoutMs: configuration.debugExecuteJavaScript ? DEBUG_CONNECTION_TIMEOUT_MS : undefined,
-      log: (message) => process.stdout.write(`[mine-ai-mcp] ${message}\n`),
+      log: (message) => notices.stdout(`[mine-ai-mcp] ${message}`),
     }),
     (application) => application.close(),
   );
@@ -264,8 +277,8 @@ export async function startRuntimeHost(source: SourceIdentity, configuration: Ho
   running = true;
 
   const runtimeStatus = activeRuntime.status();
-  process.stdout.write(
-    `[mine-ai-mcp] ${configuration.instanceId} runtime ready on port ${address.port} as ${bot.username}; ${runtimeStatus.botData.persistence} ${runtimeStatus.botData.scope} frontier has ${runtimeStatus.frontier.observedChunks} chunks.\n`,
+  notices.stdout(
+    `[mine-ai-mcp] ${configuration.instanceId} runtime ready on port ${address.port} as ${bot.username}; ${runtimeStatus.botData.persistence} ${runtimeStatus.botData.scope} frontier has ${runtimeStatus.frontier.observedChunks} chunks.`,
   );
   const lifetime = resources.move();
   const close = () => (stopPromise ??= lifetime.disposeAsync());

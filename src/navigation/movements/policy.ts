@@ -65,9 +65,7 @@ export interface MovementPolicy {
   readonly allowPlacing: boolean;
   readonly allowDoors: boolean;
   readonly allowSwimming: boolean;
-  readonly allowClimbing: boolean;
   readonly allowParkour: boolean;
-  readonly allowDiagonalAscend: boolean;
   readonly allowSprinting: boolean;
   readonly allowDownward: boolean;
   readonly maximumDrop: number;
@@ -76,27 +74,6 @@ export interface MovementPolicy {
   readonly scaffold: ScaffoldSelection | null;
   readonly placementPenalty: number;
   readonly movementTicks: Readonly<Record<MovementKind, number>>;
-  /**
-   * An extra multiplier on the goal estimate, for tuning search aggression.
-   *
-   * One is the shipped setting and the one every measurement is taken under.
-   * Goals already report in tick units, following Baritone, so the directing
-   * work is done before this is applied and a value above one is purely
-   * additional greediness.
-   *
-   * This does not bound route cost to a factor of optimal, and must not be
-   * described as though it does: that guarantee requires an admissible
-   * estimate, and the goal estimate sums its axis components, which one
-   * movement can satisfy together.
-   *
-   * Kept as a knob because search aggression is worth being able to measure
-   * separately from the cost model. Formerly this held 2.85, which was not a
-   * tuning choice at all but the residue of a unit conversion — the search
-   * used to multiply block-valued estimates by the cheapest per-block edge,
-   * a nine-tick three-block drop over 3.162 blocks. Once goals report ticks
-   * there is nothing left to convert.
-   */
-  readonly heuristicWeight: number;
   readonly digTimeEstimator: DigTimeEstimator;
   /** Whether this block may be broken at this cell, given its neighbours in `world`, and with what. */
   evaluateBreak(block: BlockObservation, position: BlockPosition, world: WorldView): BreakEvaluation;
@@ -172,22 +149,15 @@ export function createMovementPolicy(overrides: Partial<MovementPolicy> = {}): M
     allowPlacing: true,
     allowDoors: true,
     allowSwimming: true,
-    allowClimbing: true,
     // Intentional product difference from Baritone: parkour is useful enough
     // to ship enabled, while still remaining one coherent capability switch.
     allowParkour: true,
-    // Intentional product difference from Baritone's conservative default:
-    // the movement is useful, its swept volume is validated by the catalogue,
-    // and dedicated physical fixtures qualify both valid and blocked rises.
-    allowDiagonalAscend: true,
     allowSprinting: true,
     allowDownward: true,
     maximumDrop: 3,
     scaffold: null,
     placementPenalty: 8,
     movementTicks: DEFAULT_TICKS,
-    // Goals already price themselves in ticks, so nothing needs scaling here.
-    heuristicWeight: 1,
     // Vanilla's multipliers: five times slower submerged without Aqua
     // Affinity, and five times slower again with no ground underfoot.
     digTimeEstimator: {

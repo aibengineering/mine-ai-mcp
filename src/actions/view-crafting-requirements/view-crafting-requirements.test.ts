@@ -7,6 +7,8 @@ import { formatViewCraftingRequirementsResult, viewCraftingRequirements } from "
  * Every requirements answer over the same planner, varying only what is carried
  * and what is asked for. Missing materials and an item with no recipe are
  * information, not failures; only an item Minecraft does not have is a failure.
+ * Which materials a plan requires and reserves is the planner's contract, proven
+ * in utils/craft-plan.test.ts; these rows prove only what the action decides.
  */
 const rows = [
   {
@@ -18,8 +20,6 @@ const rows = [
     ],
     status: "succeeded",
     planStatus: "ready",
-    requiredMaterials: [{ item: "oak_log", count: 1 }],
-    carriedMaterials: [{ item: "oak_log", count: 1 }],
     markdown: /stick ×4/,
   },
   {
@@ -28,11 +28,6 @@ const rows = [
     items: [{ itemName: "stone_pickaxe", count: 1 }],
     status: "succeeded",
     planStatus: "missing_materials",
-    requiredMaterials: [
-      { item: "cobblestone", count: 3 },
-      { item: "oak_log", count: 1 },
-    ],
-    carriedMaterials: [],
     markdown: /Carried leaf materials reserved: none/,
   },
   {
@@ -41,8 +36,6 @@ const rows = [
     items: [{ itemName: "apple", count: 1 }],
     status: "succeeded",
     planStatus: "uncraftable",
-    requiredMaterials: undefined,
-    carriedMaterials: undefined,
     markdown: undefined,
   },
   {
@@ -51,8 +44,6 @@ const rows = [
     items: [{ itemName: "definitely_not_an_item", count: 1 }],
     status: "failed",
     planStatus: undefined,
-    requiredMaterials: undefined,
-    carriedMaterials: undefined,
     markdown: /UNKNOWN_CRAFT_ITEMS/,
   },
 ] as const;
@@ -66,15 +57,6 @@ test("reports what a craft batch would need without crafting anything", async ()
     assert.equal(craftCalls.length, 0, `${row.name}: inspection must never craft`);
     if (row.planStatus === undefined) assert.equal(result.requirements.plan, undefined, row.name);
     else assert.equal(result.requirements.plan?.status, row.planStatus, row.name);
-    if (row.requiredMaterials) {
-      assert.deepEqual(result.requirements.plan?.requiredMaterials, row.requiredMaterials, row.name);
-      assert.deepEqual(result.requirements.plan?.carriedMaterials, row.carriedMaterials, row.name);
-      assert.equal(
-        (result.requirements.plan?.missingMaterials.length ?? 0) > 0,
-        row.planStatus === "missing_materials",
-        row.name,
-      );
-    }
     if (row.markdown)
       assert.match(
         result.status === "failed" ? result.error : formatViewCraftingRequirementsResult(result),

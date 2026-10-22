@@ -19,7 +19,6 @@ const PUBLISHED: ReadonlyArray<
   ["attack_dragon_perch", "resumable_task", false, true],
   ["shoot_dragon", "resumable_task", false, true],
   ["build_structure", "task", false, true],
-  ["cancel_foreground_action", "control", false, true],
   ["collect_block", "resumable_task", false, true],
   ["craft_item", "task", false, true],
   ["drop_item", "task", false, true],
@@ -68,7 +67,6 @@ function published(t: { after(fn: () => void): void }, options: ActionCatalogOpt
       navigation: {} as never,
       strongholdEyeFlights: {} as never,
       combat: { policy: { declareQuarry() {}, reserveArrows() {} } } as never,
-      cancelForegroundAction: () => ({}) as never,
       observeStatusActivity: () => ({}) as never,
     },
     options,
@@ -93,7 +91,7 @@ test("every action publishes its name, execution, and read-only and destructive 
 test("discovery agrees with execution ownership and publishes the async inputs", () => {
   const descriptions = describeActionTools();
   const expected = [...PUBLISHED, ...DEBUG_ONLY];
-  assert.deepEqual(descriptions.map((tool) => tool.name).sort(), [...expected.map(([name]) => name), "wait_for_action"].sort());
+  assert.deepEqual(descriptions.map((tool) => tool.name).sort(), [...expected.map(([name]) => name), "wait_for_action", "cancel_foreground_action"].sort());
   for (const [name, execution] of expected) {
     const tool = descriptions.find((item) => item.name === name)!;
     const foreground = execution === "task" || execution === "resumable_task";
@@ -103,6 +101,23 @@ test("discovery agrees with execution ownership and publishes the async inputs",
     assert.equal("acknowledge_result" in tool.inputSchema.shape, false, name);
   }
   for (const name of ["wait_for_action", "cancel_foreground_action"]) {
-    assert.ok("action_id" in descriptions.find((tool) => tool.name === name)!.inputSchema.shape);
+    const tool = descriptions.find((item) => item.name === name)!;
+    assert.equal(tool.foreground, false, name);
+    assert.ok("action_id" in tool.inputSchema.shape);
+  }
+});
+
+// Every tool input is a strict object: a misspelt or invented argument is
+// refused rather than silently ignored, so the model learns its mistake instead
+// of watching the default run. One check over the catalogue replaces the same
+// assertion in each tool's file.
+test("every published input schema refuses an unknown argument", () => {
+  for (const tool of describeActionTools()) {
+    const parsed = tool.inputSchema.safeParse({ not_an_argument: true });
+    assert.equal(parsed.success, false, tool.name);
+    assert.ok(
+      parsed.error.issues.some((issue) => issue.code === "unrecognized_keys"),
+      `${tool.name} must reject unknown keys`,
+    );
   }
 });

@@ -1,18 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EventEmitter } from "node:events";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
+import { botFixture } from "../../test-support/bot.js";
 import { observeHuntDrops } from "./drop-accounting.js";
 import { huntDropSightingSchema } from "./contract.js";
 
 function fixture() {
   const blocks = new Map<string, { name: string }>();
-  const bot = Object.assign(new EventEmitter(), {
-    entity: { id: 1 },
-    entities: {} as Bot["entities"],
-    blockAt: (position: Vec3) => blocks.get(position.floored().toString()) ?? null,
-  }) as unknown as Bot;
+  // Only the cells a test names are loaded; the rest read as unknown, not air.
+  const bot = botFixture({ blocks: (position: Vec3) => (blocks.get(position.floored().toString()) ?? null) as never });
   const lifetime = new AbortController();
   const item = (id: number, stack: { name: string; count: number } | null) => {
     const state = { stack };

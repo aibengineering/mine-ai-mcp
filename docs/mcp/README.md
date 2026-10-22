@@ -54,6 +54,7 @@ The host accepts configuration flags for connection, storage, and debugging:
 | `--bot-data-persistence <mode>` | `persistent`          | Storage mode: `persistent` SQLite file or `temporary` in-memory database. |
 | `--bot-data-scope <scope>`      | `bot`                 | Database isolation: `bot` for one player UUID or `shared` for the world.  |
 | `--debug-execute-javascript`    | `false`               | Publishes unrestricted debug tools when set.                              |
+| `--vanilla-item-use-movement`   | `false`               | Moves at a fifth of the speed, without sprinting, while using an item.    |
 
 The host runs until stopped with `SIGINT` or `SIGTERM`. It disconnects cleanly
 and releases all database locks on exit.
@@ -185,16 +186,16 @@ target does not increment retargets. Final combat engagement events also retain
 the observed reason for refusing or ending the fight.
 
 The existing 20-second / 8-MiB incident recorder keeps detailed execution and
-physics history and saves a `combat_waiting` capture on the notice. Durable
-`combat_engagement` events retain starts, waits, damaging stalls, resumed progress,
-and final outcomes, with one engagement ID and the originating request ID across
-the entire fight. Read them with `read_recent_events`, or query without
-advancing the unread cursor:
+physics history and saves a `combat_waiting` capture on the notice. The durable
+event stream records a fight as `survival_danger`, `survival_decision`,
+`survival_claim`, `survival_phase` and `survival_outcome` events, carrying the
+originating request ID across the whole fight. Read them with
+`read_recent_events`, or query without advancing the unread cursor:
 
 ```sql
-SELECT event_id, observed_at, payload_json
+SELECT event_id, event_type, observed_at, payload_json
 FROM events
-WHERE event_type = 'combat_engagement'
+WHERE event_type LIKE 'survival_%'
 ORDER BY event_id DESC
 LIMIT 20
 ```

@@ -1,11 +1,11 @@
-import { decideCombatTactic, type CombatTacticalFacts, type CombatTactic } from "../../policy/combat/tactics.js";
+import { creeperEscapeAdmits, decideCombatTactic, type CombatTacticalFacts, type CombatTactic } from "../../policy/combat/tactics.js";
 import { creeperRetreatHeading } from "../../positioning/combat/creeper-retreat.js";
 import type { FightScene } from "../../responses/fight/scene.js";
 import type { FightWeapons } from "../../responses/fight/weapons.js";
 import { blastBarrierCells, blastBarrierMaterial } from "../../positioning/combat/blast-barrier.js";
 import { blastBarrierScope } from "./scopes/blast-barrier.js";
 import { permitsHide } from "../../policy/combat/permissions.js";
-import { selectPolicyFood } from "../../perception/food.js";
+import { recoveryAvailable } from "../../perception/combat/recovery.js";
 import { canMeleeTarget } from "../../weapons/melee.js";
 
 /** One interruptible effect under the existing combat owner. Observation selects;
@@ -24,8 +24,11 @@ export class CombatTactics {
       .filter(threat => threat.observed && canMeleeTarget(bot, bot.entities[threat.id]!))
       .sort((a, b) => Number(b.swelling) - Number(a.swelling) || a.distance - b.distance)[0] : null;
     const escapeAvailable = creepers.length > 0 && creeperRetreatHeading(bot, creepers, null, perception.resolvedIds) !== null;
-    const canBuild = !escapeAvailable && scene.policy.combat.terrain?.place &&
-      permitsHide(scene.policy.combat, bot.food >= 18 || selectPolicyFood(bot, scene.policy.food).food !== null) && blastBarrierMaterial(bot);
+    // A barrier is only ever cut against a creeper, so check that first: the
+    // material check rebuilds Prismarine's Block class (~1.5 ms) on every
+    // call, and this runs more than once per tick for every fight.
+    const canBuild = creepers.length > 0 && !escapeAvailable && scene.policy.combat.terrain?.place &&
+      permitsHide(scene.policy.combat, recoveryAvailable(bot, scene.policy.food)) && blastBarrierMaterial(bot);
     const barrier = canBuild ? blastBarrierCells(bot, creepers).find(cell => {
       const scope = blastBarrierScope(bot, cell, () => scene.policy.combat);
       return !scene.survival.answered.find(scope.capability, scope.scope);
@@ -47,11 +50,12 @@ export class CombatTactics {
       // Any hostile in reach, not only the selected quarry: the swing that
       // opens a fight is often from the one the bot did not pick.
       meleeImminent: perception.read().some((threat) => threat.meleeImminent),
+      quarryId: scene.target.id,
       projectile: projectile ? { imminent: projectile.imminent, aligned: projectile.aligned, coversAll: projectile.coversAll,
         impactInTicks: projectile.projectiles[0]?.impactInTicks ?? projectile.windupForecasts[0]?.impactInTicks ?? null } : null,
     };
     const decision = decideCombatTactic(facts);
-    if (decision.kind === "escape") perception.creeperClearance.require(creepers.filter(threat => decision.threatIds.includes(threat.id)));
+    if (decision.kind === "escape") perception.creeperClearance.require(creepers.filter(threat => creeperEscapeAdmits(decision).includes(threat.id)));
     if (["counter_blast", "blast_barrier", "brace_blast"].includes(decision.kind)) perception.creeperClearance.require(creepers.filter(threat => threat.distance <= 8));
     const key = JSON.stringify([decision, facts.creepers.map(threat => [threat.id, threat.swelling]), facts.clearancePending]);
     if (key !== this.#key) {

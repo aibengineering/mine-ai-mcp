@@ -47,6 +47,28 @@ test("combat holds the supporting cell through a knockback hop without changing 
   assert.ok(released(controls), "a new owner cannot inherit the previous stance");
 });
 
+test("the search hold keeps EyesBot's two-block ledge through the recorded knockback", () => {
+  // EyesBot, 2026-09-08: waiting on a route search on a one-wide nether-brick
+  // ledge over lava, with feet at -26.408,-56,353.950, it took an impulse of
+  // (0.167125, 0.275125, -0.13725) and was carried east off the ledge. Here
+  // the ledge is translated to x=0, z=0..1, with nothing else to stand on.
+  const { bot, body, controls } = holdFixture(0.591710351, Math.PI / 2);
+  const world = flatWorld();
+  for (let x = -5; x <= 5; x++)
+    for (let z = -5; z <= 5; z++) if (x !== 0 || (z !== 0 && z !== 1)) world.load({ x, y: 62, z }, { stateId: 0 });
+  body.position.set(0.591710351, 63, 0.950314139);
+  const hold = new SupportedPositionHold(bot, world);
+  hold.tick();
+  // One tick after the impulse: airborne and drifting east past the ledge's edge.
+  body.onGround = false;
+  body.velocity.set(0.167125, 0.275125 - 0.08, -0.13725);
+  body.position.set(0.591710351 + 0.167125, 63.275125, 0.950314139 - 0.13725);
+  hold.tick();
+  assert.equal(controls.get("forward"), true, "steer west, back over the ledge");
+  assert.equal(controls.get("back"), false, "never toward the lava beyond its east edge");
+  assert.equal(controls.get("sneak"), false, "air control must not be slowed by sneaking");
+});
+
 test("losing observed support releases an earlier combat correction", () => {
   const { body, controls, hold } = holdFixture(0.8, 0, {}, true);
   hold.tick();

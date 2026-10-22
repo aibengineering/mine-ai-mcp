@@ -1,0 +1,98 @@
+template: ../../templates/single-action.yaml
+
+tags: [known-failing, regression]
+description: >-
+  Hunt magma cream with an iron melee kit on generated basalt deltas, seed
+  20260906: first on the shelf from two large cubes and a medium one, then down
+  on the small basalt islands of the lava ocean from three medium cubes, and
+  climb back to the shelf, never touching lava or the magma blocks underfoot.
+  The legacy hunts touched lava (generated-basalt-hunt-melee), stood on magma
+  (generated-basalt-pack-contact) and killed dozens of cubes for no cream.
+  Observed on 2026-10-20 with Looting III on the sword: cream is collected,
+  but in one run the bot went into the lava ocean during the island hunt
+  (handoff at y 20, two [FIRE] takeovers), in another it stood on a magma
+  block and the island hunt was still chasing cubes in the lava ocean when
+  the trial timed out at seven minutes. The shelf stage alone passes in
+  scenarios/hunt/basalt-magma-cream.yaml.
+
+# Cube and island cells re-surveyed against current generation on 2026-10-20.
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: false
+    randomTickSpeed: 0
+
+# The shelf cubes are held still until the first request is under way.
+entities:
+  - { type: magma_cube, pos: [195.5, 49, -18.5], nbt: '{Size:3,NoAI:1b,PersistenceRequired:1b,Tags:["cream"]}' }
+  - { type: magma_cube, pos: [197.5, 49, -17.5], nbt: '{Size:3,NoAI:1b,PersistenceRequired:1b,Tags:["cream"]}' }
+  - { type: magma_cube, pos: [201.5, 47, -22.5], nbt: '{Size:1,NoAI:1b,PersistenceRequired:1b,Tags:["cream"]}' }
+  - { type: magma_cube, pos: [182.5, 36, -32.5], nbt: '{Size:1,NoAI:1b,PersistenceRequired:1b,Tags:["islands"]}' }
+  - { type: magma_cube, pos: [186.5, 36, -36.5], nbt: '{Size:1,NoAI:1b,PersistenceRequired:1b,Tags:["islands"]}' }
+  - { type: magma_cube, pos: [185.5, 36, -35.5], nbt: '{Size:1,NoAI:1b,PersistenceRequired:1b,Tags:["islands"]}' }
+
+schedule:
+  - { afterTicks: 20, run: "execute as @e[tag=cream] run data merge entity @s {NoAI:0b}" }
+  # The island cubes wake when the hunter reaches the islands, as in the
+  # legacy islands hunt, which started there.
+  - when: "entity @a[name=CreamHunter,x=176,y=32,z=-42,dx=16,dy=6,dz=16]"
+    run: "execute as @e[tag=islands] run data merge entity @s {NoAI:0b}"
+  - when: "entity @a[name=CreamHunter] at @a[name=CreamHunter] if block ~ ~ ~ minecraft:lava"
+    run: 'summon minecraft:marker 185 55 -19 {Tags:["lava_contact"]}'
+  - when: "entity @a[name=CreamHunter] at @a[name=CreamHunter] if block ~ ~-0.2 ~ minecraft:magma_block"
+    run: 'summon minecraft:marker 185 55 -19 {Tags:["magma_contact"]}'
+
+players:
+  - name: CreamHunter
+    pos: [185.5, 49, -19.5]
+    equipment:
+      # Looting III: a medium or large cube then drops cream about five times
+      # in eight instead of one in four, so a hunt that kills its quarry is not
+      # failed by loot luck. Small cubes still drop none.
+      mainhand: 'iron_sword[enchantments={levels:{"minecraft:looting":3}}]'
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: iron_boots
+      offhand: shield
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      # A spare: a long pack fight can break the worn shield, and a hunt for
+      # hostile quarry is refused without one.
+      - { item: shield, count: 1 }
+      - { item: cooked_beef, count: 16 }
+      - { item: cobblestone, count: 64 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    CreamHunter:
+      actions:
+        - { action: collect_mob_drop, input: { mob_name: magma_cube, drop_name: magma_cream, count: 1 } }
+        - { action: navigate, input: { x: 185, y: 49, z: -20, range: 1 } }
+        - { action: navigate, input: { x: 184, y: 35, z: -34, range: 1 } }
+        - { action: collect_mob_drop, input: { mob_name: magma_cube, drop_name: magma_cream, count: 1 } }
+        - { action: navigate, input: { x: 185, y: 49, z: -20, range: 1 } }
+      # Keep the reflexes three seconds after the return, for cubes still hopping.
+      holdTicks: 60
+
+goal:
+  kind: all
+  timeout: 420
+  goals:
+    - { kind: hasItem, who: CreamHunter, item: magma_cream, count: 2 }
+    - { kind: reach, who: CreamHunter, pos: [185.5, 49, -19.5], radius: 2 }
+    - { kind: survive, who: CreamHunter, seconds: 1 }
+    - { kind: health, who: CreamHunter, health: 1 }
+    - { kind: entityCount, entity: marker, tag: lava_contact, max: 0 }
+    - { kind: entityCount, entity: marker, tag: magma_contact, max: 0 }
+    - { kind: completion, who: CreamHunter }

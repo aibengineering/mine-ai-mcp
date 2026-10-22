@@ -20,7 +20,6 @@ import {
   VIEW_BLOCKS_DESCRIPTION,
   viewBlocksInputSchema,
   viewBlocksResultSchema,
-  viewBlocksAnnotations,
   viewBlocksOutcomes,
   type FoundBlock,
   type ObservedBlock,
@@ -205,7 +204,7 @@ export function createViewBlocksAction(bot: Bot) {
     resultSchema: viewBlocksResultSchema,
     formatResult: formatViewBlocksResult,
     execution: { kind: "information" },
-    annotations: viewBlocksAnnotations,
+    annotations: { openWorldHint: false },
     parse: parseViewBlocksRequest,
     execute: async (request) => viewBlocks(bot, request),
   });

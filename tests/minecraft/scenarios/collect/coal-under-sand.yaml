@@ -1,21 +1,10 @@
-template: ../../templates/flat-single-action.yaml
+template: ../../templates/flat-single-action-no-regen.yaml
 
-name: coal-under-sand
 tags: [regression]
 description: >-
   Reproduce the live coal collection failure where reachable targets bypassed preparation of
   the falling sand above them. Collect the buried seam with full health so clearing the
   column cannot bury the miner.
-
-world:
-  type: flat
-  time: noon
-  gamerules:
-    doDaylightCycle: false
-    doMobSpawning: false
-    keepInventory: true
-    naturalRegeneration: false
-    randomTickSpeed: 0
 
 # Taken from a live run: `collect_block coal_ore count 8 scaffold true`
 # broke nine blocks across three y levels of one cluster and the bot took

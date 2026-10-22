@@ -12,7 +12,6 @@ import {
 import {
   advanceGoal,
   createMovements,
-  type Navigate,
   type NavigationResult,
   type NavigationRuntime,
 } from "../../navigation/index.js";
@@ -42,15 +41,6 @@ const ARRIVAL_SLACK = 0.5;
 const MIN_FORWARD_PROGRESS = 0.5;
 const EXPLORE_FRONTIER_QUERIES = [nearestFrontierQuery] as const;
 
-export interface ExploreFrontierDependencies {
-  readonly createMovements: typeof createMovements;
-  readonly navigate: Navigate;
-}
-
-function productionDependencies(navigate: Navigate): ExploreFrontierDependencies {
-  return { createMovements, navigate };
-}
-
 interface RecordedExpansion {
   readonly baseline: number;
   readonly chunkKeys: Set<string>;
@@ -64,10 +54,10 @@ export async function exploreFrontier(
   request: ExploreFrontierRequest,
   context: ActionContext,
   frontier: SessionFrontier,
-  dependencies: ExploreFrontierDependencies,
+  navigation: Pick<NavigationRuntime, "navigate">,
   botData?: SqlBotData,
 ): Promise<ExploreFrontierResult> {
-  return beginExploreFrontier(bot, request, frontier, dependencies, botData)(context);
+  return beginExploreFrontier(bot, request, frontier, navigation, botData)(context);
 }
 
 /** Keep the requested boundary and observed expansion across interrupted attempts. */
@@ -75,7 +65,7 @@ export function beginExploreFrontier(
   bot: Bot,
   request: ExploreFrontierRequest,
   frontier: SessionFrontier,
-  dependencies: ExploreFrontierDependencies,
+  navigation: Pick<NavigationRuntime, "navigate">,
   botData?: SqlBotData,
 ): RequestExecution<ExploreFrontierResult> {
   const start = bot.entity.position.clone();
@@ -200,7 +190,7 @@ export function beginExploreFrontier(
       // Standard bot movements with digging and scaffolding enabled allow
       // the bot to navigate natural uneven terrain, scale hills/cliffs, break
       // obstructing foliage, and bridge gaps during frontier exploration.
-      const movements = dependencies.createMovements(bot, { placementPenalty: EXPLORATION_PLACEMENT_PENALTY });
+      const movements = createMovements(bot, { placementPenalty: EXPLORATION_PLACEMENT_PENALTY });
 
       let stopError: string | null = null;
       while (enteredBiome === null && currentExpansion() < request.chunks) {
@@ -213,7 +203,7 @@ export function beginExploreFrontier(
           // the former 30-second deadline cut off a progressing Nether ascent.
           // The leg asks for ground gained along the heading, not a point on
           // it: a point over the lava sea was bridged rather than walked round.
-          route = await dependencies.navigate({
+          route = await navigation.navigate({
             movements,
             goal: advanceGoal(legStart, vector, LEG_DISTANCE),
             signal: context.signal,
@@ -401,7 +391,6 @@ export function createExploreFrontierAction(
   navigation: NavigationRuntime,
   frontier: SessionFrontier,
   botData?: SqlBotData,
-  dependencies: ExploreFrontierDependencies = productionDependencies(navigation.navigate),
 ): SqlAction<typeof EXPLORE_FRONTIER, ExploreFrontierRequest, ExploreFrontierResult> {
   return defineSqlAction({
     checkpointSchema: exploreCheckpointSchema,
@@ -418,6 +407,6 @@ export function createExploreFrontierAction(
       openWorldHint: true,
     },
     parse: parseExploreFrontierRequest,
-    begin: (request) => beginExploreFrontier(bot, request, frontier, dependencies, botData),
+    begin: (request) => beginExploreFrontier(bot, request, frontier, navigation, botData),
   });
 }

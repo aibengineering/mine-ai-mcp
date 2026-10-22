@@ -81,6 +81,11 @@ const DAMAGING = new Set([
   "powder_snow",
 ]);
 
+/** Whether a block of this name damages a body that touches it, lava included. */
+export function damagesOnContact(name: string): boolean {
+  return name === "lava" || DAMAGING.has(name);
+}
+
 function traits(block: MineflayerBlock): BlockTraits {
   const empty = block.boundingBox === "empty";
   const liquid = block.name === "water" ? "water" : block.name === "lava" ? "lava" : null;
@@ -143,16 +148,37 @@ export function observeMineflayerBlock(block: MineflayerBlock): LoadedBlock {
   );
 }
 
-/** Prismarine's `Block` class bound to this bot's registry, for describing a state without a world position. */
-export function blockClass(bot: Pick<Bot, "registry">): {
+/** Read the bot's world cell by cell as planning does: an observation, or `UNLOADED` where there is no chunk. */
+export function blockReader(bot: Pick<Bot, "blockAt">): (x: number, y: number, z: number) => BlockObservation {
+  return (x, y, z) => {
+    const block = bot.blockAt(new Vec3(x, y, z));
+    return block ? observeMineflayerBlock(block) : UNLOADED;
+  };
+}
+
+type BlockClass = {
   fromStateId(stateId: number, biomeId: number): MineflayerBlock;
   fromProperties(
     typeId: number,
     properties: Readonly<Record<string, string | number>>,
     biomeId: number,
   ): MineflayerBlock;
-} {
-  return prismarineBlock(bot.registry);
+};
+
+// Building the class walks every block in the registry to attach its collision
+// shapes: about 1.6 ms per call, which callers on the survival tick path were
+// paying several times per tick. The result depends only on the registry, so
+// each registry gets one class for as long as it lives.
+const blockClasses = new WeakMap<Bot["registry"], BlockClass>();
+
+/** Prismarine's `Block` class bound to this bot's registry, for describing a state without a world position. */
+export function blockClass(bot: Pick<Bot, "registry">): BlockClass {
+  let Block = blockClasses.get(bot.registry);
+  if (!Block) {
+    Block = prismarineBlock(bot.registry);
+    blockClasses.set(bot.registry, Block);
+  }
+  return Block;
 }
 
 /** The Prismarine chunk column surface the section store copies from. */

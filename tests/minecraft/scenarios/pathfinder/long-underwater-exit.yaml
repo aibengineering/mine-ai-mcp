@@ -1,0 +1,82 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Leave a dry air cavern beneath a lake by its distant dry exit, about 80 blocks east,
+  instead of digging the dirt ceiling that every block of the lake rests on, then walk home
+  over land. Digging is allowed, so choosing not to open the water is the behaviour under
+  test: the dirt roof must be intact and the bot dry and unhurt at both arrivals.
+
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  # Distant fixture commands need their destination chunks loaded while the
+  # arrangement is built.
+  - "forceload add -8 -8 96 88"
+  - "fill -8 -61 -8 96 -48 8 air"
+  - "fill 76 -61 9 96 -48 88 air"
+
+geometry:
+  # A dry two-block-high cavern runs beneath a contained lake. Its dirt ceiling
+  # is diggable, but every ceiling block touches water, so the upward shortcut
+  # would flood the cavern.
+  - fill: { block: bedrock, from: [-4, -58, -4], to: [73, -58, 4] }
+  - fill: { block: bedrock, from: [-4, -57, -4], to: [-4, -55, 4] }
+  - fill: { block: bedrock, from: [-4, -57, -4], to: [73, -55, -4] }
+  - fill: { block: bedrock, from: [-4, -57, 4], to: [73, -55, 4] }
+  - fill: { block: dirt, from: [-3, -55, -3], to: [72, -55, 3] }
+  # The water is held above the dirt roof. The eastern bedrock dam leaves the
+  # cavern open below it, so the dry route continues roughly 80 blocks before
+  # rising outside the lake.
+  - fill: { block: bedrock, from: [-4, -54, -4], to: [-4, -49, 4] }
+  - fill: { block: bedrock, from: [-4, -54, -4], to: [73, -49, -4] }
+  - fill: { block: bedrock, from: [-4, -54, 4], to: [73, -49, 4] }
+  - fill: { block: bedrock, from: [73, -55, -4], to: [73, -49, 4] }
+  - fill: { block: water, from: [-3, -54, -3], to: [72, -50, 3] }
+  # Dry stairs rise beyond the lake. A surface causeway returns west to the gold
+  # home marker above the starting cavern.
+  - fill: { block: stone, from: [74, -58, -2], to: [74, -58, 2] }
+  - fill: { block: stone, from: [75, -57, -2], to: [75, -57, 2] }
+  - fill: { block: stone, from: [76, -56, -2], to: [76, -56, 2] }
+  - fill: { block: stone, from: [77, -55, -2], to: [77, -55, 2] }
+  - fill: { block: stone, from: [78, -54, -2], to: [78, -54, 2] }
+  - fill: { block: stone, from: [79, -53, -2], to: [79, -53, 2] }
+  - fill: { block: stone, from: [80, -52, -2], to: [83, -52, 12] }
+  - fill: { block: stone, from: [0, -52, 8], to: [83, -52, 12] }
+  - setblock: { block: gold_block, at: [0, -52, 10] }
+
+players:
+  - name: Navigator
+    pos: [0.5, -57, 0.5]
+
+tick:
+  - "gamemode spectator @a[name=!Navigator,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  dig: true
+  legs:
+    - { target: [81, -51, 0], range: 2, label: "Dry exit beyond the lake" }
+    - { target: [0, -51, 10], range: 2, label: "Home over land" }
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: Navigator, pos: [0.5, -51, 10.5], radius: 3 }
+    # Reaching home by punching through the lake floor is not a pass.
+    - { kind: blocksAt, block: dirt, positions: [[0, -55, 0], [10, -55, 0], [40, -55, 0], [70, -55, 0]] }
+    - { kind: health, who: Navigator, health: 20 }
+    - { kind: completion, who: Navigator }
+    - { kind: survive, who: Navigator, seconds: 1 }
