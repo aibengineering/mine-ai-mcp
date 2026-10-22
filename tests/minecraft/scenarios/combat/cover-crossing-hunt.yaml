@@ -1,30 +1,27 @@
 template: ../../templates/flat-single-action-no-regen.yaml
 
-tags: [known-failing, regression]
+tags: [regression]
 description: >-
   An unarmoured bot with a sword and shield hunts a pinned blaze thirty-two
   blocks across open ground and walks into two sword-armed wither skeletons on
   the way, which give no windup before they swing. It must collect the blaze's
   rod and survive with eight health, with no regeneration, so a guard raised
-  only after the first hit shows as damage. Observed failing in three of
-  four runs on 2026-10-20 (in combat/cover-fights, standalone, and in this
-  file; one run passed in 15 s): the bot kills both wither skeletons and is
-  left at ten health, then never takes the rod. Either it alternates between
-  approaching the blaze and a hostile-reflex "safe separation" evade every
-  thirteen seconds until the trial times out, or the hunt returns after
-  110 s with "Collection outcome: interrupted" by a fight response for the
-  blaze. The legacy fixture (blaze-crossfire-first-hit-shield) measured only
-  the first exchange and passed. This is the crossing pen of
-  combat/cover-fights, split out until a hunt below its fight bar reports
-  that it cannot continue instead of looping. The hit itself had three
-  causes, fixed on 2026-10-21: the reflex admitted the fight at reach, four
-  ticks before the swing of an attacker closing on a sprinting bot and one
-  short of a raised shield's five; a fight ended when its target stepped back
-  with the partner still in reach; and after a kill the body went back to the
-  hunt, whose preparation lowered the shield, before the partner was
-  answered. The crossing then passed 20 runs in 22. Both failures were the
-  remaining one: with the skeletons on opposite sides, the swing at one turns
-  the guard away from the other, whose hit lands from behind.
+  only after the first hit shows as damage. One unblocked swing (six health
+  and the wither that follows) leaves the bot below its fight bar of twelve,
+  and the hunt then never takes the rod. The legacy fixture
+  (blaze-crossfire-first-hit-shield) measured only the first exchange. This
+  is the crossing pen of combat/cover-fights, kept apart because it was
+  known-failing from 2026-10-20 to 22. The hit had four causes: the reflex
+  admitted the fight at reach, one tick short of a raised shield's five; a
+  fight ended when its target stepped back with the partner still in reach;
+  after a kill the body went back to the hunt, whose preparation lowered the
+  shield, before the partner was answered (all fixed 2026-10-21); and, with
+  the skeletons 144 degrees apart, the guard faced the nearer alone, though
+  vanilla's half-circle blocks both from between them (fixed 2026-10-22). It
+  then passed 31 of 32. The failure left: after a kill, the partner paused
+  3.4 blocks off, not closing, so the hunt took the body back and lowered
+  the shield, and the partner closed and swung inside the five ticks the
+  re-raised shield needed.
 
 world:
   type: flat
