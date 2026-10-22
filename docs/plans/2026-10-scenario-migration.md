@@ -316,9 +316,10 @@ Still open:
 ### Still flaky, with known or suspected cause
 
 - **Combat:**
-  - `combat/creeper-navigation` (Cave, Mixed), about 2 in 10: a bot that can
-    neither shelter nor heal holds for a recovery that never comes. The fix is
-    a shield-guarded fight, a policy change.
+  - `combat/creeper-navigation` (Cave): fixed in ec65068 (a bow drawn with a
+    zombie closing; see the confirmation-pass fixes). What remains is rarer:
+    arrows in the back during the creeper escape can still take Cave to the
+    bar.
   - `combat/skeleton-crossfire-navigation` (Elevated) and known-failing
     `skeleton-arena-crossfire`: arrows released within two ticks from
     opposite sides. One shield arc cannot cover them; the fix is positioning
@@ -391,6 +392,27 @@ that failed first and repeated live passes, no lag.
   - **Unit test:** reproduces the spin.
   - **Not proven:** nothing ties this loop to the freeze. If it recurs, the
     stuck client's stack needs capturing.
+- **`combat/creeper-navigation`, Cave, ec65068:** 38 of 40 passed at
+  37778b1 (creeper, creeper2); Mixed never fell below 17. The suspected cause, a hold for a recovery
+  that never comes, was not it: both failures were already below the bar of
+  12 when recovery began. Each took three hits first, two of them from zombie
+  #26 while the fight's quarry was skeleton #24. Bow admission checked only
+  arrows, so it lowered the shield for a twenty-tick draw with the zombie
+  melee-imminent. t00004 was hit at both releases. Across 30 trials the
+  zombie hit Cave 12 times, 6 of them mid-draw. A ranged quarry's bow now
+  yields to the shielded sword while another walker is imminent, and a draw
+  in progress is cancelled when one becomes imminent.
+  - **Unit test:** replays the t00004 tunnel scene at 12.91 s.
+  - **Proof:** 30 of 30 passed in a row (proof1), no lag, with no zombie
+    hit. creeper-reflex, wounded-navigation, wounded-hide and
+    navigation-handoff passed once each.
+  - **Still open:** the creeper escape turns Cave's back on the skeletons.
+    Arrows during the sprint are now its main damage, 16 hits in 30 trials,
+    and two of them left one trial at exactly 12. Below the bar,
+    recovery is still misjudged, which is a separate gap: the bot cannot see
+    `naturalRegeneration false`, so full hunger counts as healing, and it
+    hides or evades instead of fighting. In t00004 the evade ran past both
+    skeletons and the bot died. In t00007 a stationary guard stopped at 6.
 
 Still open in `combat/end-crystals-staircase` (1 death in the proof
 sessions): walking back across the fountain, the return route steps up into
