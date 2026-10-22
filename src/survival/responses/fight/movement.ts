@@ -89,7 +89,14 @@ export class FightMovement {
       combatItemsForTarget(this.scene.bot, this.scene.target),
       this.scene.policy.combat,
     );
-    if (!beganOutsideContact || !isRangedAttacker(this.scene.target) || !selectRangedLoadout(permitted)) return melee;
+    // Nor while another attacker closes: the turn keeps its sword and guard.
+    if (
+      !beganOutsideContact ||
+      !isRangedAttacker(this.scene.target) ||
+      !selectRangedLoadout(permitted) ||
+      this.weapons.meleeOutpacesDraw()
+    )
+      return melee;
     return anyGoal([
       melee,
       bowApproachGoal(this.scene.bot, this.scene.target.id, () => aimPoint(this.scene.bot, this.scene.target)),

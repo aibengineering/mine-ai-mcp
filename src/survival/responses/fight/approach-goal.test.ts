@@ -9,7 +9,7 @@ import type { FightScene } from "./scene.js";
 import type { FightWeapons } from "./weapons.js";
 
 /** A skeleton six blocks away on flat ground: outside sword reach, inside a clear bow line. */
-function fixture(bow: boolean) {
+function fixture(bow: boolean, attackerClosing = false) {
   const target = {
     id: 7,
     name: "skeleton",
@@ -36,7 +36,7 @@ function fixture(bow: boolean) {
     navigation: { world },
     policy: { combat: { bow, melee: true, shield: true } },
   } as unknown as FightScene;
-  const movement = new FightMovement(scene, {} as FightWeapons);
+  const movement = new FightMovement(scene, { meleeOutpacesDraw: () => attackerClosing } as unknown as FightWeapons);
   const goal = movement.approachGoal(true).resolve({ ...observation(), position: bot.entity.position });
   assert.equal(goal.kind, "active");
   if (goal.kind !== "active") throw new Error("unreachable");
@@ -50,4 +50,6 @@ test("a carried bow's firing line satisfies the approach only when the policy pe
   // a firing line the turn may not use left the bot spinning between guard and
   // a zero-length approach six blocks from a skeleton it never reached.
   assert.equal(fixture(false), false, "a forbidden bow's firing line is not an attack position");
+  // Nor while another attacker closes: the turn then keeps its sword and guard.
+  assert.equal(fixture(true, true), false, "a firing line the turn will not draw from is not an attack position");
 });

@@ -266,7 +266,7 @@ export class FightWeapons {
     this.scene.signal.throwIfAborted();
     return true;
   };
-  readonly shoot = async (shield: Item | null): Promise<GuardOutcome | "shot" | "obstructed"> =>
+  readonly shoot = async (shield: Item | null): Promise<GuardOutcome | "shot" | "obstructed" | "melee_imminent"> =>
     this.scene.execution.run("shoot", async () => {
       if (!this.hasClearShot()) return "obstructed";
       const guardIfUnsafe = async (remaining: number, stage: string) => {
@@ -288,6 +288,9 @@ export class FightWeapons {
         }
         const interrupted = await guardIfUnsafe(BOW_DRAW_TICKS - drawn, "drawing");
         if (interrupted) return interrupted;
+        // An attacker that closed during the draw: leaving this scope cancels
+        // the draw, and the next turn raises the guard against it.
+        if (shield && this.meleeOutpacesDraw()) return "melee_imminent";
         if (!(await this.aimBow())) return "obstructed";
         await waitForPhysicsTicks(this.scene.bot, 1, this.scene.signal);
       }
@@ -329,12 +332,30 @@ export class FightWeapons {
       return true;
     });
   };
-  readonly loadoutFrom = (feet: Vec3) => {
+  readonly #available = () =>
     // Endermen evade arrows by teleporting; a carried bow cannot answer this target.
-    const available = permittedCombatItems(
-      combatItemsForTarget(this.scene.bot, this.scene.target),
-      this.scene.policy.combat,
-    ).filter((item) => this.scene.target.name !== "enderman" || item.name !== "bow");
+    permittedCombatItems(combatItemsForTarget(this.scene.bot, this.scene.target), this.scene.policy.combat)
+      .filter((item) => this.scene.target.name !== "enderman" || item.name !== "bow");
+  /**
+   * Another walking attacker would swing while a bow is drawn.
+   *
+   * A draw lowers the shield for twenty ticks, and the shield blocks only five
+   * ticks after it rises again. An attacker inside melee imminence (in reach,
+   * or closing within the shield's readiness) covers that ground long before
+   * the arrow leaves. The quarry's own distance already chooses its weapon;
+   * this is everyone else. In creeper-navigation's Cave pen (creeper2
+   * 2026-10-22T01-39-20-451Z-t00004) the bot drew at skeleton #24 twice with
+   * zombie #26 imminent and was hit at both releases, 20 to 17 and 14 to 11;
+   * t00007 drew the same way. A chosen firing position keeps its bow, as it
+   * does against the quarry: the position, not the guard, answers contact.
+   */
+  readonly meleeOutpacesDraw = (): boolean =>
+    this.scene.policy.combat.melee &&
+    this.scene.policy.combat.shield &&
+    !this.scene.position.plan &&
+    this.scene.perception.read().some((threat) => threat.meleeImminent && threat.id !== this.scene.target.id);
+  readonly loadoutFrom = (feet: Vec3) => {
+    const available = this.#available();
     if (this.scene.position.plan || this.scene.movement === "hold") {
       const eye = feet.offset(0, STANDING_EYE_HEIGHT, 0);
       // Holding a position forbids chasing. The six-block open-ground
@@ -362,7 +383,13 @@ export class FightWeapons {
     }
     return selectCombatLoadout(available, this.scene.target.position.minus(feet));
   };
-  readonly currentLoadout = () => this.loadoutFrom(this.scene.bot.entity.position);
+  /** The loadout for this tick: a shielded sword instead of a bow while another attacker closes. */
+  readonly currentLoadout = (): CombatLoadout => {
+    const loadout = this.loadoutFrom(this.scene.bot.entity.position);
+    if (loadout.kind !== "bow" || !loadout.shield || !this.meleeOutpacesDraw()) return loadout;
+    const guarded = selectMeleeLoadout(this.#available());
+    return guarded.weapon && guarded.shield ? guarded : loadout;
+  };
   /** A commanded guard is not proof that the off-hand item survived a hit. */
   readonly maintainGuard = async (): Promise<void> => {
     if (!this.itemUse.shieldRaised || holdsShield(this.scene.bot)) return;
