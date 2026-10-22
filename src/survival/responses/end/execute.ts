@@ -100,6 +100,10 @@ const CRYSTAL_LINE_DIGS = 6;
 /** A perched cloud lives ten seconds of server time and a fireball's thirty; a loaded server stretches both. */
 const CRYSTAL_BREATH_WAIT_MS = 45_000;
 
+/** A native perch takes off after at most four ten-second flamings, with scans
+ * and roars between; the margin covers a loaded server stretching them. */
+const CRYSTAL_PERCH_WAIT_MS = 90_000;
+
 // Vanilla ServerLevel sends explosion packets only when distance squared is
 // below 4096. Beyond this range a destroyed crystal can vanish without a receipt.
 const EXPLOSION_RECEIPT_RANGE = 64;
@@ -435,12 +439,17 @@ export class EndCombat {
   /** Head approach and breath escape share observed body contact. Only a head
    * approach rejects breath cells: escape can begin inside one and must leave. */
   private movements(routeClouds: ReturnType<typeof readDragonBreathHazards> = []): MovementPolicy {
-    const base = createMovements(this.bot, {
+    return this.avoidingDragon(createMovements(this.bot, {
       allowParkour: false,
       allowSprinting: false,
       allowDigging: this.policy().combat.terrain.dig,
       scaffolding: this.policy().combat.terrain.place,
-    });
+    }), routeClouds);
+  }
+
+  /** Refuse every stance and jump inside the observed perched dragon's
+   * head, neck and wing boxes, and in `routeClouds`, on top of `base`. */
+  private avoidingDragon(base: MovementPolicy, routeClouds: ReturnType<typeof readDragonBreathHazards> = []): MovementPolicy {
     const contact = observeDragonEscape(this.bot);
     return {
       ...base,
@@ -939,6 +948,7 @@ export class EndCombat {
     const receipt = await this.observeCrystalShot(observation, signal);
     if (receipt.outcome !== "crystal_destroyed") return receipt;
     observation.beginReturn();
+    const perchDeadline = Date.now() + CRYSTAL_PERCH_WAIT_MS;
     for (;;) {
       if (this.danger) {
         const escape = await this.evade(signal);
@@ -949,8 +959,15 @@ export class EndCombat {
           };
         }
       }
-      const descended = await this.move(crystalReturnGoal(start), signal, () => this.danger, movements());
+      // The walk home can cross the fountain while the dragon sits on it. An
+      // unrestricted route stepped up into the perched wing's reach, the
+      // escape stepped one block down out of it, and the two alternated until
+      // the take-off launched the body. Route around that reach as the head
+      // approach does; when it closes every route, wait for the perch to change.
+      const descended = await this.move(crystalReturnGoal(start), signal, () => this.danger,
+        this.avoidingDragon(movements()));
       if (descended.kind === "changed") continue;
+      if (descended.kind === "failed" && await this.perchChanged(signal, perchDeadline)) continue;
       observation.finishReturn(descended.kind === "arrived");
       return descended.kind === "arrived"
         ? this.crystalResult(observation, "crystal_destroyed")
@@ -975,6 +992,25 @@ export class EndCombat {
       if (this.danger || this.footing.needed) return true;
       const present = new Set(readDragonCloudHazards(this.bot).map(cloud => cloud.id));
       if (beside.every(id => !present.has(id))) return true;
+      await waitForPhysicsTicks(this.bot, 5, signal);
+    }
+    return false;
+  }
+
+  /**
+   * A perched dragon's reach can close every return route from the clear cell
+   * the body stands on. Hold that cell until the perch changes (a turn moves
+   * the wings, a take-off ends it) or danger arrives, then route again. False
+   * when no dragon is perched, or the perch outlasts `deadline`.
+   */
+  private async perchChanged(signal: AbortSignal, deadline: number): Promise<boolean> {
+    const pose = () => JSON.stringify(Object.values(this.bot.entities)
+      .filter(entity => entity.isValid && entity.name === "ender_dragon" && isDragonPerched(dragonPhase(this.bot, entity)))
+      .map(entity => [entity.id, entity.position.x.toFixed(1), entity.position.y.toFixed(1), entity.position.z.toFixed(1), entity.yaw.toFixed(2)]));
+    const perched = pose();
+    if (perched === "[]") return false;
+    while (Date.now() < deadline) {
+      if (this.danger || this.footing.needed || pose() !== perched) return true;
       await waitForPhysicsTicks(this.bot, 5, signal);
     }
     return false;
