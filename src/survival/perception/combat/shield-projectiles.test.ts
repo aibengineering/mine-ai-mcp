@@ -6,6 +6,7 @@ import { Vec3 } from "vec3";
 import { botFixture } from "../../../test-support/bot.js";
 import { projectileReachesBody } from "../../positioning/combat/exposure.js";
 import { confirmShieldBlock, observeProjectileDefence, projectileShieldFacing, shieldFacing } from "../../weapons/shield-facing.js";
+import { arrowFlight, trackArrowFlights } from "./arrow-flight.js";
 import { CombatPerception } from "./observations.js";
 import { arrowImpact, arrowImpactInTicks, incomingShieldProjectiles, isIncomingArrow } from "./shield-projectiles.js";
 
@@ -353,4 +354,51 @@ test("a draw from a skeleton knocked above the bot is aimed at it although its r
   // A pitch the server did report still places the aim.
   bot.entities[52]!.pitch = Math.PI / 4;
   assert.ok(!observeProjectileDefence(bot)!.windingUp.some((entity) => entity.id === 52), "a draw aimed above the bot");
+});
+test("a shield block retires the arrow it stopped, so the guard turns to the next one", () => {
+  // skeleton-arena-crossfire, xfire-base2 2026-10-22T02-23-30-756Z (t00010).
+  // Arrow #75 from skeleton #68, eight blocks south, met the shield and the
+  // server confirmed the block (entity status 29) 167 ms before arrow #76
+  // from skeleton #67, five blocks east, landed. The server sends no new
+  // position for a deflected arrow for several ticks, so #75's flight was
+  // still extrapolated from its launch, one tick from the body, and stayed
+  // the most urgent shot: the guard kept facing south on the next send and
+  // turned east one tick too late.
+  const { bot } = fixture();
+  delete bot.entities[8];
+  bot.entity.id = 63;
+  bot.entity.position.set(5.1134, -60, -5.4886);
+  bot.entity.velocity.set(0, -0.0784, 0);
+  bot.entity.yaw = 2.4871;
+  const north = { id: 75, name: "arrow", isValid: true, width: 0.5, height: 0.5, metadata: [],
+    position: new Vec3(3.5222, -58.36, 2.3871), velocity: new Vec3(0.2351, 0.095, -1.5271) } as unknown as Bot["entity"];
+  const east = { id: 76, name: "arrow", isValid: true, width: 0.5, height: 0.5, metadata: [],
+    position: new Vec3(10.5807, -58.36, -6.7), velocity: new Vec3(-1.4656, 0.0613, 0.2519) } as unknown as Bot["entity"];
+  bot.entities[75] = north;
+  bot.entities[76] = east;
+  // Launch observations as old as they were when the block was confirmed.
+  let age = 246;
+  using _flights = trackArrowFlights(bot, () => performance.now() - age);
+  bot._client.emit("spawn_entity", { entityId: 75 });
+  age = 46;
+  bot._client.emit("spawn_entity", { entityId: 76 });
+  assert.equal(observeProjectileDefence(bot)!.projectiles[0]!.entity, north, "before the block, #75 lands first");
+
+  bot._client.emit("entity_status", { entityId: 63, entityStatus: 29 });
+  const defence = observeProjectileDefence(bot)!;
+  assert.deepEqual(defence.projectiles.map(({ entity }) => entity.id), [76]);
+  assert.ok(defence.facing.x > bot.entity.position.x + 0.5, "the guard faces the arrow still in flight");
+  // A later observation of the deflected arrow replaces the retired flight.
+  north.position.set(4.6428, -58.3737, -4.8888);
+  north.velocity.set(-0.0223, -0.0395, 0.1451);
+  bot._client.emit("sync_entity_position", { entityId: 75 });
+  assert.equal(arrowFlight(bot, north).velocity.z, 0.1451);
+});
+test("a block confirmed with no arrow at the body retires nothing", () => {
+  const { bot, arrow } = fixture();
+  bot.entity.id = 1;
+  using _flights = trackArrowFlights(bot, () => performance.now());
+  bot._client.emit("spawn_entity", { entityId: arrow.id });
+  bot._client.emit("entity_status", { entityId: 1, entityStatus: 29 });
+  assert.equal(incomingShieldProjectiles(bot)[0], arrow, "an arrow five ticks out is still coming");
 });
