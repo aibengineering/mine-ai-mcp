@@ -265,9 +265,23 @@ function evidence(
  * Earlier targets reserve their requested output while intermediate surplus
  * remains available to later targets.
  */
+/**
+ * minecraft-data omits stripped-log → planks recipes (a data gap in all versions to date).
+ * Alias each stripped_X item to its base X so the planner can reach the planks recipe.
+ */
+function addStrippedItemAliases(bot: Bot, available: Map<number, number>): void {
+  for (const item of bot.inventory.items()) {
+    const name = bot.registry.items[item.type]?.name ?? "";
+    if (!name.startsWith("stripped_")) continue;
+    const baseItem = bot.registry.itemsByName[name.slice("stripped_".length)];
+    if (baseItem) addCount(available, baseItem.id, item.count);
+  }
+}
+
 export function planCraftingFromInventory(bot: Bot, targets: readonly CraftTarget[]): CraftPreparation {
   const available = new Map<number, number>();
   for (const item of bot.inventory.items()) addCount(available, item.type, item.count);
+  addStrippedItemAliases(bot, available);
   let state: PlanningState = {
     available,
     craftedSurplus: new Map(),
