@@ -70,6 +70,10 @@ export class CombatExecution {
   #depth = 0;
   readonly #phaseHistory: Partial<Record<CombatPhase, number>> = {};
 
+  get phase(): CombatPhase {
+    return this.#phase;
+  }
+
   tick(): void {
     this.#ticks++;
     this.#phaseHistory[this.#phase] = (this.#phaseHistory[this.#phase] ?? 0) + 1;
