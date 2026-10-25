@@ -43,6 +43,16 @@ export interface DiveAdmission {
   readonly airTicks: number;
 }
 
+/**
+ * A cell of caller-budgeted submerged travel: the route itself ends in air, so
+ * the cell needs no ascent column of its own, only to lie within the budget.
+ * Under an obsidian ceiling every cell lacks one, and an air pocket six blocks
+ * along was unreachable to a dive that asked each cell for its own way up.
+ */
+export function admitsBudgetedSwim(feet: BlockPosition, budget: DiveAdmission): boolean {
+  return swimTravelTicks(budget.origin, feet) <= budget.airTicks;
+}
+
 export function admitsDive(read: WorldView["blockAt"], feet: BlockPosition, budget: DiveAdmission, workTicks = 0): boolean {
   const surface = openWaterSurface(read, feet);
   return surface !== null && swimTravelTicks(budget.origin, feet) + workTicks +

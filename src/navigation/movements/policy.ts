@@ -61,6 +61,14 @@ export interface ScaffoldSelection {
 export interface MovementPolicy {
   /** Scoped open-water admission, supplied by the navigation runtime. */
   readonly dive?: DiveAdmission;
+  /**
+   * Submerged travel the caller has budgeted itself, for a route whose goal
+   * ends in air. A submerged cell then needs no ascent column above it, only
+   * to lie within `airTicks` of swimming from `origin`; the runtime's `dive`
+   * asks each cell for its own way up, because a planned dive must be able to
+   * surface wherever it is stopped.
+   */
+  readonly submergedTravel?: DiveAdmission;
   readonly allowDigging: boolean;
   readonly allowPlacing: boolean;
   readonly allowDoors: boolean;
@@ -94,6 +102,11 @@ export interface MovementPolicy {
   decideMovement?(kind: MovementKind, from: BlockPosition, to: BlockPosition): PolicyDecision;
   /** Whether the route may place a scaffold in this cell, and at what penalty. */
   decidePlace(x: number, y: number, z: number, world: WorldView): PolicyDecision;
+}
+
+/** Whether the route may travel fully submerged, under either admission. */
+export function travelsSubmerged(policy: Pick<MovementPolicy, "dive" | "submergedTravel">): boolean {
+  return policy.dive !== undefined || policy.submergedTravel !== undefined;
 }
 
 const DEFAULT_TICKS: Readonly<Record<MovementKind, number>> = Object.freeze({

@@ -4,7 +4,10 @@ import { MemoryWorld } from "./memory-world.js";
 import { admitsDive, holdSwimDepth, openWaterSurface, swimTravelTicks } from "./swimming.js";
 import { createMovementCatalogue } from "../movements/catalogue.js";
 import { createMovementPolicy } from "../movements/policy.js";
-import { WELL_FED, planningStart } from "../../test-support/navigation.js";
+import { WELL_FED, observation, planningStart } from "../../test-support/navigation.js";
+import type { ResolvedGoal } from "../goals/goal.js";
+import { headOutOfLiquidGoal } from "../goals/index.js";
+import { IncrementalSearch } from "../search/search.js";
 
 function pool() {
   const world = new MemoryWorld();
@@ -77,4 +80,79 @@ test("depth holding arrests inherited momentum and stays in a band under pinned 
   assert.ok(max - min < 0.18, `hold varied from ${min} to ${max}`);
   assert.ok(swimTravelTicks({ x: 0, y: 63, z: 0 }, { x: 0, y: 61, z: 0 }) >
     swimTravelTicks({ x: 0, y: 61, z: 0 }, { x: 0, y: 63, z: 0 }));
+});
+
+/** PocketSwimmer's room: water three deep under a sealed ceiling, air over its far end. */
+function sealedRoom() {
+  const world = new MemoryWorld();
+  const water = { stateId: 2, traits: { empty: true, liquid: "water" as const, liquidSource: true, safeToBreak: false } };
+  for (let x = -1; x <= 9; x++) for (let z = -2; z <= 2; z++) for (let y = 58; y <= 64; y++) {
+    const inside = x >= 0 && x <= 8 && z >= -1 && z <= 1;
+    world.load({ x, y, z }, inside && y >= 59 && y <= 61 ? water
+      : inside && x >= 6 && (y === 62 || y === 63) ? { stateId: 0 } : { stateId: 1 });
+  }
+  return world;
+}
+
+test("budgeted submerged travel reaches air a ceiling hides, within the budget and not past it", () => {
+  const world = sealedRoom();
+  const feet = { x: 0, y: 60, z: 0 };
+  const search = (submergedTravel?: { origin: typeof feet; airTicks: number }) => new IncrementalSearch({
+    id: "escape",
+    start: planningStart(feet),
+    goal: headOutOfLiquidGoal().resolve(observation(0.5, 60, 0.5)) as Extract<ResolvedGoal, { kind: "active" }>,
+    now: () => 0,
+    context: {
+      world, player: WELL_FED, catalogue: createMovementCatalogue(),
+      policy: createMovementPolicy({ allowDigging: false, allowPlacing: false, ...(submergedTravel && { submergedTravel }) }),
+    },
+  }).advance({ maximumMilliseconds: Infinity });
+  // A planned dive asks every cell for its own way up; under the ceiling none has one.
+  assert.notEqual(search().kind, "complete");
+  const escape = search({ origin: feet, airTicks: 300 });
+  assert.equal(escape.kind, "complete");
+  if (escape.kind !== "complete") return;
+  assert.ok(escape.plan.end.x >= 6 && escape.plan.end.y === 61, `surfaced at ${JSON.stringify(escape.plan.end)}`);
+  // Six blocks of swimming is 92 ticks: a 60-tick budget cannot reach the pocket.
+  assert.notEqual(search({ origin: feet, airTicks: 60 }).kind, "complete");
+});
+
+test("budgeted submerged travel digs up through a roof it may break, and only with a budget", () => {
+  // SealedDiver's chamber: water three deep under two blocks of stone, air above.
+  const world = new MemoryWorld();
+  const water = { stateId: 2, traits: { empty: true, liquid: "water" as const, liquidSource: true, safeToBreak: false } };
+  for (let x = -3; x <= 3; x++) for (let z = -3; z <= 3; z++) for (let y = 58; y <= 66; y++) {
+    const inside = Math.abs(x) <= 2 && Math.abs(z) <= 2;
+    world.load({ x, y, z }, inside && y >= 59 && y <= 61 ? water : y >= 64 ? { stateId: 0 } : { stateId: 1 });
+  }
+  const feet = { x: 0, y: 60, z: 0 };
+  const search = (submergedTravel?: { origin: typeof feet; airTicks: number }) => new IncrementalSearch({
+    id: "dig-up",
+    start: planningStart(feet),
+    goal: headOutOfLiquidGoal().resolve(observation(0.5, 60, 0.5)) as Extract<ResolvedGoal, { kind: "active" }>,
+    now: () => 0,
+    context: {
+      world, player: WELL_FED, catalogue: createMovementCatalogue(),
+      policy: createMovementPolicy({
+        allowPlacing: false,
+        ...(submergedTravel && { submergedTravel }),
+        // The Mineflayer policy's rule: a break beside a water source floods.
+        confirmBreak: (_block, { x, y, z }, view) =>
+          [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => {
+            const beside = view.blockAt(x + dx!, y, z + dz!);
+            return beside.kind === "loaded" && beside.traits.liquidSource;
+          })
+            ? { kind: "prohibited", reason: "opens into liquid" }
+            : { kind: "allowed" },
+      }),
+    },
+  }).advance({ maximumMilliseconds: Infinity });
+  assert.notEqual(search().kind, "complete");
+  const escape = search({ origin: feet, airTicks: 400 });
+  assert.equal(escape.kind, "complete");
+  if (escape.kind !== "complete") return;
+  // One break opens the cell over the surface: the head is in air beneath the second.
+  assert.deepEqual(escape.plan.end, { x: 0, y: 61, z: 0 });
+  assert.deepEqual(escape.plan.steps.flatMap(({ operations }) => operations.filter(({ kind }) => kind === "break")
+    .map((operation) => "position" in operation ? operation.position : null)), [{ x: 0, y: 62, z: 0 }]);
 });

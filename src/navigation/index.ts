@@ -57,6 +57,7 @@ export {
   anyGoal,
   customGoal,
   exactBlockGoal,
+  headOutOfLiquidGoal,
   itemPickupGoal,
   nearEntityGoal,
   nearGoal,
