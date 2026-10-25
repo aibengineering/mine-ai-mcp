@@ -282,6 +282,48 @@ test("migrates a version 1 store on open, keeping its notes and dropping retired
   assert.deepEqual(tables.map((row) => row.name), ["event_read_state"]);
 });
 
+/**
+ * A development-era store, world 879121 on the author's machine, had both the
+ * old status table and the old response table. Dropping the status table left
+ * frontier_navigation pointing at nothing, and the response table's rename then
+ * re-checked every view and failed, so the upgrade rolled back and the store
+ * could not open at all.
+ */
+test("migrates a version 1 store whose views read the status table it replaces", (t) => {
+  const storage = persistentBotData(t);
+  const data = storage.open("world");
+  const file = persistentFile(data);
+  data.close();
+
+  const database = new DatabaseSync(file);
+  const view = (database.prepare("SELECT sql FROM sqlite_schema WHERE name = 'frontier_navigation'").get() as { sql: string }).sql;
+  database.exec(`
+    DROP VIEW frontier_navigation;
+    DROP TABLE bot_status;
+    CREATE TABLE bot_status (
+      bot_id TEXT PRIMARY KEY, dimension TEXT, x REAL, y REAL, z REAL, chunk_x INTEGER, chunk_z INTEGER,
+      yaw REAL, pitch REAL, health REAL, food INTEGER, updated_at TEXT
+    );
+    CREATE TABLE action_responses_old (
+      request_id INTEGER PRIMARY KEY, responded_at TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL CHECK(duration_ms >= 0),
+      status TEXT NOT NULL CHECK(status IN ('succeeded','partial','failed','cancelled')),
+      response_json TEXT NOT NULL CHECK(json_valid(response_json)),
+      FOREIGN KEY(request_id) REFERENCES action_requests(request_id) ON DELETE CASCADE
+    ) STRICT;
+    DROP TABLE action_responses;
+    ALTER TABLE action_responses_old RENAME TO action_responses;
+  `);
+  database.exec(view);
+  database.prepare("UPDATE sql_bot_data_metadata SET value = '1' WHERE key = 'schema_version'").run();
+  closeSqlDatabase(database);
+
+  const migrated = storage.open("world");
+  assert.equal(migrated.read("SELECT value FROM sql_bot_data_metadata WHERE key = 'schema_version'")[0]?.value, "2");
+  assert.deepEqual(migrated.read("SELECT * FROM frontier_navigation"), []);
+  assert.ok(migrated.read("SELECT name FROM pragma_table_info('bot_status')").some((row) => row.name === "time_of_day"));
+});
+
 test("refuses a store at a schema version it does not know and names the file", (t) => {
   const storage = persistentBotData(t);
   const data = storage.open("world");

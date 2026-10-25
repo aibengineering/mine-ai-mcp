@@ -345,6 +345,11 @@ function migrateV1ToV2(database: DatabaseSync): void {
     database.prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?").get(name) !== undefined;
   database.exec("BEGIN IMMEDIATE");
   try {
+    // The schema script recreates every view. An old view left in place can
+    // name a table dropped below, and the next rename then re-checks it and
+    // fails: a store with the old status and response tables never opened.
+    const views = database.prepare("SELECT name FROM sqlite_schema WHERE type = 'view'").all() as { name: string }[];
+    for (const { name } of views) database.exec(`DROP VIEW "${name.replaceAll('"', '""')}"`);
     if (tableExists("notification_state") && !tableExists("event_read_state")) {
       database.exec("ALTER TABLE notification_state RENAME TO event_read_state");
     }
