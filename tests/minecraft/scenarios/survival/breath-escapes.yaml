@@ -1,8 +1,8 @@
 template: ../../templates/flat-single-action-no-regen.yaml
 
-tags: [known-failing, regression]
+tags: [acceptance, regression]
 description: >-
-  Every situation the breath reflex serves, in thirteen pens side by side.
+  Every situation the breath reflex serves, in twelve pens side by side.
   Rising alone: ShallowIdler in a two-deep lake, DeepIdler at the bottom of a
   six-deep pool, DeepRiser in an eighteen-deep column, and DeepSea on the bed
   of a twenty-deep sea with no edge in reach, which must also stay afloat.
@@ -10,35 +10,27 @@ description: >-
   dolphin publishing 6000 air (the eighth playthrough's drowning), OffsetDiver
   is in a falling column whose overhang catches its shoulder (EnderSeeker,
   2026-09-09), and LowAirDiver, empty-handed and at 120 air, has to swim clear
-  of a bedrock overhang. Beyond the reflex's two-block escape search, under
-  obsidian it cannot dig: PocketSwimmer with air six blocks east,
-  TunnelSwimmer fourteen blocks along a flooded tunnel, LidSwimmer with a
-  stone pickaxe that cannot mine the ceiling and air four blocks east, and
-  SkylightSwimmer with an air shaft four blocks east. With a request: KnockedIn
-  is walking a pier when it is pushed into ten-deep water, and must surface
-  and finish the walk; PocketRescue is PocketSwimmer's room, where the agent
-  asks to swim to the air while the reflex holds the body. Regeneration is
-  off, so each health floor bounds the drowning taken.
-  Observed at f8e0965: PocketSwimmer, TunnelSwimmer, LidSwimmer,
-  SkylightSwimmer and PocketRescue drown. In each, the idle water-surface rise
-  has lifted the bot against the obsidian, the reflex fires at air 18 with
-  roof obsidian, holds jump, tries to hand-dig obsidian it cannot harvest,
-  finds no escape within two blocks, and keeps the body until the bot drowns
-  about 25 s in; PocketRescue's navigate is admitted only after the respawn.
-  KnockedIn's walk fails as soon as it is pushed in: replanning from the
-  seabed finds no path after expanding one node, and the request ends
-  instead of the bot surfacing and finishing the walk. A failed request ends
-  the whole trial, so the rising and roofed pens are seen alive at full
-  health only until then.
-  The planned-dive cases, where navigation owns the breath budget, are
-  pathfinder/underwater-course's.
+  of a bedrock overhang. Air beyond the next stroke, under obsidian no tool
+  here can dig, reached by a route through the water beneath it:
+  PocketSwimmer with air six blocks east, TunnelSwimmer fourteen blocks along
+  a flooded tunnel, LidSwimmer with a stone pickaxe that cannot mine the
+  ceiling and air four blocks east, and SkylightSwimmer with an air shaft four
+  blocks east. With a request: PocketRescue is PocketSwimmer's room, where the
+  agent asks to swim to the air the reflex has already reached. Regeneration
+  is off, so each health floor bounds the drowning taken.
+  Until the response routed through navigation, the four obsidian rooms and
+  PocketRescue drowned about 25 s in: the idle rise had lifted each bot
+  against the ceiling, and the reflex held jump and hand-dug obsidian until
+  it died. A walk knocked into the water mid-route is
+  known-failing/survival/knocked-in-walk's; the planned-dive cases, where
+  navigation owns the breath budget, are pathfinder/underwater-course's.
 
 # Pens sit side by side along x, sealed or walled so nothing crosses between
 # them. Every bot waits on a dry stand, because the host prepares a grounded,
 # still body; the schedule drops each into its water on the first tick, so it
 # starts with a full bar. LowAirDiver is released later, at 120 air.
 reset:
-  - "fill -8 -61 -18 330 -18 18 air"
+  - "fill -8 -61 -18 280 -18 18 air"
 
 setup:
   # LowAirDiver's air, copied every tick by `tick` below.
@@ -126,13 +118,6 @@ geometry:
   - fill: { block: water, from: [196, -59, -14], to: [224, -40, 14] }
   - fill: { block: air, from: [196, -39, -14], to: [224, -39, 14] }
 
-  # KnockedIn: a stone pier at -50 running east from x 236 to x 250 between
-  # walls, over water -60..-51; the walk starts at the west end.
-  - fill: { block: stone, from: [234, -61, -7], to: [252, -48, 7] }
-  - fill: { block: water, from: [235, -60, -6], to: [251, -51, 6] }
-  - fill: { block: air, from: [235, -50, -6], to: [251, -48, 6] }
-  - fill: { block: stone, from: [236, -50, 0], to: [250, -50, 0] }
-
   # PocketRescue: PocketSwimmer's room again, for the agent's rescue.
   - fill: { block: obsidian, from: [259, -60, -3], to: [271, -54, 3] }
   - fill: { block: water, from: [260, -59, -2], to: [267, -57, 2] }
@@ -175,8 +160,6 @@ players:
     pos: [187.5, -54, 0.5]
   - name: DeepSea
     pos: [195.5, -38, 0.5]
-  - name: KnockedIn
-    pos: [236.5, -49, 0.5]
   - name: PocketRescue
     pos: [262.5, -53, 0.5]
 
@@ -186,10 +169,9 @@ client:
   args: [client-host.ts, drivers/action-sequence.ts]
 
 params:
-  # Every pen holds its reflexes for 90 s, past PocketRescue's longest request
-  # (140 ticks, up to 700 waiting for an idle body, the swim, then 200): a pen
-  # whose driver returned early would sit in the water with them closed, and
-  # sink and drown while the trial waited for the last pen.
+  # Every pen holds its reflexes for 90 s: a pen whose driver returned early
+  # would sit in the water with them closed, and sink and drown while the
+  # trial waited for the last pen.
   players:
     PocketSwimmer: { waitTicks: 1800 }
     TunnelSwimmer: { waitTicks: 1800 }
@@ -202,14 +184,6 @@ params:
     OffsetDiver: { waitTicks: 1800 }
     LowAirDiver: { waitTicks: 1800 }
     DeepSea: { waitTicks: 1800 }
-    KnockedIn:
-      # The schedule pushes it into the water partway along the pier; the walk
-      # must survive the breath response and still arrive.
-      waitTicks: 20
-      actions:
-        - action: navigate
-          input: { x: 249, y: -49, z: 0, range: 1, dig: false, scaffold: false }
-      holdTicks: 600
     PocketRescue:
       # The breath reflex fires at twelve to eighteen points of air, so by 140
       # ticks after the drop it owns the body. Wait for it to let go before
@@ -219,10 +193,13 @@ params:
         - action: navigate
           input: { x: 269, y: -57, z: 0, range: 1, dig: false, scaffold: false }
           idleWithinTicks: 700
-      holdTicks: 200
+      # Held past the 90 s the other pens wait, since the goals are judged
+      # when the last one finishes: released early, its idle body sank to the
+      # pocket's floor, out of reach of the target, and drowned there.
+      holdTicks: 1800
 
 tick:
-  - "gamemode spectator @a[name=!PocketSwimmer,name=!TunnelSwimmer,name=!LidSwimmer,name=!SkylightSwimmer,name=!DeepRiser,name=!SealedDiver,name=!DeepIdler,name=!ShallowIdler,name=!OffsetDiver,name=!LowAirDiver,name=!DeepSea,name=!KnockedIn,name=!PocketRescue,gamemode=!spectator]"
+  - "gamemode spectator @a[name=!PocketSwimmer,name=!TunnelSwimmer,name=!LidSwimmer,name=!SkylightSwimmer,name=!DeepRiser,name=!SealedDiver,name=!DeepIdler,name=!ShallowIdler,name=!OffsetDiver,name=!LowAirDiver,name=!DeepSea,name=!PocketRescue,gamemode=!spectator]"
   - "execute as @a[name=LowAirDiver] store result score @s ml_air run data get entity @s Air"
 
 schedule:
@@ -243,7 +220,6 @@ schedule:
       - "tp PocketRescue 261.5 -59 0.5"
       # Tags left on a reused player by an earlier trial must not count.
       - "tag LowAirDiver remove ml_released"
-      - "tag KnockedIn remove ml_pushed"
   # Released under the overhang with 120 of 300 air: rising alone cannot
   # breathe there and digging cannot open bedrock.
   - afterTicks: 1
@@ -251,13 +227,6 @@ schedule:
     run:
       - "tp LowAirDiver 175.02621917259805 -36 0.08979961991747"
       - "tag LowAirDiver add ml_released"
-  # Pushed off the pier into ten-deep water once it is a third of the way
-  # along, as a knockback or a misstep would leave it.
-  - afterTicks: 1
-    when: "entity @a[name=KnockedIn,x=240,y=-50,z=-1,dx=3,dy=3,dz=2]"
-    run:
-      - "tp KnockedIn 242.5 -59 4.5"
-      - "tag KnockedIn add ml_pushed"
 
 goal:
   kind: all
@@ -302,12 +271,6 @@ goal:
     - { kind: health, who: DeepSea, health: 18 }
     - { kind: survive, who: DeepSea, seconds: 40 }
     - { kind: completion, who: DeepSea }
-    # Pushed in, surfaced, and the walk finished on the pier's east end.
-    - { kind: entityCount, entity: player, tag: ml_pushed, min: 1 }
-    - { kind: reach, who: KnockedIn, pos: [249.5, -49, 0.5], radius: 1.5 }
-    - { kind: health, who: KnockedIn, health: 16 }
-    - { kind: survive, who: KnockedIn, seconds: 40 }
-    - { kind: completion, who: KnockedIn }
     - { kind: reach, who: PocketRescue, pos: [269.5, -57, 0.5], radius: 2 }
     - { kind: survive, who: PocketRescue, seconds: 30 }
     - { kind: completion, who: PocketRescue }

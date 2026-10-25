@@ -1,0 +1,68 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [known-failing, regression]
+description: >-
+  KnockedIn walks a stone pier and is pushed into the ten-deep water beside it
+  a third of the way along, as a knockback or a misstep would leave it. It
+  must surface and still finish the walk. Regeneration is off, so the health
+  floor bounds the drowning taken.
+  Observed at f8e0965, and still with the breath response routing through
+  navigation: the walk fails as soon as the bot is pushed in. Its route was
+  planned on dry land with no dive admission, so replanning from the seabed
+  finds no path after expanding one node, and the request ends instead of
+  the bot surfacing and finishing the walk. It was a pen of
+  survival/breath-escapes, where a failed request ended the whole trial.
+
+reset:
+  - "fill -2 -61 -9 20 -46 9 air"
+
+# A stone pier at -50 running east from x 2 to x 16 between walls, over water
+# -60..-51; the walk starts at the west end.
+geometry:
+  - fill: { block: stone, from: [0, -61, -7], to: [18, -48, 7] }
+  - fill: { block: water, from: [1, -60, -6], to: [17, -51, 6] }
+  - fill: { block: air, from: [1, -50, -6], to: [17, -48, 6] }
+  - fill: { block: stone, from: [2, -50, 0], to: [16, -50, 0] }
+
+players:
+  - name: KnockedIn
+    pos: [2.5, -49, 0.5]
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  players:
+    KnockedIn:
+      waitTicks: 20
+      actions:
+        - action: navigate
+          input: { x: 15, y: -49, z: 0, range: 1, dig: false, scaffold: false }
+      holdTicks: 600
+
+tick:
+  - "gamemode spectator @a[name=!KnockedIn,gamemode=!spectator]"
+
+schedule:
+  - afterTicks: 0
+    run:
+      # A tag left on a reused player by an earlier trial must not count.
+      - "tag KnockedIn remove ml_pushed"
+  - afterTicks: 1
+    when: "entity @a[name=KnockedIn,x=6,y=-50,z=-1,dx=3,dy=3,dz=2]"
+    run:
+      - "tp KnockedIn 8.5 -59 4.5"
+      - "tag KnockedIn add ml_pushed"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    # Pushed in, surfaced, and the walk finished on the pier's east end.
+    - { kind: entityCount, entity: player, tag: ml_pushed, min: 1 }
+    - { kind: reach, who: KnockedIn, pos: [15.5, -49, 0.5], radius: 1.5 }
+    - { kind: health, who: KnockedIn, health: 16 }
+    - { kind: survive, who: KnockedIn, seconds: 40 }
+    - { kind: completion, who: KnockedIn }
