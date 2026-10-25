@@ -129,6 +129,12 @@ export interface MovementGenerationContext extends GenerationContext {
   readonly support: BlockObservation;
   /** The cell the head rises into when the bot jumps, two above the feet, prepared once: an ascent or a gap jump in any direction passes it. */
   readonly takeoffHead: number;
+  /**
+   * The cell the head is in, prepared once. An eye inside a block sees only
+   * that block, as a player's pick lands on it, so a movement that digs clears
+   * it first; see `MovementCandidates.offer`.
+   */
+  readonly ownHead: number;
 }
 
 export interface MovementCatalogue {
@@ -845,6 +851,7 @@ export function createMovementCatalogue(): MovementCatalogue {
       const view = cells.view;
       let sight: StanceSight | undefined;
       let takeoffHead: number | undefined;
+      let ownHead: number | undefined;
       const context: MovementGenerationContext = {
         world,
         policy: generation.policy,
@@ -865,6 +872,9 @@ export function createMovementCatalogue(): MovementCatalogue {
         support: cells.look(feet.x, feet.y - 1, feet.z),
         get takeoffHead() {
           return (takeoffHead ??= prepareHeadCell(feet.x, feet.y + 2, feet.z, context));
+        },
+        get ownHead() {
+          return (ownHead ??= prepareHeadCell(feet.x, feet.y + 1, feet.z, context));
         },
       };
       movements.begin(context);

@@ -20,3 +20,24 @@ test("the nearest clear cell skips one a mob stands in", () => {
   assert.notDeepEqual(chosen.position, new Vec3(-1, 64, 0));
   assert.equal(chosen.position.distanceTo(new Vec3(0, 64, 0)), 1);
 });
+
+// progression-to-diamond@3 (merge-recheck 2026-10-25T09-57-07-322Z-t00007):
+// collect_block reached the iron at 1614,65,1579 by digging straight down from
+// the surface at y 71 and stood in the ore's cell, at (1614.51, 65, 1579.45).
+// Every cell at feet level and the step down was stone, the step up was the
+// bot's own head, and the temporary furnace failed with no_cell. The shaft
+// above the head is clear and within reach.
+test("at the bottom of a one-wide shaft the cell over the head is chosen", () => {
+  const shaft: Record<string, string> = {};
+  for (let y = 65; y <= 70; y += 1) shaft[`1614,${y},1579`] = "air";
+  const bot = botFixture({ groundY: 70, blocks: shaft, position: new Vec3(1614.51, 65, 1579.45) });
+
+  const chosen = chooseCell(bot, "furnace", 3);
+  assert.deepEqual(chosen?.position, new Vec3(1614, 67, 1579));
+});
+
+test("the cell over the head is not chosen while a nearer cell is clear", () => {
+  const bot = botFixture({ groundY: 63 });
+  const chosen = chooseCell(bot, "furnace", 3);
+  assert.equal(chosen?.position.y, 64, "open ground keeps a floor cell at feet level");
+});

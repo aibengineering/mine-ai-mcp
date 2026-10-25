@@ -547,6 +547,30 @@ test("a step up clears the takeoff headroom needed to jump", () => {
   assert.ok(ascending && breaksAt(ascending, 0, 65));
 });
 
+// progression-to-diamond@2 (proof-shaft 2026-10-25T10-48-24-379Z-t00005): the
+// bot was arranged at -808,105,800 with a leaf block in its head cell and a log
+// beside it at head height. The eye inside the leaves could see no other block,
+// so every movement that dug was refused and the first search expanded only its
+// start: "visited 1 nodes, generated 1". A player's pick lands on the block
+// around the eye, so that block comes out first.
+test("a stance whose head is inside a block clears that block before any other dig", () => {
+  const world = flat([{ x: 0, y: 64, z: 0 }, SOLID]);
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]] as const)
+    world.load({ x: dx, y: 64, z: dz }, SOLID);
+
+  const moves = generateFrom(world, ORIGIN);
+  const east = moves.find(to(1, 63, 0));
+  assert.ok(east, "the eastward walk is offered once the head is cleared");
+  const breaks = east.step.operations.flatMap((operation) => (operation.kind === "break" ? [operation.position] : []));
+  assert.deepEqual(breaks, [{ x: 0, y: 64, z: 0 }, { x: 1, y: 64, z: 0 }]);
+  assert.ok(east.step.effects.some((effect) => effect.kind === "break" && effect.position.y === 64 && effect.position.x === 0));
+
+  // A walk that digs nothing does not pay for the head.
+  world.load({ x: -1, y: 64, z: 0 }, AIR);
+  const west = generateFrom(world, ORIGIN).find(to(-1, 63, 0));
+  assert.ok(west && !breaksAt(west, 0, 64));
+});
+
 test("an exposed solid tread is stepped onto instead of dug through", () => {
   const towardTread = generateFrom(flat([{ x: 1, y: 63, z: 0 }, SOLID]), ORIGIN).find(
     (movement) => movement.step.to.x === 1 && movement.step.to.z === 0,
