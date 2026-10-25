@@ -46,6 +46,21 @@ export const BREATH_ROOF_AIR = 18;
 
 /** Give up the claim after this long and let the action have the body back. */
 export const SURFACE_MAXIMUM_TICKS = 600;
+
+/** Once the air is spent, drowning takes two health every twenty ticks. */
+export const DROWNING_TICKS_PER_HEALTH = 10;
+/** Swim estimates are approximate; a route to air must arrive with this many ticks to spare. */
+export const ESCAPE_MARGIN_TICKS = 20;
+
+/**
+ * How long a submerged body can travel before it dies: its air, then its
+ * health. A route that arrives hurt still beats drowning in place, so the
+ * whole of both is the budget; the route itself is the fastest, so it spends
+ * health only when no route fits in the air.
+ */
+export function survivableSubmergedTicks(airTicks: number, health: number): number {
+  return Math.max(0, airTicks + health * DROWNING_TICKS_PER_HEALTH - ESCAPE_MARGIN_TICKS);
+}
 /**
  * Ordinary eating leaves room for a filling meal. A wounded bot also eats
  * when its hunger is below the eighteen required for natural regeneration.
