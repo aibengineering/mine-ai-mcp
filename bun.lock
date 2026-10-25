@@ -20,7 +20,7 @@
         "@types/node": "^26.0.1",
         "highlight.js": "^11.12.0",
         "markdown-it": "^15.0.0",
-        "mine-labs": "github:aibengineering/mine-labs#cdca91c274cb1b4f73e8817a1287deaa189aa88b",
+        "mine-labs": "github:aibengineering/mine-labs#ca5868a58024483de4cb7d1a7a7c3c7d906b33fe",
         "tsx": "^4.23.1",
         "typescript": "^6.0.3",
       },
@@ -289,7 +289,7 @@
 
     "mime-types": ["mime-types@3.0.2", "", { "dependencies": { "mime-db": "^1.54.0" } }, "sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A=="],
 
-    "mine-labs": ["mine-labs@github:aibengineering/mine-labs#cdca91c", { "dependencies": { "commander": "^13.1.0", "picocolors": "^1.1.1", "rcon-srcds": "^2.1.1", "yaml": "^2.9.0", "zod": "^4.0.0" }, "bin": { "mine-labs": "./bin/mine-labs.mjs" } }, "aibengineering-mine-labs-cdca91c", "sha512-XzsN0Cdf7TbZ8dYMNVxEhEjIFA3skVJJ7gdlTGZsZejeHBo9QQolDO5MPteE2RWoSahawtEMMZ6KcmMBThQ5wg=="],
+    "mine-labs": ["mine-labs@github:aibengineering/mine-labs#ca5868a", { "dependencies": { "commander": "^13.1.0", "picocolors": "^1.1.1", "rcon-srcds": "^2.1.1", "yaml": "^2.9.0", "zod": "^4.0.0" }, "bin": { "mine-labs": "./bin/mine-labs.mjs" } }, "aibengineering-mine-labs-ca5868a", "sha512-cgPPono74CVStVAKkHFg34tkXPDLl+9gdgc7wQmuu15z7qRPliHSCD0tEj6PfPf2S8AytGTLtYApdVnSR+jdTA=="],
 
     "minecraft-data": ["minecraft-data@https://github.com/aibengineering/node-minecraft-data/releases/download/mine-ai-c932f743/minecraft-data-3.116.0.tgz", {}, "sha512-MNQ3stmo691WgdUA2K4JJFCz5Aa6lBNxsE7pp2CiOBMY3eJpeFXweFB4LPHT5RcnGtKvZKqaIEDxAiFtlgLYTg=="],
 
