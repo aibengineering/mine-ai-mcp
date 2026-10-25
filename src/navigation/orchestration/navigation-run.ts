@@ -426,17 +426,23 @@ export class NavigationRun {
   /** Start the plan-ahead search from where a partial segment will end, stoppable on its own. */
   #startContinuation(goal: ActiveGoal, plan: RoutePlan, observation: NavigationObservation): PendingContinuation {
     const control = new AbortController();
+    const result = this.#plan(
+      goal,
+      plan.endNode,
+      observation,
+      "segment_continuation",
+      AbortSignal.any([this.context.signal, control.signal]),
+      { effects: plan.steps.flatMap((step) => step.effects) },
+    );
+    // Nothing awaits this search until the segment it follows has been walked.
+    // A failure before then is still met there, by `#planFromHere` or cleanup;
+    // until then it must not reach the process as an unhandled rejection,
+    // which Bun treats as fatal.
+    result.catch(() => undefined);
     return {
       from: plan.endNode,
       scaffold: this.#policy.scaffold,
-      result: this.#plan(
-        goal,
-        plan.endNode,
-        observation,
-        "segment_continuation",
-        AbortSignal.any([this.context.signal, control.signal]),
-        { effects: plan.steps.flatMap((step) => step.effects) },
-      ),
+      result,
       abandon: () => control.abort("continuation abandoned"),
     };
   }
@@ -582,6 +588,16 @@ export class NavigationRun {
       case "planning_stalled":
         return { kind: "outcome", outcome: this.#failed(answer.failure) };
       case "arrived":
+        // The arrival belongs to whoever owns the body. A plan-ahead search
+        // runs beside the route being walked, so the goal it saw met is left
+        // to that route, or to the next pass, which looks again before it
+        // plans. Running the process's arrival from here steered a pickup
+        // approach beside the step still walking, and its rejection on the
+        // run's stop went unobserved until the step came back.
+        if (ahead) {
+          release();
+          return { kind: "retry", reason: "goal_revised" };
+        }
         return this.#resolveArrival(answer.node, answer.observation);
       case "start_changed":
         release();
