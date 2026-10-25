@@ -1,7 +1,7 @@
 import { smeltCheckpointSchema } from "../checkpoint-schemas.js";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { createMovements, nearGoal, type Navigate, type NavigationRuntime } from "../../navigation/index.js";
+import { createMovements, nearGoal, type NavigationRuntime } from "../../navigation/index.js";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
 import { carriedCount, settleInventoryCount, settleInventoryMinimum } from "../../world/inventory-count.js";
 import { waitForSignal } from "../../utils/signals.js";
@@ -15,7 +15,6 @@ import {
   SMELT_ITEM_DESCRIPTION,
   smeltItemInputSchema,
   smeltItemResultSchema,
-  smeltItemAnnotations,
   smeltItemOutcomes,
   type SmeltItemRequest,
   type SmeltItemResult,
@@ -31,12 +30,23 @@ const SLOT_RECOVERY_MS = 2_000;
 type FurnaceWindow = Awaited<ReturnType<Bot["openFurnace"]>>;
 type FurnaceBlock = NonNullable<ReturnType<Bot["blockAt"]>>;
 
+/**
+ * The furnace engine and the clock the cook is judged by. Tests replace the
+ * furnace with one whose progress they drive and the clock with one they
+ * advance, so stall and fuel decisions are proven without waiting minutes.
+ */
 export interface SmeltItemDependencies {
-  readonly createMovements: typeof createMovements;
-  readonly navigate: Navigate;
   readonly openFurnace: (bot: Bot, block: FurnaceBlock) => Promise<FurnaceWindow>;
   readonly now: () => number;
   readonly pause: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
+  /** How long each furnace slot take, and the inventory receiving its output, gets to settle. */
+  readonly slotRecoveryMs?: number;
+  /**
+   * How long the raw input left in the inventory gets to show exactly what was
+   * smelted. Production omits it for the shared receipt window; a test
+   * shortens it so input that never returns lapses for real.
+   */
+  readonly inventorySettleMs?: number;
 }
 
 function abortablePause(milliseconds: number, signal?: AbortSignal): Promise<void> {
@@ -54,15 +64,13 @@ function abortablePause(milliseconds: number, signal?: AbortSignal): Promise<voi
   });
 }
 
-function productionDependencies(navigate: Navigate): SmeltItemDependencies {
-  return {
-    createMovements,
-    navigate,
-    openFurnace: (bot, block) => bot.openFurnace(block),
-    now: () => performance.now(),
-    pause: abortablePause,
-  };
-}
+const productionDependencies: SmeltItemDependencies = {
+  openFurnace: (bot, block) => bot.openFurnace(block),
+  // Monotonic, not the wall clock: an NTP step or a resumed laptop moves
+  // Date.now by minutes, which the cook wait would read as a stalled furnace.
+  now: () => performance.now(),
+  pause: abortablePause,
+};
 
 function fuelCapacity(name: string): number {
   if (name === "coal" || name === "charcoal") return 8;
@@ -117,13 +125,13 @@ interface Recovery {
   readonly errors: readonly string[];
 }
 
-async function boundedTake<T>(operation: () => Promise<T>, label: string): Promise<T> {
+async function boundedTake<T>(operation: () => Promise<T>, label: string, timeoutMs: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       operation(),
       new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`${label} did not settle within ${SLOT_RECOVERY_MS} ms.`)), SLOT_RECOVERY_MS);
+        timer = setTimeout(() => reject(new Error(`${label} did not settle within ${timeoutMs} ms.`)), timeoutMs);
       }),
     ]);
   } finally {
@@ -138,7 +146,7 @@ function hasInventoryRoom(bot: Bot, item: ReturnType<FurnaceWindow["outputItem"]
   return (inventory.emptySlotCount?.() ?? 1) > 0;
 }
 
-async function takeOutputOnce(bot: Bot, window: FurnaceWindow) {
+async function takeOutputOnce(bot: Bot, window: FurnaceWindow, slotRecoveryMs: number) {
   const item = window.outputItem();
   if (!item) return null;
   if (!hasInventoryRoom(bot, item)) throw new Error(`No inventory room for furnace output ${item.name} x${item.count}.`);
@@ -157,7 +165,7 @@ async function takeOutputOnce(bot: Bot, window: FurnaceWindow) {
     () => Math.max(0, outputBefore - (window.outputItem()?.count ?? 0)),
     window,
     "updateSlot",
-    { timeoutMs: SLOT_RECOVERY_MS },
+    { timeoutMs: slotRecoveryMs },
   );
   const count = removed ?? 0;
   return { name: item.name, count, inventoryBefore, confirmed: count > 0 };
@@ -172,7 +180,7 @@ async function takeResidualOnce(window: FurnaceWindow, slot: "inputItem" | "fuel
   return { name: item.name, count: Math.max(0, item.count - remaining), confirmed: remaining < item.count };
 }
 
-async function recover(bot: Bot, window: FurnaceWindow): Promise<Recovery> {
+async function recover(bot: Bot, window: FurnaceWindow, slotRecoveryMs: number): Promise<Recovery> {
   let input = 0;
   let fuel = 0;
   let output: Recovery["output"] = null;
@@ -190,7 +198,7 @@ async function recover(bot: Bot, window: FurnaceWindow): Promise<Recovery> {
         break;
       }
       if (take === "takeOutput") {
-        const taken = await boundedTake(() => takeOutputOnce(bot, window), take);
+        const taken = await boundedTake(() => takeOutputOnce(bot, window, slotRecoveryMs), take, slotRecoveryMs);
         if (!taken) continue;
         output = { name: taken.name, count: taken.count, inventoryBefore: taken.inventoryBefore };
         if (!taken.confirmed) {
@@ -198,7 +206,7 @@ async function recover(bot: Bot, window: FurnaceWindow): Promise<Recovery> {
           break;
         }
       } else {
-        const taken = await boundedTake(() => takeResidualOnce(window, read), take);
+        const taken = await boundedTake(() => takeResidualOnce(window, read), take, slotRecoveryMs);
         if (!taken) continue;
         if (take === "takeInput") input += taken.count;
         else fuel += taken.count;
@@ -270,14 +278,14 @@ async function waitForCook(
 
 async function approach(
   bot: Bot,
+  navigation: NavigationRuntime,
   request: ExistingFurnaceRequest,
   context: ActionContext,
-  dependencies: SmeltItemDependencies,
 ): Promise<string | null> {
   const target = new Vec3(request.x, request.y, request.z);
   if (bot.entity.position.distanceTo(target) <= FURNACE_REACH) return null;
-  const route = await dependencies.navigate({
-    movements: dependencies.createMovements(bot),
+  const route = await navigation.navigate({
+    movements: createMovements(bot),
     goal: nearGoal(target, 2),
     signal: context.signal,
   });
@@ -292,7 +300,7 @@ export async function smeltItem(
   context: ActionContext,
   dependencies: SmeltItemDependencies,
 ): Promise<SmeltItemResult> {
-  if (request.temporaryWorkstation !== true) return smeltInFurnace(bot, request, context, dependencies);
+  if (request.temporaryWorkstation !== true) return smeltInFurnace(bot, navigation, request, context, dependencies);
   return useTemporaryWorkstation(
     bot,
     "furnace",
@@ -301,6 +309,7 @@ export async function smeltItem(
     (block) =>
       smeltInFurnace(
         bot,
+        navigation,
         {
           itemName: request.itemName,
           count: request.count,
@@ -325,6 +334,7 @@ export async function smeltItem(
 
 async function smeltInFurnace(
   bot: Bot,
+  navigation: NavigationRuntime,
   request: ExistingFurnaceRequest,
   context: ActionContext,
   dependencies: SmeltItemDependencies,
@@ -369,7 +379,7 @@ async function smeltInFurnace(
 
   let routeFailure: string | null;
   try {
-    routeFailure = await approach(bot, request, context, dependencies);
+    routeFailure = await approach(bot, navigation, request, context);
   } catch (cause) {
     context.signal?.throwIfAborted();
     routeFailure = cause instanceof Error ? cause.message : String(cause);
@@ -427,6 +437,7 @@ async function smeltInFurnace(
     };
   }
 
+  const slotRecoveryMs = dependencies.slotRecoveryMs ?? SLOT_RECOVERY_MS;
   let verdict: CookVerdict | "execution_failed" = "execution_failed";
   let executionError = "";
   let recovery: Recovery = { input: 0, fuel: 0, output: null, errors: [] };
@@ -447,7 +458,7 @@ async function smeltInFurnace(
   } catch (cause) {
     executionError = smeltItemOutcomes.executionFailed(cause);
   } finally {
-    if (ownsSlots) recovery = await recover(bot, furnace);
+    if (ownsSlots) recovery = await recover(bot, furnace, slotRecoveryMs);
     furnace.close();
   }
   context.signal?.throwIfAborted();
@@ -458,7 +469,7 @@ async function smeltInFurnace(
       bot,
       outputItem,
       recovery.output.inventoryBefore + produced,
-      { timeoutMs: SLOT_RECOVERY_MS, signal: context.signal },
+      { timeoutMs: slotRecoveryMs, signal: context.signal },
     );
     if (!outputAfter.confirmed) {
       recovery = {
@@ -476,6 +487,7 @@ async function smeltInFurnace(
   // read once it has landed.
   const inputAfter = await settleInventoryCount(bot, request.itemName, before.input - produced, {
     signal: context.signal,
+    timeoutMs: dependencies.inventorySettleMs,
   });
   const observed = evidence(bot, request, before, {
     fuelInserted,
@@ -518,7 +530,7 @@ export function formatSmeltItemResult(result: SmeltItemResult): string {
 export function createSmeltItemAction(
   bot: Bot,
   navigation: NavigationRuntime,
-  dependencies: SmeltItemDependencies = productionDependencies(navigation.navigate),
+  dependencies: SmeltItemDependencies = productionDependencies,
 ) {
   return defineAction({
     checkpointSchema: smeltCheckpointSchema,
@@ -528,7 +540,11 @@ export function createSmeltItemAction(
     resultSchema: smeltItemResultSchema,
     formatResult: formatSmeltItemResult,
     execution: { kind: "task", prepare: () => prepareBotForMovement(bot, navigation) },
-    annotations: smeltItemAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     parse: parseSmeltItemRequest,
     execute: (request, context) => smeltItem(bot, navigation, request, context, dependencies),
   });

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture, type FakeStack } from "../../test-support/bot.js";
-import { parseEatFoodRequest } from "./contract.js";
 import { formatEatFoodResult, eatFood, type EatFoodDependencies } from "./eat-food.js";
+import { INVENTORY_SETTLE_MS } from "../../world/inventory-count.js";
 
 /** A hungry bot carrying one stack of the named item. */
 function hungryBot(name = "cooked_beef", count = 2) {
@@ -31,12 +31,6 @@ test("cancellation releases a native bite without waiting for consume's bookkeep
   assert.equal(bot.usingHeldItem, false);
   rejectNative(new Error("Late native consume timeout"));
   await new Promise(resolve => setImmediate(resolve));
-});
-
-test("parses one normalized exact food name", () => {
-  assert.deepEqual(parseEatFoodRequest({ food_name: "Minecraft:Cooked Beef" }), {
-    foodName: "cooked_beef",
-  });
 });
 
 test("equips and consumes one named food while reporting observed changes", async () => {
@@ -79,11 +73,14 @@ test("waits for consumption when Mineflayer resolves before the eating animation
     equip: async () => {},
     consume: async () => {
       // A held-item update resolved consume, but the server is still eating.
+      // The finish lands after the shared inventory window would have given
+      // up, so this proves eat-food waits on its own longer consumption window
+      // rather than that one. Real time, on purpose: about a third of a second.
       setTimeout(() => {
         items[0]!.count -= 1;
         bot.food = 18;
         bot.inventory.emit("updateSlot");
-      }, 350);
+      }, INVENTORY_SETTLE_MS + 50);
     },
   };
 

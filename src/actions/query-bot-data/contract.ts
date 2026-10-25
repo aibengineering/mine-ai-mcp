@@ -1,6 +1,5 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 
 export const QUERY_BOT_DATA = "query_bot_data" as const;
 
@@ -63,12 +62,3 @@ export const queryBotDataResultSchema = actionResultSchema({
   query: botDataQueryResultSchema,
 });
 export type QueryBotDataResult = z.output<typeof queryBotDataResultSchema>;
-export type QueryBotDataOutput = ActionOutput<typeof QUERY_BOT_DATA, QueryBotDataResult>;
-
-export const queryBotDataAnnotations = {
-  openWorldHint: false,
-} satisfies ToolAnnotations;
-
-export function parseQueryBotDataInput(input: unknown): QueryBotDataInput {
-  return queryBotDataInputSchema.parse(input);
-}

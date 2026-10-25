@@ -1,0 +1,129 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Three bots on one-wide netherrack bridges, in pens at least 100 blocks apart,
+  answer large fireballs. An idle bot with a sword returns a held ghast's real
+  fireball and kills the ghast without leaving its cell or taking damage. A
+  navigate across a bridge yields to a fireball fired when the bot is under
+  way, deflects it, and still arrives unhurt with the bridge intact. An idle
+  bot fighting an 80-health blaze from a bridge yields to a large fireball
+  three seconds in, before its explosion can remove the floor, and never
+  falls.
+
+# The ghast follows players a hundred blocks off and shoots inside 64, so it
+# has the corner farthest from the other two.
+#   x:    0          100           200
+#   z 0:  Ghast                    Crossfire
+#   z100:            FireballNav
+geometry:
+  - fill: { block: netherrack, from: [-2, -55, 0], to: [24, -55, 0] }
+  - fill: { block: netherrack, from: [98, -55, 100], to: [120, -55, 100] }
+  - fill: { block: netherrack, from: [198, -55, 0], to: [220, -55, 0] }
+  # The blaze's own perch, twelve blocks off the crossfire bridge.
+  - setblock: { at: [200, -55, 12], block: netherrack }
+
+entities:
+  - { type: ghast, pos: [20.5, -51.5, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_ghast"]}' }
+  - type: blaze
+    pos: [200.5, -54, 12.5]
+    nbt: '{PersistenceRequired:1b,Health:80f,attributes:[{id:"minecraft:max_health",base:80.0}],Tags:["pen_crossfire"]}'
+
+# Hold the ghast in one place; its attack, its projectile, the damage and its
+# death stay vanilla.
+tick:
+  - "tp @e[type=minecraft:ghast,tag=pen_ghast] 20.5 -51.5 0.5"
+  - "gamemode spectator @a[name=!Ghast,name=!FireballNav,name=!Crossfire,gamemode=!spectator]"
+
+schedule:
+  # A straight ghast-sized shot down the bridge once the navigating bot is
+  # past x 102, so it meets a crossing already under way.
+  - when: "entity @a[name=FireballNav,x=102,y=-55,z=99,dx=30,dy=4,dz=2]"
+    run: "summon minecraft:fireball 116.5 -52.5 100.5 {Motion:[-0.5d,0.0d,0.0d],ExplosionPower:1b}"
+  # The same shot along the crossfire bridge, once the blaze fight has begun.
+  - afterTicks: 60
+    run: "summon minecraft:fireball 212.5 -53 0.5 {Motion:[-0.5d,0.0d,0.0d],ExplosionPower:1b}"
+  # A fall off the crossfire bridge leaves a mark the goals can see: the
+  # bot's body below the deck sets a block in an empty cell.
+  - when: "entity @a[name=Crossfire,x=190,y=-62,z=-10,dx=40,dy=5,dz=20]"
+    run: "setblock 200 -40 30 minecraft:red_wool"
+
+players:
+  - name: Ghast
+    pos: [0.5, -54, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+  - name: FireballNav
+    pos: [100.5, -54, 100.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+  - name: Crossfire
+    pos: [200.5, -54, 0.5]
+    equipment:
+      { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots, offhand: shield }
+    inventory:
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 64 }
+
+client:
+  command: bun
+  cwd: ../..
+  args:
+    - client-host.ts
+    - drivers/action-sequence.ts
+
+params:
+  players:
+    Ghast: { waitTicks: 600 }
+    Crossfire: { waitTicks: 600 }
+    # Ends on the far end of its bridge, with nothing left to shoot at it.
+    FireballNav:
+      actions:
+        - { action: navigate, input: { x: 116, y: -54, z: 100, range: 0 } }
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: kill, who: Ghast, target: ghast, tag: pen_ghast }
+    - { kind: health, who: Ghast, health: 20 }
+    - { kind: reach, who: Ghast, pos: [0.5, -54, 0.5], radius: 0.5 }
+    - { kind: survive, who: Ghast, seconds: 1 }
+    - { kind: completion, who: Ghast }
+
+    - { kind: reach, who: FireballNav, pos: [116.5, -54, 100.5], radius: 1 }
+    - { kind: health, who: FireballNav, health: 20 }
+    - kind: blocksAt
+      who: FireballNav
+      block: netherrack
+      positions:
+        - [98, -55, 100]
+        - [100, -55, 100]
+        - [102, -55, 100]
+        - [104, -55, 100]
+        - [106, -55, 100]
+        - [108, -55, 100]
+        - [110, -55, 100]
+        - [112, -55, 100]
+        - [114, -55, 100]
+        - [116, -55, 100]
+    - { kind: survive, who: FireballNav, seconds: 1 }
+    - { kind: completion, who: FireballNav }
+
+    # An explosion on the bridge removes deck cells around the impact.
+    - kind: blocksAt
+      who: Crossfire
+      block: netherrack
+      positions:
+        - [198, -55, 0]
+        - [199, -55, 0]
+        - [200, -55, 0]
+        - [201, -55, 0]
+        - [202, -55, 0]
+        - [203, -55, 0]
+        - [204, -55, 0]
+        - [205, -55, 0]
+        - [206, -55, 0]
+    - { kind: blockAt, who: Crossfire, pos: [200, -40, 30], block: air }
+    - { kind: survive, who: Crossfire, seconds: 1 }
+    - { kind: completion, who: Crossfire }

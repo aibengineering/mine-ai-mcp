@@ -1,33 +1,28 @@
-import minecraftData from "minecraft-data";
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import test from "node:test";
-import prismarineBlock from "prismarine-block";
 import { Vec3 } from "vec3";
 import { worldViewRaycaster } from "../../../navigation/world/line-of-sight.js";
 import { MemoryWorld } from "../../../navigation/world/memory-world.js";
 import { observation, planningStart } from "../../../test-support/navigation.js";
+import { blockNamed } from "../../../test-support/world.js";
 import {
   crystalBlastCoverCell,
   crystalBlastCovered,
   crystalBlastEstimate,
   crystalMeleeAim,
   crystalMeleeAimFrom,
+  crystalMeleeObstruction,
   crystalReturnGoal,
 } from "./crystal-melee.js";
 
-const registry = minecraftData("1.21.4"),
-  Block = prismarineBlock("1.21.4");
 const crystal = new Vec3(0.5, 83, 0.5);
 function fixture(pedestal: string | null = "bedrock") {
   const blocks = new Map<string, string>();
   if (pedestal) blocks.set("(0, 82, 0)", pedestal);
   const blockAt = (position: Vec3) => {
-    const p = position.floored(),
-      name = blocks.get(p.toString()) ?? "air";
-    const block = Block.fromStateId(registry.blocksByName[name]!.defaultState, 0);
-    block.position = p;
-    return block;
+    const p = position.floored();
+    return blockNamed(blocks.get(p.toString()) ?? "air", p);
   };
   const rays = worldViewRaycaster((x, y, z) =>
     blockAt(new Vec3(x, y, z)).shapes.map(([minX, minY, minZ, maxX, maxY, maxZ]) => ({
@@ -128,6 +123,36 @@ test("melee requires an exposed ray within three blocks after the cage cell is e
   assert.equal(crystalMeleeAim(bot, crystal), null);
   assert.ok(crystalMeleeAimFrom(bot, crystal, new Vec3(3.5, 82.62, 3.5)), "a diagonal top-layer eye still reaches");
   assert.equal(crystalMeleeAimFrom(bot, crystal, new Vec3(4.5, 82.62, 1.5)), null, "four blocks out on an axis does not");
+});
+
+/**
+ * The tower at 33.5,89,-24.5 on seed 8675309, moved so its crystal sits at
+ * 0.5,83,0.5. The dragon came by as the bot stepped onto the rim stance, and
+ * the shelter walled and capped that cell in end stone. Released, the bot
+ * stood at 35.42,87,-27.52 with the staircase complete, and every request
+ * after was refused in milliseconds: the shelter, not the tower, stood
+ * between the eye and the crystal.
+ */
+test("a dragon shelter left on the stance is dug out of the attack line, and nothing native is", () => {
+  const { bot, blocks } = fixture();
+  tower(blocks, 3);
+  const eye = new Vec3(2.42, 82.62, -2.52);
+  assert.ok(crystalMeleeAimFrom(bot, crystal, eye), "the native rim has a clear hit");
+  const shelter = ["(2, 82, -2)", "(2, 83, -2)", "(2, 83, -3)", "(3, 80, -3)", "(3, 81, -3)", "(3, 82, -3)", "(1, 82, -3)", "(2, 82, -4)"];
+  for (const cell of shelter) blocks.set(cell, "end_stone");
+  assert.equal(crystalMeleeAimFrom(bot, crystal, eye), null, "the walls and cap block every aim");
+  const placed = (position: Vec3) => blocks.get(position.toString()) === "end_stone";
+  assert.equal(crystalMeleeObstruction(bot, crystal, eye, () => false), null, "only clearable blocks are offered");
+  const dug: string[] = [];
+  while (!crystalMeleeAimFrom(bot, crystal, eye)) {
+    const obstruction = crystalMeleeObstruction(bot, crystal, eye, placed);
+    assert.ok(obstruction, `an obstruction to clear after ${dug.join(" ")}`);
+    dug.push(obstruction.toString());
+    blocks.delete(obstruction.toString());
+    assert.ok(dug.length <= 3, `opened within three digs: ${dug.join(" ")}`);
+  }
+  assert.ok(dug.every(cell => shelter.includes(cell)), `only shelter blocks were dug: ${dug.join(" ")}`);
+  assert.equal(blocks.get("(0, 82, 0)"), "bedrock");
 });
 
 test("the melee return accepts any supported cell near the start instead of one exact block", () => {

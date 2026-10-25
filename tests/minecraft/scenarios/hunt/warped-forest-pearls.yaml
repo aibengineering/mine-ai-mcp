@@ -1,0 +1,92 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance, slow]
+description: >-
+  Ender pearls from native endermen in the warped forest of seed 20260906,
+  with the expedition kit. Hunt the enderman across an exposed canopy gap with
+  a ten-block drop and return to the canopy refuge; walk to the top of the
+  nylium slope, descend to the approach with digging and scaffolding off, and
+  hunt five more pearls from endermen teleporting below the slope at no less
+  than one pearl a minute; then climb back to the slope top. End alive there
+  with six pearls. Folds canopy-gap-hunt, enderman-nylium-approach,
+  enderman-slope-return, enderman-six-pearls-rate and
+  enderman-six-pearls-slope-rate.
+
+world:
+  type: default
+  dimension: the_nether
+  seed: 20260906
+  structures: true
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: true
+    keepInventory: false
+    randomTickSpeed: 0
+
+# The neutral canopy enderman waits across the gap from the start.
+entities:
+  - { type: enderman, pos: [108.5, 64, -11.5], nbt: "{PersistenceRequired:1b}" }
+
+# The slope trio of the legacy slope fixtures appears when the bot reaches the
+# slope top, as those fixtures started there; it does not roam the forest
+# during the canopy stage. From then on, whenever no enderman is left, one
+# more appears below the slope, since five pearls can outlast three endermen
+# with ordinary drop chances. Health, drops and teleports stay native.
+schedule:
+  - { afterTicks: 0, run: "tag @a remove ml_slope" }
+  - when: "entity @a[name=EnderExpedition,x=98,y=62,z=16,dx=4,dy=4,dz=4]"
+    run:
+      - "tag EnderExpedition add ml_slope"
+      - "summon minecraft:enderman 112.5 56 10.5 {PersistenceRequired:1b}"
+      - "summon minecraft:enderman 110.5 57 12.5 {PersistenceRequired:1b}"
+      - "summon minecraft:enderman 114.5 58 16.5 {PersistenceRequired:1b}"
+
+tick:
+  - "execute if entity @a[name=EnderExpedition,tag=ml_slope] unless entity @e[type=minecraft:enderman] run summon minecraft:enderman 112.5 56 10.5 {PersistenceRequired:1b}"
+
+players:
+  - name: EnderExpedition
+    pos: [104.5, 64, -11.5]
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: golden_boots
+      offhand: shield
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cooked_beef, count: 16 }
+      # Repeated native kills and roof relocation exhausted a one-pearl kit.
+      - { item: cobblestone, count: 192 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/nether-expedition.ts]
+params:
+  idleWithinTicks: 200
+  actions:
+    - { action: collect_mob_drop, input: { mob_name: enderman, drop_name: ender_pearl, count: 1 } }
+    - { action: navigate, input: { x: 102, y: 65, z: -15, range: 1 } }
+    - { action: navigate, input: { x: 100, y: 64, z: 18, range: 1 } }
+    - { action: navigate, input: { x: 108, y: 58, z: 12, range: 1, dig: false, scaffold: false } }
+    - { action: collect_mob_drop, input: { mob_name: enderman, drop_name: ender_pearl, count: 5 } }
+    - { action: navigate, input: { x: 100, y: 64, z: 18, range: 1 } }
+  rate: { step: 4, count: 5, minimumPerMinute: 1 }
+  # Five seconds with the reflexes still live, for an enderman still angry.
+  holdTicks: 100
+
+goal:
+  kind: all
+  timeout: 720
+  goals:
+    - { kind: hasItem, who: EnderExpedition, item: ender_pearl, count: 6 }
+    - { kind: reach, who: EnderExpedition, pos: [100.5, 64, 18.5], radius: 2 }
+    - { kind: survive, who: EnderExpedition, seconds: 1 }
+    - { kind: health, who: EnderExpedition, health: 1 }
+    - { kind: completion, who: EnderExpedition }

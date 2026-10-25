@@ -1,5 +1,6 @@
 export const HOLD_GROUND_RANGE = 16;
 import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
+import { observedEyeHeight } from "../../../world/block-visibility.js";
 import type { CombatOutcome } from "../../control/combat/contract.js";
 import { isRangedAttacker } from "../../perception/combat/observations.js";
 import { isHostile } from "../../perception/combat/threats.js";
@@ -11,6 +12,7 @@ import {
   hasMeleeKnockbackRoom,
   hasSweepBystander,
   meleeDistance,
+  quarryDownAtLavaShore,
   waitingForDescendingCube,
 } from "../../weapons/melee.js";
 import type { EndermanFight } from "./enderman.js";
@@ -23,6 +25,19 @@ import type { FightWeapons } from "./weapons.js";
 /** Any hostile in reach whose next action is a hit, not only the selected quarry. */
 const meleeThreatInReach = (scene: FightScene): boolean =>
   scene.perception.read().some((threat) => threat.meleeImminent);
+
+const QUARRY_AT_LAVA_SHORE = "the quarry went down to a lava shore; a pursuit does not follow it off higher ground";
+/** Mobs that hold their height in the air rather than walking to the bot. */
+const HOVERING_FLIERS = new Set(["blaze", "ghast", "phantom"]);
+/** A flier whose lowest point is beyond a sword's reach from any footing at the bot's level. */
+const hoversAboveReach = (scene: FightScene): boolean =>
+  scene.movement === "pursue" &&
+  HOVERING_FLIERS.has(scene.target.name ?? "") &&
+  scene.target.position.y - (scene.bot.entity.position.y + observedEyeHeight(scene.bot.entity)) > MELEE_RANGE;
+
+const followsQuarryDownToLava = (scene: FightScene): boolean =>
+  scene.movement === "pursue" &&
+  quarryDownAtLavaShore(scene.navigation.world, scene.request.ground ?? scene.bot.entity.position, scene.target.position);
 
 export async function runMeleeTurn(
   scene: FightScene,
@@ -63,9 +78,30 @@ export async function runMeleeTurn(
     // shield it is not told to keep. A mob already in reach of the bot - the
     // quarry or the one beside it - is answered before the step, not after
     // its first swing.
+    // A blaze's hover height is re-rolled every five seconds and can hold it
+    // a block or two above a sword's reach from any footing. Every route then
+    // fails, and two failures end the hunt's interest in a blaze that came
+    // back down seconds later (hunts-transit 2026-10-21T04-35-46-887Z-t00005:
+    // feet 5.4 blocks up, then down to the ground within six seconds). Wait
+    // for it under the guard, for as long as a protected wait lasts.
+    if (hoversAboveReach(scene)) {
+      scene.hoverWaitStartedAt ??= scene.elapsedTicks;
+      if (scene.elapsedTicks - scene.hoverWaitStartedAt < scene.policy.combat.protected_wait_ticks) {
+        if (guarded) await weapons.raiseGuard();
+        await scene.execution.run("hold", () => weapons.holdFacing(1));
+        return null;
+      }
+    } else scene.hoverWaitStartedAt = null;
+    if (followsQuarryDownToLava(scene))
+      return { ...scene.result("unreachable"), observation: QUARRY_AT_LAVA_SHORE };
+    const volley = guarded && isRangedAttacker(scene.target) ? locomotion.volleyStop : null;
     const stopped = await locomotion.approach(
-      guarded && (weapons.projectileDefence() !== null || weapons.volleyActive() || meleeThreatInReach(scene)),
-      guarded && isRangedAttacker(scene.target) ? locomotion.volleyStop : null,
+      guarded && (weapons.projectileDefence() !== null || weapons.volleyActive() || weapons.projectileWithinStride() ||
+        meleeThreatInReach(scene)),
+      {
+        get reason() { return volley?.when() ? volley.reason : QUARRY_AT_LAVA_SHORE; },
+        when: () => (volley?.when() ?? false) || followsQuarryDownToLava(scene),
+      },
     );
     // A route also stops when its target dies mid-way, which is not a
     // reachability verdict: the next iteration reports what settled it.

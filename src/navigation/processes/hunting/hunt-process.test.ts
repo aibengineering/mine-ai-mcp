@@ -33,19 +33,21 @@ function request(overrides: Partial<HuntRequest> = {}): HuntRequest {
   };
 }
 
-/** Which entity a route was aimed at, read from the goal the process handed it. */
+/**
+ * Which entity a route was aimed at, read from the goal the process handed it.
+ * A goal near one entity cannot resolve where that entity is not observed, so
+ * the target is the one entity whose sighting alone keeps the goal active.
+ */
 function aimedAt(bot: Bot, goal: Goal): number {
-  const resolved = goal.resolve({
-    position: bot.entity.position,
-    entities: new Map(
-      Object.values(bot.entities).map((entity) => [entity.id, { id: entity.id, position: entity.position }]),
-    ),
-  } as never);
-  assert.equal(resolved.kind, "active");
-  if (resolved.kind !== "active") throw new Error("unreachable");
-  const id = /^near:\d+:entity:(\d+):/.exec(resolved.revision)?.[1];
-  assert.ok(id, `unexpected goal revision ${resolved.revision}`);
-  return Number(id);
+  const aimed = Object.values(bot.entities).filter(
+    (entity) =>
+      goal.resolve({
+        position: bot.entity.position,
+        entities: new Map([[entity.id, { id: entity.id, position: entity.position }]]),
+      } as never).kind === "active",
+  );
+  assert.equal(aimed.length, 1, `expected the goal to follow one entity, but ${aimed.length} keep it active`);
+  return aimed[0]!.id;
 }
 
 /** A route that puts the bot beside whichever entity it was aimed at. */
@@ -205,7 +207,7 @@ test("enderman ranking keeps terrain priority inside a nearest-relative band for
         },
       }),
     );
-    assert.deepEqual(engaged, [8]);
+    assert.deepEqual(engaged, [8], `candidates listed as ${order.map(({ id }) => id).join(",")}`);
   }
 });
 

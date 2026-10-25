@@ -375,10 +375,7 @@ export class IncrementalSearch {
     // the axes — ten blocks up scored the same as ten blocks along, when it
     // costs more than twice as much — and `cavern-ore-return` went from 13
     // visited nodes to 6,230 and failed.
-    this.#goal = {
-      ...options.goal,
-      heuristic: (node) => options.goal.heuristic(node) * options.context.policy.heuristicWeight,
-    };
+    this.#goal = options.goal;
     const heuristic = this.#goal.heuristic(options.start.node);
     this.#root = this.#store.add(
       blockKey(options.start.node.feet),

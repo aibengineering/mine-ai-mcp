@@ -1,0 +1,87 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Act from awkward dripstone stances without damage. Wedged starts settled on a supported
+  upward dripstone tip in a one-wide pit and navigates out to an exact cell; TipCollector
+  starts on the same kind of tip and collects the stone beside it; HangingCollector stands
+  under a stalactite and is asked for the stone holding it up, which it cannot reach past
+  the tip and must refuse with NO_REACHABLE_MATCHING_TARGETS, leaving both blocks in place.
+  Guards the reliability-plan incident where the bot stood on dripstone and no action could
+  act from there.
+
+# Each pen starts the player 0.31 above its upward tip; the host waits for the
+# landing, so the action begins grounded on the tip's collision box. Landing
+# that short a distance onto a tip does no damage, and regeneration is off, so
+# every health goal measures the action alone.
+reset:
+  - "fill -5 -60 -5 8 -50 5 air"
+  - "fill 95 -60 -5 108 -50 5 air"
+  - "fill 196 -60 -4 204 -50 4 air"
+
+geometry:
+  # Wedged: a one-wide pit with the tip at its foot, stairs out to the east.
+  - fill: { block: bedrock, from: [-4, -60, -4], to: [7, -56, 4] }
+  - fill: { block: air, from: [-2, -59, 0], to: [5, -55, 0] }
+  - setblock: { block: stone, at: [0, -59, 0] }
+  - setblock: { block: "pointed_dripstone[vertical_direction=up,thickness=tip]", at: [0, -58, 0] }
+  - setblock: { block: stone, at: [1, -58, 0] }
+  - setblock: { block: stone, at: [2, -57, 0] }
+
+  # TipCollector: the same pit, translated 100 east; the stone at 101,-58,0 is the target.
+  - fill: { block: bedrock, from: [96, -60, -4], to: [107, -56, 4] }
+  - fill: { block: air, from: [98, -59, 0], to: [105, -55, 0] }
+  - setblock: { block: stone, at: [100, -59, 0] }
+  - setblock: { block: "pointed_dripstone[vertical_direction=up,thickness=tip]", at: [100, -58, 0] }
+  - setblock: { block: stone, at: [101, -58, 0] }
+
+  # HangingCollector: a sealed one-wide shaft with a stalactite hanging from its
+  # stone support, 200 east.
+  - fill: { block: bedrock, from: [198, -60, -2], to: [202, -52, 2] }
+  - fill: { block: air, from: [200, -59, 0], to: [200, -53, 0] }
+  - setblock: { block: stone, at: [200, -54, 0] }
+  - setblock: { block: "pointed_dripstone[vertical_direction=down,thickness=tip]", at: [200, -55, 0] }
+
+players:
+  - name: Wedged
+    pos: [0.5, -57, 0.5]
+    inventory: [{ item: iron_pickaxe, count: 1 }]
+  - name: TipCollector
+    pos: [100.5, -57, 0.5]
+    inventory: [{ item: iron_pickaxe, count: 1 }]
+  - name: HangingCollector
+    pos: [200.5, -59, 0.5]
+    inventory: [{ item: iron_pickaxe, count: 1 }]
+
+tick:
+  - "gamemode spectator @a[name=!Wedged,name=!TipCollector,name=!HangingCollector,gamemode=!spectator]"
+
+params:
+  players:
+    Wedged:
+      action: navigate
+      input: { x: 4, y: -59, z: 0, range: 0 }
+    TipCollector:
+      action: collect_block
+      input: { block_name: stone, count: 1, x: 101, y: -58, z: 0, scaffold: false }
+    HangingCollector:
+      action: collect_block
+      input: { block_name: stone, count: 1, x: 200, y: -54, z: 0, scaffold: false }
+      expect: { status: failed, errorContains: NO_REACHABLE_MATCHING_TARGETS }
+
+goal:
+  kind: all
+  timeout: 60
+  goals:
+    - { kind: reach, who: Wedged, pos: [4.5, -59, 0.5], radius: 0.7 }
+    - { kind: health, who: Wedged, health: 20 }
+    - { kind: completion, who: Wedged }
+    - { kind: hasItem, who: TipCollector, item: cobblestone, count: 1 }
+    - { kind: blockAt, pos: [101, -58, 0], block: air }
+    - { kind: health, who: TipCollector, health: 20 }
+    - { kind: completion, who: TipCollector }
+    - { kind: blockAt, pos: [200, -54, 0], block: stone }
+    - { kind: blockAt, pos: [200, -55, 0], block: pointed_dripstone }
+    - { kind: health, who: HangingCollector, health: 20 }
+    - { kind: completion, who: HangingCollector }
+    - { kind: survive, seconds: 1 }

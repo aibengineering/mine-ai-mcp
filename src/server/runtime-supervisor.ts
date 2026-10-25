@@ -3,13 +3,19 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { createServer, request as httpRequest, type ClientRequest, type ServerResponse } from "node:http";
 import { z } from "zod";
 import { writeIncidentArtifact, type IncidentReference, type IncidentRetention } from "../bot-data/incident-log.js";
-import { IncidentRecorder, type SourceIdentity } from "../diagnostics/incident-recorder.js";
+import {
+  INCIDENT_HISTORY_BYTES,
+  INCIDENT_HISTORY_MS,
+  IncidentRecorder,
+  type SourceIdentity,
+} from "../diagnostics/incident-recorder.js";
 import {
   RUNTIME_HEARTBEAT_MS,
   RUNTIME_UNRESPONSIVE_MS,
   runtimeMessageSchema,
   type RuntimeActivity,
 } from "./runtime-liveness.js";
+import type { OperatorNotices } from "./operator-notices.js";
 
 const envelopeSchema = z.object({
   id: z.union([z.string(), z.number()]).optional(),
@@ -47,12 +53,29 @@ export interface McpSupervisorOptions {
   readonly instanceId: string;
   readonly source: SourceIdentity;
   readonly incidents: { directory: string; retention: IncidentRetention };
+  /**
+   * How long a silent event loop is tolerated, and how far back an incident
+   * looks. Production omits it and gets RUNTIME_UNRESPONSIVE_MS and
+   * INCIDENT_HISTORY_MS. Tests shorten both so that declaring a wedged runtime,
+   * or letting its history age out, costs a fraction of a second instead of
+   * the operator's real allowance; the watchdog logic itself is unchanged.
+   */
+  readonly liveness?: { readonly unresponsiveMs?: number; readonly incidentHistoryMs?: number };
+  /**
+   * Where a runtime failure is reported to the operator. Production omits it
+   * and the report goes to stderr; a test passes its own to assert the report
+   * names the incident health does, without printing it.
+   */
+  readonly notices?: Pick<OperatorNotices, "stderr">;
 }
 
 /** Public HTTP stays outside the bot's event loop, including pending MCP SSE replies. */
 export async function startMcpSupervisor(options: McpSupervisorOptions) {
   // Docker binds all container interfaces; Compose restricts the published port to host loopback.
   if (!["127.0.0.1", "localhost", "::1", "0.0.0.0"].includes(options.host)) throw new Error("MCP must bind to loopback or 0.0.0.0 for container port forwarding.");
+  const unresponsiveMs = options.liveness?.unresponsiveMs ?? RUNTIME_UNRESPONSIVE_MS;
+  const incidentHistoryMs = options.liveness?.incidentHistoryMs ?? INCIDENT_HISTORY_MS;
+  const notices = options.notices ?? { stderr: (line: string) => console.error(line) };
   let state: RuntimeState = { kind: "starting" };
   let lastHeartbeat = performance.now();
   let observationResumedAt = lastHeartbeat;
@@ -76,6 +99,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
         options.incidents.retention,
       ),
     () => {},
+    { durationMs: incidentHistoryMs, bytes: INCIDENT_HISTORY_BYTES },
   );
 
   const answerFailure = (response: ServerResponse, id: string | number | null, failure: RuntimeFailure) => {
@@ -142,7 +166,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
       entry.upstream.destroy();
       answerFailure(entry.response, entry.id, failure);
     }
-    console.error(`[minecraft-supervisor] ${JSON.stringify(failure)}`);
+    notices.stderr(`[minecraft-supervisor] ${JSON.stringify(failure)}`);
   };
 
   const app = createMcpExpressApp({ host: options.host, allowedHosts: ["127.0.0.1", "localhost", "[::1]"] });
@@ -246,7 +270,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
     // A watchdog that missed its own liveness window cannot attribute that
     // gap to the child. Resume observation before judging it; queued IPC and
     // a child recovering from the same scheduling pause get a full window.
-    if (watchdogDelayMs >= RUNTIME_UNRESPONSIVE_MS) {
+    if (watchdogDelayMs >= unresponsiveMs) {
       observationResumedAt = now;
       recorder.record("supervisor_observation_resumed", {
         supervisorTickDelayMs: watchdogDelayMs,
@@ -254,7 +278,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
       });
     }
     const age = now - Math.max(lastHeartbeat, observationResumedAt);
-    if (age >= RUNTIME_UNRESPONSIVE_MS)
+    if (age >= unresponsiveMs)
       void fail(
         "RUNTIME_UNRESPONSIVE",
         `Runtime event-loop heartbeat absent for ${Math.round(now - lastHeartbeat)} ms.`,
@@ -268,7 +292,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
       child.kill("SIGTERM");
       // Normal disposal gets the same liveness allowance as execution. A
       // cleanup loop must not keep the owned child alive after service stop.
-      const force = setTimeout(() => child?.kill("SIGKILL"), RUNTIME_UNRESPONSIVE_MS);
+      const force = setTimeout(() => child?.kill("SIGKILL"), unresponsiveMs);
       try {
         await stopped;
       } finally {

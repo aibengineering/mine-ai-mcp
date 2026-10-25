@@ -23,16 +23,14 @@
   "files": [
     "src",
     "docs",
-    "scenarios",
     "README.md"
   ],
   "scripts": {
     "clean": "bun -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "bun run clean && bunx --bun tsc -p tsconfig.build.json && bun -e \"require('node:fs').copyFileSync('src/bot-data/bot-data.sql', 'dist/bot-data/bot-data.sql')\"",
     "typecheck": "bunx --bun tsc -p tsconfig.check.json --noEmit",
-    "typecheck:scenarios": "bunx --bun tsc -p scenarios/tsconfig.json --noEmit",
-    "test": "bun run typecheck && bun run typecheck:scenarios && bun test src scenarios/src",
-    "evidence:render": "bun scenarios/src/action-evidence-page.ts",
+    "test": "bun run typecheck && bun test src",
+    "evidence:render": "bun tools/action-evidence/page.ts",
     "scenarios": "bunx --bun mine-labs run --jobs 2 --repeat forever",
     "scenarios:client": "bunx --bun mine-labs run --client"
   },
@@ -43,7 +41,6 @@
   "dependencies": {
     "@aibengineering/minecraft-block-highlighter": "github:aibengineering/minecraft-block-highlighter#8fe2983f3be5fc562437d25cc8afbb715d5103c5",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "mineflayer-tool": "1.2.0",
     "prismarine-block": "^1.23.0",
     "prismarine-chat": "^1.13.0",
     "prismarine-item": "^1.18.0",

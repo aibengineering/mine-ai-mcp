@@ -1,5 +1,5 @@
 import { findCrystalOpenings } from "../../positioning/combat/crystal-openings.js";
-import { buildCrystalStaircase, pillarShortfall, planCrystalStaircase } from "../../positioning/combat/crystal-staircase.js";
+import { buildCrystalStaircase, pillarShortfall, planCrystalStaircase, type CrystalStaircase } from "../../positioning/combat/crystal-staircase.js";
 import { standingCell } from "../../positioning/combat/geometry.js";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
@@ -16,6 +16,8 @@ import { CLIMBABLES } from "../../../navigation/mineflayer/world.js";
 import type { MovementPolicy } from "../../../navigation/movements/policy.js";
 import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
 import {
+  breathBesideFeet,
+  breathOverStances,
   cloudExposure,
   dragonDanger,
   dragonExposure,
@@ -24,9 +26,11 @@ import {
   observeDragonEscape,
   perchedDragonContact,
   readDragonBreathHazards,
+  readDragonCloudHazards,
 } from "../../../world/dragon-hazards.js";
 import { entityHealth, dragonPhase, isDragonLanding, isDragonPerched, observedDragonLandingCenter, perchAttackCell, perchedDragonHead, perchedDragonBodyParts } from "../../../world/end-fight.js";
 import { nearestBodyPoint } from "../../../world/entity-geometry.js";
+import { observedEyeHeight } from "../../../world/block-visibility.js";
 import { REGENERATION_HUNGER } from "../../../world/food.js";
 import { isReplaceableForPlacement } from "../../../world/block-classification.js";
 import { selectPolicyFood } from "../../perception/food.js";
@@ -49,6 +53,7 @@ import {
   crystalBlastCoverCell,
   crystalBlastEstimate,
   crystalMeleeAim,
+  crystalMeleeObstruction,
   crystalReturnGoal,
 } from "../../positioning/combat/crystal-melee.js";
 import { type SurvivalResources } from "../../state/resources.js";
@@ -90,6 +95,14 @@ export interface EndCombatResult {
 type EndMoveResult = { kind: "arrived" } | { kind: "changed" } | { kind: "failed"; reason: string };
 /** Health points held back beyond the blast estimate before an exposed swing. */
 const CRYSTAL_BLAST_MARGIN = 2;
+/** Blocks one melee request may dig off its attack line: a shelter's walls and cap are at most a few. */
+const CRYSTAL_LINE_DIGS = 6;
+/** A perched cloud lives ten seconds of server time and a fireball's thirty; a loaded server stretches both. */
+const CRYSTAL_BREATH_WAIT_MS = 45_000;
+
+/** A native perch takes off after at most four ten-second flamings, with scans
+ * and roars between; the margin covers a loaded server stretching them. */
+const CRYSTAL_PERCH_WAIT_MS = 90_000;
 
 // Vanilla ServerLevel sends explosion packets only when distance squared is
 // below 4096. Beyond this range a destroyed crystal can vanish without a receipt.
@@ -297,7 +310,7 @@ export class EndCombat {
         observation.blockedBy = "Dragon is beyond the 64-block firing range; move closer or wait for its next pass.";
         return null;
       }
-      const trajectory = bowTrajectory(this.eyePosition().offset(0, -0.1, 0), target, velocity);
+      const trajectory = bowTrajectory(this.bot.entity.position.offset(0, observedEyeHeight(this.bot.entity) - 0.1, 0), target, velocity);
       if (!trajectory || !clearBowTrajectory(trajectory, (p, d, n) => bot.world.raycast(p, d, n))) {
         observation.blockedBy = "No clear intercept from this footing; wait for a pass or move to an exposed position.";
         return null;
@@ -426,12 +439,17 @@ export class EndCombat {
   /** Head approach and breath escape share observed body contact. Only a head
    * approach rejects breath cells: escape can begin inside one and must leave. */
   private movements(routeClouds: ReturnType<typeof readDragonBreathHazards> = []): MovementPolicy {
-    const base = createMovements(this.bot, {
+    return this.avoidingDragon(createMovements(this.bot, {
       allowParkour: false,
       allowSprinting: false,
       allowDigging: this.policy().combat.terrain.dig,
       scaffolding: this.policy().combat.terrain.place,
-    });
+    }), routeClouds);
+  }
+
+  /** Refuse every stance and jump inside the observed perched dragon's
+   * head, neck and wing boxes, and in `routeClouds`, on top of `base`. */
+  private avoidingDragon(base: MovementPolicy, routeClouds: ReturnType<typeof readDragonBreathHazards> = []): MovementPolicy {
     const contact = observeDragonEscape(this.bot);
     return {
       ...base,
@@ -826,15 +844,27 @@ export class EndCombat {
     // The pillar approach is the exception: its route is the scaffolding, and
     // the descent digs back through it. The tower stays protected either way.
     const pillar = observation.approach === "pillar";
+    const protectedCells = () => new Set([packKey(pedestal.x, pedestal.y, pedestal.z),
+      ...(observation.staircase?.tower.map(p => packKey(p.x, p.y, p.z)) ?? []),
+      ...(observation.staircase?.cells.filter(cell => cell.blockName !== "air")
+        .map(({ position: p }) => packKey(p.x, p.y, p.z)) ?? [])]);
     const movements = () => createMovements(bot, {
       allowDigging: this.policy().combat.terrain.dig, scaffolding: pillar && this.policy().combat.terrain.place,
-      protectedCells: new Set([packKey(pedestal.x, pedestal.y, pedestal.z),
-        ...(observation.staircase?.tower.map(p => packKey(p.x, p.y, p.z)) ?? []),
-        ...(observation.staircase?.cells.filter(cell => cell.blockName !== "air")
-          .map(({ position: p }) => packKey(p.x, p.y, p.z)) ?? [])]),
+      protectedCells: protectedCells(),
     });
+    // What the bot itself may have left on the attack line: shelter walls and
+    // caps, or scaffold. The tower, its pedestal, its cage and the treads stay.
+    const placedByBot = (position: Vec3) => {
+      const block = bot.blockAt(position);
+      return block !== null && block.name !== "bedrock" && !protectedCells().has(packKey(position.x, position.y, position.z)) &&
+        (DRAGON_PROTECTION_BLOCKS.includes(block.name) || this.policy().navigation.scaffold_blocks.includes(block.name));
+    };
+    let lineDigs = 0;
     while (!observation.destroyed && !observation.shot) {
       signal.throwIfAborted();
+      // An approach pass answers a lost crystal with "changed" before any real
+      // wait; without this check the climb re-entered itself and never yielded.
+      if (!crystal.isValid) return this.crystalResult(observation, "stopped", "Selected crystal is no longer observed");
       if (this.danger) {
         const escape = await this.evade(signal);
         if (escape.outcome !== "evaded") {
@@ -852,7 +882,10 @@ export class EndCombat {
       } else {
         const built = await this.buildCrystalApproach(observation, signal);
         if (built.kind === "changed") continue;
-        if (built.kind === "failed") return this.crystalResult(observation, "stopped", built.reason);
+        if (built.kind === "failed") {
+          if (await this.breathPassed(signal, observation.staircase)) continue;
+          return this.crystalResult(observation, "stopped", built.reason);
+        }
       }
       const moved = await this.move(exactBlockGoal(observation.staircase.stance), signal,
         () => this.danger || !crystal.isValid, movements());
@@ -865,6 +898,18 @@ export class EndCombat {
       const feet = bot.entity.position.clone();
       const aim = crystalMeleeAim(bot, crystal.position);
       if (!aim) {
+        // A dragon shelter raised on the stance leaves its walls and cap
+        // between the eye and the crystal; dig them out rather than refuse
+        // every retry from the same cell.
+        const obstruction = this.policy().combat.terrain.dig && lineDigs < CRYSTAL_LINE_DIGS
+          ? crystalMeleeObstruction(bot, crystal.position, feet.offset(0, observedEyeHeight(bot.entity), 0), placedByBot)
+          : null;
+        if (obstruction) {
+          lineDigs++;
+          const dug = await this.phase("approach", () =>
+            this.navigation.breakBlockInPlace({ position: obstruction, movements: movements(), signal }));
+          if (dug.status === "broken") continue;
+        }
         observation.fail("cage_uncleared");
         return this.crystalResult(observation, "stopped", "[CRYSTAL_ATTACK_CORNER_BLOCKED] The staircase is complete but the stance lacks a clear melee hit within reach. Inspect the cage opening before retrying.");
       }
@@ -893,7 +938,7 @@ export class EndCombat {
       if (blastUnsafe(finalBlast)) continue;
       observation.recordSwing(
         bot.entity.position.floored().equals(observation.staircase.stance),
-        bot.entity.position.offset(0, 1.62, 0).distanceTo(aim),
+        bot.entity.position.offset(0, observedEyeHeight(bot.entity), 0).distanceTo(aim),
         { cover: crystalBlastCoverCell(bot, crystal.position, bot.entity.position), exposure: finalBlast.exposure, damage: finalBlast.damage },
       );
       observation.released(0);
@@ -903,6 +948,7 @@ export class EndCombat {
     const receipt = await this.observeCrystalShot(observation, signal);
     if (receipt.outcome !== "crystal_destroyed") return receipt;
     observation.beginReturn();
+    const perchDeadline = Date.now() + CRYSTAL_PERCH_WAIT_MS;
     for (;;) {
       if (this.danger) {
         const escape = await this.evade(signal);
@@ -913,13 +959,61 @@ export class EndCombat {
           };
         }
       }
-      const descended = await this.move(crystalReturnGoal(start), signal, () => this.danger, movements());
+      // The walk home can cross the fountain while the dragon sits on it. An
+      // unrestricted route stepped up into the perched wing's reach, the
+      // escape stepped one block down out of it, and the two alternated until
+      // the take-off launched the body. Route around that reach as the head
+      // approach does; when it closes every route, wait for the perch to change.
+      const descended = await this.move(crystalReturnGoal(start), signal, () => this.danger,
+        this.avoidingDragon(movements()));
       if (descended.kind === "changed") continue;
+      if (descended.kind === "failed" && await this.perchChanged(signal, perchDeadline)) continue;
       observation.finishReturn(descended.kind === "arrived");
       return descended.kind === "arrived"
         ? this.crystalResult(observation, "crystal_destroyed")
         : this.crystalResult(observation, "stopped", `Crystal destroyed; return route failed: ${descended.reason}`);
     }
+  }
+
+  /**
+   * A perched dragon's breath settled on the floor beside the raised cell the
+   * bot stood on: not exposed, so no escape ran, but navigation refuses every
+   * step into the breath, and the staircase read its closed routes as
+   * unreachable treads. A fireball's cloud on a tread above the bot closes the
+   * one-wide staircase the same way. Wait for that breath to go, then build again.
+   */
+  private async breathPassed(signal: AbortSignal, staircase: CrystalStaircase | null): Promise<boolean> {
+    const treads = staircase?.cells.filter(cell => cell.blockName === "air").map(cell => cell.position) ?? [];
+    const beside = [...breathBesideFeet(this.bot, this.bot.entity.position), ...breathOverStances(this.bot, treads)]
+      .map(cloud => cloud.id);
+    if (beside.length === 0) return false;
+    for (const deadline = Date.now() + CRYSTAL_BREATH_WAIT_MS; Date.now() < deadline;) {
+      // Danger or lost footing is a changed scene the approach loop answers itself.
+      if (this.danger || this.footing.needed) return true;
+      const present = new Set(readDragonCloudHazards(this.bot).map(cloud => cloud.id));
+      if (beside.every(id => !present.has(id))) return true;
+      await waitForPhysicsTicks(this.bot, 5, signal);
+    }
+    return false;
+  }
+
+  /**
+   * A perched dragon's reach can close every return route from the clear cell
+   * the body stands on. Hold that cell until the perch changes (a turn moves
+   * the wings, a take-off ends it) or danger arrives, then route again. False
+   * when no dragon is perched, or the perch outlasts `deadline`.
+   */
+  private async perchChanged(signal: AbortSignal, deadline: number): Promise<boolean> {
+    const pose = () => JSON.stringify(Object.values(this.bot.entities)
+      .filter(entity => entity.isValid && entity.name === "ender_dragon" && isDragonPerched(dragonPhase(this.bot, entity)))
+      .map(entity => [entity.id, entity.position.x.toFixed(1), entity.position.y.toFixed(1), entity.position.z.toFixed(1), entity.yaw.toFixed(2)]));
+    const perched = pose();
+    if (perched === "[]") return false;
+    while (Date.now() < deadline) {
+      if (this.danger || this.footing.needed || pose() !== perched) return true;
+      await waitForPhysicsTicks(this.bot, 5, signal);
+    }
+    return false;
   }
 
   private async buildCrystalApproach(observation: CrystalObservation, signal: AbortSignal): Promise<EndMoveResult> {
@@ -1053,7 +1147,7 @@ export class EndCombat {
           const cleared = await this.clearPerchSightline(block.position.offset(0.5, 0.5, 0.5), signal, changed);
           return cleared.kind === "arrived" ? { kind: "changed" } : cleared;
         }
-    const eye = this.eyePosition();
+    const eye = this.bot.entity.position.offset(0, observedEyeHeight(this.bot.entity), 0);
     // Open a small arrival window, including lower/higher body-eye positions.
     // Visibility is observable; a native unseen-player cache is not.
     for (const dx of [-1, 0, 1]) for (const dy of [-1, 0, 1]) for (const dz of [-1, 0, 1]) {
@@ -1140,7 +1234,7 @@ export class EndCombat {
    * or the observed perch pose makes the current block unsafe to work on. */
   private async clearPerchSightline(point: Vec3, signal: AbortSignal, changed: () => boolean): Promise<EndMoveResult> {
     await this.bot.lookAt(point, true);
-    const eye = this.eyePosition();
+    const eye = this.bot.entity.position.offset(0, observedEyeHeight(this.bot.entity), 0);
     const ray = point.minus(eye);
     const length = ray.norm();
     if (length === 0) return { kind: "changed" };
@@ -1176,11 +1270,6 @@ export class EndCombat {
     } finally {
       this.bot.off("physicsTick", watch);
     }
-  }
-
-  private eyePosition(): Vec3 {
-    const entity = this.bot.entity as Bot["entity"] & { eyeHeight?: number };
-    return entity.position.offset(0, entity.eyeHeight ?? 1.62, 0);
   }
 
   // TODO(dragon combat): revisit after the 2026-09-14 qualification (one full
@@ -1429,7 +1518,7 @@ export class EndCombat {
           await this.tick(signal);
           continue;
         }
-        const aim = nearestBodyPoint(bot.entity.position.offset(0, 1.62, 0), target);
+        const aim = nearestBodyPoint(bot.entity.position.offset(0, observedEyeHeight(bot.entity), 0), target);
         if (!canMeleeTarget(bot, target)) {
           observation.blockedBy = `Clearing the observed block between the low stance and ${target.name}.`;
           report("clearing_part_sightline", { aim: point(aim) });

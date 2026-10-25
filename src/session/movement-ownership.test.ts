@@ -10,7 +10,9 @@ test("movement inputs belong to navigation, survival, and the bounded raw action
   const invalid: { file: string; call: string }[] = [];
   for (const entry of readdirSync(root, { recursive: true, encoding: "utf8" })) {
     const file = entry.replaceAll("\\", "/");
-    if (!file.endsWith(".ts") || file.endsWith(".test.ts") || file.startsWith("test-support/")) continue;
+    // `*.test-support.ts` holds co-located test helpers and is left out of the build like the tests.
+    const testCode = file.endsWith(".test.ts") || file.endsWith(".test-support.ts") || file.startsWith("test-support/");
+    if (!file.endsWith(".ts") || testCode) continue;
     const source = ts.createSourceFile(file, readFileSync(join(root, file), "utf8"), ts.ScriptTarget.Latest, true);
     function visit(node: ts.Node) {
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {

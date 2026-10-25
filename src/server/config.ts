@@ -25,6 +25,8 @@ export interface HostOptions {
   readonly version: string;
   readonly connectTimeoutMs: number;
   readonly debugExecuteJavaScript: boolean;
+  /** Slow the bot and stop it sprinting while an item is in use, as the vanilla client does. */
+  readonly vanillaItemUseMovement: boolean;
   /** Defaults to true; false retains the SDK's previous output-schema representation. */
   readonly outputSchemaReferences?: boolean;
   readonly botData: {
@@ -49,6 +51,7 @@ export function parseHostOptions(args: readonly string[] = process.argv.slice(2)
       version: { type: "string", default: "1.21.4" },
       "connect-timeout-ms": { type: "string", default: "45000" },
       "debug-execute-javascript": { type: "boolean", default: false },
+      "vanilla-item-use-movement": { type: "boolean", default: false },
       "inline-output-schemas": { type: "boolean", default: false },
       "data-root": { type: "string", default: DEFAULT_DATA_ROOT },
       "bot-data-persistence": { type: "string", default: "persistent" },
@@ -77,6 +80,7 @@ export function parseHostOptions(args: readonly string[] = process.argv.slice(2)
     version: values.version,
     connectTimeoutMs: positiveInteger("--connect-timeout-ms", values["connect-timeout-ms"]),
     debugExecuteJavaScript: values["debug-execute-javascript"],
+    vanillaItemUseMovement: values["vanilla-item-use-movement"],
     outputSchemaReferences: !values["inline-output-schemas"],
     botData: {
       storage:

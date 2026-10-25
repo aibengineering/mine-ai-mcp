@@ -215,22 +215,8 @@ test("auto-zooms when chunks_per_cell is omitted", (t) => {
   assert.equal(scaleDefault, 2);
 });
 
-test("keeps the map request deliberately bounded", () => {
-  assert.deepEqual(parseViewFrontierRequest({}), {
-    perspective: "biome",
-    width: 61,
-    height: 31,
-    chunksPerCell: undefined,
-  });
-  for (const input of [
-    { width: 4 },
-    { width: 6 },
-    { width: 123 },
-    { height: 83 },
-    { chunks_per_cell: 3 },
-    { perspective: "materials" },
-    { surprise: true },
-  ]) {
-    assert.throws(() => parseViewFrontierRequest(input));
+test("a map has one centre cell and draws only at a supported scale", () => {
+  for (const input of [{ width: 6 }, { height: 30 }, { chunks_per_cell: 3 }]) {
+    assert.throws(() => parseViewFrontierRequest(input), Error, JSON.stringify(input));
   }
 });

@@ -1,0 +1,71 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance]
+description: >-
+  Explore east until standing in a warped forest, in three pens a hundred blocks apart. Each pen
+  has warped forest biome loaded above the bot, which must not count as entry. EntryScout must walk
+  into the warped forest that begins eight blocks east at feet level. GapScout enters it while
+  jumping a three-wide gap and must settle on the landing, unhurt, before exploration releases
+  movement. ExhaustedScout has only the overhead layer, so after expanding its frontier column it
+  must report EXPLORATION_BIOME_NOT_OBSERVED as a partial result instead of claiming entry.
+
+# Biome volumes are restored to plains on the way out, so a reused server
+# does not carry warped forest into the next fixture.
+reset:
+  - "fill -3 -63 97 20 -53 103 air"
+  - "fillbiome -16 -60 -16 31 -53 15 plains"
+  - "fillbiome -16 -60 96 23 -53 103 plains"
+  - "fillbiome -16 -60 184 63 -53 215 plains"
+
+geometry:
+  # GapScout: a netherrack runway over a pit cleared to bedrock, with a
+  # three-wide gap between x 0 and the landing at x 4.
+  - fill: { block: netherrack, from: [-3, -59, 100], to: [0, -59, 100] }
+  - fill: { block: netherrack, from: [4, -59, 100], to: [20, -59, 100] }
+
+setup:
+  # EntryScout: a decoy layer above spawn, and the forest at feet level from x 8.
+  - "fillbiome -16 -56 -16 31 -53 15 warped_forest"
+  - "fillbiome 8 -60 -16 31 -57 15 warped_forest"
+  # GapScout: the forest begins at the landing, so entry happens mid-jump.
+  - "fillbiome 4 -60 96 23 -53 103 warped_forest"
+  # ExhaustedScout: only the overhead decoy, across the whole frontier column.
+  - "fillbiome -16 -56 184 63 -53 215 warped_forest"
+
+players:
+  - name: EntryScout
+    pos: [0.5, -60, 0.5]
+  - name: GapScout
+    pos: [0.5, -58, 100.5]
+  - name: ExhaustedScout
+    pos: [0.5, -60, 200.5]
+
+params:
+  players:
+    EntryScout:
+      action: explore_frontier
+      input: { heading: 90, chunks: 1, biome: warped_forest }
+    GapScout:
+      action: explore_frontier
+      input: { heading: 90, chunks: 1, biome: warped_forest }
+    ExhaustedScout:
+      action: explore_frontier
+      input: { heading: 90, chunks: 1, biome: warped_forest }
+      expect: { status: partial, errorContains: "[EXPLORATION_BIOME_NOT_OBSERVED]" }
+
+tick:
+  - "gamemode spectator @a[name=!EntryScout,name=!GapScout,name=!ExhaustedScout,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    # A biome request succeeds only on entry, so completion means the
+    # runtime reported entering; where the bot stands says it was not the decoy.
+    - { kind: reach, who: EntryScout, pos: [8.5, -60, 0.5], radius: 2 }
+    - { kind: completion, who: EntryScout }
+    - { kind: reach, who: GapScout, pos: [4.5, -58, 100.5], radius: 0.8 }
+    - { kind: health, who: GapScout, health: 20 }
+    - { kind: completion, who: GapScout }
+    - { kind: reach, who: ExhaustedScout, pos: [18, -60, 200.5], radius: 12 }
+    - { kind: completion, who: ExhaustedScout }

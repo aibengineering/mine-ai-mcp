@@ -1,0 +1,59 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance, regression]
+description: >-
+  At night, starting inside the opening of an End portal frame with two of
+  twelve eyes and lava under the opening's centre, activate it with ten
+  carried eyes: step out, fill every socket, spend all ten and stay in the
+  Overworld. A second activation reports the portal already active. Entering
+  is refused while no personal respawn bed is confirmed, and after sleeping at
+  the bed eight blocks west it is refused again when the request allows only
+  four blocks to the bed. Allowed the default distance, the bot enters the End,
+  lands undamaged on the obsidian platform and can still walk.
+# Absorbs flat/portal/activate-end-and-cross, activate-end-resume (the live
+# part; cancel and resume are pinned in activate-portal.test.ts),
+# end-entry-missing, end-entry-distant and end-entry-near. The distant refusal
+# uses respawn_within below the near bed's distance, the same guard decision as
+# the legacy bed thirty blocks off. Only a night sleep confirms a bed, so the
+# course starts at night.
+world:
+  type: flat
+  time: 13000
+  difficulty: peaceful
+  gamerules: { doDaylightCycle: true, doMobSpawning: false, doWeatherCycle: false, keepInventory: true, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  - fill: { block: stone_bricks, from: [-16, -60, -16], to: [16, -60, 16] }
+  - setblock: { at: [0, -60, 0], block: lava }
+  - fill: { block: "end_portal_frame[facing=south,eye=false]", from: [-1, -59, -2], to: [1, -59, -2] }
+  - fill: { block: "end_portal_frame[facing=north,eye=false]", from: [-1, -59, 2], to: [1, -59, 2] }
+  - fill: { block: "end_portal_frame[facing=east,eye=false]", from: [-2, -59, -1], to: [-2, -59, 1] }
+  - fill: { block: "end_portal_frame[facing=west,eye=false]", from: [2, -59, -1], to: [2, -59, 1] }
+  - fill: { block: "end_portal_frame[facing=south,eye=true]", from: [-1, -59, -2], to: [0, -59, -2] }
+  - setblock: { at: [-8, -59, 0], block: "red_bed[facing=west,part=foot,occupied=false]" }
+  - setblock: { at: [-9, -59, 0], block: "red_bed[facing=west,part=head,occupied=false]" }
+players:
+  - name: EndVisitor
+    # In the opening, on stone, beside the lava.
+    pos: [-0.5, -59, -0.5]
+    inventory:
+      - { item: ender_eye, count: 10 }
+      - { item: cooked_beef, count: 16 }
+      - { item: arrow, count: 32 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/end-portal-course.ts]
+params:
+  frame: { x: -2, y: -59, z: 0 }
+  portal: { x: 0, y: -59, z: 0 }
+  distantWithin: 4
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - kind: blocksAt
+      block: end_portal
+      positions: [[-1, -59, -1], [0, -59, -1], [1, -59, -1], [-1, -59, 0], [0, -59, 0], [1, -59, 0], [-1, -59, 1], [0, -59, 1], [1, -59, 1]]
+    - { kind: hasItem, who: EndVisitor, item: ender_eye, count: 0, max: 0 }
+    - { kind: health, who: EndVisitor, health: 20 }
+    - { kind: completion, who: EndVisitor }

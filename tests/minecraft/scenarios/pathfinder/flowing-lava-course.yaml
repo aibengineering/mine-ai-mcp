@@ -1,0 +1,173 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Move and work beside flowing lava without touching it. Five pens, none armoured: a narrow
+  zigzag bridge past four falling lava streams; a three-block gap through a one-block
+  opening between two streams; three step-ups and a west turn beside a stream with lava at
+  head height (run 17's final lava contact, request 205); an 80x30 arena where three
+  sources are released across the straight route once the bot sets off; and obsidian
+  collected while a gated source beside it is released mid-dig. Health stays at 20. The
+  navigation variant of the released source, which still kills the bot, is
+  known-failing/pathfinder/flowing-lava-dig-release.
+
+# Regeneration is off, so any lava contact or burn shows as lost health. The
+# streams are native flow, given eighty ticks to settle before each request.
+# The released sources are opened by one-shot schedule entries keyed to the
+# bot's position or the trial clock, not by the driver. For the released flow
+# any settled status will do (withdrawing is correct); the bot is observed
+# 340 ticks later, with its reflexes live, as the legacy fixtures did, and the
+# spreading arena 160 ticks after arrival, once the flows have settled.
+reset:
+  - "fill -8 -62 -4 9 -43 11 air"
+  - "fill 92 -62 -5 110 -45 5 air"
+  - "fill 193 -60 -5 205 -36 5 air"
+  - "fill 297 -60 -16 382 -51 16 air"
+  - "fill 394 -60 -6 406 -47 6 air"
+
+geometry:
+  # Slalom (stream-slalom): a narrow zigzag bridge with a falling lava stream
+  # beside each of its four corners.
+  - fill: { block: bedrock, from: [-8, -61, -4], to: [9, -61, 11] }
+  - fill: { block: blue_concrete, from: [-5, -55, 0], to: [0, -55, 0] }
+  - fill: { block: lime_concrete, from: [0, -55, 1], to: [0, -55, 4] }
+  - fill: { block: blue_concrete, from: [1, -55, 4], to: [5, -55, 4] }
+  - fill: { block: lime_concrete, from: [5, -55, 5], to: [5, -55, 8] }
+  - fill: { block: glass, from: [0, -45, -1], to: [2, -45, 1] }
+  - fill: { block: glass, from: [-2, -45, 3], to: [0, -45, 5] }
+  - fill: { block: glass, from: [5, -45, 3], to: [7, -45, 5] }
+  - fill: { block: glass, from: [3, -45, 7], to: [5, -45, 9] }
+  - setblock: { block: lava, at: [1, -45, 0] }
+  - setblock: { block: lava, at: [-1, -45, 4] }
+  - setblock: { block: lava, at: [6, -45, 4] }
+  - setblock: { block: lava, at: [4, -45, 8] }
+  - fill: { block: "lava[level=8]", from: [1, -60, 0], to: [1, -46, 0] }
+  - fill: { block: "lava[level=8]", from: [-1, -60, 4], to: [-1, -46, 4] }
+  - fill: { block: "lava[level=8]", from: [6, -60, 4], to: [6, -46, 4] }
+  - fill: { block: "lava[level=8]", from: [4, -60, 8], to: [4, -46, 8] }
+
+  # Streams (parkour-between-streams): a three-block gap whose only opening is
+  # one block wide, between two falling streams.
+  - fill: { block: bedrock, from: [92, -61, -5], to: [110, -61, 5] }
+  - fill: { block: blue_concrete, from: [95, -55, 0], to: [100, -55, 0] }
+  - fill: { block: lime_concrete, from: [104, -55, 0], to: [107, -55, 0] }
+  - fill: { block: glass, from: [101, -47, -2], to: [103, -47, 2] }
+  - setblock: { block: lava, at: [102, -47, -1] }
+  - setblock: { block: lava, at: [102, -47, 1] }
+  - fill: { block: "lava[level=8]", from: [102, -60, -1], to: [102, -48, -1] }
+  - fill: { block: "lava[level=8]", from: [102, -60, 1], to: [102, -48, 1] }
+
+  # Stair (step-up-turn-beside-lava-stream): run 17's last three ascents and
+  # west turn, with level-2 lava beside head height and a stream beyond.
+  - fill: { block: bedrock, from: [194, -56, -4], to: [204, -56, 4] }
+  - setblock: { block: deepslate, at: [200, -45, -2] }
+  - setblock: { block: deepslate, at: [200, -44, -1] }
+  - setblock: { block: deepslate, at: [200, -43, 0] }
+  - fill: { block: deepslate, from: [197, -42, 0], to: [199, -42, 0] }
+  - setblock: { block: bedrock, at: [200, -42, 2] }
+  - setblock: { block: bedrock, at: [199, -41, 2] }
+  - setblock: { block: bedrock, at: [201, -41, 2] }
+  - setblock: { block: bedrock, at: [200, -41, 3] }
+  - setblock: { block: lava, at: [200, -41, 2] }
+  - setblock: { block: "lava[level=2]", at: [200, -41, 1] }
+  - fill: { block: "lava[level=8]", from: [200, -55, 1], to: [200, -42, 1] }
+
+  # Spreading (spreading-lava-obstacle-course): an 80x30 walled floor with
+  # scattered rocks and three glass cups of lava over the straight route,
+  # whose stone bottoms are removed once the bot sets off.
+  - fill: { block: bedrock, from: [298, -60, -15], to: [381, -60, 15] }
+  - fill: { block: bedrock, from: [298, -59, -15], to: [381, -57, -15] }
+  - fill: { block: bedrock, from: [298, -59, 15], to: [381, -57, 15] }
+  - fill: { block: bedrock, from: [298, -59, -15], to: [298, -57, 15] }
+  - fill: { block: bedrock, from: [381, -59, -15], to: [381, -57, 15] }
+  - setblock: { block: gold_block, at: [378, -60, 0] }
+  - fill: { block: stone, from: [336, -59, -5], to: [338, -58, -3] }
+  - fill: { block: stone, from: [352, -59, 3], to: [354, -58, 5] }
+  - fill: { block: stone, from: [368, -59, -6], to: [370, -58, -4] }
+  - fill: { block: glass, from: [331, -57, -1], to: [333, -56, 1] }
+  - setblock: { block: lava, at: [332, -56, 0] }
+  - setblock: { block: stone, at: [332, -57, 0] }
+  - fill: { block: glass, from: [347, -57, 0], to: [349, -56, 2] }
+  - setblock: { block: lava, at: [348, -56, 1] }
+  - setblock: { block: stone, at: [348, -57, 1] }
+  - fill: { block: glass, from: [363, -57, -2], to: [365, -56, 0] }
+  - setblock: { block: lava, at: [364, -56, -1] }
+  - setblock: { block: stone, at: [364, -57, -1] }
+
+  # Collect (lava-advances-during-collection): obsidian in a bedrock cut beside
+  # a gated lava source, released while the bot digs. Bedrock forbids climbing
+  # over or walking round the cut; the open area east allows a withdrawal.
+  - fill: { block: bedrock, from: [395, -55, -5], to: [405, -55, 5] }
+  - setblock: { block: deepslate, at: [400, -52, 1] }
+  - fill: { block: bedrock, from: [396, -54, -1], to: [398, -53, 1] }
+  - setblock: { block: lava, at: [397, -54, 0] }
+  - setblock: { block: stone, at: [398, -54, 0] }
+  - fill: { block: bedrock, from: [399, -54, -4], to: [401, -50, -1] }
+  - fill: { block: air, from: [400, -54, -3], to: [400, -53, -2] }
+  - fill: { block: obsidian, from: [400, -54, -1], to: [400, -53, -1] }
+
+schedule:
+  - when: "entity @a[name=Spreader,x=303,y=-60,z=-15,dx=80,dy=4,dz=30]"
+    run: ["setblock 332 -57 0 air", "setblock 348 -57 1 air", "setblock 364 -57 -1 air"]
+  # Obsidian takes about nine seconds to break with a diamond pickaxe.
+  - { afterTicks: 40, run: "setblock 398 -54 0 air" }
+
+players:
+  - { name: Slalom, pos: [-4.5, -54, 0.5] }
+  - { name: StreamJumper, pos: [95.5, -54, 0.5] }
+  - { name: StairTurner, pos: [200.5, -44, -1.5] }
+  - { name: Spreader, pos: [300.5, -59, 0.5] }
+  - name: Collector
+    pos: [400.5, -54, 0.5]
+    inventory: [{ item: diamond_pickaxe, count: 1 }]
+
+tick:
+  - "gamemode spectator @a[name=!Slalom,name=!StreamJumper,name=!StairTurner,name=!Spreader,name=!Collector,gamemode=!spectator]"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  players:
+    Slalom:
+      waitTicks: 80
+      dig: true
+      legs: [{ target: [5, -54, 8], range: 0.2, label: "Slalom past four streams" }]
+    StreamJumper:
+      waitTicks: 80
+      dig: true
+      legs: [{ target: [107, -54, 0], range: 0.2, label: "Jump between two streams" }]
+    StairTurner:
+      waitTicks: 80
+      dig: true
+      legs: [{ target: [197, -41, 0], range: 0.2, label: "Step up three and turn west beside the stream" }]
+    Spreader:
+      legs: [{ target: [378, -59, 0], range: 0.2, settleTicks: 160, label: "Cross the arena as the lava spreads" }]
+    Collector:
+      legs:
+        - label: "Collect obsidian as the lava is released"
+          action: collect_block
+          input: { block_name: obsidian, count: 1, x: 400, y: -54, z: -1, scaffold: false }
+          expect: { status: [succeeded, partial, failed] }
+          settleTicks: 340
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: reach, who: Slalom, pos: [5.5, -54, 8.5], radius: 0.75 }
+    - { kind: health, who: Slalom, health: 20 }
+    - { kind: completion, who: Slalom }
+    - { kind: reach, who: StreamJumper, pos: [107.5, -54, 0.5], radius: 0.75 }
+    - { kind: health, who: StreamJumper, health: 20 }
+    - { kind: completion, who: StreamJumper }
+    - { kind: reach, who: StairTurner, pos: [197.5, -41, 0.5], radius: 0.75 }
+    - { kind: health, who: StairTurner, health: 20 }
+    - { kind: completion, who: StairTurner }
+    - { kind: reach, who: Spreader, pos: [378.5, -59, 0.5], radius: 0.8 }
+    - { kind: health, who: Spreader, health: 20 }
+    - { kind: completion, who: Spreader }
+    - { kind: health, who: Collector, health: 20 }
+    - { kind: completion, who: Collector }
+    - { kind: survive, seconds: 1 }

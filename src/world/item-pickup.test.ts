@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import type { MovementPolicy } from "../navigation/index.js";
+import type { PlannedStep } from "../navigation/movements/movement.js";
+import { createMovementPolicy } from "../navigation/movements/policy.js";
+import { runNavigation } from "../navigation/navigate.js";
+import { createNavigator } from "../navigation/orchestration/navigator.js";
+import type { NavigationObservation } from "../navigation/world/world.js";
 import { botFixture, type FakeStack } from "../test-support/bot.js";
+import { FakeNavigationBot, flatWorld, observation } from "../test-support/navigation.js";
 import { armSignal } from "../utils/index.js";
 import {
   DROPPED_ITEM_OBSERVATION_EVENTS,
@@ -72,6 +78,59 @@ test("an item disappearing during a stopped route is gone, not an unreachable pi
   });
 
   assert.deepEqual(result, { kind: "item_gone" });
+  assert.equal(bot.inventory.listenerCount("updateSlot"), 0);
+});
+
+test("a pickup observed during the arrival approach is collected, and stopping the approach crashes nothing", async () => {
+  // The bow-range ledge: a blaze rod rolled into reach while a partial route
+  // was walked, the approach began closing on it, and the inventory proved the
+  // pickup mid-approach. The route's stop then rejected the approach's tick
+  // wait with "pickup_observed" where nothing was listening, and Bun ended the
+  // client process although the request itself succeeded.
+  const { bot } = pickupBot(0);
+  let collected = false;
+  let approaching = false;
+  // The approach steers once per tick; its first steering is the pickup's cue.
+  (bot as unknown as { setControlState: () => void }).setControlState = () => {
+    if (approaching || collected) return;
+    approaching = true;
+    setTimeout(() => {
+      collected = true;
+      bot.inventory.emit("updateSlot");
+    }, 5);
+  };
+  const dropAt = (x: number): NavigationObservation => ({
+    ...observation(x),
+    entities: new Map([[7, { id: 7, position: { x: x + 0.5, y: 63, z: 0.5 }, width: 0.25, height: 0.25 }]]),
+  });
+  class RollingDropBot extends FakeNavigationBot {
+    constructor() {
+      super();
+      this.current = { ...dropAt(-5), entities: dropAt(5).entities };
+    }
+    override async prepareMovement(step: PlannedStep, _token?: unknown, signal?: AbortSignal) {
+      // The drop rolls to where the body is before the step reports itself done.
+      this.arrive(step.to, dropAt(step.to.x));
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 30);
+        signal?.addEventListener("abort", () => (clearTimeout(timer), setTimeout(resolve, 30)), { once: true });
+      });
+      return { kind: "completed", arrival: step.to } as const;
+    }
+  }
+  const navigator = createNavigator({ world: flatWorld(), bot: new RollingDropBot() });
+
+  const result = await pickupObservedItem(bot, {
+    ...OBSERVED_ITEM,
+    movements: createMovementPolicy({ allowSprinting: false }),
+    hasArrived: () => collected,
+    // Commit a partial route at once, so a plan-ahead search runs beside it.
+    navigate: (options) => runNavigation(navigator, { ...options, searchLimits: { primaryTimeoutMs: 0, failureTimeoutMs: 1_000 } }),
+  });
+
+  assert.equal(approaching, true, "the pickup was observed during the arrival approach");
+  assert.deepEqual(result, { kind: "collected" });
+  assert.equal(navigator.running, false);
   assert.equal(bot.inventory.listenerCount("updateSlot"), 0);
 });
 

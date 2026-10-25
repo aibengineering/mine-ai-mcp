@@ -1,7 +1,7 @@
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { centerOnCell, steeringPortFor } from "../../navigation/index.js";
-import { selectHarvestTool } from "../../navigation/mineflayer/movement-policy.js";
+import { dryGroundedDigTime, selectHarvestTool } from "../../navigation/mineflayer/movement-policy.js";
 import { navigationFeet } from "../../navigation/world/block-geometry.js";
 import { cellIntersectsBody } from "../../utils/geometry.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
@@ -22,6 +22,17 @@ import { recoverUnderCover, type CoveredRecovery } from "./recover.js";
 function shelterFeet(bot: Bot): Vec3 {
   const cell = navigationFeet(bot.entity.position, bot.entity.onGround);
   return new Vec3(cell.x, cell.y, cell.z);
+}
+
+/** The cells under the player's footprint at its feet height, nearest the centre first. */
+function footprintCells(bot: Bot): Vec3[] {
+  const { position } = bot.entity;
+  const feet = shelterFeet(bot);
+  const cells: Vec3[] = [];
+  for (let x = Math.floor(position.x - 0.3); x < position.x + 0.3; x++)
+    for (let z = Math.floor(position.z - 0.3); z < position.z + 0.3; z++) cells.push(new Vec3(x, feet.y, z));
+  const away = (cell: Vec3) => Math.hypot(cell.x + 0.5 - position.x, cell.z + 0.5 - position.z);
+  return cells.sort((a, b) => away(a) - away(b));
 }
 
 type Entity = Parameters<Bot["attack"]>[0];
@@ -90,6 +101,33 @@ function solid(block: WorldBlock | null): block is WorldBlock {
 
 function diggable(block: WorldBlock | null): block is WorldBlock {
   return solid(block) && block.name !== "bedrock" && block.hardness !== null && block.hardness >= 0;
+}
+
+/**
+ * Whether breaking `cell` would let a liquid beside it run into the shaft
+ * the body then drops into.
+ *
+ * The CubeEvade pen stands on a two-thick basalt shelf in a lava lake. Its
+ * hide, cornered on the edge row, dug the basalt under its feet; the lava
+ * beside that block flowed into the new cell and the bot dropped into it
+ * (combat-diag cube1 2026-10-20T22-58-31-012Z t00001 and t00002: 11 to 3.3
+ * health, and death).
+ */
+/**
+ * The longest one shaft block may take to break. The shield is down while
+ * the bot digs, and a bow skeleton looses an arrow every two seconds or so:
+ * the Cave pen of combat/creeper-navigation, at 9 health with only an iron
+ * sword, spent seven seconds swinging at the stone floor of its tunnel and
+ * was shot three times, to death (hunts-regress2 2026-10-20T22-39-36-467Z).
+ * A wooden pickaxe breaks stone in 1.15 s, bare hands dirt in 0.75 s.
+ */
+export const SHAFT_DIG_LIMIT_MS = 1500;
+
+function openToLiquid(bot: Bot, cell: Vec3): boolean {
+  return PROTECTION_SIDES.some((side) => {
+    const name = bot.blockAt(cell.plus(side))?.name;
+    return name === "lava" || name === "water";
+  });
 }
 
 function message(cause: unknown): string {
@@ -288,6 +326,7 @@ export async function hideInPlace(bot: Bot, options: HideOptions): Promise<HideR
         Math.abs(bot.entity.position.z - origin.z - 0.5) + bot.entity.width / 2 > 0.5)) ||
     shelterIntruder(bot, threatContext) !== null;
 
+  let steppedOntoSupport = false;
   construction: while (!enclosed) {
     signal.throwIfAborted();
     const hazard = unsafe();
@@ -319,11 +358,12 @@ export async function hideInPlace(bot: Bot, options: HideOptions): Promise<HideR
       const standing = shelterFeet(bot);
       const below = bot.blockAt(standing.offset(0, -1, 0));
       const under = bot.blockAt(standing.offset(0, -2, 0));
-      if (!diggable(below) || !solid(under)) break;
+      if (!diggable(below) || !solid(under) || openToLiquid(bot, standing.offset(0, -1, 0))) break;
       const centered = await centerShelterCell(standing);
       if (shelterIntruder(bot, threatContext)) continue construction;
       if (!centered) return done({ kind: "failed", error: "The bot could not centre over the shelter shaft" });
       const tool = selectHarvestTool(bot, below);
+      if (dryGroundedDigTime(bot, below, tool) > SHAFT_DIG_LIMIT_MS) break;
       itemUse.lowerShield();
       if (tool && bot.heldItem?.name !== tool.name) await bot.equip(tool, "hand");
       signal.throwIfAborted();
@@ -352,16 +392,27 @@ export async function hideInPlace(bot: Bot, options: HideOptions): Promise<HideR
     if (descended === 0) {
       // A body straddling a cell edge occupies the wall's destination. The
       // server refuses that block even though the target itself is air.
-      const floor = bot.blockAt(feet.offset(0, -1, 0));
-      const supportedCenter = floor?.shapes.some(
-        ([minX, , minZ, maxX, maxY, maxZ]) =>
-          minX <= 0.5 &&
-          maxX >= 0.5 &&
-          minZ <= 0.5 &&
-          maxZ >= 0.5 &&
-          Math.abs(feet.y - 1 + maxY - bot.entity.position.y) < 0.001,
-      );
-      if (blocks() > 0 && !supportedCenter) {
+      const supportedCenter = (cell: Vec3) =>
+        bot.blockAt(cell.offset(0, -1, 0))?.shapes.some(
+          ([minX, , minZ, maxX, maxY, maxZ]) =>
+            minX <= 0.5 &&
+            maxX >= 0.5 &&
+            minZ <= 0.5 &&
+            maxZ >= 0.5 &&
+            Math.abs(cell.y - 1 + maxY - bot.entity.position.y) < 0.001,
+        ) ?? false;
+      if (blocks() > 0 && !supportedCenter(feet)) {
+        // A walk can end with the body's centre over an edge, standing on the
+        // block beside it: a withdrawal on the basalt slope stopped at x
+        // 172.04 above air at x 172, held up by the floor at x 171. Shelter
+        // over the block that holds the body, not the air its centre is over.
+        const holding = footprintCells(bot).find(
+          (cell) => !cell.equals(feet) && supportedCenter(cell) && bot.blockAt(cell)?.boundingBox === "empty",
+        );
+        if (holding && !steppedOntoSupport) {
+          steppedOntoSupport = true;
+          if (await centerShelterCell(holding)) continue construction;
+        }
         return done({ kind: "failed", error: "The shelter cell has no solid floor to centre on" });
       }
       const centered = blocks() === 0 || (await centerShelterCell(feet));

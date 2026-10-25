@@ -60,6 +60,13 @@ export interface MinecraftRuntimeOptions {
   readonly botData: SqlBotDataOptions;
   readonly highlighter?: BlockHighlighter;
   readonly debugExecuteJavaScript?: boolean;
+  /**
+   * Move as the vanilla client does while an item is in use: a raised shield,
+   * food or a drawn bow slows the bot to a fifth of its speed and stops it
+   * sprinting. Off by default, because combat and fleeing were tuned while
+   * the bot kept full speed behind its shield.
+   */
+  readonly vanillaItemUseMovement?: boolean;
   readonly onDisconnect?: (reason: string) => void;
   /** A replacement receives the same perception, footing and budgets as every reflex. */
   readonly createCombatController?: typeof createCombatController;
@@ -314,6 +321,9 @@ export async function createMinecraftRuntime(
     bot.off("physicsTick", sampleProgress); bot.off("forcedMove", resetProgress);
     bot.off("death", resetProgress); bot.off("game", resetProgress);
   });
+  const itemUseSlowdown = bot.physics.itemUseSlowdown;
+  bot.physics.itemUseSlowdown = options.vanillaItemUseMovement === true;
+  resources.defer(() => { bot.physics.itemUseSlowdown = itemUseSlowdown; });
   const reflexes = resources.use(new ReflexDriver(bot, runner));
   const navigation = resources.use(createNavigationRuntime(bot));
   installMinecraftKnowledge(botData, bot.registry);
@@ -437,7 +447,6 @@ export async function createMinecraftRuntime(
       navigation,
       strongholdEyeFlights,
       combat,
-      cancelForegroundAction: runner.cancelActive,
       observeStatusActivity: () => {
         const { owner, activeAction } = runner.status();
         return { owner, activeAction };

@@ -47,7 +47,6 @@ import {
   USE_BUCKET_DESCRIPTION,
   useBucketInputSchema,
   useBucketResultSchema,
-  useBucketAnnotations,
   useBucketOutcomes,
   type BucketCell,
   type BucketLiquid,
@@ -64,8 +63,13 @@ import {
  * over five away and the server refuses it before anything else is asked.
  */
 const POUR_APPROACH_RANGE = 2;
+/**
+ * The engine a bucket use drives: the route, the item use, the source search
+ * and the world navigation judges access through. Tests replace them with a
+ * fake that changes the blocks, so the fill and pour decisions are proven
+ * without a server.
+ */
 export interface UseBucketDependencies {
-  readonly createMovements: typeof createMovements;
   readonly navigate: Navigate;
   readonly useItem: typeof useItemAt;
   /** The loaded scan with the mine process's exploration behind it: where every source is found. */
@@ -75,7 +79,6 @@ export interface UseBucketDependencies {
 
 function productionDependencies(navigation: NavigationRuntime): UseBucketDependencies {
   return {
-    createMovements,
     navigate: navigation.navigate,
     useItem: useItemAt,
     explore: exploreForBlocks,
@@ -117,7 +120,7 @@ async function findSources(
   if (!definition) return { sources: [], reason: `Minecraft has no block named ${liquid}.`, explored: false };
   const result = await dependencies.explore(bot, {
     stateIds: new Set([definition.minStateId]),
-    movements: dependencies.createMovements(bot),
+    movements: createMovements(bot),
     route: dependencies.navigate,
     signal: context.signal,
   });
@@ -135,7 +138,7 @@ async function approach(
   // Measured feet cell to cell, as `nearGoal` measures arrival, so the two agree.
   if (bot.entity.position.floored().distanceTo(target) <= range) return null;
   return dependencies.navigate({
-    movements: dependencies.createMovements(bot),
+    movements: createMovements(bot),
     goal: nearGoal(coordinates(target), range),
     signal: context.signal,
   });
@@ -158,7 +161,7 @@ async function approachVisibleSource(
   const current = usableSource();
   if (current) return { source: current };
   const route = await dependencies.navigate({
-    movements: dependencies.createMovements(bot),
+    movements: createMovements(bot),
     goal: liquidAccessGoal(sources, liquid),
     signal: context.signal,
   });
@@ -325,6 +328,10 @@ export async function useBucket(
       item,
       lookAt: target.offset(0.5, 0.9, 0.5),
       expectedInventoryGain: { item: bucketFor(request.liquid, true), count: 1 },
+      // The inventory packet can beat the block update. Vanilla empties the
+      // cell in the same tick as the swap, and an infinite pool refills it
+      // only on a fluid tick five ticks later, so the cell is seen empty.
+      expectedCells: [{ position: target, matches: (block) => !isLiquidSource(bot, block, request.liquid) }],
       signal: context.signal,
     });
   } else {
@@ -389,7 +396,11 @@ export function createUseBucketAction(
     resultSchema: useBucketResultSchema,
     formatResult: formatUseBucketResult,
     execution: { kind: "task", prepare: () => prepareBotForMovement(bot, navigation) },
-    annotations: useBucketAnnotations,
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     parse: parseUseBucketRequest,
     execute: (request, context) => useBucket(bot, request, context, dependencies),
   });

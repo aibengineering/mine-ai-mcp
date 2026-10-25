@@ -20,7 +20,8 @@ import type {
 } from "../navigation/execution/movement-controller.js";
 import type { AttemptToken } from "../navigation/execution/mutations.js";
 import { MineflayerBot } from "../navigation/mineflayer/bot.js";
-import type { PlanningState } from "../navigation/movements/catalogue.js";
+import type { GeneratedMovement, PlanningState } from "../navigation/movements/catalogue.js";
+import type { GeneratedMovements } from "../navigation/movements/movement-candidates.js";
 import type { MovementKind, PlannedOperation, PlannedStep, RoutePlan } from "../navigation/movements/movement.js";
 import type { NavigationRequest, Navigator } from "../navigation/orchestration/navigator.js";
 import type { NavigationOutcome } from "../navigation/orchestration/outcome.js";
@@ -212,6 +213,30 @@ export function onEvent(handler: (event: NavigationEvent) => void): TelemetrySin
   return { emit: handler, error: () => undefined };
 }
 
+/** Search reasons that carry a run on from where it got to, rather than replanning what it had. */
+const CONTINUATIONS: ReadonlySet<string> = new Set(["segment_continuation", "arrival_continuation", "alternate_arrival"]);
+
+/**
+ * What a run did, counted from its events as they pass, then handed on to
+ * `forward`. The run publishes these transitions and keeps no tally of its
+ * own, so a test that cares how many searches a decision cost counts them here.
+ */
+export function countingTelemetry(forward: (event: NavigationEvent) => void = () => undefined) {
+  const counts = { searches: 0, continuations: 0, replans: 0, slices: 0, routes: 0, steps: 0 };
+  const telemetry = onEvent((event) => {
+    if (event.kind === "search_started") {
+      counts.searches += 1;
+      if (CONTINUATIONS.has(event.reason)) counts.continuations += 1;
+      else if (event.reason !== "initial") counts.replans += 1;
+    }
+    if (event.kind === "search_slice") counts.slices += 1;
+    if (event.kind === "route_committed") counts.routes += 1;
+    if (event.kind === "step_started") counts.steps += 1;
+    forward(event);
+  });
+  return { counts, telemetry };
+}
+
 /** A fresh planning state: the bot's feet, the scaffolds it carries, and an empty overlay. */
 export function planningStart(feet: Position3, remainingScaffolds = 0): PlanningState {
   const overlay = new PlanningOverlay(new OverlayInterner());
@@ -236,5 +261,21 @@ export function movementStep(
     operations: [{ kind: "move", movement: kind, target: options.target ?? { x: to.x + 0.5, y: to.y, z: to.z + 0.5 } }],
     effects: [],
     cost: { expectedTicks: ticks, breakPenalty: 0, placementPenalty: 0, hazardPenalty: 0, total: ticks },
+  };
+}
+
+/** Ready-made movements in the shape `generate` returns, for a catalogue stubbed in a test. */
+export function movementList(movements: readonly GeneratedMovement[]): GeneratedMovements {
+  return {
+    length: movements.length,
+    toX: movements.map((movement) => movement.to.x),
+    toY: movements.map((movement) => movement.to.y),
+    toZ: movements.map((movement) => movement.to.z),
+    remainingScaffolds: movements.map((movement) => movement.remainingScaffolds),
+    cost: movements.map((movement) => movement.cost),
+    settle: () => true,
+    movement: (index) => movements[index]!,
+    toArray: () => [...movements],
+    [Symbol.iterator]: () => movements[Symbol.iterator](),
   };
 }

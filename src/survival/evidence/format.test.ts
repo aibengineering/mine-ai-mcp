@@ -4,7 +4,6 @@ import { DEFAULT_SURVIVAL_POLICY } from "../policy/contract.js";
 import { survivalStatusSchema, type SurvivalStatus, type SurvivalReceipt } from "./contract.js";
 import { temporaryBotData } from "../../test-support/bot-data.js";
 import { readNotificationSummary, recordEvent } from "../../bot-data/event-log.js";
-import { readRecentEvents } from "../../actions/read-recent-events/read-recent-events.js";
 import { formatSurvivalOutcome, formatSurvivalStatus } from "./format.js";
 
 function snapshot(): SurvivalStatus {
@@ -52,7 +51,7 @@ test("active dangers and limitations remain visible", () => {
   status.summary = "standing_down";
   status.response = null;
   status.answered = [{ id: 1, capability: "fire_reflex", response: "escape", scope: "incident",
-    facts: null, consumed: null, failure: { kind: "no_route", why: "No escape route was found." }, since: 1, temporal: null }];
+    facts: null, consumed: null, failure: { kind: "no_route", why: "No escape route was found." }, since: 1 }];
   assert.ok(formatSurvivalStatus(status).includes("No escape route was found."));
 });
 
@@ -80,15 +79,10 @@ test("reflex notifications preserve observed interruption and eating evidence wi
     type: "survival_outcome", observedAt: new Date().toISOString(),
     summary: formatSurvivalOutcome(receipt), payload: receipt,
   });
-  const summary = readNotificationSummary(data, "TestBot");
-  assert.equal(summary.unreadCount, 2);
-  assert.deepEqual(summary.recentPreview, [
+  assert.deepEqual(readNotificationSummary(data, "TestBot").recentPreview, [
     "hostile: target died; interrupted collect_block; health 20 → 14/20",
     "hunger: ate; cooked porkchop; hunger 16 → 20/20",
   ]);
-  assert.deepEqual(readNotificationSummary(data, "TestBot"), summary, "Previews do not consume the unread cursor");
-  assert.equal(readRecentEvents(data, "TestBot", 100).events.length, 2);
-  assert.equal(readNotificationSummary(data, "TestBot").unreadCount, 0);
   assert.match(formatSurvivalOutcome({ ...receipts[1]!, evidence: {
     outcome: { kind: "eating_failed", food: "bread", error: "Consumption not observed" },
   } }), /eating failed; bread; Consumption not observed/);

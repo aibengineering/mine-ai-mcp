@@ -1,6 +1,5 @@
 template: ../../templates/flat-single-action.yaml
 
-name: iron-around-lava
 tags: [acceptance]
 description: Collect three iron ore from six choices, leaving the three suspended over lava because there is nowhere safe to stand to mine them.
 

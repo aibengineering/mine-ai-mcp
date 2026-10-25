@@ -1,7 +1,7 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import {
+  craftingOutcomes,
   craftPlanEvidenceSchema,
   craftingRequestInputSchema,
   parseCraftingRequest,
@@ -52,27 +52,13 @@ export const craftItemResultSchema = actionResultSchema({
   workstation: workstationEvidenceSchema.optional(),
 });
 export type CraftItemResult = z.output<typeof craftItemResultSchema>;
-export type CraftItemOutput = ActionOutput<typeof CRAFT_ITEM, CraftItemResult>;
-
-export const craftItemAnnotations = {
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: false,
-} satisfies ToolAnnotations;
-
-function itemList(items: readonly string[]): string {
-  return items.join(", ");
-}
 
 export const craftItemOutcomes = {
-  unknownItems: (items: readonly string[]) =>
-    `[UNKNOWN_CRAFT_ITEMS] Minecraft has no registry items named: ${itemList(items)}.`,
+  ...craftingOutcomes,
   uncraftable: (items: readonly string[]) =>
-    `[ITEMS_NOT_CRAFTABLE] Minecraft has no crafting recipe for: ${itemList(items)}.`,
+    `[ITEMS_NOT_CRAFTABLE] Minecraft has no crafting recipe for: ${items.join(", ")}.`,
   missingMaterials: (materials: readonly CraftMaterial[]) =>
     `[CRAFT_MATERIALS_MISSING] Missing leaf materials: ${materials.map(({ item, count }) => `${item} x${count}`).join(", ")}.`,
-  plannerFailed: (items: readonly string[]) =>
-    `[CRAFT_PLAN_UNAVAILABLE] The recursive planner found recipes but could not produce concrete plans for: ${itemList(items)}.`,
   craftingTableRequired:
     "[CRAFTING_TABLE_REQUIRED] This recipe batch needs a crafting table within the bot's four-block interaction reach; none is in reach and no carried one could be placed beside the bot.",
   executionFailed: (cause: unknown) =>

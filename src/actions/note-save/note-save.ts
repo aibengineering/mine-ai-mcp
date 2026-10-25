@@ -9,7 +9,6 @@ import {
   NOTE_SAVE_DESCRIPTION,
   noteSaveInputSchema,
   noteSaveResultSchema,
-  parseNoteSaveRequest,
 } from "./contract.js";
 
 export function createNoteSaveAction(bot: Bot, data: SqlBotData) {
@@ -19,7 +18,7 @@ export function createNoteSaveAction(bot: Bot, data: SqlBotData) {
     description: NOTE_SAVE_DESCRIPTION,
     inputSchema: noteSaveInputSchema,
     resultSchema: noteSaveResultSchema,
-    parse: parseNoteSaveRequest,
+    parse: (input: unknown) => noteSaveInputSchema.parse(input ?? {}),
     execution: { kind: "task" },
     annotations: { destructiveHint: false, idempotentHint: false, openWorldHint: false },
     formatResult: (result) =>

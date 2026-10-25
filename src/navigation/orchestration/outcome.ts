@@ -1,7 +1,6 @@
-/** What one navigation run reports about itself: status while live, evidence when settled. */
+/** What one navigation run reports about itself when it settles. */
 import type { SearchEvidence } from "../search/search-result.js";
-import type { MovementKind } from "../movements/movement.js";
-import type { BlockPosition, NavigationObservation } from "../world/world.js";
+import type { BlockPosition } from "../world/world.js";
 import type { UnrestoredPassage } from "../execution/opened-passages.js";
 export type SearchReason =
   | "initial"
@@ -15,20 +14,6 @@ export type SearchReason =
   | "goal_revised";
 
 export type MovementPhase = "aligning" | "breaking" | "placing" | "activating" | "moving" | "confirming";
-
-export type NavigationStatus =
-  | { readonly kind: "planning"; readonly runId: string; readonly goalRevision: string; readonly searchId: string }
-  | {
-      readonly kind: "executing";
-      readonly runId: string;
-      readonly goalRevision: string;
-      readonly routeId: string;
-      readonly stepId: string;
-      readonly movement: MovementKind;
-      readonly phase: MovementPhase;
-    }
-  | { readonly kind: "stabilizing"; readonly runId: string; readonly reason: "airborne" }
-  | { readonly kind: "stopping"; readonly runId: string; readonly reason: string };
 
 export interface ClosestNodeEvidence {
   readonly position: BlockPosition;
@@ -53,26 +38,13 @@ export interface MovementFailure {
   readonly operation?: { readonly kind: "break" | "place" | "activate"; readonly position: BlockPosition };
 }
 
+/**
+ * What a settled run leaves for its caller. Only what a caller reads: the
+ * doorways it could not close, which `runNavigation` puts in its words, and
+ * what the run still held after cleanup, which is how a leak shows. What the
+ * run did on the way is in its telemetry events.
+ */
 export interface NavigationEvidence {
-  readonly runId: string;
-  readonly startedAtMs: number;
-  readonly settledAtMs: number;
-  readonly start: NavigationObservation;
-  readonly final: NavigationObservation;
-  readonly goalRevision: string;
-  readonly searches: number;
-  readonly searchSlices: number;
-  readonly plans: number;
-  readonly continuations: number;
-  readonly replans: number;
-  readonly movementAttempts: Readonly<Partial<Record<MovementKind, number>>>;
-  readonly breaks: number;
-  readonly placements: number;
-  readonly activations: number;
-  readonly expectedMutations: number;
-  readonly conflictingMutations: number;
-  readonly invalidatingChanges: number;
-  readonly irrelevantChanges: number;
   readonly unrestoredPassages: readonly UnrestoredPassage[];
   readonly cleanup: {
     readonly listeners: number;
@@ -80,6 +52,16 @@ export interface NavigationEvidence {
     readonly expectations: number;
   };
 }
+
+/** How a run ended, before the evidence its cleanup measures is attached. */
+export type NavigationSettlement =
+  | { readonly kind: "completed" }
+  | {
+      /** The run was asked to stop; `reason` is what the aborting signal said. */
+      readonly kind: "stopped";
+      readonly reason: string;
+    }
+  | { readonly kind: "failed"; readonly failure: NavigationFailure };
 
 export type NavigationFailure =
   | { readonly kind: "invalid_goal"; readonly observation: string }
@@ -120,12 +102,4 @@ export type NavigationFailure =
   | { readonly kind: "restoration_incomplete"; readonly observation: string }
   | { readonly kind: "internal_error"; readonly message: string };
 
-export type NavigationOutcome =
-  | { readonly kind: "completed"; readonly evidence: NavigationEvidence }
-  | {
-      /** The run was asked to stop; `reason` is what the aborting signal said. */
-      readonly kind: "stopped";
-      readonly reason: string;
-      readonly evidence: NavigationEvidence;
-    }
-  | { readonly kind: "failed"; readonly failure: NavigationFailure; readonly evidence: NavigationEvidence };
+export type NavigationOutcome = NavigationSettlement & { readonly evidence: NavigationEvidence };

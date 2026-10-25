@@ -10,15 +10,16 @@ import { IncrementalSearch } from "../search/search.js";
 
 const source = { x: 3, y: 62, z: 0 };
 const lid = { ...source, y: 63 };
+const WATER_SOURCE = {
+  stateId: 80,
+  collisionShapes: [],
+  traits: { empty: true, liquid: "water", liquidSource: true },
+} as const;
 const dry = { submergedAtEyes: false, onGround: true, aquaAffinity: false, effects: {} };
 
 function pocket() {
   const world = flatWorld();
-  world.load(source, {
-    stateId: 80,
-    collisionShapes: [],
-    traits: { empty: true, liquid: "water", liquidSource: true },
-  });
+  world.load(source, WATER_SOURCE);
   world.load(lid, { stateId: 1 });
   const goal = liquidAccessGoal([source], "water").resolve(observation());
   if (goal.kind !== "active") throw new Error("Expected an active liquid goal.");
@@ -57,11 +58,7 @@ test("terminal access work refuses disabled digging, its own floor, and a source
   assert.equal(goal.finish?.(state, context(createMovementPolicy({ allowDigging: false })), dry), null);
 
   const underfoot = { x: 0, y: 61, z: 0 };
-  world.load(underfoot, {
-    stateId: 80,
-    collisionShapes: [],
-    traits: { empty: true, liquid: "water", liquidSource: true },
-  });
+  world.load(underfoot, WATER_SOURCE);
   const underGoal = liquidAccessGoal([underfoot], "water").resolve(observation());
   if (underGoal.kind !== "active") throw new Error("Expected active goal.");
   assert.equal(underGoal.finish?.(state, context(), dry), null);
@@ -69,11 +66,7 @@ test("terminal access work refuses disabled digging, its own floor, and a source
   // The stance is judged where the body actually stands, not from the centre
   // of the cell it occupies.
   const distant = { x: 4, y: 62, z: 0 };
-  world.load(distant, {
-    stateId: 80,
-    collisionShapes: [],
-    traits: { empty: true, liquid: "water", liquidSource: true },
-  });
+  world.load(distant, WATER_SOURCE);
   world.load(lid, { stateId: 0 });
   const offCentre = liquidAccessGoal([distant], "water").resolve({
     ...observation(),
@@ -106,19 +99,12 @@ test("the bucket ray names the liquid it wants, stops at an intervening source, 
   world.load(source, { stateId: 90, collisionShapes: [], traits: { empty: true, liquid: "lava", liquidSource: true } });
   assert.equal(canAccessLiquid(world, eyes, source, "lava"), true);
   assert.equal(canAccessLiquid(world, eyes, source, "water"), false);
-  world.load(
-    { x: 2, y: 63, z: 0 },
-    { stateId: 80, collisionShapes: [], traits: { empty: true, liquid: "water", liquidSource: true } },
-  );
+  world.load({ x: 2, y: 63, z: 0 }, WATER_SOURCE);
   assert.equal(canAccessLiquid(world, eyes, source, "lava"), false);
 
   // Poured water sits at the bot's own feet level, with the eyes above it.
   const poured = { x: 3, y: 63, z: 0 };
-  world.load(poured, {
-    stateId: 80,
-    collisionShapes: [],
-    traits: { empty: true, liquid: "water", liquidSource: true },
-  });
+  world.load(poured, WATER_SOURCE);
   assert.equal(canAccessLiquid(world, eyes, poured, "water"), true);
 });
 
@@ -126,11 +112,7 @@ test("search completes a liquid approach against the excavation overlay", () => 
   const { state, goal } = pocket();
   const world = new MemoryWorld();
   for (let x = 0; x <= 3; x++) for (let y = 62; y <= 65; y++) world.load({ x, y, z: 0 }, { stateId: y === 62 ? 1 : 0 });
-  world.load(source, {
-    stateId: 80,
-    collisionShapes: [],
-    traits: { empty: true, liquid: "water", liquidSource: true },
-  });
+  world.load(source, WATER_SOURCE);
   // Force travel to clear the lid; this exercises search's satisfaction
   // predicate independently of the terminal-excavation shortcut.
   const { finish: _finish, ...visibilityGoal } = goal;

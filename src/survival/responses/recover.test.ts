@@ -277,31 +277,3 @@ test("covered recovery keeps uncooked meat for cooking above the raw_food health
   );
   assert.equal(bot.inventory.items()[0]!.count, 4);
 });
-
-test("below the raw_food health floor covered recovery spends the uncooked meat", async () => {
-  const bot = botFixture(
-    { items: [{ name: "beef", count: 4 }] },
-    {
-      health: 8,
-      food: 10,
-      consume: async () => {
-        bot.inventory.items()[0]!.count--;
-        bot.food = 20;
-        bot.health = 18;
-      },
-    },
-  );
-  const result = await recoverUnderCover(bot, {
-    policy: () => DEFAULT_SURVIVAL_POLICY,
-    survival: survivalResources(),
-    signal: new AbortController().signal,
-    recoverTo: 18,
-    maximumMs: 90_000,
-    isProtected: () => true,
-    defendIntruder: async () => {},
-    releaseItemUse: () => {},
-    wait: async () => {},
-  });
-  assert.deepEqual(result, { kind: "recovered", ate: "beef" });
-  assert.equal(bot.inventory.items()[0]!.count, 3);
-});

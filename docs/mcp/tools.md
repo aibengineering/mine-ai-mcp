@@ -728,7 +728,8 @@ can prevent preparation. This cannot be combined
 with `to_player`. Hole disposal additionally verifies that the tossed items
 landed at the bottom; the result includes the hole's bottom coordinates. The
 bot then plugs the shaft above the discards with a carried full block (scaffold
-material first; never a falling block or a workstation) and walks a few blocks
+material first; never a falling block, a workstation, or one of the items being
+dropped, so a partial drop keeps exactly what it did not toss) and walks a few blocks
 clear of the pit, so a following `collect_block` or other route does not lead
 straight back into it. The result's `holeClosure` reports the block used, how
 many were placed, the bot's final distance from the hole, and any reason the

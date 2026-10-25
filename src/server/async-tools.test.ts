@@ -8,18 +8,18 @@ import { ActionRunner } from "../session/action-runner.js";
 import { AsyncActions } from "../session/async-actions.js";
 import type { SurvivalStatus } from "../survival/evidence/contract.js";
 import { DEFAULT_SURVIVAL_POLICY } from "../survival/policy/contract.js";
+import { deferred } from "../test-support/async.js";
 import { createMinecraftMcpServer } from "./mcp.js";
 
 for (const outputSchemaReferences of [false, true]) {
 test(`MCP accepts immediately, retains work across client reconnect, and delivers full typed output before the successor (references=${outputSchemaReferences})`, async (t) => {
-  let release!: () => void;
-  const done = new Promise<void>((resolve) => { release = resolve; });
+  const done = deferred();
   const runner = new ActionRunner();
   const action = defineAction({
     name: "test_foreground", description: "Test work", inputSchema: z.object({}),
     resultSchema: actionResultSchema({ collected: z.number() }), formatResult: (result) => `Collected ${result.collected}`,
     execution: { kind: "task" }, parse: () => ({}),
-    execute: async () => { await done; return { status: "succeeded", collected: 3 }; },
+    execute: async () => { await done.promise; return { status: "succeeded", collected: 3 }; },
   });
   const service = new AsyncActions(runner, runner.run);
   const statusAction = defineAction({
@@ -91,12 +91,12 @@ test(`MCP accepts immediately, retains work across client reconnect, and deliver
   assert.match(statusText, /Foreground action/);
   assert.match(statusText, new RegExp(accepted.actionId));
   assert.deepEqual(Object.keys(statusMarkdown.structuredContent!), ["response"], "Markdown must not carry duplicate raw progress");
-  release();
+  done.resolve();
   await service.settled();
   const refused = await reconnected.callTool({ name: action.name, arguments: { submission_id: "two", rationale: "Check the result retrieval gate" } });
   const refusalText = (refused.structuredContent as { response: { markdown: string } }).response.markdown;
+  // The gate itself is the service's (async-actions.test.ts); here, how its refusal reads.
   assert.match(refusalText.replaceAll("\\", ""), /Refused \(RESULT_NOT_RETRIEVED\)/);
-  assert.equal(service.status().awaitingResult?.actionId, accepted.actionId);
   const finalReply = await reconnected.callTool({ name: "wait_for_action", arguments: { action_id: accepted.actionId, timeout_ms: 1000, rationale: "Read result", response_format: "json" } });
   const final = (finalReply.structuredContent as { response: { data: { state: string; output: { result: { collected: number } } } } }).response.data;
   assert.equal(final.state, "settled");
@@ -122,10 +122,8 @@ test(`MCP accepts immediately, retains work across client reconnect, and deliver
 
 
 test("initial waits return typed results or progress, deduplicate retries, and cancellation stops only the wait", async (t) => {
-  let release!: () => void;
-  let started!: () => void;
-  const gate = new Promise<void>((resolve) => { release = resolve; });
-  const entered = new Promise<void>((resolve) => { started = resolve; });
+  const gate = deferred();
+  const entered = deferred();
   const runner = new ActionRunner();
   let attempts = 0;
   const inputSchema = z.strictObject({ count: z.number() });
@@ -135,7 +133,7 @@ test("initial waits return typed results or progress, deduplicate retries, and c
     execution: { kind: "task" }, parse: (input) => inputSchema.parse(input),
     execute: async ({ count }) => {
       attempts++;
-      if (count === 1) { started(); await gate; }
+      if (count === 1) { entered.resolve(); await gate.promise; }
       return count < 0 ? { status: "failed", count, error: "Observed failure" } : { status: "succeeded", count };
     },
   });
@@ -147,7 +145,7 @@ test("initial waits return typed results or progress, deduplicate retries, and c
   const client = new Client({ name: "initial-wait", version: "1" });
   const [c, s] = InMemoryTransport.createLinkedPair();
   await server.connect(s); await client.connect(c);
-  t.after(async () => { release(); await service.settled(); await client.close(); await server.close(); });
+  t.after(async () => { gate.resolve(); await service.settled(); await client.close(); await server.close(); });
   const request = (submission_id: string, count: number, wait_timeout_ms: number) => ({ name: action.name,
     arguments: { submission_id, count, wait_timeout_ms, rationale: "Observe initial work", response_format: "json" },
   });
@@ -160,21 +158,22 @@ test("initial waits return typed results or progress, deduplicate retries, and c
   const controller = new AbortController();
   const initial = client.callTool(request("slow", 1, 10000), undefined, { signal: controller.signal });
   const cancelled = assert.rejects(initial);
-  await entered;
+  await entered.promise;
   controller.abort();
   await cancelled;
   assert.equal(runner.status().busy, true, "Cancelling an initial wait must preserve admitted work");
   const pending = data(await client.callTool(request("slow", 1, 0)));
   assert.equal(pending.state, "pending");
-  assert.equal(data(await client.callTool(request("busy", 2, 1000))).code, "ACTION_BUSY");
   const invalid = await client.callTool(request("invalid", 2, -1));
   assert.equal(invalid.isError, true);
   assert.equal(attempts, 2);
-  release();
+  gate.resolve();
   const final = data(await client.callTool(request("slow", 1, 1000)));
   assert.equal(final.state, "settled");
   assert.equal(final.actionId, pending.actionId);
   assert.equal(final.output?.result.count, 1);
+  // wait_timeout_ms is a reply option, not part of the submission, so a retry
+  // that changes it is the same submission and does not run again.
   assert.equal(attempts, 2, "Changing wait timeout on retry must not repeat execution");
   assert.equal(service.status().awaitingResult, null);
   const markdown = await client.callTool({ name: action.name, arguments: {

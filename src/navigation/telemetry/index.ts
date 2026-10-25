@@ -144,13 +144,3 @@ export function forRun(sink: TelemetrySink, runId: string): RunTelemetry {
   };
 }
 export const silentTelemetry: TelemetrySink = { emit: () => undefined, error: () => undefined };
-export class MemoryTelemetry implements TelemetrySink {
-  readonly events: NavigationEvent[] = [];
-  readonly errors: unknown[] = [];
-  emit(event: NavigationEvent) {
-    this.events.push(event);
-  }
-  error(_runId: string, cause: unknown) {
-    this.errors.push(cause);
-  }
-}

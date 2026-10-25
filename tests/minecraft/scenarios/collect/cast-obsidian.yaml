@@ -1,15 +1,19 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
-# One full portal-sized collection in unmodified natural terrain.
-# Starting position surveyed on vanilla 1.21.4; no terrain is placed or reset.
+# One full portal-sized collection in unmodified natural terrain, at separated
+# surface locations surveyed on vanilla 1.21.4; no terrain is placed or reset.
+# `mine-labs run` expands verification.locations into isolated trials,
+# cast-obsidian@1 and @2, each failing if the collector leaves its 256-block
+# radius; `mine-labs verify` can still share one world. The third verified
+# location, 8.5,64,-19.5, fails today and is
+# known-failing/collect/cast-obsidian-spawn-column. Two trials of about
+# 2.5 minutes each put the file in the slow tier.
 # Checks the final quantity only. The mine process considers lava only when no
 # existing obsidian remains, so choosing the cheaper option is not covered here.
-name: cast-obsidian
-tags: [acceptance]
+tags: [acceptance, slow]
 description: Collect ten obsidian for a portal in natural terrain on seed 8675309,
-  recover the water bucket, and complete without a recorded death.
-minecraft:
-  version: 1.21.4
+  recover the water bucket, and complete without a recorded death, at each of
+  two separated surface locations.
 world:
   type: default
   seed: 8675309
@@ -22,7 +26,13 @@ world:
     randomTickSpeed: 0
     doFireTick: false
   difficulty: peaceful
+verification:
+  radius: 256
+  locations:
+    - [-807.5, 114, 800.5]
+    - [1608.5, 75, 1600.5]
 players:
+  # Each verification location replaces this position.
   - name: Collector
     pos: [1608.5, 75, 1600.5]
     inventory:
@@ -34,10 +44,6 @@ players:
         count: 1
       - item: cobblestone
         count: 32
-client:
-  command: bun
-  cwd: ../..
-  args: [client-host.ts, drivers/single-action.ts]
 params:
   action: collect_block
   input:

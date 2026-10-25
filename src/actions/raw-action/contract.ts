@@ -1,7 +1,6 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { ControlState } from "mineflayer";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const RAW_ACTION = "raw_action" as const;
@@ -19,6 +18,30 @@ const controlStateSchema = z.enum([
   "sneak",
 ]);
 const faceSchema = z.enum(["up", "down", "north", "south", "east", "west"]);
+
+/**
+ * The fields each operation reads. The MCP input stays one flat object (see
+ * raw-action.test.ts), so this table is what keeps it honest: `oneOf` lists
+ * alternative field sets of which exactly one must be complete, `optional`
+ * fields may be omitted, and every other operation field is refused, so a
+ * model that mixes fields learns which operation ignored them rather than
+ * watching them do nothing. `blockCell` operations name a whole block.
+ */
+type OperationFields =
+  | { readonly oneOf: readonly (readonly string[])[]; readonly missing: string; readonly blockCell?: true; readonly optional?: never }
+  | { readonly optional: readonly string[]; readonly oneOf?: never; readonly blockCell?: never };
+const OPERATION_FIELDS = {
+  look: { oneOf: [["yaw", "pitch"], ["x", "y", "z"]], missing: "look requires either yaw and pitch, or x, y, and z." },
+  dig: { oneOf: [["x", "y", "z"]], missing: "dig requires x, y, and z.", blockCell: true },
+  place: {
+    oneOf: [["block_name", "x", "y", "z", "face"]],
+    missing: "place requires block_name, x, y, z, and face.",
+    blockCell: true,
+  },
+  swing: { optional: ["entity_id"] },
+  use_item: { optional: ["hand"] },
+  control: { oneOf: [["state", "ticks"]], missing: "control requires state and ticks." },
+} as const satisfies Record<string, OperationFields>;
 
 export const rawActionInputSchema = z
   .strictObject({
@@ -41,82 +64,24 @@ export const rawActionInputSchema = z
     ticks: z.number().int().min(1).max(40).optional(),
   })
   .superRefine((value, context) => {
-    const exactly = (names: readonly string[]) =>
-      names.every((name) => Reflect.get(value, name) !== undefined);
-    const forbid = (allowed: readonly string[]) => {
+    const rule: OperationFields = OPERATION_FIELDS[value.operation];
+    const issue = (message: string, path: string[] = []) => context.addIssue({ code: "custom", path, message });
+    const forbidAllBut = (used: readonly string[]) => {
       for (const key of Object.keys(value))
-        if (
-          rawActionInputKeys.has(key) &&
-          key !== "operation" &&
-          !allowed.includes(key)
-        )
-          context.addIssue({
-            code: "custom",
-            path: [key],
-            message: `${key} is not used by ${value.operation}.`,
-          });
+        if (rawActionInputKeys.has(key) && key !== "operation" && !used.includes(key))
+          issue(`${key} is not used by ${value.operation}.`, [key]);
     };
-    switch (value.operation) {
-      case "look": {
-        const angles = exactly(["yaw", "pitch"]),
-          target = exactly(["x", "y", "z"]);
-        if (angles === target)
-          context.addIssue({
-            code: "custom",
-            message: "look requires either yaw and pitch, or x, y, and z.",
-          });
-        forbid(angles ? ["yaw", "pitch"] : ["x", "y", "z"]);
-        break;
-      }
-      case "dig":
-        if (!exactly(["x", "y", "z"]))
-          context.addIssue({
-            code: "custom",
-            message: "dig requires x, y, and z.",
-          });
-        else {
-          forbid(["x", "y", "z"]);
-          for (const key of ["x", "y", "z"] as const)
-            if (!Number.isInteger(value[key]))
-              context.addIssue({
-                code: "custom",
-                path: [key],
-                message: `${key} must be an integer block coordinate.`,
-              });
-        }
-        break;
-      case "place":
-        if (!exactly(["block_name", "x", "y", "z", "face"]))
-          context.addIssue({
-            code: "custom",
-            message: "place requires block_name, x, y, z, and face.",
-          });
-        else {
-          forbid(["block_name", "x", "y", "z", "face"]);
-          for (const key of ["x", "y", "z"] as const)
-            if (!Number.isInteger(value[key]))
-              context.addIssue({
-                code: "custom",
-                path: [key],
-                message: `${key} must be an integer block coordinate.`,
-              });
-        }
-        break;
-      case "swing":
-        forbid(["entity_id"]);
-        break;
-      case "use_item":
-        forbid(["hand"]);
-        break;
-      case "control":
-        if (!exactly(["state", "ticks"]))
-          context.addIssue({
-            code: "custom",
-            message: "control requires state and ticks.",
-          });
-        else forbid(["state", "ticks"]);
-        break;
+    if (!rule.oneOf) return forbidAllBut(rule.optional);
+    const complete = rule.oneOf.map((fields) => fields.every((name) => Reflect.get(value, name) !== undefined));
+    if (complete.filter(Boolean).length !== 1) {
+      issue(rule.missing);
+      // An operation with one required set has nothing more to judge until it is complete.
+      if (rule.oneOf.length === 1) return;
     }
+    forbidAllBut(rule.oneOf[complete.indexOf(true)] ?? rule.oneOf.at(-1)!);
+    if (rule.blockCell)
+      for (const key of ["x", "y", "z"] as const)
+        if (!Number.isInteger(value[key])) issue(`${key} must be an integer block coordinate.`, [key]);
   });
 const rawActionInputKeys = new Set(Object.keys(rawActionInputSchema.shape));
 
@@ -190,9 +155,3 @@ export const rawActionResultSchema = actionResultSchema({
   effectObserved: z.boolean().nullable(),
 });
 export type RawActionResult = z.output<typeof rawActionResultSchema>;
-export type RawActionOutput = ActionOutput<typeof RAW_ACTION, RawActionResult>;
-export const rawActionAnnotations = {
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: true,
-} satisfies ToolAnnotations;

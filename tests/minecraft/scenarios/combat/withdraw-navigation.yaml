@@ -1,0 +1,141 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Leave a fight that is already running. Each pen stands on a nether-brick
+  bridge over lava with two hostiles behind it: blazes (Blazes), bow skeletons
+  (Skeletons), or blazes inside a bedrock seal that closes the bridge
+  (Sealed). Five seconds in, the model sets its combat policy to defend only
+  and never hide, then asks for a route to the far end of the bridge. Blazes
+  and Skeletons must arrive alive. Sealed cannot get out: its route must
+  report failure rather than claim arrival or loop, and the bot must survive
+  the fight it could not leave.
+
+# Regeneration on and beef carried, as the original bridges had them.
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+# Bridges two hundred blocks apart, beyond a blaze's follow range. Two seconds
+# after Blazes or Skeletons reaches the far end its request has returned, and
+# the hostiles left on its bridge are removed rather than left to shoot a body
+# with no reflexes. Sealed cannot leave its fight, so it holds the session,
+# reflexes live, until the others are done.
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -15 69 -8 68 79 8 air"
+  - "fill 185 69 -8 268 79 8 air"
+  - "fill 385 69 -8 468 79 8 air"
+
+setup:
+  - "scoreboard objectives add pens dummy"
+  - "scoreboard players set #blazes pens 0"
+  - "scoreboard players set #skeletons pens 0"
+
+geometry:
+  - fill: { block: lava, from: [-15, 69, -8], to: [68, 69, 8] }
+  - fill: { block: nether_bricks, from: [-12, 71, -2], to: [65, 71, 2] }
+  - fill: { block: lava, from: [185, 69, -8], to: [268, 69, 8] }
+  - fill: { block: nether_bricks, from: [188, 71, -2], to: [265, 71, 2] }
+  - fill: { block: lava, from: [385, 69, -8], to: [468, 69, 8] }
+  - fill: { block: nether_bricks, from: [388, 71, -2], to: [465, 71, 2] }
+  # Sealed: bedrock floor, roof, walls and ends around the bridge up to x 25,
+  # so leaving is a real capability boundary whatever the bot carries.
+  - fill: { block: bedrock, from: [388, 71, -2], to: [425, 71, 2] }
+  - fill: { block: bedrock, from: [388, 78, -2], to: [425, 78, 2] }
+  - fill: { block: bedrock, from: [388, 72, -3], to: [425, 78, -3] }
+  - fill: { block: bedrock, from: [388, 72, 3], to: [425, 78, 3] }
+  - fill: { block: bedrock, from: [387, 72, -3], to: [387, 78, 3] }
+  - fill: { block: bedrock, from: [425, 72, -3], to: [425, 78, 3] }
+
+entities:
+  - { type: blaze, pos: [-6.5, 74, -1.5], nbt: '{PersistenceRequired:1b,Tags:["blazes"]}' }
+  - { type: blaze, pos: [-6.5, 74, 2.5], nbt: '{PersistenceRequired:1b,Tags:["blazes"]}' }
+  - { type: skeleton, pos: [193.5, 72, -1.5], nbt: '{PersistenceRequired:1b,Tags:["skeletons"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [193.5, 72, 1.5], nbt: '{PersistenceRequired:1b,Tags:["skeletons"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: blaze, pos: [393.5, 74, -1.5], nbt: '{PersistenceRequired:1b,Tags:["sealed"]}' }
+  - { type: blaze, pos: [393.5, 74, 1.5], nbt: '{PersistenceRequired:1b,Tags:["sealed"]}' }
+
+players:
+  - name: Blazes
+    pos: [0.5, 72, 0.5]
+    equipment: &armour { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory: &kit
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cooked_beef, count: 32 }
+  - name: Skeletons
+    pos: [200.5, 72, 0.5]
+    equipment: *armour
+    inventory: *kit
+  - name: Sealed
+    pos: [400.5, 72, 0.5]
+    equipment: *armour
+    inventory: *kit
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  players:
+    Blazes:
+      # Five seconds: the hostiles have opened fire and the reflex is fighting.
+      waitTicks: 100
+      actions:
+        - &withdraw
+          action: set_survival_policy
+          input:
+            operation: set
+            changes: { combat: { engagement: defend_only, hide: never } }
+            lifetime: { kind: session }
+            reason: Stop fighting and get to the end of the bridge.
+        # The policy change releases the fight, but a blaze still in reach can
+        # be defended against again before the route is asked for; a model
+        # told the body is busy waits for it, and so does this step.
+        - { action: navigate, input: { x: 60, y: 72, z: 0, range: 1, dig: false, scaffold: false }, idleWithinTicks: 400 }
+    Skeletons:
+      waitTicks: 100
+      actions:
+        - *withdraw
+        - { action: navigate, input: { x: 260, y: 72, z: 0, range: 1, dig: false, scaffold: false }, idleWithinTicks: 400 }
+    Sealed:
+      waitTicks: 100
+      holdTicks: 900
+      actions:
+        - *withdraw
+        - action: navigate
+          input: { x: 460, y: 72, z: 0, range: 1, dig: false, scaffold: false }
+          expect: { status: [partial, failed] }
+
+tick:
+  - "gamemode spectator @a[name=!Blazes,name=!Skeletons,name=!Sealed,gamemode=!spectator]"
+  - "execute if entity @a[name=Blazes,x=57,y=71,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #blazes pens 1"
+  - "execute if entity @a[name=Skeletons,x=257,y=71,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #skeletons pens 1"
+
+schedule:
+  - { when: "score #blazes pens matches 40..", run: "kill @e[tag=blazes]" }
+  - { when: "score #skeletons pens matches 40..", run: "kill @e[tag=skeletons]" }
+
+goal:
+  kind: all
+  timeout: 180
+  goals:
+    - { kind: reach, who: Blazes, pos: [60.5, 72, 0.5], radius: 3 }
+    - { kind: survive, who: Blazes, seconds: 1 }
+    - { kind: completion, who: Blazes }
+    - { kind: reach, who: Skeletons, pos: [260.5, 72, 0.5], radius: 3 }
+    - { kind: survive, who: Skeletons, seconds: 1 }
+    - { kind: completion, who: Skeletons }
+    # Still inside the seal: the route claimed nothing it could not do.
+    - { kind: reach, who: Sealed, pos: [406.5, 72, 0.5], radius: 19 }
+    - { kind: survive, who: Sealed, seconds: 1 }
+    - { kind: completion, who: Sealed }

@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { DEFAULT_COMBAT_POLICY } from "./contract.js";
-import { combatDecisionEvidence, decideCombatResponse, type CombatDecisionFacts } from "./decision.js";
+import type { CombatDecisionFacts } from "./decision.js";
 import { decideFightBoundary } from "./fight-boundary.js";
-import { replayCombatDecision } from "./replay.js";
 
 function facts(): CombatDecisionFacts {
   return {
@@ -44,27 +43,4 @@ test("policy health changes affect both pursuit admission and recovery inside co
     kind: "recover",
     health: 19,
   });
-});
-
-test("combat and protected recovery decisions replay from serialized inputs after live facts change", () => {
-  let observed = facts();
-  const selected = decideCombatResponse(observed, purpose);
-  const receipt = combatDecisionEvidence(observed, purpose, selected);
-  const saved = JSON.parse(JSON.stringify(receipt));
-  assert.deepEqual(replayCombatDecision(saved), selected);
-  const boundary = JSON.parse(JSON.stringify({ boundary: "fight", protection: refuge, selection: receipt }));
-  observed = { ...observed, policy: { ...DEFAULT_COMBAT_POLICY, recover: "never" } };
-  assert.deepEqual(replayCombatDecision(boundary), { kind: "recover", health: 18 });
-  assert.notDeepEqual(decideFightBoundary(observed, purpose, refuge), replayCombatDecision(boundary));
-});
-
-test("recorded ownership gates replay the handled response without a live controller", () => {
-  const observed = facts();
-  const receipt = {
-    selection: combatDecisionEvidence(observed, purpose, decideCombatResponse(observed, purpose)),
-    settling: false,
-    combatOwnsBody: true,
-    entries: [],
-  };
-  assert.deepEqual(replayCombatDecision(JSON.parse(JSON.stringify(receipt))), { kind: "handled", by: "combat" });
 });

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { writeIncidentArtifact, type IncidentReference } from "../bot-data/incident-log.js";
+import { deferred } from "../test-support/async.js";
 import { IncidentRecorder, type IncidentCapture } from "./incident-recorder.js";
 
 function text(capture: IncidentCapture): string {
@@ -68,15 +69,12 @@ test("fine-grained events retain their facts without duplicating physics context
 
 test("byte pressure and slow storage are bounded and disclosed", async () => {
   const saved: IncidentCapture[] = [];
-  let release!: () => void;
-  const blocked = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const blocked = deferred();
   const recorder = new IncidentRecorder(
     {},
     async (capture) => {
       saved.push(capture);
-      if (saved.length === 1) await blocked;
+      if (saved.length === 1) await blocked.promise;
       return receipt;
     },
     () => {},
@@ -91,7 +89,7 @@ test("byte pressure and slow storage are bounded and disclosed", async () => {
   assert.deepEqual(await replaced, { kind: "coalesced" });
   assert.equal(recorder.status().pendingCaptures, 2);
   assert.equal(saved.length, 1);
-  release();
+  blocked.resolve();
   await recorder.flush();
   assert.equal((await kept).kind, "completed");
   assert.equal(saved.length, 2);
@@ -166,17 +164,14 @@ test("fast recurring damage writes checkpoint once per history window without su
 
 test("failed damage writes permit immediate retry and queued damage uses the completed checkpoint", async () => {
   let attempts = 0;
-  let release!: () => void;
-  const blocked = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const blocked = deferred();
   const recorder = new IncidentRecorder(
     {},
     async () => {
       attempts++;
       if (attempts === 1) throw new Error("unavailable");
       if (attempts === 2) return { ...receipt, artifact: { kind: "failed" as const, error: "unavailable" } };
-      await blocked;
+      await blocked.promise;
       return receipt;
     },
     () => {},
@@ -185,7 +180,7 @@ test("failed damage writes permit immediate retry and queued damage uses the com
   await recorder.capture("non_entity_damage", 1);
   const writing = recorder.capture("non_entity_damage", 1);
   const pending = recorder.capture("non_entity_damage", 1);
-  release();
+  blocked.resolve();
   assert.equal((await writing).kind, "completed");
   assert.equal((await pending).kind, "coalesced");
   assert.equal(attempts, 3);
@@ -196,16 +191,13 @@ test("failed damage writes permit immediate retry and queued damage uses the com
 test("slow persistence does not defer the next damage snapshot beyond its captured history window", async (t) => {
   let now = 100_000;
   t.mock.method(Date, "now", () => now);
-  let release!: () => void;
-  const blocked = new Promise<void>((resolve) => {
-    release = resolve;
-  });
+  const blocked = deferred();
   const saved: IncidentCapture[] = [];
   const recorder = new IncidentRecorder(
     {},
     async (capture) => {
       saved.push(capture);
-      if (saved.length === 1) await blocked;
+      if (saved.length === 1) await blocked.promise;
       return receipt;
     },
     () => {},
@@ -216,7 +208,7 @@ test("slow persistence does not defer the next damage snapshot beyond its captur
   recorder.record("packet", { checkpoint: "next" });
   const next = recorder.capture("non_entity_damage", 1);
   now += 5_000;
-  release();
+  blocked.resolve();
   assert.equal((await first).kind, "completed");
   assert.equal((await next).kind, "completed");
   assert.equal(saved.length, 2);

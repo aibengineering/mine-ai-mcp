@@ -31,7 +31,7 @@ function fakeNavigator(
       } as const;
     },
     setStepFieldProvider: () => undefined,
-    active: null,
+    running: false,
     cancelActive: () => undefined,
     terminateActive: () => undefined,
   } satisfies Navigator;

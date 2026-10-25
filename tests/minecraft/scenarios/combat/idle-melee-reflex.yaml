@@ -1,0 +1,152 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Eight idle bots, one per pen and 100 blocks apart, each meet a melee threat
+  with whatever they carry and request nothing. The reflex kills a zombie
+  walking in from 24 blocks with an axe among other tools, bare-handed behind
+  armour and a shield, and with a sword and shield untouched; it kills an
+  abreast pair, a zombie standing on a one-block step, and a spider starting
+  inside its 16-block radius; it kills a large magma cube released from six
+  blocks overhead (the pack death that began with the cube above swing reach);
+  and it leaves alone a zombie on a walled ledge neither side can reach, without
+  leaving its start cell. Each pen's quarry is tagged, so a pen that fails to
+  fight, chases the unreachable or is hurt fails its own goals.
+
+# Pens on a 100-block grid, open superflat ground as the absorbed fixtures had,
+# beyond every follow range here (zombie 35). Each bot stands at its pen origin.
+#   x:    0          100        200          300
+#   z 0:  Axe        Hand       ShieldSword  Pack
+#   z100: Step       Spider     Cube         Ledge
+geometry:
+  # Step pen: a one-block stone step five blocks out, the zombie standing on it.
+  - fill: { block: stone, from: [4, -60, 98], to: [8, -60, 102] }
+  # Ledge pen: a wide stone ledge four blocks above the bot's feet, walled two
+  # high round its rim. Too tall to jump, nothing carried to pillar with, and
+  # the zombie cannot come down either: neither side can reach the other.
+  - fill: { block: stone, from: [305, -60, 95], to: [315, -57, 105] }
+  - fill: { block: stone, from: [305, -56, 95], to: [315, -55, 95] }
+  - fill: { block: stone, from: [305, -56, 105], to: [315, -55, 105] }
+  - fill: { block: stone, from: [305, -56, 96], to: [305, -55, 104] }
+  - fill: { block: stone, from: [315, -56, 96], to: [315, -55, 104] }
+
+entities:
+  - { type: zombie, pos: [24.5, -60, 0.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_axe"]}' }
+  - { type: zombie, pos: [124.5, -60, 0.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_hand"]}' }
+  - { type: zombie, pos: [224.5, -60, 0.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_shield"]}' }
+  # Two abreast: one encounter may kill both, so only both deaths are asserted.
+  - { type: zombie, pos: [324.5, -60, -0.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_pack"]}' }
+  - { type: zombie, pos: [324.5, -60, 1.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_pack"]}' }
+  - { type: zombie, pos: [5.5, -59, 100.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_step"]}' }
+  # Inside the reflex's sixteen-block hostile radius. At twenty blocks the
+  # spider also stayed outside its own pursuit range and no encounter began.
+  - { type: spider, pos: [114.5, -60, 100.5], nbt: '{PersistenceRequired:1b,Tags:["pen_spider"]}' }
+  # The recorded pose: six blocks overhead and horizontally in contact, held
+  # still until the schedule releases it twenty ticks in. Split cubes do not
+  # inherit the tag, so the kill goal names the large cube itself.
+  - type: magma_cube
+    pos: [198.1, -53.9, 103.4]
+    nbt: '{Size:3,NoAI:1b,NoGravity:1b,PersistenceRequired:1b,Tags:["pen_cube"]}'
+  # On the ledge, against the wall nearest the bot.
+  - { type: zombie, pos: [306.5, -56, 100.5], nbt: '{PersistenceRequired:1b,IsBaby:0b,Tags:["pen_ledge"]}' }
+
+schedule:
+  - { afterTicks: 20, run: "data merge entity @e[tag=pen_cube,limit=1] {NoAI:0b,NoGravity:0b}" }
+
+players:
+  # Weapon fallback: no sword, three tools of which the axe hits hardest.
+  - name: AxeBot
+    pos: [0.5, -60, 0.5]
+    inventory:
+      - { item: diamond_shovel, count: 1 }
+      - { item: wooden_pickaxe, count: 1 }
+      - { item: iron_axe, count: 1 }
+  # No weapon at all: armour and a shield, and fists.
+  - name: HandBot
+    pos: [100.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: shield, count: 1 }
+  # Shielded melee takes no damage from one zombie.
+  - name: ShieldSword
+    pos: [200.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  # Armour keeps one kill's cost clear of the ten-health fight bar, so the pen
+  # measures the policy rather than where the damage rolls left the bot.
+  - name: PackBot
+    pos: [300.5, -60, 0.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: StepBot
+    pos: [0.5, -60, 100.5]
+    inventory:
+      - { item: stone_sword, count: 1 }
+  - name: SpiderBot
+    pos: [100.5, -60, 100.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: CubeBot
+    pos: [200.5, -60, 100.5]
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: shield, count: 1 }
+  - name: LedgeBot
+    pos: [300.5, -60, 100.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+params:
+  # The ledge pen's observation window; every fight here settles well inside it.
+  waitTicks: 1260
+
+tick:
+  - "gamemode spectator @a[name=!AxeBot,name=!HandBot,name=!ShieldSword,name=!PackBot,name=!StepBot,name=!SpiderBot,name=!CubeBot,name=!LedgeBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: kill, who: AxeBot, target: zombie, tag: pen_axe }
+    - { kind: survive, who: AxeBot, seconds: 1 }
+    - { kind: completion, who: AxeBot }
+
+    - { kind: kill, who: HandBot, target: zombie, tag: pen_hand }
+    - { kind: survive, who: HandBot, seconds: 1 }
+    - { kind: completion, who: HandBot }
+
+    - { kind: kill, who: ShieldSword, target: zombie, tag: pen_shield }
+    - { kind: health, who: ShieldSword, health: 20 }
+    - { kind: survive, who: ShieldSword, seconds: 1 }
+    - { kind: completion, who: ShieldSword }
+
+    - { kind: kill, who: PackBot, target: zombie, tag: pen_pack }
+    - { kind: survive, who: PackBot, seconds: 1 }
+    - { kind: completion, who: PackBot }
+
+    - { kind: kill, who: StepBot, target: zombie, tag: pen_step }
+    - { kind: health, who: StepBot, health: 12 }
+    - { kind: survive, who: StepBot, seconds: 1 }
+    - { kind: completion, who: StepBot }
+
+    - { kind: kill, who: SpiderBot, target: spider, tag: pen_spider }
+    - { kind: health, who: SpiderBot, health: 10 }
+    - { kind: survive, who: SpiderBot, seconds: 1 }
+    - { kind: completion, who: SpiderBot }
+
+    - { kind: kill, who: CubeBot, target: magma_cube, tag: pen_cube }
+    - { kind: survive, who: CubeBot, seconds: 1 }
+    - { kind: completion, who: CubeBot }
+
+    # The ledge zombie is alive and still up there, and the bot never left home.
+    - { kind: entityCount, who: LedgeBot, entity: zombie, tag: pen_ledge, min: 1, max: 1 }
+    - { kind: reach, who: LedgeBot, pos: [300.5, -60, 100.5], radius: 0.5 }
+    - { kind: health, who: LedgeBot, health: 20 }
+    - { kind: survive, who: LedgeBot, seconds: 1 }
+    - { kind: completion, who: LedgeBot }

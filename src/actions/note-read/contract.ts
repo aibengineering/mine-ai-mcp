@@ -6,7 +6,8 @@ export const NOTE_READ = "note_read" as const;
 export const NOTE_READ_DESCRIPTION =
   "Read this bot's latest N saved notes in this world, newest first, including context, UTC time, " +
   "dimension, position, and world age in ticks. Reading does not mark, change, or delete notes. " +
-  "Use query_bot_data on main.notes for older notes or other filters.";
+  "Use query_bot_data on main.notes for older notes or other filters. " +
+  "It is the simpler form of query_bot_data for this one common read.";
 
 export const noteReadInputSchema = z.strictObject({
   n: z
@@ -25,7 +26,3 @@ export const noteReadResultSchema = z.strictObject({
 
 export type NoteReadRequest = z.output<typeof noteReadInputSchema>;
 export type NoteReadResult = z.output<typeof noteReadResultSchema>;
-
-export function parseNoteReadRequest(input: unknown) {
-  return noteReadInputSchema.parse(input ?? {});
-}

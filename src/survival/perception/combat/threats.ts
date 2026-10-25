@@ -76,12 +76,25 @@ function isAggressivePiglin(bot: Bot, entity: Entity): boolean {
   const flags: unknown = index >= 0 ? entity.metadata?.[index] : undefined;
   return typeof flags === "number" && (flags & 4) !== 0;
 }
-/** Anger plus a head look intersecting our body is a pre-hit targeting cue.
- * Allow two byte-angle steps for packet quantisation and staggered updates.
- * This infers attention, not a server-provided target identity.
+/** Anger at a player plus a head look intersecting our body is a pre-hit
+ * targeting cue. Allow two byte-angle steps for packet quantisation and
+ * staggered updates. This infers attention, not a server-provided target
+ * identity.
+ *
+ * `creepy` is anger at anything. Vanilla raises `stared_at` only when the
+ * enderman's player-targeting goal starts, for a player who stared at it or
+ * one it is angry at, and never for a mob victim; the flag then stays set.
+ * An enderman angry at a mob still turns its head onto a nearby player
+ * whenever its look-at-player goal runs between attacks, so a look without
+ * `stared_at` is no cue at all. Observed 2026-10-21 in combat-base
+ * 19-33-40-191Z: an enderman angry at a held pig, `creepy` set and
+ * `stared_at` unset, looked at the pumpkin-headed bot from 3.6 blocks one
+ * second in, and the reflex fought it. When it turned on the bot fourteen
+ * seconds later, `stared_at` rose before its new target was set.
  */
 function angryEndermanLookingAtBot(bot: Bot, entity: Entity): boolean {
   if (entity.name !== "enderman" || entityMetadata(bot, entity, "creepy") !== true) return false;
+  if (entityMetadata(bot, entity, "stared_at") !== true) return false;
   return lookingAtBot(bot, entity, 2.55);
 }
 /**

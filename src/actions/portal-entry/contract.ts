@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { navigationEvidenceSchema } from "../navigate/contract.js";
 
 export const ENTER_NETHER_PORTAL = "enter_nether_portal" as const;
 export const ENTER_END_PORTAL = "enter_end_portal" as const;
 export const ENTER_NETHER_PORTAL_DESCRIPTION =
-  "Enter the active Nether portal block at x,y,z and wait for server-positioned arrival. From the Overworld this enters the Nether; from the Nether it returns to the Overworld. Entry checks food and arrows unless allow_low_supplies is true; return is exempt.";
+  "Enter the active Nether portal block at x,y,z and wait for server-positioned arrival. From the Overworld this enters the Nether; from the Nether it returns to the Overworld. Entry checks food and arrows unless allow_low_supplies is true; return is exempt. It is the same action as enter_end_portal, for a Nether portal.";
 export const ENTER_END_PORTAL_DESCRIPTION =
-  "Enter the active End portal block at x,y,z and wait for server-positioned arrival. Entering the End requires a personal respawn bed observed through this session's sleep action within respawn_within blocks (default 128), unless allow_distant_respawn is true. Returning from the End is exempt.";
+  "Enter the active End portal block at x,y,z and wait for server-positioned arrival. Entering the End requires a personal respawn bed observed through this session's sleep action within respawn_within blocks (default 128), unless allow_distant_respawn is true. Returning from the End is exempt. It is the same action as enter_nether_portal, for an End portal, plus the respawn guard.";
 
 const coordinates = {
   x: z.number().int().describe("Absolute X coordinate of an active portal block."),
@@ -39,8 +39,6 @@ export interface PortalEntryRequest {
 
 export const portalEntryResultSchema = actionResultSchema({ navigation: navigationEvidenceSchema });
 export type PortalEntryResult = z.output<typeof portalEntryResultSchema>;
-export type EnterNetherPortalOutput = ActionOutput<typeof ENTER_NETHER_PORTAL, PortalEntryResult>;
-export type EnterEndPortalOutput = ActionOutput<typeof ENTER_END_PORTAL, PortalEntryResult>;
 
 export function parseNetherPortalRequest(input: unknown): PortalEntryRequest {
   const value = enterNetherPortalInputSchema.parse(input ?? {});

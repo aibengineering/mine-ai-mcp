@@ -215,6 +215,50 @@ test("uses the production world policy to reject lava steps", () => {
   assert.equal(createMovements(bot).decideStep(1, 64, 1, lavaWorld).kind, "prohibited");
 });
 
+/**
+ * Lava beside a cell enters it on its next update when it can still spread
+ * sideways: a source, a falling column where it lands, or a flow with levels
+ * to lose (two a step in the overworld, one in the Nether). A falling stream
+ * in mid-air, and a flow running down a drop or onto lava, go down instead,
+ * which is how pathfinder/flowing-lava-course's slalom and stair are walked.
+ */
+test("a step is refused where lava beside it can flow in on its next update", () => {
+  const bot = botFixture();
+  const policy = createMovements(bot);
+  const lava = (level: number) =>
+    observeMineflayerBlock(blockClass(bot).fromStateId(bot.registry.blocksByName.lava.minStateId + level, 0));
+  const stone = observed(bot, "stone");
+  const air = observed(bot, "air");
+  /** A cell at 0,64,0 on a stone floor; the column east of it holds `east` from y 63 up. */
+  const verdict = (east: readonly LoadedBlock[], dimension: Bot["game"]["dimension"] = "overworld") => {
+    const world = new MemoryWorld();
+    for (let x = -1; x <= 1; x++)
+      for (let z = -1; z <= 1; z++) {
+        world.load({ x, y: 63, z }, stone);
+        for (const y of [64, 65, 66]) world.load({ x, y, z }, air);
+      }
+    east.forEach((block, index) => world.load({ x: 1, y: 63 + index, z: 0 }, block));
+    bot.game.dimension = dimension;
+    return policy.decideStep(0, 64, 0, world).kind;
+  };
+  try {
+    assert.equal(verdict([stone, lava(0)]), "prohibited", "a source spreads");
+    assert.equal(verdict([stone, lava(2)]), "prohibited", "level 2 spreads to 4");
+    assert.equal(verdict([stone, lava(4)]), "prohibited", "level 4 spreads to 6");
+    assert.equal(verdict([stone, lava(6)]), "allowed", "overworld level 6 is spent");
+    assert.equal(verdict([stone, lava(6)], "the_nether"), "prohibited", "Nether lava spreads to 7");
+    assert.equal(verdict([stone, lava(7)], "the_nether"), "allowed", "Nether level 7 is spent");
+    assert.equal(verdict([stone, lava(8)]), "prohibited", "a falling column spreads where it lands");
+    assert.equal(verdict([stone, stone, lava(4)]), "prohibited", "lava at head height enters the head");
+    assert.equal(verdict([lava(8), lava(8), lava(8)]), "allowed", "a stream in mid-air keeps falling");
+    assert.equal(verdict([lava(8), lava(8), lava(2)]), "allowed", "a flow over a stream runs down it");
+    assert.equal(verdict([air, lava(2)]), "allowed", "a flow over a drop runs down it");
+    assert.equal(verdict([lava(0), lava(0)]), "prohibited", "a source on lava still spreads");
+  } finally {
+    bot.game.dimension = "overworld";
+  }
+});
+
 test("routes preserve what a player built or uses, while terrain stays diggable", () => {
   const bot = botFixture();
   const policy = createMovements(bot);

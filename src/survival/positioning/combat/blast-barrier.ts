@@ -2,6 +2,7 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { preferredScaffoldItem } from "../../../navigation/mineflayer/movement-policy.js";
 import { isReplaceableForPlacement } from "../../../world/block-classification.js";
+import { observedEyeHeight } from "../../../world/block-visibility.js";
 import { findPlacementSupport, occupiedCell } from "../../../world/placement.js";
 import type { CreeperObservation } from "../../perception/combat/creepers.js";
 
@@ -24,7 +25,7 @@ export function blastBarrierCells(bot: Bot, threats: readonly CreeperObservation
         const support = findPlacementSupport(bot, cell);
         if (!block || !isReplaceableForPlacement(block) || !support) continue;
         const face = support.support.position.offset(0.5 + support.face.x / 2, 0.5 + support.face.y / 2, 0.5 + support.face.z / 2);
-        if (face.distanceTo(bot.entity.position.offset(0, 1.62, 0)) <= 4.5) cells.set(cell.toString(), cell);
+        if (face.distanceTo(bot.entity.position.offset(0, observedEyeHeight(bot.entity), 0)) <= 4.5) cells.set(cell.toString(), cell);
       }
     }
   }

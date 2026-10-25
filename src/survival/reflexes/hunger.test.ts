@@ -93,29 +93,12 @@ test("a hunt's raw drops stand the reflex down with the policy's reason until an
   const reflex = attachHungerReflex(bot, driver, { activeEngagement: () => null }, new SurvivalPolicyState(bot));
   try {
     for (let tick = 0; tick < 20; tick += 1) bot.emit("physicsTick");
-    assert.deepEqual(driver.snapshot()[0]?.danger, {
-      food: 12,
-      health: 20,
-      selectedFood: null,
-      withheldRaw: "beef",
-      rawFoodRule:
-        "uncooked food is kept for cooking until hunger is at most 6 or health is below 10 with hunger under 18 (raw_food policy)",
-      bodyBusy: false,
-      combatActive: false,
-    });
-    assert.deepEqual(driver.snapshot()[0]?.decision, {
-      kind: "stand_down",
-      candidates: [
-        {
-          response: "eat",
-          excluded: {
-            kind: "infeasible_now",
-            premise:
-              "Only uncooked beef is carried and uncooked food is kept for cooking until hunger is at most 6 or health is below 10 with hunger under 18 (raw_food policy).",
-          },
-        },
-      ],
-    });
+    const [snapshot] = driver.snapshot();
+    assert.equal((snapshot?.danger as { withheldRaw?: string } | null)?.withheldRaw, "beef");
+    const decision = snapshot?.decision as { kind: string; candidates?: { excluded: { premise: string } }[] } | null;
+    assert.equal(decision?.kind, "stand_down");
+    // The reason is policy/food.ts's sentence; this reflex only has to pass it on.
+    assert.match(decision?.candidates?.[0]?.excluded.premise ?? "", /raw_food policy/);
   } finally {
     await reflex[Symbol.asyncDispose]();
     await driver[Symbol.asyncDispose]();

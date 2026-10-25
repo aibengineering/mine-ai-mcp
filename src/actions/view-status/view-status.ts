@@ -34,9 +34,7 @@ import {
   MOB_KINDS,
   VIEW_STATUS,
   VIEW_STATUS_DESCRIPTION,
-  parseViewStatusRequest,
   viewStatusResultSchema,
-  viewStatusAnnotations,
   viewStatusInputSchema,
   type LiveSituation,
   type MobilityBlocker,
@@ -507,8 +505,8 @@ export function createViewStatusAction(bot: Bot, data: SqlBotData, observeActivi
     resultSchema: viewStatusResultSchema,
     formatResult: formatViewStatusResult,
     execution: { kind: "information" },
-    annotations: viewStatusAnnotations,
-    parse: parseViewStatusRequest,
+    annotations: { openWorldHint: false },
+    parse: (input: unknown) => viewStatusInputSchema.parse(input ?? {}),
     execute: async () => ({ status: "succeeded", situation: observeLiveSituation(bot, data, observeActivity) }),
   });
 }

@@ -1,6 +1,5 @@
 template: ../../templates/flat-single-action.yaml
 
-name: fill-flowing
 tags: [regression]
 description: >-
   Guard against the Run 10 failure where a bucket action walked to a flowing cell before

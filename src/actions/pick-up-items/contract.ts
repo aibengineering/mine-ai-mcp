@@ -1,6 +1,7 @@
 import {z} from 'zod';
 
-import {type ActionOutput, actionResultSchema} from '../action.js';
+import {actionResultSchema} from '../action.js';
+import {wholeCell} from '../cell.js';
 import {registryNameSchema} from '../registry-name.js';
 
 export const PICK_UP_ITEMS = 'pick_up_items' as const;
@@ -15,11 +16,8 @@ export const pickUpItemsInputSchema =
        z: z.number().finite().optional(),
        radius: z.number().positive().max(32).default(8),
        recover_death_items: z.boolean().default(false),
-     }).superRefine((value, context) => {
-      const coordinates = [value.x, value.y, value.z].filter((part) => part !== undefined).length;
-      if (coordinates !== 0 && coordinates !== 3)
-        context.addIssue({code: 'custom', message: 'x, y, and z must be supplied together.'});
-      if (value.recover_death_items && coordinates !== 0)
+     }).superRefine(wholeCell('x, y, and z must be supplied together.')).superRefine((value, context) => {
+      if (value.recover_death_items && [value.x, value.y, value.z].some((part) => part !== undefined))
         context.addIssue(
             {code: 'custom', message: 'recover_death_items chooses the retained death position; omit x, y, and z.'});
     });
@@ -68,4 +66,3 @@ const evidenceSchema = z.strictObject({
 });
 export const pickUpItemsResultSchema = actionResultSchema({pickup: evidenceSchema});
 export type PickUpItemsResult = z.output<typeof pickUpItemsResultSchema>;
-export type PickUpItemsOutput = ActionOutput<typeof PICK_UP_ITEMS, PickUpItemsResult>;

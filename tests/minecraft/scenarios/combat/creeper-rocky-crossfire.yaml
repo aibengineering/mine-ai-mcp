@@ -1,0 +1,59 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression]
+description: >-
+  Continue a wounded nighttime journey from the rocky slope of the 2026-09-12
+  playtest (seed 20260912), where a mixed encounter with a creeper ended in a
+  fatal retreat. At 13 health, with a creeper, spider, zombie and skeleton
+  close by and little room to back away, reach the original onward waypoint
+  alive by any effective response.
+# Migrated from default/terrain/navigation-creeper-rocky-crossfire. Its prepare
+# hook only wore armour and raised the shield: that is equipment here. Ambient
+# spawning is off to bound the cast; fuses are fresh, not a replayed expiring one.
+world:
+  type: default
+  seed: 20260912
+  time: midnight
+  difficulty: normal
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, naturalRegeneration: true, keepInventory: false }
+players:
+  - name: RockyTraveller
+    pos: [-223.5, 63, -83.5]
+    health: 13
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: iron_boots
+      offhand: shield
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_shovel, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 16 }
+entities:
+  - { type: creeper, pos: [-224.5, 64, -84.5], nbt: '{PersistenceRequired:1b}' }
+  - { type: spider, pos: [-221.5, 64, -83.5], nbt: '{PersistenceRequired:1b}' }
+  - { type: zombie, pos: [-217.5, 64, -82.5], nbt: '{PersistenceRequired:1b}' }
+  - { type: skeleton, pos: [-214.5, 64, -81.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+# The fight starts before the request does: the driver makes its one request
+# once view_status shows no reflex owns the body, and fails if that takes
+# longer than a minute.
+params:
+  idleWithinTicks: 1200
+  actions:
+    - { action: navigate, input: { x: -220, y: 68, z: -109, range: 1 } }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: reach, who: RockyTraveller, pos: [-219.5, 68, -108.5], radius: 2 }
+    - { kind: survive, who: RockyTraveller, seconds: 1 }
+    - { kind: completion, who: RockyTraveller }

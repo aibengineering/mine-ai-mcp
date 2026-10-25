@@ -1,25 +1,13 @@
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
-import test, { type TestContext } from "node:test";
+import test from "node:test";
 import { once } from "node:events";
 import { Worker } from "node:worker_threads";
 import type { BotDataScope } from "./bot-data-identity.js";
-import { closeSqlDatabase, SqlBotData } from "./sql-bot-data.js";
-import { persistentBotData } from "../test-support/bot-data.js";
+import { botDataLogLine, closeSqlDatabase, SQL_BOT_DATA_SCHEMA_VERSION, SqlBotData } from "./sql-bot-data.js";
+import { persistentBotData, temporaryBotData } from "../test-support/bot-data.js";
 import { BotDataLockError } from "./storage-diagnostics.js";
 import { queryBotData } from "../actions/query-bot-data/query-bot-data.js";
-
-/**
- * A persistent storage root, with every store opened in it closed before the
- * directory is removed: Windows refuses to remove an open SQLite file.
- */
-
-/** One in-memory store, closed when this test finishes. */
-function temporarySqlBotData(t: TestContext, worldId = "temporary-world", scope: BotDataScope = { kind: "shared" }) {
-  const data = SqlBotData.create({ storage: { kind: "temporary" }, identity: { worldId, scope } });
-  t.after(() => data.close());
-  return data;
-}
 
 function persistentFile(data: SqlBotData): string {
   if (data.location.kind !== "persistent") throw new Error("Expected persistent SQL bot data.");
@@ -32,34 +20,8 @@ function withObservations(data: SqlBotData): SqlBotData {
   return data;
 }
 
-test("async call migration preserves historical replies and publishes execution storage", (t) => {
-  const storage = persistentBotData(t);
-  const original = storage.open("async-migration");
-  const historical = JSON.stringify({ response: { format: "markdown", markdown: "Original physical evidence\nunchanged" } });
-  original.transaction((db) => {
-    db.exec(`DROP TABLE action_responses;
-      CREATE TABLE action_responses (
-        request_id INTEGER PRIMARY KEY, responded_at TEXT NOT NULL,
-        duration_ms INTEGER NOT NULL CHECK(duration_ms >= 0),
-        status TEXT NOT NULL CHECK(status IN ('succeeded','partial','failed','cancelled')),
-        response_json TEXT NOT NULL CHECK(json_valid(response_json)),
-        FOREIGN KEY(request_id) REFERENCES action_requests(request_id) ON DELETE CASCADE
-      ) STRICT;
-      INSERT INTO action_requests VALUES (1, 'AsyncBot', 'navigate', 'Original intent', '2026-09-12T00:00:00Z', '{}');`);
-    db.prepare("INSERT INTO action_responses VALUES (1, ?, 1234, 'succeeded', ?)").run("2026-09-12T00:00:01Z", historical);
-  });
-  original.close();
-  const migrated = storage.open("async-migration");
-  assert.deepEqual(migrated.read("SELECT duration_ms, status, response_json FROM action_responses"), [
-    { duration_ms: 1234, status: "succeeded", response_json: historical },
-  ]);
-  migrated.transaction((db) => {
-    db.exec("INSERT INTO action_requests VALUES (2, 'AsyncBot', 'navigate', 'Async intent', '2026-09-12T00:00:02Z', '{}')");
-    db.exec("INSERT INTO action_responses VALUES (2, '2026-09-12T00:00:02Z', 1, 'accepted', '{}')");
-  });
-  assert.equal(migrated.read("SELECT description FROM data_dictionary WHERE table_name = 'action_executions'").length, 5);
-  assert.deepEqual(migrated.read("PRAGMA foreign_key_check"), []);
-});
+// Every persistent store reports its opening and closing, and every lock
+// failure, to operators; a test's stores report to `storage.log` instead.
 
 test("runtime lock contention reports an error without consuming the watchdog allowance", (t) => {
   const storage = persistentBotData(t);
@@ -91,6 +53,12 @@ test("runtime lock contention reports an error without consuming the watchdog al
   // observed five-second synchronous SQLite wait, without timing normal SQL.
   assert.ok(performance.now() - began < 1000, "Lock contention must not block the runtime for seconds.");
   assert.equal(data.diagnostics().lockFailures, 1, "Diagnostic reads must work while the other writer holds its lock.");
+  const reported = storage.log.filter((record) => "sqliteCode" in record && record.sqliteCode === 5);
+  assert.equal(reported.length, 1, "The operator is told about the lock even though the database cannot record it.");
+  assert.match(
+    botDataLogLine(reported[0]!),
+    /^\[minecraft-bot-data\] .*"operation":\{"name":"recordActionResponse","requestId":115\}/,
+  );
   assert.equal(data.read("PRAGMA query_only")[0]?.query_only, 1);
   writer.exec("ROLLBACK");
   assert.equal(
@@ -192,6 +160,10 @@ test("persistent files are stable per world and scope, and neither shares the ot
   assert.notEqual(persistentFile(collector), persistentFile(builder));
   assert.match(persistentFile(shared), /[\\/]shared[\\/]bot-data\.sqlite$/);
   assert.match(persistentFile(collector), /[\\/]bots[\\/].+[\\/]bot-data\.sqlite$/);
+  // Lifecycle records let an operator correlate a lock with the connection holding this exact file.
+  const opened = storage.log.flatMap((record) => ("event" in record && record.event === "opened" ? [record.file] : []));
+  for (const data of [shared, collisionSafeWorld, collector, builder])
+    assert.ok(opened.includes(persistentFile(data)), `an opened record names ${persistentFile(data)}`);
 
   for (const data of [shared, collector, builder]) withObservations(data);
   shared.transaction((database) => database.prepare("INSERT INTO observations VALUES (?)").run("shared"));
@@ -203,8 +175,8 @@ test("persistent files are stable per world and scope, and neither shares the ot
 });
 
 test("opens an isolated in-memory representation for disposable work", (t) => {
-  const data = withObservations(temporarySqlBotData(t, "world", { kind: "bot", botId: "collector" }));
-  const other = temporarySqlBotData(t, "world", { kind: "bot", botId: "collector" });
+  const data = withObservations(temporaryBotData({ botId: "collector", closeAfter: t }));
+  const other = temporaryBotData({ botId: "collector", closeAfter: t });
 
   data.transaction((database) => database.prepare("INSERT INTO observations VALUES (?)").run("coal_ore"));
 
@@ -213,9 +185,9 @@ test("opens an isolated in-memory representation for disposable work", (t) => {
   assert.throws(() => other.read("SELECT name FROM observations"), /no such table/);
   assert.deepEqual(data.read("SELECT key, value FROM sql_bot_data_metadata ORDER BY key"), [
     { key: "bot_id", value: "collector" },
-    { key: "schema_version", value: "1" },
+    { key: "schema_version", value: String(SQL_BOT_DATA_SCHEMA_VERSION) },
     { key: "scope_kind", value: "bot" },
-    { key: "world_id", value: "world" },
+    { key: "world_id", value: "test-world" },
   ]);
 });
 
@@ -228,7 +200,7 @@ test("temporary storage enforces the same identity contract as persistent storag
 });
 
 test("a transaction is synchronous, all-or-nothing, and never interleaved with a read", (t) => {
-  const data = withObservations(temporarySqlBotData(t));
+  const data = withObservations(temporaryBotData({ closeAfter: t }));
 
   assert.throws(
     () =>
@@ -252,7 +224,8 @@ test("a transaction is synchronous, all-or-nothing, and never interleaved with a
 });
 
 test("host reads cannot mutate temporary or persistent bot data", (t) => {
-  const sources = [temporarySqlBotData(t), persistentBotData(t).open("persistent-world")];
+  const persistent = persistentBotData(t);
+  const sources = [temporaryBotData({ closeAfter: t }), persistent.open("persistent-world")];
 
   for (const data of sources) {
     assert.throws(
@@ -280,8 +253,98 @@ test("rejects a SQL database whose recorded identity has been altered", (t) => {
   assert.throws(() => storage.open("world"), /SQL bot data identity mismatch for world_id/);
 });
 
+test("migrates a version 1 store on open, keeping its notes and dropping retired events", (t) => {
+  const storage = persistentBotData(t);
+  const data = storage.open("world");
+  const file = persistentFile(data);
+  data.close();
+
+  // Turn the fresh file back into what version 1 left behind: the old cursor
+  // table name, a retired event beside a current one, and a note to keep.
+  const database = new DatabaseSync(file);
+  database.exec("ALTER TABLE event_read_state RENAME TO notification_state");
+  database
+    .prepare("INSERT INTO notes (bot_id, note, context, remembered_at, dimension, x, y, z) VALUES (?, ?, ?, ?, ?, 0, 64, 0)")
+    .run("Steve", "iron at the ravine", "mining", "2026-09-01T00:00:00.000Z", "overworld");
+  const insertEvent = database.prepare(
+    "INSERT INTO events (bot_id, event_type, observed_at, summary, payload_json) VALUES (?, ?, ?, ?, ?)",
+  );
+  insertEvent.run("Steve", "hostile_encounter", "2026-09-01T00:00:01.000Z", "fought a zombie", "{}");
+  insertEvent.run("Steve", "player_death", "2026-09-01T00:00:02.000Z", "died", '{"cause":"drowned"}');
+  database.prepare("UPDATE sql_bot_data_metadata SET value = '1' WHERE key = 'schema_version'").run();
+  closeSqlDatabase(database);
+
+  const migrated = storage.open("world");
+  assert.equal(migrated.read("SELECT value FROM sql_bot_data_metadata WHERE key = 'schema_version'")[0]?.value, "2");
+  assert.equal(migrated.read("SELECT note FROM notes")[0]?.note, "iron at the ravine");
+  assert.deepEqual(migrated.read("SELECT event_type FROM events ORDER BY event_id").map((row) => row.event_type), ["player_death"]);
+  const tables = migrated.read("SELECT name FROM sqlite_schema WHERE type = 'table' AND name IN ('event_read_state', 'notification_state')");
+  assert.deepEqual(tables.map((row) => row.name), ["event_read_state"]);
+});
+
+/**
+ * A development-era store, world 879121 on the author's machine, had both the
+ * old status table and the old response table. Dropping the status table left
+ * frontier_navigation pointing at nothing, and the response table's rename then
+ * re-checked every view and failed, so the upgrade rolled back and the store
+ * could not open at all.
+ */
+test("migrates a version 1 store whose views read the status table it replaces", (t) => {
+  const storage = persistentBotData(t);
+  const data = storage.open("world");
+  const file = persistentFile(data);
+  data.close();
+
+  const database = new DatabaseSync(file);
+  const view = (database.prepare("SELECT sql FROM sqlite_schema WHERE name = 'frontier_navigation'").get() as { sql: string }).sql;
+  database.exec(`
+    DROP VIEW frontier_navigation;
+    DROP TABLE bot_status;
+    CREATE TABLE bot_status (
+      bot_id TEXT PRIMARY KEY, dimension TEXT, x REAL, y REAL, z REAL, chunk_x INTEGER, chunk_z INTEGER,
+      yaw REAL, pitch REAL, health REAL, food INTEGER, updated_at TEXT
+    );
+    CREATE TABLE action_responses_old (
+      request_id INTEGER PRIMARY KEY, responded_at TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL CHECK(duration_ms >= 0),
+      status TEXT NOT NULL CHECK(status IN ('succeeded','partial','failed','cancelled')),
+      response_json TEXT NOT NULL CHECK(json_valid(response_json)),
+      FOREIGN KEY(request_id) REFERENCES action_requests(request_id) ON DELETE CASCADE
+    ) STRICT;
+    DROP TABLE action_responses;
+    ALTER TABLE action_responses_old RENAME TO action_responses;
+  `);
+  database.exec(view);
+  database.prepare("UPDATE sql_bot_data_metadata SET value = '1' WHERE key = 'schema_version'").run();
+  closeSqlDatabase(database);
+
+  const migrated = storage.open("world");
+  assert.equal(migrated.read("SELECT value FROM sql_bot_data_metadata WHERE key = 'schema_version'")[0]?.value, "2");
+  assert.deepEqual(migrated.read("SELECT * FROM frontier_navigation"), []);
+  assert.ok(migrated.read("SELECT name FROM pragma_table_info('bot_status')").some((row) => row.name === "time_of_day"));
+});
+
+test("refuses a store at a schema version it does not know and names the file", (t) => {
+  const storage = persistentBotData(t);
+  const data = storage.open("world");
+  const file = persistentFile(data);
+  data.close();
+
+  const database = new DatabaseSync(file);
+  database.prepare("UPDATE sql_bot_data_metadata SET value = '99' WHERE key = 'schema_version'").run();
+  closeSqlDatabase(database);
+
+  assert.throws(
+    () => storage.open("world"),
+    (error: Error) =>
+      error.message.includes(file) &&
+      /schema version 99, but this runtime knows schema versions up to 2/.test(error.message) &&
+      /recreate the store/.test(error.message),
+  );
+});
+
 test("close is idempotent and rejects later SQL work", (t) => {
-  const data = temporarySqlBotData(t);
+  const data = temporaryBotData({ closeAfter: t });
 
   data.close();
   data.close();

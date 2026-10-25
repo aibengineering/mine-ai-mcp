@@ -67,5 +67,30 @@ export const run: ScenarioRun = async (context) => {
   assert.equal(temporary.smelt.produced, 9, "Temporary furnace receipt must agree with inventory.");
   assert.equal(temporary.smelt.rawRecovered, 0);
   assert.equal(temporary.workstation?.recovered, true);
-  return { status: "succeeded", detail: "Nine-log batch and three-door output confirmed; placed furnace cooked two; floating furnace recovered; temporary furnace cooked nine at 16 TPS and was recovered." };
+
+  // A temporary table may craft a batch that includes another table; the
+  // carried one is placed, used and recovered, and the new one is counted once.
+  const batch2 = craftItemResultSchema.parse(await call("craft_item", {
+    temporary_workstation: true,
+    items: [{ item_name: "stone_pickaxe" }, { item_name: "stone_axe" }, { item_name: "crafting_table" }],
+  }));
+  assert.equal(batch2.workstation?.recovered, true, "The temporary table must be recovered.");
+  const tableOutput = batch2.craft.items.find((item) => item.item === "crafting_table");
+  assert.equal(tableOutput?.gained, 1);
+  assert.equal(tableOutput.inventoryBefore, 1);
+  assert.equal(tableOutput.inventoryAfter, 2);
+  assert.equal((await inventory())("crafting_table"), 2);
+
+  // A plan that cannot be met still returns the table it placed for this call.
+  const failedOutput = await context.call("craft_item", {
+    temporary_workstation: true, items: [{ item_name: "diamond_pickaxe" }],
+  });
+  assert.equal(failedOutput.result.status, "failed", failedOutput.summary);
+  const failed = craftItemResultSchema.parse(failedOutput.result);
+  assert.equal(failed.workstation?.recovered, true, "A failed plan must still recover its table.");
+  assert.equal((await inventory())("crafting_table"), 2);
+  const used = [temporary, batch2, failed].map((result) => result.workstation!.position);
+  const cells = viewBlocksResultSchema.parse(await call("view_blocks", { cells: used })).blocks.cells;
+  assert.deepEqual(cells.map((cell) => cell.name), used.map(() => "air"), "Every temporary workstation cell must be empty again.");
+  return { status: "succeeded", detail: "Nine-log batch and three-door output confirmed; placed furnace cooked two; floating furnace recovered; temporary furnace cooked nine at 16 TPS and was recovered; temporary table crafted a batch with a table and was recovered, also after a failed plan." };
 };

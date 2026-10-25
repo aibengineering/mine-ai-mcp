@@ -8,31 +8,29 @@ import {
   BotDataLockError,
   sqliteLock,
   storageConnection,
+  type StorageConnection,
   type StorageLockFailure,
   type StorageOperation,
   type StoragePhase,
 } from "./storage-diagnostics.js";
 
 export { BOT_DATA_SCHEMA };
-export const SQL_BOT_DATA_SCHEMA_VERSION = 1;
+/**
+ * The store's shape, recorded in each file's metadata. A file at an older
+ * version is migrated forward when it opens, so a bot keeps its notes, its
+ * event history and its learned queries across a runtime upgrade; a file at
+ * a version this runtime does not know is refused with the file named, which
+ * beats failing deep inside a later query. Version 2 retired the pre-survival
+ * event types, the `notification_state` cursor table, the `bot_status` row
+ * without `time_of_day`, and the synchronous-only call statuses.
+ */
+export const SQL_BOT_DATA_SCHEMA_VERSION = 2;
 
-/** Extend call statuses without rewriting any historical response payload. */
-function migrateActionResponses(database: DatabaseSync): void {
-  const row = database.prepare("SELECT sql FROM sqlite_master WHERE name = 'action_responses'").get() as { sql: string } | undefined;
-  if (!row || row.sql.includes("'accepted'")) return;
-  database.exec(`BEGIN IMMEDIATE;
-    CREATE TABLE action_responses_async (
-      request_id INTEGER PRIMARY KEY, responded_at TEXT NOT NULL,
-      duration_ms INTEGER NOT NULL CHECK(duration_ms >= 0),
-      status TEXT NOT NULL CHECK(status IN ('succeeded','partial','failed','cancelled','accepted','refused','pending','storage_failed','cancellation_requested')),
-      response_json TEXT NOT NULL CHECK(json_valid(response_json)),
-      FOREIGN KEY(request_id) REFERENCES action_requests(request_id) ON DELETE CASCADE
-    ) STRICT;
-    INSERT INTO action_responses_async SELECT * FROM action_responses;
-    DROP TABLE action_responses;
-    ALTER TABLE action_responses_async RENAME TO action_responses;
-    COMMIT;`);
-}
+/** Event types version 1 could hold that nothing writes or reads any more. */
+const RETIRED_EVENT_TYPES = [
+  "hostile_encounter", "hunger_reflex", "breath_reflex", "fire_reflex", "dragon_reflex",
+  "combat_engagement", "survival_policy", "combat_policy",
+] as const;
 
 export type SqlBotDataRow = Record<string, SQLOutputValue>;
 
@@ -48,9 +46,29 @@ export type BotDataStorage =
 export type SqlBotDataLocation =
   { readonly kind: "persistent"; readonly file: string } | { readonly kind: "temporary" };
 
+/**
+ * An operator record about the storage itself, which the database cannot hold:
+ * a persistent connection opening or closing, or a lock failure on any connection.
+ */
+export type BotDataLogRecord =
+  | ({ readonly event: "opened" | "closed" } & StorageConnection & { readonly observedAt: string })
+  | StorageLockFailure;
+
+/** The line an operator reads for one record: a tag, then the record as JSON. */
+export function botDataLogLine(record: BotDataLogRecord): string {
+  return `[minecraft-bot-data] ${JSON.stringify(record)}`;
+}
+
+/** Production's sink: one line per record on stderr, alongside the host's own notices. */
+export function writeBotDataLog(record: BotDataLogRecord): void {
+  process.stderr.write(`${botDataLogLine(record)}\n`);
+}
+
 export interface SqlBotDataOptions {
   readonly storage: BotDataStorage;
   readonly identity: BotDataIdentity;
+  /** Where lifecycle and lock records go. Defaults to {@link writeBotDataLog}. */
+  readonly log?: (record: BotDataLogRecord) => void;
 }
 
 /** Owns the SQLite representation and connection for one bot-data identity. */
@@ -62,9 +80,15 @@ export class SqlBotData {
   private readonly connection;
   private lockFailures = 0;
   private lastLockFailure: StorageLockFailure | null = null;
+  private readonly log: (record: BotDataLogRecord) => void;
 
-  private constructor(location: SqlBotDataLocation, metadata: ReadonlyMap<string, string>) {
+  private constructor(
+    location: SqlBotDataLocation,
+    metadata: ReadonlyMap<string, string>,
+    log: (record: BotDataLogRecord) => void,
+  ) {
     this.location = location;
+    this.log = log;
     this.connection = storageConnection(location.kind === "persistent" ? location.file : ":memory:");
 
     const database = new DatabaseSync(location.kind === "persistent" ? location.file : ":memory:", {
@@ -77,10 +101,8 @@ export class SqlBotData {
     try {
       this.at({ name: "open-bot-data" }, "configure", () => {
         configureDatabase(database, location.kind);
-        validateExistingMetadata(database, metadata);
-        migrateEventReadState(database);
-        migrateBotStatus(database);
-        migrateActionResponses(database);
+        migrateStore(database, location);
+        validateExistingMetadata(database, metadata, location);
         database.exec(BOT_DATA_SCHEMA);
         installAndValidateMetadata(database, metadata);
         // Startup may wait for a transient migration/journal lock. Once attached
@@ -96,9 +118,7 @@ export class SqlBotData {
     // Cross-process contention cannot be attributed from the victim's SQLite error alone.
     // Lifecycle records let operators correlate other runtime connections to this exact file.
     if (location.kind === "persistent")
-      process.stderr.write(
-        `[minecraft-bot-data] ${JSON.stringify({ event: "opened", ...this.connection, observedAt: new Date().toISOString() })}\n`,
-      );
+      this.log({ event: "opened", ...this.connection, observedAt: new Date().toISOString() });
   }
 
   /** Creates the selected durable or session-only representation of one bot-data identity. */
@@ -106,7 +126,7 @@ export class SqlBotData {
     const identity = resolveBotDataIdentity(options.identity);
     const metadata = metadataFor(identity.worldId, identity.scope);
     const location = resolveSqlBotDataLocation(options.storage, identity);
-    return new SqlBotData(location, metadata);
+    return new SqlBotData(location, metadata, options.log ?? writeBotDataLog);
   }
 
   /** Runs a trusted, synchronous read on the host thread. */
@@ -169,9 +189,7 @@ export class SqlBotData {
     this.closed = true;
     closeSqlDatabase(this.database);
     if (this.location.kind === "persistent")
-      process.stderr.write(
-        `[minecraft-bot-data] ${JSON.stringify({ event: "closed", ...this.connection, observedAt: new Date().toISOString() })}\n`,
-      );
+      this.log({ event: "closed", ...this.connection, observedAt: new Date().toISOString() });
   }
 
   [Symbol.dispose](): void {
@@ -208,7 +226,7 @@ export class SqlBotData {
       this.lockFailures += 1;
       this.lastLockFailure = details;
       // The database itself is unavailable. Do not try to persist this through events or receipts.
-      process.stderr.write(`[minecraft-bot-data] ${JSON.stringify(details)}\n`);
+      this.log(details);
       throw new BotDataLockError(details, cause);
     }
   }
@@ -252,27 +270,6 @@ export function closeSqlDatabase(database: DatabaseSync): void {
 
 const collectOrphanedStatements = (globalThis as { Bun?: { gc: (synchronous: boolean) => void } }).Bun?.gc;
 
-/** Preserve the cursor created before event reading was separated from notification policy. */
-function migrateEventReadState(database: DatabaseSync): void {
-  const oldTable = database
-    .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'notification_state'")
-    .get();
-  const currentTable = database
-    .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'event_read_state'")
-    .get();
-  if (oldTable !== undefined && currentTable === undefined) {
-    database.exec("ALTER TABLE notification_state RENAME TO event_read_state");
-  }
-}
-
-/** The live-status row is rewritten on every refresh, so an outdated shape is dropped rather than altered. */
-function migrateBotStatus(database: DatabaseSync): void {
-  const columns = database.prepare("SELECT name FROM pragma_table_info('bot_status')").all() as { name: string }[];
-  if (columns.length > 0 && !columns.some((column) => column.name === "time_of_day")) {
-    database.exec("DROP TABLE bot_status");
-  }
-}
-
 function resolveSqlBotDataLocation(storage: BotDataStorage, identity: BotDataIdentity): SqlBotDataLocation {
   if (storage.kind === "temporary") return Object.freeze({ kind: "temporary" });
 
@@ -305,8 +302,98 @@ function configureDatabase(database: DatabaseSync, location: SqlBotDataLocation[
   database.exec("PRAGMA foreign_keys = ON");
 }
 
+/**
+ * Bring an existing file up to this runtime's schema before anything reads it.
+ *
+ * Runs before the schema script, whose CREATE IF NOT EXISTS would otherwise
+ * install fresh tables beside the renamed old ones. A fresh file has no
+ * metadata yet and needs nothing; a file already at this version needs
+ * nothing; a version this runtime has never written is refused, since it is
+ * newer than the code or not a bot-data file at all.
+ */
+function migrateStore(database: DatabaseSync, location: SqlBotDataLocation): void {
+  const found = recordedSchemaVersion(database);
+  if (found === undefined || found === String(SQL_BOT_DATA_SCHEMA_VERSION)) return;
+  if (found === "1") {
+    migrateV1ToV2(database);
+    return;
+  }
+  throw schemaVersionMismatch(location, found);
+}
+
+function recordedSchemaVersion(database: DatabaseSync): string | undefined {
+  const metadataTable = database
+    .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'sql_bot_data_metadata'")
+    .get();
+  if (metadataTable === undefined) return undefined;
+  const row = database.prepare("SELECT value FROM sql_bot_data_metadata WHERE key = 'schema_version'").get() as
+    | { value: string }
+    | undefined;
+  return row?.value;
+}
+
+/**
+ * Version 1 to 2, in one transaction so a crash midway leaves a version 1 file.
+ *
+ * Each step handles a shape version 1 files were seen with during development,
+ * so each first checks whether the file still has it. The retired event rows
+ * have no current shape to become and are deleted; the read cursor and every
+ * other row stay.
+ */
+function migrateV1ToV2(database: DatabaseSync): void {
+  const tableExists = (name: string): boolean =>
+    database.prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = ?").get(name) !== undefined;
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    // The schema script recreates every view. An old view left in place can
+    // name a table dropped below, and the next rename then re-checks it and
+    // fails: a store with the old status and response tables never opened.
+    const views = database.prepare("SELECT name FROM sqlite_schema WHERE type = 'view'").all() as { name: string }[];
+    for (const { name } of views) database.exec(`DROP VIEW "${name.replaceAll('"', '""')}"`);
+    if (tableExists("notification_state") && !tableExists("event_read_state")) {
+      database.exec("ALTER TABLE notification_state RENAME TO event_read_state");
+    }
+    const statusColumns = database.prepare("SELECT name FROM pragma_table_info('bot_status')").all() as { name: string }[];
+    if (statusColumns.length > 0 && !statusColumns.some((column) => column.name === "time_of_day")) {
+      // The live status is rewritten within a second of connecting; nothing is lost.
+      database.exec("DROP TABLE bot_status");
+    }
+    const responses = database.prepare("SELECT sql FROM sqlite_master WHERE name = 'action_responses'").get() as
+      | { sql: string }
+      | undefined;
+    if (responses && !responses.sql.includes("'accepted'")) {
+      database.exec(`
+        CREATE TABLE action_responses_async (
+          request_id INTEGER PRIMARY KEY, responded_at TEXT NOT NULL,
+          duration_ms INTEGER NOT NULL CHECK(duration_ms >= 0),
+          status TEXT NOT NULL CHECK(status IN ('succeeded','partial','failed','cancelled','accepted','refused','pending','storage_failed','cancellation_requested')),
+          response_json TEXT NOT NULL CHECK(json_valid(response_json)),
+          FOREIGN KEY(request_id) REFERENCES action_requests(request_id) ON DELETE CASCADE
+        ) STRICT;
+        INSERT INTO action_responses_async SELECT * FROM action_responses;
+        DROP TABLE action_responses;
+        ALTER TABLE action_responses_async RENAME TO action_responses;`);
+    }
+    if (tableExists("events")) {
+      const placeholders = RETIRED_EVENT_TYPES.map(() => "?").join(", ");
+      database.prepare(`DELETE FROM events WHERE event_type IN (${placeholders})`).run(...RETIRED_EVENT_TYPES);
+    }
+    database.prepare("UPDATE sql_bot_data_metadata SET value = ? WHERE key = 'schema_version'").run(
+      String(SQL_BOT_DATA_SCHEMA_VERSION),
+    );
+    database.exec("COMMIT");
+  } catch (error) {
+    if (database.isTransaction) database.exec("ROLLBACK");
+    throw error;
+  }
+}
+
 /** Reject incompatible files before schema installation can modify them. */
-function validateExistingMetadata(database: DatabaseSync, expected: ReadonlyMap<string, string>): void {
+function validateExistingMetadata(
+  database: DatabaseSync,
+  expected: ReadonlyMap<string, string>,
+  location: SqlBotDataLocation,
+): void {
   const metadataTable = database
     .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'sql_bot_data_metadata'")
     .get();
@@ -315,10 +402,18 @@ function validateExistingMetadata(database: DatabaseSync, expected: ReadonlyMap<
   const find = database.prepare("SELECT value FROM sql_bot_data_metadata WHERE key = ?");
   for (const [key, expectedValue] of expected) {
     const existing = find.get(key) as { value: string } | undefined;
-    if (existing !== undefined && existing.value !== expectedValue) {
-      throw metadataMismatch(key, expectedValue, existing.value);
-    }
+    if (existing === undefined || existing.value === expectedValue) continue;
+    if (key === "schema_version") throw schemaVersionMismatch(location, existing.value);
+    throw metadataMismatch(key, expectedValue, existing.value);
   }
+}
+
+function schemaVersionMismatch(location: SqlBotDataLocation, found: string): Error {
+  const store = location.kind === "persistent" ? `SQL bot data at ${location.file}` : "SQL bot data";
+  return new Error(
+    `${store} has schema version ${found}, but this runtime knows schema versions up to ${SQL_BOT_DATA_SCHEMA_VERSION}. ` +
+      "Open it with the runtime that wrote it, or delete this file (with its -wal and -shm files) to recreate the store.",
+  );
 }
 
 function installAndValidateMetadata(database: DatabaseSync, expected: ReadonlyMap<string, string>): void {

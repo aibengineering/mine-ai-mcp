@@ -216,13 +216,7 @@ export class ReflexDriver implements AsyncDisposable {
             // Movement or construction can change the attempted arrangement.
             // Remember the settled scope, including its identity, so an evade
             // cannot buy another full attempt just by moving before it fails.
-            if (failure)
-              this.answered.remember(
-                definition.facts(chosen.response),
-                failure,
-                definition.temporal?.(outcome) ?? null,
-              );
-            definition.settled?.(chosen.response, outcome, claim.interrupted);
+            if (failure) this.answered.remember(definition.facts(chosen.response), failure);
             this.#publish({
               kind: "outcome",
               reflex: definition.name,

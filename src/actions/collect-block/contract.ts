@@ -4,7 +4,8 @@
 import type { Vec3 } from "vec3";
 import { z } from "zod";
 import type { BlockColour } from "@aibengineering/minecraft-block-highlighter";
-import { actionOutputSchema, actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
+import { wholeCell } from "../cell.js";
 import { asVec3, type Position3 } from "../../utils/index.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────────────────
@@ -122,12 +123,9 @@ export const collectBlockInputSchema = z
     on_tool_loss: z.enum(["stop", "continue"]).default("stop")
       .describe("Stop with partial progress when the best required tool tier drops, or continue the same collection with the remaining tool."),
   })
+  .superRefine(wholeCell(outcomes.coordinatesTogether))
   .superRefine((value, context) => {
-    const coordinates = [value.x, value.y, value.z].filter((coordinate) => coordinate !== undefined).length;
-    if (coordinates !== 0 && coordinates !== 3) {
-      context.addIssue({ code: "custom", message: outcomes.coordinatesTogether });
-    }
-    if (coordinates === 3 && value.count !== 1) {
+    if (value.x !== undefined && value.y !== undefined && value.z !== undefined && value.count !== 1) {
       context.addIssue({ code: "custom", path: ["count"], message: outcomes.exactTargetCount });
     }
   });
@@ -186,14 +184,3 @@ export const collectBlockResultSchema = actionResultSchema({
  * blocks broken, and deterministic failure reasons.
  */
 export type CollectBlockResult = z.output<typeof collectBlockResultSchema>;
-
-/** Stable runtime-output schema available without constructing a bot-bound action. */
-export const collectBlockOutputSchema = actionOutputSchema(
-  COLLECT_BLOCK,
-  collectBlockResultSchema,
-);
-
-/**
- * Layer 2 Typed Action Output: Associates the action name tag with its typed result.
- */
-export type CollectBlockOutput = ActionOutput<typeof COLLECT_BLOCK, CollectBlockResult>;

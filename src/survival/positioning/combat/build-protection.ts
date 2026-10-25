@@ -3,7 +3,7 @@ import type { Vec3 } from "vec3";
 import { isReplaceableForPlacement } from "../../../world/block-classification.js";
 import { findPlacementSupport, placeBlock } from "../../../world/placement.js";
 import type { CombatPolicy } from "../../policy/combat/contract.js";
-import { extinguishFireAt } from "../fire-clearance.js";
+import { clearInstantObstructionAt, extinguishFireAt } from "../fire-clearance.js";
 import { capBlock } from "./hide-blocks.js";
 
 export type ProtectionBuild =
@@ -59,6 +59,8 @@ export async function buildProtection(
     const cell = pending[index]!;
     if ((await extinguishFireAt(bot, cell, signal, terrain.dig)) === "blocked")
       return blocked(`Fire could not be cleared from protection cell ${cell}.`);
+    if ((await clearInstantObstructionAt(bot, cell, signal, terrain.dig)) === "blocked")
+      return blocked(`Protection cell ${cell} holds ${bot.blockAt(cell)?.name ?? "a plant"}, which could not be punched out.`);
     const changedAfterClearing = mayContinue();
     if (changedAfterClearing) return blocked(changedAfterClearing);
     const current = bot.blockAt(cell);

@@ -1,6 +1,5 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const COLLECT_MOB_DROP = "collect_mob_drop" as const;
@@ -178,13 +177,6 @@ export const huntMobResultSchema = actionResultSchema({
   handoff: huntHandoffSchema,
 });
 export type HuntMobResult = z.output<typeof huntMobResultSchema>;
-export type HuntMobOutput = ActionOutput<typeof COLLECT_MOB_DROP, HuntMobResult>;
-
-export const huntMobAnnotations = {
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: true,
-} satisfies ToolAnnotations;
 
 export const huntMobOutcomes = {
   /**

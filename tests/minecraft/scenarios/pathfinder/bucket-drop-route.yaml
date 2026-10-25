@@ -1,0 +1,38 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance]
+description: >-
+  Reach the foot of an unbreakable 15-block bedrock tower carrying only a water bucket, with
+  digging and scaffolding disabled. The only safe way down is a planned bucket drop: pour
+  water at the landing, fall into it and pick it back up. Arrive at full health with the
+  water bucket in hand.
+
+# A 15-block fall costs about 12 health without the water, and this world does
+# not regenerate, so the health goal catches a missed or late pour. The bucket
+# goal catches a pour whose water was left behind.
+reset:
+  - "fill -8 -60 -8 8 -40 8 air"
+
+geometry:
+  - fill: { block: bedrock, from: [-8, -60, -8], to: [8, -60, 8] }
+  - fill: { block: bedrock, from: [0, -59, 0], to: [0, -45, 0] }
+
+players:
+  - name: Actor
+    pos: [0.5, -44, 0.5]
+    inventory:
+      - { item: water_bucket, count: 1 }
+
+params:
+  action: navigate
+  input: { x: 1, y: -59, z: 0, range: 0, dig: false, scaffold: false }
+
+goal:
+  kind: all
+  timeout: 45
+  goals:
+    - { kind: reach, who: Actor, pos: [1.5, -59, 0.5], radius: 0.75 }
+    - { kind: health, who: Actor, health: 20 }
+    - { kind: hasItem, who: Actor, item: water_bucket, count: 1 }
+    - { kind: completion, who: Actor }
+    - { kind: survive, who: Actor, seconds: 1 }

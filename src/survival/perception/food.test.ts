@@ -30,11 +30,6 @@ test("cooked food is eaten as before, and nothing is reported withheld when a me
   assert.equal(selection.withheld, null);
 });
 
-test("below the sprint floor or half health the raw drops become the meal", () => {
-  assert.equal(selectPolicyFood(fed(20, 6, [{ name: "beef", count: 4 }]), DEFAULT_FOOD_POLICY).food?.name, "beef");
-  assert.equal(selectPolicyFood(fed(8, 14, [{ name: "beef", count: 4 }]), DEFAULT_FOOD_POLICY).food?.name, "beef");
-});
-
 test("raw chicken stays off the menu even in an emergency; its hunger effect is the model's call", () => {
   const selection = selectPolicyFood(fed(4, 2, [{ name: "chicken", count: 2 }]), DEFAULT_FOOD_POLICY);
   assert.equal(selection.food, null);

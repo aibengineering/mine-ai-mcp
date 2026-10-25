@@ -1,0 +1,66 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression, slow]
+description: >-
+  Replays a retained seed-64510673 death after the crystals were gone: the bot
+  starts from its last safe position with the fight's worn kit (armour, sword
+  and pickaxe at their recorded durability) and the dragon at 190 health, and
+  the perch loop must kill the dragon while the bot lives.
+
+world:
+  type: default
+  dimension: the_end
+  seed: "64510673"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+
+players:
+  - name: DragonFighter
+    # Latest safe pre-death status in the retained zero-crystal fight.
+    pos: [-28.5, 62, 35.5]
+    # The recorded worn slots at their durability; the inventory is the
+    # fight's practical combat subset, not full parity.
+    equipment:
+      head: "diamond_helmet[damage=124]"
+      chest: "diamond_chestplate[damage=124]"
+      legs: "diamond_leggings[damage=124]"
+      feet: "diamond_boots[damage=63]"
+      offhand: shield
+    inventory:
+      - { item: "diamond_sword[damage=780]" }
+      - { item: "diamond_pickaxe[damage=585]" }
+      - { item: bow, count: 3 }
+      - { item: arrow }
+      - { item: cooked_beef, count: 9 }
+      - { item: cooked_porkchop, count: 3 }
+      - { item: cobbled_deepslate, count: 91 }
+      - { item: end_stone, count: 26 }
+      - { item: shield, count: 3 }
+      - { item: water_bucket }
+
+schedule:
+  - { when: "entity @e[type=end_crystal]", run: "kill @e[type=end_crystal]" }
+  - { when: "entity @e[type=ender_dragon]", run: "data merge entity @e[type=ender_dragon,limit=1] {Health:190.0f}" }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/end-fight.ts]
+params:
+  arranged:
+    crystals: 0
+    dragonHealth: 190
+    damaged:
+      - { item: diamond_helmet, damage: 124 }
+      - { item: diamond_boots, damage: 63 }
+      - { item: diamond_sword, damage: 780 }
+      - { item: diamond_pickaxe, damage: 585 }
+  dragon: { attack: perch }
+
+goal:
+  kind: all
+  timeout: 1500
+  goals:
+    - { kind: kill, target: ender_dragon }
+    - { kind: survive, who: DragonFighter, seconds: 1 }
+    - { kind: completion, who: DragonFighter }

@@ -1,7 +1,6 @@
 import { temporaryWorkstationInputSchema, workstationEvidenceSchema } from "../temporary-workstation.js";
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const SMELT_ITEM = "smelt_item" as const;
@@ -82,13 +81,6 @@ export const smeltItemResultSchema = actionResultSchema({
 });
 export type SmeltEvidence = z.output<typeof smeltEvidenceSchema>;
 export type SmeltItemResult = z.output<typeof smeltItemResultSchema>;
-export type SmeltItemOutput = ActionOutput<typeof SMELT_ITEM, SmeltItemResult>;
-
-export const smeltItemAnnotations = {
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: true,
-} satisfies ToolAnnotations;
 
 export const smeltItemOutcomes = {
   unknownItem: (item: string) => `[UNKNOWN_SMELT_ITEM] Minecraft has no item registry entry named ${item}.`,

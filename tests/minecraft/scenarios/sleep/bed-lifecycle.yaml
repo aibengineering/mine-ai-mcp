@@ -1,0 +1,56 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  At night, with a bed in inventory and exactly one two-block footprint beside
+  the start, place the bed there and sleep until morning: the server's respawn
+  point moves to that bed. In a second pen, once that sleep has brought the
+  morning, use a bed already standing nearby by day: its respawn point moves
+  to it, and the receipt says the bot did not sleep.
+# Absorbs flat/sleep/carried-bed-night, nearby-bed-day and nearby-bed-night.
+# The legacy driver checked the respawn by killing the bot; here the server's
+# own SpawnX/Y/Z sets a marker block that the goals read. The night pen is an
+# island: within the bed search's four-block radius the only flat footprint is
+# the andesite pair. Walking off a bed after waking fails today and is
+# known-failing/sleep/bed-exit-after-waking, so the day pen is a second player;
+# one sleeper is enough to end the night.
+world:
+  type: flat
+  time: 13000
+  difficulty: peaceful
+  gamerules: { doDaylightCycle: true, doMobSpawning: false, doWeatherCycle: false, keepInventory: true, playersSleepingPercentage: 0 }
+geometry:
+  - fill: { block: air, from: [-5, -64, -5], to: [5, -54, 5] }
+  - setblock: { at: [0, -60, 0], block: polished_andesite }
+  - fill: { block: polished_andesite, from: [2, -60, 0], to: [3, -60, 0] }
+  - setblock: { at: [105, -60, 0], block: "red_bed[facing=east,part=foot,occupied=false]" }
+  - setblock: { at: [106, -60, 0], block: "red_bed[facing=east,part=head,occupied=false]" }
+schedule:
+  # Markers set by the server when a player's respawn point names a bed's head.
+  - { when: "data entity Sleeper {SpawnX:2,SpawnY:-59,SpawnZ:0}", run: "setblock 0 -50 12 gold_block" }
+  - { when: "data entity Sleeper {SpawnX:3,SpawnY:-59,SpawnZ:0}", run: "setblock 0 -50 12 gold_block" }
+  - { when: "data entity Napper {SpawnX:106,SpawnY:-60,SpawnZ:0}", run: "setblock 100 -50 12 gold_block" }
+players:
+  - name: Sleeper
+    pos: [0.5, -59, 0.5]
+    inventory:
+      - { item: cyan_bed, count: 1 }
+  - name: Napper
+    pos: [100.5, -60, 0.5]
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/bed-lifecycle.ts]
+params:
+  players:
+    Sleeper: { case: night }
+    Napper: { case: day, dayWithinTicks: 1200 }
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: blocksAt, block: cyan_bed, positions: [[2, -59, 0], [3, -59, 0]] }
+    - { kind: blockAt, pos: [0, -50, 12], block: gold_block }
+    - { kind: completion, who: Sleeper }
+    - { kind: blockAt, pos: [100, -50, 12], block: gold_block }
+    - { kind: completion, who: Napper }

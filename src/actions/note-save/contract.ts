@@ -23,7 +23,3 @@ export const noteSaveResultSchema = z.strictObject({
   status: z.literal("succeeded"),
   note: botNoteSchema,
 });
-
-export function parseNoteSaveRequest(input: unknown) {
-  return noteSaveInputSchema.parse(input);
-}

@@ -1,6 +1,4 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import type { ActionOutput } from "../action.js";
 import { sqlActionResultSchema } from "../sql-action.js";
 
 export const VIEW_FRONTIER = "view_frontier" as const;
@@ -67,7 +65,6 @@ export const closestFrontierSchema = z.strictObject({
   distanceBlocks: z.number(),
   heading: z.number(),
 });
-export type ClosestFrontier = z.output<typeof closestFrontierSchema>;
 
 export const frontierViewSchema = z.strictObject({
   perspective: z.enum(FRONTIER_MAP_PERSPECTIVES),
@@ -94,15 +91,9 @@ export const frontierViewSchema = z.strictObject({
   legends: z.record(z.string(), z.array(z.string())).optional(),
 });
 
-export type ViewFrontierInput = z.input<typeof viewFrontierInputSchema>;
 export type FrontierView = z.output<typeof frontierViewSchema>;
 
 export const viewFrontierResultSchema = sqlActionResultSchema({
   view: frontierViewSchema,
 });
 export type ViewFrontierResult = z.output<typeof viewFrontierResultSchema>;
-export type ViewFrontierOutput = ActionOutput<typeof VIEW_FRONTIER, ViewFrontierResult>;
-
-export const viewFrontierAnnotations = {
-  openWorldHint: false,
-} satisfies ToolAnnotations;

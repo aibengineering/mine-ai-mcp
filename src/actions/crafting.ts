@@ -42,6 +42,14 @@ export function parseCraftingRequest(input: unknown): CraftingRequest {
   return { items: [...combined].map(([itemName, count]) => ({ itemName, count })) };
 }
 
+/** The refusals craft_item and view_crafting_requirements share word for word, since both plan the same request. */
+export const craftingOutcomes = {
+  unknownItems: (items: readonly string[]) =>
+    `[UNKNOWN_CRAFT_ITEMS] Minecraft has no registry items named: ${items.join(", ")}.`,
+  plannerFailed: (items: readonly string[]) =>
+    `[CRAFT_PLAN_UNAVAILABLE] The recursive planner found recipes but could not produce concrete plans for: ${items.join(", ")}.`,
+} as const;
+
 export const craftMaterialSchema: z.ZodType<CraftMaterial> = z.strictObject({
   item: z.string(),
   count: z.number().int().positive(),

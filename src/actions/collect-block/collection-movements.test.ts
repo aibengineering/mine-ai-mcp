@@ -9,7 +9,6 @@ import { blockClass, observeMineflayerBlock } from "../../navigation/mineflayer/
 import { createCollectionMovements, type CollectionMovementOptions } from "./collection-movements.js";
 import { flatWorld } from "../../test-support/navigation.js";
 import { createMovements } from "../../navigation/runtime.js";
-import { MemoryWorld } from "../../navigation/world/memory-world.js";
 
 /** Air around the origin: no liquid beside any cell these tests break. */
 const world = flatWorld();
@@ -99,14 +98,8 @@ test("collects a requested door without giving navigation permission to mine oth
   assert.equal(policy.evaluateBreak(birchDoor, position, world).decision.kind, "penalized");
   assert.equal(policy.evaluateBreak(oakDoor, position, world).decision.kind, "prohibited");
   assert.equal(createMovements(bot).evaluateBreak(birchDoor, position, world).decision.kind, "prohibited");
-
-  const wet = new MemoryWorld();
-  wet.load(
-    { x: 3, y: 64, z: 0 },
-    { stateId: bot.registry.blocksByName.lava.minStateId, traits: { liquid: "lava", liquidSource: true } },
-  );
-  const flood = policy.evaluateBreak(birchDoor, position, wet).decision;
-  assert.equal(flood.kind === "prohibited" && flood.cause, "opens_into_liquid");
+  // Collect adds nothing to the liquid rule; opening a path into liquid is
+  // refused by the shared policy (movement-policy.test.ts) for every caller.
   assert.equal(
     policy.evaluateBreak({ ...birchDoor, traits: { ...birchDoor.traits, safeToBreak: false } }, position, world)
       .decision.kind,
@@ -168,8 +161,9 @@ test("only the requested interactive block state may be broken, and only at a na
     [table, chest],
   ]) {
     const policy = collectionPolicy(bot, { matchingStateIds: new Set([requested!.stateId]) });
-    assert.equal(policy.evaluateBreak(requested!, position, world).decision.kind, "penalized");
-    assert.equal(policy.evaluateBreak(other!, position, world).decision.kind, "prohibited");
+    const asked = requested === chest ? "the chest" : "the table";
+    assert.equal(policy.evaluateBreak(requested!, position, world).decision.kind, "penalized", `${asked} was requested`);
+    assert.equal(policy.evaluateBreak(other!, position, world).decision.kind, "prohibited", `only ${asked} was requested`);
   }
 
   // An exact target names one cell; another chest of the same state is not it.

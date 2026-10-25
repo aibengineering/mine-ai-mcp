@@ -55,7 +55,6 @@ function poolWorld(held: string | null = null) {
   Object.defineProperty(bot, "heldItem", { get: () => hand });
   const uses: unknown[] = [];
   const dependencies: UseBucketDependencies = {
-    createMovements: () => ({}) as never,
     navigate: async () => ({ status: "completed", elapsedMs: 0 }),
     world: {
       blockAt(x, y, z) {
@@ -107,7 +106,8 @@ function poolWorld(held: string | null = null) {
   return { bot, blocks, dependencies, uses };
 }
 
-test("parses fill without a cell and pour with one, and refuses a partial cell", () => {
+test("a fill may omit its cell, but a pour must name the cell the liquid ends up in", () => {
+  // The partial-cell refusal is the shared rule proven in cell.test.ts.
   assert.deepEqual(parseUseBucketRequest({ action: "fill" }), { action: "fill", liquid: "water", cell: null });
   assert.deepEqual(parseUseBucketRequest({ action: "pour", liquid: "lava", x: 1, y: 2, z: 3 }), {
     action: "pour",
@@ -115,7 +115,6 @@ test("parses fill without a cell and pour with one, and refuses a partial cell",
     cell: { x: 1, y: 2, z: 3 },
   });
   assert.throws(() => parseUseBucketRequest({ action: "pour" }), /pour needs/);
-  assert.throws(() => parseUseBucketRequest({ action: "fill", x: 1 }), /all three/);
 });
 
 test("fill finds the nearest source, looks at its surface, and confirms the full bucket", async () => {
@@ -127,6 +126,44 @@ test("fill finds the nearest source, looks at its surface, and confirms the full
   assert.equal(result.bucket.target?.x, 4);
   assert.equal(result.bucket.heldAfter, "water_bucket");
   assert.match(formatUseBucketResult(result), /Filled the bucket with \*\*water\*\*/);
+});
+
+/**
+ * The server sends the filled bucket and the emptied source in the same tick,
+ * but the inventory packet can arrive first. An evidence tour on 2026-10-25
+ * confirmed a fill 8 ms in and reported the source still standing.
+ */
+test("fill waits for the source to empty, not only for the full bucket", async () => {
+  const { bot, blocks, dependencies } = poolWorld("bucket");
+  const result = await useBucket(
+    bot,
+    { action: "fill", liquid: "water", cell: null },
+    {},
+    {
+      ...dependencies,
+      // `useItemAt`'s loop, one tick per step: the bucket lands, then the block update.
+      useItem: async (_bot, use) => {
+        const arrivals = [
+          () => Object.defineProperty(bot, "heldItem", { get: () => ({ name: "water_bucket" }) }),
+          () => blocks.delete("4,63,0"),
+        ];
+        for (const arrive of arrivals) {
+          arrive();
+          const settled = (use.expectedCells ?? []).every((cell) => {
+            const block = bot.blockAt(new Vec3(cell.position.x, cell.position.y, cell.position.z));
+            return block !== null && cell.matches(block);
+          });
+          if (settled) return { kind: "used" };
+        }
+        return { kind: "failed", error: "not confirmed" };
+      },
+    },
+  );
+
+  assert.equal(result.status, "succeeded");
+  assert.equal(result.bucket.targetBefore, "water");
+  assert.equal(result.bucket.targetAfter, "air");
+  assert.match(formatUseBucketResult(result), /Target: `water` → `air`/);
 });
 
 test("fill keeps an already usable higher bank instead of walking into the pool", async () => {

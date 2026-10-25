@@ -35,10 +35,7 @@ export interface ReflexDefinition<Danger, Response, Outcome> {
   continuation(outcome: Outcome): Continuation;
   failure(outcome: Outcome): AnsweredEntry["failure"] | null;
   describe(outcome: Outcome): Facts;
-  /** An actual temporal dependency, never an automatic retry delay. */
-  temporal?(outcome: Outcome): AnsweredEntry["temporal"];
   releaseAfterAdmission?(): void;
-  settled?(response: Response, outcome: Outcome, interrupted: { action: string; startedAt: string } | null): void;
 }
 
 export interface ReflexSnapshot {

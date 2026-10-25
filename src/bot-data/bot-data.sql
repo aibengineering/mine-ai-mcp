@@ -218,8 +218,7 @@ SELECT
   c.observed_by_bot_id,
   c.observed_at
 FROM observed_containers AS c
-JOIN json_each(c.contents_json) AS item
-WHERE json_type(item.value, '$.slot') = 'integer';
+JOIN json_each(c.contents_json) AS item;
 
 CREATE VIEW observed_container_items AS
 SELECT

@@ -99,7 +99,6 @@ test(`the complete production catalogue defaults to equivalent reference schemas
   const actions = createActions({ bot: botFixture(), botData,
     budgets: {} as never, frontier: {} as never, navigation: {} as never, strongholdEyeFlights: {} as never,
     combat: { policy: { declareQuarry() {}, reserveArrows() {} } } as never,
-    cancelForegroundAction: () => { throw new Error("Catalogue test cannot cancel actions"); },
     observeStatusActivity: () => { throw new Error("Catalogue test cannot execute actions"); },
   }, { debugExecuteJavaScript });
   const runner = new ActionRunner();
@@ -267,7 +266,8 @@ test("ordinary SDK HTTP discovery, calls and a new session resolve and validate 
     try { await client.connect(transport); await exercise(client); }
     finally { await transport.terminateSession(); await client.close(); }
   }
-  assert.equal(application.clientSessionCount, 0);
+  const health = (await (await fetch(`http://127.0.0.1:${address.port}/health`)).json()) as { clientSessions: number };
+  assert.equal(health.clientSessions, 0);
 });
 
 test("server Zod output validation remains active and the SDK rejects invalid successful structuredContent", async (t) => {

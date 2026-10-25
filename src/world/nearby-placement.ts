@@ -2,13 +2,18 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { cellIntersectsPlayerBody } from "../utils/index.js";
 import { isDryPlacementSite, supportsFlatPlacement } from "./block-classification.js";
-import { placeBlock, findPlacementSupport, type WorldBlock } from "./placement.js";
+import { placeBlock, findPlacementSupport, occupiedCell, type WorldBlock } from "./placement.js";
 import { chestOpeningObstruction } from "./chest-clearance.js";
 
 /** Vanilla block-interaction reach, measured from the bot's feet cell like every other placement here. */
 const NEARBY_PLACEMENT_REACH = 4;
-/** Feet level first, then the step down and the step up; a cell two up is over the bot's head. */
-const SEARCH_HEIGHTS = [0, -1, 1] as const;
+/**
+ * Feet level, the step down and the step up, then the level over the bot's
+ * head. Nearest wins, so the overhead level only decides when nothing lower is
+ * clear: at the bottom of a one-wide shaft the bot dug down into an ore, every
+ * lower cell was stone or its own body and a temporary furnace had no cell.
+ */
+const SEARCH_HEIGHTS = [0, -1, 1, 2] as const;
 
 export type NearbyPlacement =
   | { readonly kind: "placed"; readonly position: Vec3; readonly block: WorldBlock }
@@ -33,7 +38,7 @@ interface PlacementCell {
  * has walls on every side and no free floor, and the model walked off to
  * find open ground instead of crafting where it stood.
  */
-function chooseCell(bot: Bot, itemName: string, maxRadius: number): PlacementCell | null {
+export function chooseCell(bot: Bot, itemName: string, maxRadius: number): PlacementCell | null {
   const feet = bot.entity.position.floored();
   let chosen: { readonly cell: PlacementCell; readonly distance: number; readonly onFloor: boolean } | null = null;
   for (let dx = -maxRadius; dx <= maxRadius; dx += 1) {
@@ -44,6 +49,9 @@ function chooseCell(bot: Bot, itemName: string, maxRadius: number): PlacementCel
         if (distance > NEARBY_PLACEMENT_REACH || cellIntersectsPlayerBody(position, bot.entity.position)) continue;
         if (!isDryPlacementSite(bot.blockAt(position))) continue;
         if (chestOpeningObstruction(bot, itemName, position)) continue;
+        // A mob standing in the cell refuses the placement after the choice is
+        // made; a wandering animal on generated ground took the nearest cell.
+        if (occupiedCell(bot, position)) continue;
         const placement = findPlacementSupport(bot, position, supportsFlatPlacement);
         if (placement) {
           const { support, face } = placement;

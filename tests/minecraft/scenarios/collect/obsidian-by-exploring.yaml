@@ -1,8 +1,7 @@
 template: ../../templates/flat-single-action.yaml
 
-name: obsidian-by-exploring
 tags: [acceptance]
-description: With no obsidian and all lava pools outside the initial casting search radius, one collect call searches outward, casts and collects two obsidian, and recovers the water bucket.
+description: With no obsidian and all lava pools outside the initial casting search radius, one collect call searches outward, casts and collects three obsidian, and recovers the water bucket.
 
 # The lava pools sit eighty blocks out on all four sides, past the
 # sixty-four-block casting scan, so the call must move before it can select one. It
@@ -33,7 +32,7 @@ params:
   action: collect_block
   input:
     block_name: obsidian
-    count: 2
+    count: 3
     scaffold: false
 
 tick:
@@ -46,7 +45,7 @@ goal:
     - kind: hasItem
       who: Collector
       item: obsidian
-      count: 2
+      count: 3
     - kind: hasItem
       who: Collector
       item: water_bucket

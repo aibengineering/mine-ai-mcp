@@ -70,8 +70,25 @@ export function decideBreathResponse(air: number): ResponseDecision<SurfaceRespo
   };
 }
 
-export function needsFood(health: number, hunger: number): boolean {
-  return hunger <= HUNGER_EAT_THRESHOLD || (health < 20 && hunger < REGENERATION_HUNGER);
+/**
+ * Health below which a bot that can still eat tops up spent saturation.
+ *
+ * Vanilla heals a point every ten ticks only while hunger is full and
+ * saturation remains; at hunger 18 or 19 without saturation it heals one
+ * every eighty. A burn takes a point every twenty, so a wounded bot standing
+ * on slow regeneration loses. In combat-proof4 2026-10-20T21-00-20-800Z the
+ * Burning pen's shelter failed and the bot stood at hunger 19 with no
+ * saturation, burning from 8.9 to death with cooked beef in its inventory:
+ * the reflex waited for hunger 17.
+ */
+export const SATURATION_EAT_HEALTH = 10;
+
+export function needsFood(health: number, hunger: number, saturation = Number.POSITIVE_INFINITY): boolean {
+  return (
+    hunger <= HUNGER_EAT_THRESHOLD ||
+    (health < 20 && hunger < REGENERATION_HUNGER) ||
+    (health < SATURATION_EAT_HEALTH && hunger < 20 && saturation <= 0)
+  );
 }
 
 export interface HungerFacts {

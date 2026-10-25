@@ -21,7 +21,6 @@ import { defineAction, type ActionContext } from "../action.js";
 import { equipmentSlots } from "../equip/index.js";
 import { describeNavigation } from "../navigation-result.js";
 import {
-  dropItemAnnotations,
   dropItemOutcomes,
   NEVER_DROPPED_SLOTS,
   parseDropItemRequest,
@@ -69,12 +68,17 @@ const DISCARD_ATTRIBUTION_RADIUS = 4;
  */
 const HOLE_CLEARANCE = 3;
 
+/**
+ * The engine a drop drives: the route to a hole or a player, the in-place
+ * break that digs the hole, and the placement that seals it. Tests replace
+ * them with fakes that change the world, so the drop's own decisions are
+ * proven without a server.
+ */
 export interface DropItemDependencies {
   readonly navigate: Navigate;
   readonly breakInPlace: BreakBlockInPlace;
   /** Fills one cell of the hole's shaft with a carried block once the toss is done. */
   readonly placeInto: typeof placeSolidBlockInto;
-  readonly createMovements: (bot: Bot) => ReturnType<typeof createMovements>;
   /** How long the server gets to show a toss in the inventory and, for a hole, on the ground. */
   readonly settleMs?: number;
 }
@@ -84,7 +88,6 @@ function productionDependencies(navigation: NavigationRuntime): DropItemDependen
     navigate: navigation.navigate,
     breakInPlace: navigation.breakBlockInPlace,
     placeInto: placeSolidBlockInto,
-    createMovements,
   };
 }
 
@@ -190,7 +193,7 @@ async function approachPlayer(
   if (bot.entity.position.distanceTo(entity.position) > HANDOVER_RANGE) {
     const route = await dependencies
       .navigate({
-        movements: dependencies.createMovements(bot),
+        movements: createMovements(bot),
         goal: nearEntityGoal({ id: entity.id }, HANDOVER_RANGE),
         signal: context.signal,
       })
@@ -253,7 +256,7 @@ async function stepAwayFromHole(
   );
   try {
     const route = await dependencies.navigate({
-      movements: dependencies.createMovements(bot),
+      movements: createMovements(bot),
       goal,
       signal: context.signal,
     });
@@ -283,8 +286,9 @@ async function closeDisposalHole(
   hole: Vec3,
   dependencies: DropItemDependencies,
   context: ActionContext,
+  discarding: ReadonlySet<string>,
 ): Promise<HoleClosure> {
-  const seal = await sealDisposalHole(bot, hole, dependencies.placeInto, context);
+  const seal = await sealDisposalHole(bot, hole, dependencies.placeInto, context, discarding);
   const retreat = await stepAwayFromHole(bot, hole, dependencies, context);
   const errors = [seal.error, retreat.error].filter((error): error is string => error !== undefined);
   return {
@@ -323,7 +327,7 @@ export async function dropItem(
       if (request.destination.kind === "player") {
         recipient = await approachPlayer(bot, request.destination.name, dependencies, context);
       } else {
-        hole = await prepareDisposalHole(bot, dependencies.createMovements(bot), dependencies.breakInPlace, context);
+        hole = await prepareDisposalHole(bot, createMovements(bot), dependencies.breakInPlace, context);
       }
     } catch (cause) {
       context.signal?.throwIfAborted();
@@ -390,7 +394,7 @@ export async function dropItem(
     context.signal?.throwIfAborted();
     // Whether or not the toss was seen at the bottom, an open pit beside the
     // bot is the hazard the next route walks into, so close it either way.
-    holeClosure = await closeDisposalHole(bot, hole, dependencies, context);
+    holeClosure = await closeDisposalHole(bot, hole, dependencies, context, new Set(request.items.map((item) => item.itemName)));
   }
 
   const evidence: DropItemEvidence = {
@@ -468,7 +472,12 @@ export function createDropItemAction(
     resultSchema: dropItemResultSchema,
     formatResult: formatDropItemResult,
     execution: { kind: "task", prepare: () => prepareBotForMovement(bot, navigation) },
-    annotations: dropItemAnnotations,
+    annotations: {
+      // Dropped items despawn and can be taken by anyone; this is not undoable.
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
     parse: parseDropItemRequest,
     execute: (request, context) => dropItem(bot, request, context, dependencies, discarded),
   });

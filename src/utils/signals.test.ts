@@ -37,10 +37,12 @@ test("armSignal: resolves on event emission and cleans up listeners", async () =
  * facts. Reporting both as one value let a lapsed pickup budget be read as a
  * completed pickup, so the distinction is pinned here.
  */
-test("armSignal: neither a timeout nor a cancellation is a sighting, and both release the listener", async () => {
+test("armSignal: neither a timeout nor a cancellation is a sighting, and both release the listener", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
   const emitter = new EventEmitter();
   const timed = armSignal(emitter, "update", () => null, { timeoutMs: 20 });
   assert.equal(emitter.listenerCount("update"), 1);
+  t.mock.timers.tick(20);
   assert.deepEqual(await timed.promise, { kind: "timeout" });
   assert.equal(emitter.listenerCount("update"), 0);
 
@@ -51,14 +53,15 @@ test("armSignal: neither a timeout nor a cancellation is a sighting, and both re
   assert.equal(emitter.listenerCount("update"), 0);
 });
 
-test("armSignal: an unbounded signal listens until its caller stops it", async () => {
+test("armSignal: an unbounded signal listens until its caller stops it", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
   const emitter = new EventEmitter();
   let ready = false;
   const signal = armSignal(emitter, "update", () => (ready ? "late" : null), {});
   assert.equal(emitter.listenerCount("update"), 1);
 
-  await new Promise((resolve) => setTimeout(resolve, 30));
-  assert.equal(emitter.listenerCount("update"), 1, "no deadline may retire an unbounded signal");
+  t.mock.timers.tick(60 * 60_000);
+  assert.equal(emitter.listenerCount("update"), 1, "no deadline, not even an hour, may retire an unbounded signal");
 
   ready = true;
   emitter.emit("update");

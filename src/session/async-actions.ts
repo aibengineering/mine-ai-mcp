@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { Action, ActionOutput } from "../actions/action.js";
 import type { SqlBotData } from "../bot-data/sql-bot-data.js";
 import type { ActionRunner } from "./action-runner.js";
-import { progressChange, type Progress } from "./progress.js";
+import { progressChange, type Progress, type ProgressChange } from "./progress.js";
 import type { RequestSnapshot } from "./request.js";
 
 export const submissionMetadataSchema = z.object({
@@ -28,7 +28,7 @@ export type Acceptance = z.output<typeof acceptanceSchema>;
 export type LiveProgress = { actionId: string; action: string; progress: Progress; request: RequestSnapshot | null };
 export type WaitOutcome = Refusal | {
   state: "pending"; wakeReason: "timeout"; actionId: string;
-  progress: LiveProgress; duringWait: ReturnType<typeof progressChange>;
+  progress: LiveProgress; duringWait: ProgressChange;
 } | {
   state: "settled"; wakeReason: "settled"; actionId: string; output: ActionOutput<string, import("../actions/action.js").ActionResult>;
 } | { state: "storage_failed"; actionId: string; error: string; output: ActionOutput<string, import("../actions/action.js").ActionResult> };
@@ -69,12 +69,7 @@ export class ExecutionStore {
   constructor(private readonly data: SqlBotData, private readonly botId: string) {}
   load(): RecordData[] {
     return this.data.read("SELECT record_json FROM action_executions WHERE bot_id = ? ORDER BY rowid", this.botId)
-      .map((row) => {
-        // Earlier development records used a caller acknowledgement and receipt.
-        const { acknowledged, terminal, ...record } = JSON.parse(String(row.record_json));
-        return { ...record, resultRetrieved: record.resultRetrieved ?? acknowledged ?? false,
-          terminal: terminal ? { output: terminal.output } : null } as RecordData;
-      });
+      .map((row) => JSON.parse(String(row.record_json)) as RecordData);
   }
   write(records: readonly RecordData[]): void {
     this.data.transaction((db) => {

@@ -1,0 +1,90 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [known-failing, regression]
+description: >-
+  LavaPoolBot is put in the middle of a 13x13 lava pool with nothing but
+  cobblestone and no bank within the fire reflex's reach, so it has to place
+  a step and climb out; regeneration is off. As the legacy lava-escape-step
+  required, it must come out alive, out of the lava and no longer burning.
+  The migration had added a health floor of two, which no escape can meet:
+  lava hits for four on contact, and leaving it sets a fifteen-second burn,
+  fifteen health, that only water ends. One hit leaves at most one health.
+  Fails today, though not from a runtime defect: a second lava hit lands ten
+  ticks after the first, and that kills. The bot reacts in one to three
+  ticks, swims the 0.2 blocks to the step's face in six (lava caps the swim
+  at 0.039 blocks a tick) and climbs out in two or three more, so only the
+  fastest reactions get out in time. In 2026-10-21 trials it survived five
+  of twelve, then none of eight under heavier load. Early steering while
+  the step was placed did not move the contact earlier and was reverted. To
+  pass reliably the arrangement must change, for instance natural
+  regeneration as the Nether pool pen in survival/nether-idle-survival has.
+  The pocket and dig pens that were split out with it are back in
+  survival/fire-reflex.
+
+# The idle bot waits on a dry bank and is teleported into the lava once the
+# runtime is up; a tag set the first tick its body burns proves the lava
+# reached it.
+world:
+  type: flat
+  time: noon
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill 90 -61 -10 110 -50 10 air"
+
+setup:
+  - "scoreboard objectives add ml_fire dummy"
+
+geometry:
+  # A netherrack bed under the pool, its centre six blocks from every edge,
+  # and a dry netherrack bank to the east where the bot waits.
+  - fill: { block: netherrack, from: [91, -61, -9], to: [109, -61, 9] }
+  - fill: { block: lava, from: [94, -60, -6], to: [106, -60, 6] }
+  - fill: { block: netherrack, from: [107, -60, -9], to: [109, -60, 9] }
+
+players:
+  - name: LavaPoolBot
+    pos: [108.5, -59, 0.5]
+    inventory:
+      - { item: cobblestone, count: 8 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    # The idle wait covers the escape and the whole residual burn after it.
+    LavaPoolBot: { waitTicks: 400 }
+
+schedule:
+  - afterTicks: 0
+    run:
+      # A tag a reused player kept from an earlier trial must not count.
+      - "tag @a remove ml_burned_LavaPoolBot"
+      - "tag @a remove ml_cool_LavaPoolBot"
+      - "tp LavaPoolBot 100.5 -60 0.5"
+  - { afterTicks: 1, when: "entity @a[name=LavaPoolBot,scores={ml_fire=1..}]", run: "tag LavaPoolBot add ml_burned_LavaPoolBot" }
+
+tick:
+  - "gamemode spectator @a[name=!LavaPoolBot,gamemode=!spectator]"
+  - "execute as @a store result score @s ml_fire run data get entity @s Fire"
+  # Lava sets the burn again every tick, so a burned bot whose Fire has run
+  # out is out of the lava and no longer burning.
+  - "tag @a[name=LavaPoolBot,scores={ml_fire=1..}] remove ml_cool_LavaPoolBot"
+  - "tag @a[name=LavaPoolBot,tag=ml_burned_LavaPoolBot,scores={ml_fire=..0}] add ml_cool_LavaPoolBot"
+
+goal:
+  kind: all
+  timeout: 75
+  goals:
+    - { kind: entityCount, entity: player, tag: ml_burned_LavaPoolBot, min: 1 }
+    - { kind: entityCount, entity: player, tag: ml_cool_LavaPoolBot, min: 1 }
+    - { kind: survive, who: LavaPoolBot, seconds: 1 }
+    - { kind: completion, who: LavaPoolBot }

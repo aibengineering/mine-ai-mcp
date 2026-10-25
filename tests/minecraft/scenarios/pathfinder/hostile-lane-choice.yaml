@@ -1,0 +1,139 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression]
+description: >-
+  Price hostile mobs into route choice without forbidding their lanes or digging round
+  them. Four pens, each a long wall with a roofed corridor: a zombie in the corridor and an
+  open detour nine blocks east; the same with the detour's mouth plugged by one dirt block,
+  which is broken rather than pass the zombie; no detour, so the zombie's corridor is walked
+  rather than tunnelled; and a pack of three piglin brutes in the corridor with a near lane
+  thirteen blocks east, inside their acquisition range, and a far lane twenty-five east,
+  where the route must go without ever coming within sixteen blocks of the pack.
+
+# Navigation may dig, as the legacy fixtures allowed, so the intact-wall goals
+# show the route walked a lane instead of tunnelling. The mobs are NoAI, so a
+# route that passes them is not punished by a fight; instead a tick command
+# latches the brutes' acquisition range: if BruteBot ever comes within sixteen
+# blocks of a brute, a red wool marker replaces the floor block at 350,-61,29.
+# The walls are as wide as the legacy ones (61 and 97 blocks), so going round
+# either end costs more than any lane.
+world:
+  type: flat
+  # Midnight, so the zombies do not burn, and no daylight cycle, so the fixture
+  # reads the same however long a trial takes.
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -34 -61 -26 34 -50 8 air"
+  - "fill 66 -61 -26 134 -50 8 air"
+  - "fill 166 -61 -26 234 -50 8 air"
+  - "fill 296 -61 -40 404 -57 -5 air"
+  - "fill 296 -61 -4 404 -57 30 air"
+
+geometry:
+  # Detour: a 61-wide wall, the corridor at x=0 and an open detour at x=9.
+  - fill: { block: smooth_stone, from: [-34, -61, -26], to: [34, -61, 8] }
+  - fill: { block: smooth_stone, from: [-30, -60, -14], to: [30, -58, -2] }
+  - fill: { block: air, from: [0, -60, -14], to: [0, -59, -2] }
+  - fill: { block: air, from: [9, -60, -14], to: [9, -59, -2] }
+
+  # Plug: the same, with one dirt block in the detour's mouth under its roof,
+  # both corners beside it wall, so entering the detour costs exactly one break.
+  - fill: { block: smooth_stone, from: [66, -61, -26], to: [134, -61, 8] }
+  - fill: { block: smooth_stone, from: [70, -60, -14], to: [130, -58, -2] }
+  - fill: { block: air, from: [100, -60, -14], to: [100, -59, -2] }
+  - fill: { block: air, from: [109, -60, -14], to: [109, -59, -2] }
+  - setblock: { block: dirt, at: [109, -60, -2] }
+
+  # Forced: the same wall with no detour.
+  - fill: { block: smooth_stone, from: [166, -61, -26], to: [234, -61, 8] }
+  - fill: { block: smooth_stone, from: [170, -60, -14], to: [230, -58, -2] }
+  - fill: { block: air, from: [200, -60, -14], to: [200, -59, -2] }
+
+  # Brutes: a 97-wide wall, the corridor at x=350, a near lane at 363 and a
+  # far lane at 375.
+  - fill: { block: smooth_stone, from: [296, -61, -40], to: [404, -61, 30] }
+  - fill: { block: smooth_stone, from: [302, -60, -14], to: [398, -58, -2] }
+  - fill: { block: air, from: [350, -60, -14], to: [350, -59, -2] }
+  - fill: { block: air, from: [363, -60, -14], to: [363, -59, -2] }
+  - fill: { block: air, from: [375, -60, -14], to: [375, -59, -2] }
+
+entities:
+  # Halfway along each corridor. NoAI, so they never move or swing: what is
+  # measured is the route.
+  - { type: zombie, pos: [0.5, -60, -8.0], nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b,Tags:[\"detour\"]}" }
+  - { type: zombie, pos: [100.5, -60, -8.0], nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b,Tags:[\"plug\"]}" }
+  - { type: zombie, pos: [200.5, -60, -8.0], nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b,Tags:[\"forced\"]}" }
+  # Three in adjacent cells, so the near lane sums all three fights.
+  - { type: piglin_brute, pos: [350.5, -60, -7.0], nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b,IsImmuneToZombification:1b,Tags:[\"pack\"]}" }
+  - { type: piglin_brute, pos: [350.5, -60, -8.0], nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b,IsImmuneToZombification:1b,Tags:[\"pack\"]}" }
+  - { type: piglin_brute, pos: [350.5, -60, -9.0], nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b,IsImmuneToZombification:1b,Tags:[\"pack\"]}" }
+
+players:
+  - { name: DetourBot, pos: [0.5, -60, 0.5] }
+  - { name: PlugBot, pos: [100.5, -60, 0.5] }
+  - { name: ForcedBot, pos: [200.5, -60, 0.5] }
+  # Twenty-six blocks out, so the route is chosen rather than escaped from.
+  - { name: BruteBot, pos: [350.5, -60, 18.5] }
+
+tick:
+  - "gamemode spectator @a[name=!DetourBot,name=!PlugBot,name=!ForcedBot,name=!BruteBot,gamemode=!spectator]"
+  - "execute at @e[type=piglin_brute,tag=pack] if entity @a[name=BruteBot,distance=..16] run setblock 350 -61 29 red_wool"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/pathfinder-course.ts]
+params:
+  players:
+    DetourBot:
+      dig: true
+      legs: [{ target: [0, -60, -20], range: 0.5, label: "Past the zombie's wall, detour open" }]
+    PlugBot:
+      dig: true
+      legs: [{ target: [100, -60, -20], range: 0.5, label: "Past the zombie's wall, detour plugged" }]
+    ForcedBot:
+      dig: true
+      legs: [{ target: [200, -60, -20], range: 0.5, label: "Through the zombie's corridor, no detour" }]
+    BruteBot:
+      dig: true
+      legs: [{ target: [350, -60, -34], range: 0.5, label: "Past the brute pack by the far lane" }]
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: reach, who: DetourBot, pos: [0.5, -60, -19.5], radius: 1.5 }
+    - { kind: blockAt, pos: [5, -60, -8], block: smooth_stone }
+    - { kind: entityCount, entity: zombie, tag: detour, min: 1 }
+    - { kind: health, who: DetourBot, health: 20 }
+    - { kind: completion, who: DetourBot }
+    - { kind: reach, who: PlugBot, pos: [100.5, -60, -19.5], radius: 1.5 }
+    # The one block worth breaking is gone; the wall is not.
+    - { kind: blockAt, pos: [109, -60, -2], block: air }
+    - { kind: blockAt, pos: [105, -60, -8], block: smooth_stone }
+    - { kind: entityCount, entity: zombie, tag: plug, min: 1 }
+    - { kind: health, who: PlugBot, health: 20 }
+    - { kind: completion, who: PlugBot }
+    - { kind: reach, who: ForcedBot, pos: [200.5, -60, -19.5], radius: 1.5 }
+    # Walked, not tunnelled: the field is a price, not a prohibition.
+    - { kind: blocksAt, block: smooth_stone, positions: [[205, -60, -8], [201, -60, -8], [199, -60, -8]] }
+    # No zombie count here: walking its corridor, the bot's hostile reflex
+    # fights the zombie, which is the reflex's job and not the route's.
+    - { kind: health, who: ForcedBot, health: 20 }
+    - { kind: completion, who: ForcedBot }
+    - { kind: reach, who: BruteBot, pos: [350.5, -60, -33.5], radius: 1.5 }
+    - { kind: blocksAt, block: smooth_stone, positions: [[356, -60, -8], [369, -60, -8]] }
+    - { kind: entityCount, entity: piglin_brute, tag: pack, min: 3 }
+    # Never within the pack's acquisition range.
+    - { kind: blockAt, pos: [350, -61, 29], block: smooth_stone }
+    - { kind: health, who: BruteBot, health: 20 }
+    - { kind: completion, who: BruteBot }
+    - { kind: survive, seconds: 1 }

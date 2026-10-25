@@ -1,19 +1,20 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
-name: exact-collection-preservation
 tags: [regression]
 description: >-
   Collect an addressed open birch door, coal ore, empty chest and spare crafting
   table. Remove both target door halves while leaving the nearer matching door,
-  oak door and unrequested coal intact. Return past the stocked chest and table
-  without destroying them; inspect the chest to confirm its original 12 pearls
-  and 79 gold. Guards exact targeting and the Run 12 door refusal and storage
-  destruction regressions.
+  oak door and unrequested coal intact, then stand in the empty doorway and put
+  the door back. Reach the chest and table past a stocked chest of the same
+  block state, which sits in a short corridor between walls long enough that
+  breaking through it is far cheaper than walking round, and return the same
+  way, without destroying either; inspect the chest to confirm its original 12
+  pearls and 79 gold. Guards exact targeting, the Run 12 door refusal and storage
+  destruction regressions, and the refusal to re-place a door from its own doorway.
 # Origins: mine_ai db5384ea (protected storage) and e148dee5 (requested door).
 # Preserves coal-exact-target and birch-door-exact-target. The door arrangement
-# is translated twenty blocks west and one down; the storage barrier is unchanged.
-minecraft:
-  version: "1.21.4"
+# is translated twenty blocks west and one down. The storage barrier's walls run
+# z -20..15, as same-state-storage's did.
 world:
   type: flat
   time: noon
@@ -21,7 +22,7 @@ world:
     doDaylightCycle: false
     doMobSpawning: false
 reset:
-  - "fill -25 -60 -9 9 -54 9 air"
+  - "fill -25 -60 -23 9 -54 18 air"
 geometry:
   - fill: { block: andesite, from: [-25, -61, -9], to: [-4, -61, 9] }
   - setblock: { block: "birch_door[facing=east,half=lower,hinge=left,open=true,powered=false]", at: [-21, -60, 0] }
@@ -34,10 +35,11 @@ geometry:
   - setblock: { block: coal_ore, at: [-14, -60, 4] }
   - setblock: { block: coal_ore, at: [-12, -60, 4] }
   # A low ceiling prevents jumping over the shortcut's protected blocks.
-  # The longer route around either end of the barrier remains open.
-  - fill: { block: bedrock, from: [-3, -61, -9], to: [9, -61, 9] }
-  - fill: { block: bedrock, from: [-3, -58, -9], to: [9, -58, 9] }
-  - fill: { block: bedrock, from: [1, -60, -6], to: [5, -59, 6] }
+  # The longer route around either end of the barrier remains open. The
+  # ceiling is barrier: as solid as bedrock, but a spectator can see through it.
+  - fill: { block: bedrock, from: [-3, -61, -23], to: [9, -61, 18] }
+  - fill: { block: barrier, from: [-3, -58, -23], to: [9, -58, 18] }
+  - fill: { block: bedrock, from: [1, -60, -20], to: [5, -59, 15] }
   - fill: { block: air, from: [1, -60, 0], to: [5, -59, 0] }
   # The stocked chest has the same block state as the requested empty chest.
   # Permission to collect one must never permit breaking the other on approach.
@@ -62,6 +64,12 @@ params:
     - label: Addressed door and both halves
       action: collect_block
       input: { block_name: birch_door, count: 1, x: -18, y: -60, z: 0, scaffold: false }
+    - label: Stand in the emptied doorway
+      action: navigate
+      input: { x: -18, y: -60, z: 0, range: 0, dig: false, scaffold: false }
+    - label: Re-place the door from inside its doorway
+      action: place_block
+      input: { block_name: birch_door, x: -18, y: -60, z: 0 }
     - label: Addressed ore instead of nearer match
       action: collect_block
       input: { block_name: coal_ore, count: 1, x: -12, y: -60, z: 4, scaffold: false }
@@ -86,9 +94,11 @@ goal:
   kind: all
   timeout: 180
   goals:
-    - { kind: hasItem, who: Collector, item: birch_door, count: 1 }
+    # The collected door was the one put back: none is left in the inventory.
+    - { kind: hasItem, who: Collector, item: birch_door, count: 0, max: 0 }
     - { kind: hasItem, who: Collector, item: coal, count: 1 }
-    - { kind: blocksAt, block: air, positions: [[-18, -60, 0], [-18, -59, 0], [-12, -60, 4]] }
+    - { kind: blockAt, block: air, pos: [-12, -60, 4] }
+    - { kind: blocksAt, block: birch_door, positions: [[-18, -60, 0], [-18, -59, 0]] }
     - { kind: blocksAt, block: birch_door, positions: [[-21, -60, 0], [-21, -59, 0]] }
     - { kind: blocksAt, block: oak_door, positions: [[-15, -60, 0], [-15, -59, 0]] }
     - { kind: blockAt, block: coal_ore, pos: [-14, -60, 4] }

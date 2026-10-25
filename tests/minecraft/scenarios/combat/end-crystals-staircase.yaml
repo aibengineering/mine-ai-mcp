@@ -1,0 +1,52 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression, slow]
+description: >-
+  Climb the melee staircase to every one of the ten native crystals on seed
+  8675309, lowest first, caged or exposed, and melee each from the covered rim
+  or the tower top without mining obsidian (legacy crystals-melee). Each
+  crystal gets at most five requests while view_status still lists it. Kept
+  apart from end-crystals-every-method because a staircase climbed after a
+  pillar fails today (known-failing/combat/end-crystals-pillar-then-staircase.yaml).
+  Failed intermittently until 2026-10-21, three ways: the builder judged a dig
+  stance from the cell centre while the body stood 0.12 blocks off it, so it
+  "arrived" and never worked ("2 passes changed nothing"); a perched dragon's
+  breath beside the bot's raised cell closed every route ("visited 7 nodes"),
+  read as unreachable treads; and a dragon shelter raised on the rim stance
+  left its walls on the attack line ([CRYSTAL_ATTACK_CORNER_BLOCKED]).
+
+world:
+  type: default
+  dimension: the_end
+  seed: "8675309"
+  difficulty: normal
+  gamerules: { doMobSpawning: false }
+
+players:
+  - name: DragonFighter
+    pos: [12.5, 64, 0.5]
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: diamond_boots }
+    inventory:
+      - { item: diamond_sword }
+      - { item: diamond_pickaxe }
+      - { item: bow }
+      - { item: arrow, count: 128 }
+      - { item: cooked_beef, count: 64 }
+      - { item: end_stone, count: 640 }
+      - { item: water_bucket }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/end-fight.ts]
+params:
+  arranged: { crystals: 10 }
+  crystals: { plan: melee, attempts: 5 }
+
+goal:
+  kind: all
+  timeout: 2400
+  goals:
+    - { kind: entityCount, entity: end_crystal, max: 0 }
+    - { kind: survive, who: DragonFighter, seconds: 1 }
+    - { kind: completion, who: DragonFighter }

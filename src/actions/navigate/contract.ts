@@ -1,6 +1,6 @@
 /** MCP contract and factual outcomes for one absolute navigation request. */
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
 
 export const NAVIGATE = "navigate" as const;
 export const NAVIGATE_DESCRIPTION =
@@ -113,7 +113,6 @@ export const navigateResultSchema = actionResultSchema({
 
 export type NavigationEvidence = z.output<typeof navigationEvidenceSchema>;
 export type NavigateResult = z.output<typeof navigateResultSchema>;
-export type NavigateOutput = ActionOutput<typeof NAVIGATE, NavigateResult>;
 
 export const navigateOutcomes = {
   toolTierLost: (reason: string) => reason,

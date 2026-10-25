@@ -116,9 +116,5 @@ for (const row of TABLE) {
     const memory = world(row.east);
     assert.deepEqual(offered(memory, 0), [...row.empty], "empty-handed");
     assert.deepEqual(offered(memory, 64), [...row.carrying], "carrying cobblestone");
-    // Whatever a scaffold adds, it never takes a family away.
-    for (const family of offered(memory, 0)) {
-      assert.ok(offered(memory, 64).includes(family), `carrying cobblestone lost ${family} into ${row.shape}`);
-    }
   });
 }

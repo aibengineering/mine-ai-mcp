@@ -26,6 +26,7 @@ import { SWIM_DOWN_TICKS, SWIM_UP_TICKS, SWIM_HORIZONTAL_TICKS } from "../world/
 import { type BlockPosition, blockLabel } from "../world/world.js";
 import type { GeneratedMovement, MovementGenerationContext, PlanningState } from "./catalogue.js";
 import { type Dig, confirmDigs, prepareExcavationDigs, releasesLava } from "./excavation.js";
+import { NO_CELL } from "./expansion-cells.js";
 import {
   type MovementKind,
   type PlacementPlan,
@@ -63,21 +64,6 @@ export interface GeneratedMovements extends Iterable<GeneratedMovement> {
   toArray(): GeneratedMovement[];
 }
 
-/** Ready-made movements in the shape `generate` returns, for a catalogue stubbed in a test. */
-export function movementList(movements: readonly GeneratedMovement[]): GeneratedMovements {
-  return {
-    length: movements.length,
-    toX: movements.map((movement) => movement.to.x),
-    toY: movements.map((movement) => movement.to.y),
-    toZ: movements.map((movement) => movement.to.z),
-    remainingScaffolds: movements.map((movement) => movement.remainingScaffolds),
-    cost: movements.map((movement) => movement.cost),
-    settle: () => true,
-    movement: (index) => movements[index]!,
-    toArray: () => [...movements],
-    [Symbol.iterator]: () => movements[Symbol.iterator](),
-  };
-}
 
 /** What an opened door or gate must read as before the route walks through it. */
 const OPENED = {
@@ -87,7 +73,8 @@ const OPENED = {
 };
 
 const NO_DIGS: readonly Dig[] = [];
-const CELLS_PER_MOVEMENT = 4;
+/** The most cells a family names, plus the stance's own head cell a digging row may add. */
+const CELLS_PER_MOVEMENT = 5;
 const INITIAL_CAPACITY = 64;
 
 /** Whether a row has been settled: not yet, kept, or refused by a cell rule, the stance's sight, or a missing support. */
@@ -287,6 +274,7 @@ export class MovementCandidates implements GeneratedMovements {
     }
     const grid = context.cells;
     const first = row * CELLS_PER_MOVEMENT;
+    this.#clearOwnHead(row, first);
     const end = first + this.#cellCount[row]!;
     let breakTicks = 0;
     let breakPenalty = 0;
@@ -334,6 +322,28 @@ export class MovementCandidates implements GeneratedMovements {
     this.#hazardPenalty[row] = hazardPenalty;
     this.cost[row] = expectedTicks + breakPenalty + this.#placementPenalty[row]! + hazardPenalty;
     this.length = row + 1;
+  }
+
+  /**
+   * Add the stance's own head cell to a row that digs, when the head is inside
+   * a block. An eye inside a block sees only that block, so no other dig can be
+   * aimed until it is gone; the ordering in `settle` takes it first. A row that
+   * digs nothing walks out without it.
+   *
+   * progression-to-diamond@2 arranged the bot on generated terrain with a
+   * leaf block in its head cell and a log beside it at head height. No row
+   * that dug could see its dig past the leaves, and the first search expanded
+   * only its start, so collect_block reported no path within a second.
+   */
+  #clearOwnHead(row: number, first: number): void {
+    const grid = this.#context.cells;
+    const count = this.#cellCount[row]!;
+    let digs = false;
+    for (let at = first; at < first + count && !digs; at += 1) digs = grid.cellDug(this.#cells[at]!);
+    if (!digs) return;
+    const ownHead = this.#context.ownHead;
+    if (ownHead === NO_CELL || !grid.cellDug(ownHead)) return;
+    this.cell(ownHead);
   }
 
   /**

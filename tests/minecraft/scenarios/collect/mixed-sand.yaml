@@ -1,11 +1,9 @@
-template: ../../templates/collect/single-action.yaml
-name: mixed-sand
+template: ../../templates/single-action.yaml
 tags: [acceptance]
 description: >-
   Collect all 15 sand blocks from a low bank and three tall columns using a
   shovel. All sections must be harvested and their drops collected, with full
   health at completion; clearing only the easy bank cannot pass.
-minecraft: { version: "1.21.4" }
 world:
   type: flat
   time: noon

@@ -1,0 +1,76 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Two idle bots are hungry and nothing is requested; the runtime's eating
+  reflex must feed each from what it carries. HungryBot starts at hunger 10
+  with bread and rotten flesh, below the ordinary eating bar: the first
+  playthrough went seventy minutes without a bite. HurtHungryBot starts at 14
+  health and hunger 16, above that bar but too low for natural regeneration,
+  so only eating while wounded lets it heal to 18.
+
+# Natural regeneration stays on: healing is HurtHungryBot's evidence. Pens are
+# 100 blocks apart. Mine Labs arranges each bar before the start, and the
+# wound after the hunger, so no regeneration can sneak in during preparation.
+world:
+  type: flat
+  time: noon
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+reset:
+  - "fill -8 -59 -8 108 -40 8 air"
+
+setup:
+  # The food criterion follows each player's hunger bar.
+  - "scoreboard objectives add ml_food food"
+
+players:
+  - name: HungryBot
+    pos: [0.5, -60, 0.5]
+    food: 10
+    # Food choice is policy, not a verdict: either kind may be eaten.
+    inventory:
+      - { item: bread, count: 3 }
+      - { item: rotten_flesh, count: 3 }
+  - name: HurtHungryBot
+    pos: [100.5, -60, 0.5]
+    health: 14
+    food: 16
+    inventory:
+      - { item: bread, count: 3 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/idle.ts]
+params:
+  # After the meal's saturation is spent, regeneration adds one health every
+  # four seconds, so the wounded bot needs most of this to pass eighteen.
+  waitTicks: 600
+
+schedule:
+  # A tag left on a reused player by an earlier trial must not count.
+  - { afterTicks: 0, run: "tag HungryBot remove ml_fed" }
+  # Hunger only rises by eating: nothing else in the pen feeds the bot.
+  - afterTicks: 1
+    when: "entity @a[name=HungryBot,scores={ml_food=14..}]"
+    run: "tag HungryBot add ml_fed"
+
+tick:
+  - "gamemode spectator @a[name=!HungryBot,name=!HurtHungryBot,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 75
+  goals:
+    - { kind: entityCount, entity: player, tag: ml_fed, min: 1 }
+    - { kind: survive, who: HungryBot, seconds: 1 }
+    - { kind: completion, who: HungryBot }
+    - { kind: health, who: HurtHungryBot, health: 18 }
+    - { kind: survive, who: HurtHungryBot, seconds: 1 }
+    - { kind: completion, who: HurtHungryBot }

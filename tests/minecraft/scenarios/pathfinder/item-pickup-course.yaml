@@ -1,0 +1,144 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression]
+description: >-
+  Collect dropped items where they actually lie with pick_up_items. Three pens: one sweeper
+  collects diamonds scattered on open floor, on a raised ledge, on top of a one-block ledge, behind a low wall, resting a
+  step down at the foot of a ledge and drifting in a walled water channel, while leaving a
+  gravel drop it was not asked for; another pursues a diamond that a tick command keeps
+  moving and never lets rest; and a third collects an ender pearl from a raised ledge while
+  a stationary enderman stands in the cell it would scaffold from.
+
+# Every drop is summoned in setup with PickupDelay 0 and Age -32768, so a slow
+# run fails on the route, not on despawn. Any drop missed or abandoned leaves a
+# hasItem goal short. Picking up the gravel fails both the gravel and the item
+# count goals. A pursuit that waits for its item to rest never collects it: the
+# diamond leaves the floor at x=130 about fourteen seconds into the trial.
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -12 -62 -12 64 -50 24 air"
+  - "fill 94 -62 -6 132 -50 6 air"
+  - "fill 198 -61 -3 206 -55 3 air"
+
+geometry:
+  # Open-floor zone (item-pickup-area): a three-high ledge with a step, and
+  # drops on the floor and on the ledge.
+  - fill: { block: polished_andesite, from: [-8, -61, -8], to: [22, -61, 8] }
+  - fill: { block: polished_andesite, from: [10, -60, -1], to: [14, -58, 2] }
+  - setblock: { block: polished_andesite, at: [9, -60, 0] }
+  # A one-block grass ledge with a drop resting on top (item-pickup-ledge's drop,
+  # which rolled behind such a ledge, as a static drop).
+  - fill: { block: grass_block, from: [16, -60, 4], to: [20, -60, 7] }
+  - fill: { block: stone, from: [23, -61, -2], to: [27, -61, 2] }
+
+  # Chase zone (item-pickup-chase and item-pickup-ledge, 40 east): a low wall,
+  # a ledge with a drop resting at its foot one across and one down from its
+  # top, a walled channel carrying a drop east on the current, and gravel the
+  # requests do not name, off every route but inside the request's radius
+  # (a body that walks over a drop picks it up whatever it was asked for).
+  - fill: { block: stone, from: [28, -61, -10], to: [62, -61, 22] }
+  - fill: { block: stone, from: [54, -60, -4], to: [60, -59, 10] }
+  - fill: { block: stone, from: [44, -60, -6], to: [44, -59, 6] }
+  - fill: { block: stone, from: [38, -60, 7], to: [53, -60, 7] }
+  - fill: { block: stone, from: [38, -60, 9], to: [53, -60, 9] }
+  - setblock: { block: stone, at: [53, -60, 8] }
+  - setblock: { block: stone, at: [37, -60, 8] }
+  - setblock: { block: water, at: [38, -60, 8] }
+
+  # Moving zone (moving-item-pursuit): a long strip for the mover to cross.
+  - fill: { block: stone, from: [94, -61, -4], to: [130, -61, 4] }
+
+  # Pearl zone (pearl-occupied-scaffold): a raised two-block-high ledge, a low
+  # step, and the enderman standing between the bot and the ledge.
+  - fill: { block: stone, from: [198, -61, -3], to: [206, -61, 3] }
+  - fill: { block: stone, from: [203, -60, 0], to: [204, -58, 1] }
+  - fill: { block: stone, from: [201, -60, -1], to: [202, -60, -1] }
+
+
+schedule:
+  # Summoned once the players are arranged, not in setup: a player joining
+  # in survival picks up any item within reach before the harness clears its
+  # inventory. A new player spawns at random inside the open-floor zone, and
+  # on a reused server the pearl collector rejoins where it took the pearl;
+  # either took a stack the requests then never saw.
+  - afterTicks: 0
+    run:
+      - 'summon item 3.5 -60.0 2.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 7.5 -60.0 -2.5 {Item:{id:"minecraft:diamond",count:2},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 13.5 -57.0 0.5 {Item:{id:"minecraft:diamond",count:3},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 17.5 -59.0 4.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 42.5 -60.0 3.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 49.5 -60.0 -3.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 53.5 -60.0 4.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 40.5 -60.0 8.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 45.5 -60.0 15.5 {Item:{id:"minecraft:gravel",count:4},PickupDelay:0s,Age:-32768s}'
+      - 'summon item 108.5 -60.0 0.5 {Item:{id:"minecraft:diamond",count:1},PickupDelay:0s,Age:-32768s,Tags:["moving_pickup"]}'
+      - 'summon item 203.5 -57.0 0.5 {Item:{id:"minecraft:ender_pearl",count:1},PickupDelay:0s,Age:-32768s}'
+
+entities:
+  - { type: enderman, pos: [201.5, -60, 0.5], nbt: "{NoAI:1b,PersistenceRequired:1b,Silent:1b,Tags:[\"pearl\"]}" }
+
+players:
+  - { name: Sweeper, pos: [0.5, -60, 0.5] }
+  - { name: Pursuer, pos: [100.5, -60, 0.5] }
+  - name: PearlCollector
+    pos: [200.5, -60, 0.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 16 }
+
+tick:
+  - "gamemode spectator @a[name=!Sweeper,name=!Pursuer,name=!PearlCollector,gamemode=!spectator]"
+  # Keep the pursued diamond moving, slowly enough to catch, for good.
+  - "execute as @e[type=item,tag=moving_pickup] at @s run tp @s ~0.08 ~ ~"
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    # Each request waits for the summoned items to reach the client.
+    Sweeper:
+      waitTicks: 10
+      actions:
+        - { action: pick_up_items, input: { item: diamond, x: 7, y: -58, z: 0, radius: 12 } }
+        - { action: pick_up_items, input: { item: diamond, x: 49, y: -60, z: 4, radius: 16 } }
+    Pursuer:
+      waitTicks: 10
+      actions:
+        - { action: pick_up_items, input: { item: diamond, x: 108, y: -60, z: 0, radius: 24 } }
+    PearlCollector:
+      waitTicks: 10
+      actions:
+        - { action: pick_up_items, input: { item: ender_pearl, x: 203, y: -57, z: 0, radius: 4 } }
+
+goal:
+  kind: all
+  timeout: 120
+  goals:
+    - { kind: hasItem, who: Sweeper, item: diamond, count: 11, max: 11 }
+    - { kind: hasItem, who: Sweeper, item: gravel, count: 0, max: 0 }
+    # Only the gravel is left lying in the chase zone, where the sweeper ends;
+    # the open-floor zone's chunks may unload once it leaves, and an item in
+    # an unloaded chunk cannot be counted.
+    - { kind: entityCount, entity: item, near: { pos: [49, -60, 4], radius: 20 }, min: 1, max: 1 }
+    - { kind: health, who: Sweeper, health: 20 }
+    - { kind: completion, who: Sweeper }
+    - { kind: hasItem, who: Pursuer, item: diamond, count: 1 }
+    - { kind: health, who: Pursuer, health: 20 }
+    - { kind: completion, who: Pursuer }
+    - { kind: hasItem, who: PearlCollector, item: ender_pearl, count: 1 }
+    - { kind: entityCount, entity: enderman, tag: pearl, min: 1 }
+    - { kind: completion, who: PearlCollector }
+    - { kind: survive, seconds: 1 }

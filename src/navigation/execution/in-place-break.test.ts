@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { FakeNavigationBot, flatWorld } from "../../test-support/navigation.js";
+import { nextTurn } from "../../test-support/async.js";
 import type { PlannedOperation } from "../movements/movement.js";
 import { createMovementPolicy } from "../movements/policy.js";
 import { breakBlockInPlace } from "./in-place-break.js";
@@ -110,7 +111,7 @@ test("cancelling an in-place dig stops the physical effect before releasing the 
     { position: target, movements: createMovementPolicy(), signal: controller.signal },
   );
   const rejected = assert.rejects(work, /stop mining in current/);
-  await new Promise<void>((resolve) => setImmediate(resolve));
+  await nextTurn();
   assert.equal(cancelled, true, "aborting must stop the active dig, not only its positioning controls");
   await rejected;
 });

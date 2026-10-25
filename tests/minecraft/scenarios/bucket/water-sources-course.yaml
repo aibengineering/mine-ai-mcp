@@ -1,0 +1,86 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  Fill buckets from water that is awkward to stand beside, in three pens a hundred blocks apart,
+  with regeneration off so no pen may swim or drown its way to a fill. ShoreBucket starts out of
+  reach of a pool two cells below a bank whose shore cell holds submerged seagrass, and must fill
+  two buckets from the bank (Run 17 took the seagrass for a dry stance and left without filling).
+  PocketBucket names a source sealed in rock and must dig access and fill it from dry ground.
+  Bucketeer fills from a pool four deep without standing in it (both playthrough bucket deaths
+  were drownings after a fill from inside a lake), pours on a lava pool's shore, scoops the water
+  back from that cell, and mines three of the obsidian the pour made.
+
+reset:
+  - "fill -8 -61 -8 12 -50 8 air"
+  - "fill 92 -61 -8 112 -48 8 air"
+  - "fill 184 -63 -16 220 -40 16 air"
+
+geometry:
+  # ShoreBucket: water lies two cells below the bank's standing height, still
+  # within use reach. The seagrass cell is wet although it has no collision box.
+  - fill: { block: stone, from: [-8, -62, -8], to: [12, -59, 8] }
+  - fill: { block: water, from: [-7, -60, -7], to: [4, -60, 7] }
+  - fill: { block: air, from: [-7, -59, -7], to: [4, -59, 7] }
+  - setblock: { block: seagrass, at: [3, -60, 0] }
+  # PocketBucket: a dry entry chamber, separated by solid rock from a source
+  # whose every face, roof included, is enclosed.
+  - fill: { block: stone, from: [92, -62, -8], to: [112, -52, 8] }
+  - fill: { block: air, from: [98, -56, -1], to: [101, -55, 1] }
+  - setblock: { block: water, at: [106, -58, 0] }
+  # Bucketeer: a four-deep pool west and a lava pool east, both of sources.
+  - fill: { block: stone, from: [184, -63, -16], to: [220, -60, 16] }
+  - fill: { block: water, from: [190, -63, -3], to: [196, -60, 3] }
+  - fill: { block: lava, from: [205, -60, -3], to: [209, -60, 3] }
+
+players:
+  - name: ShoreBucket
+    pos: [9.5, -58, 0.5]
+    inventory: [{ item: bucket, count: 2 }]
+  - name: PocketBucket
+    pos: [100.5, -56, 0.5]
+    inventory: [{ item: bucket, count: 1 }, { item: diamond_pickaxe, count: 1 }]
+  - name: Bucketeer
+    pos: [200, -59, 0]
+    inventory: [{ item: bucket, count: 1 }, { item: diamond_pickaxe, count: 1 }]
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  players:
+    ShoreBucket:
+      actions:
+        - { action: use_bucket, input: { action: fill, liquid: water } }
+        - { action: use_bucket, input: { action: fill, liquid: water } }
+    PocketBucket:
+      actions:
+        - { action: use_bucket, input: { action: fill, liquid: water, x: 106, y: -58, z: 0 } }
+    Bucketeer:
+      actions:
+        - { action: use_bucket, input: { action: fill, liquid: water } }
+        # The air above the stone shore block beside the lava; the pour spreads east from here.
+        - { action: use_bucket, input: { action: pour, liquid: water, x: 204, y: -59, z: 0 } }
+        - { action: use_bucket, input: { action: fill, liquid: water, x: 204, y: -59, z: 0 } }
+        - { action: collect_block, input: { block_name: obsidian, count: 3, scaffold: false } }
+
+tick:
+  - "gamemode spectator @a[name=!ShoreBucket,name=!PocketBucket,name=!Bucketeer,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: hasItem, who: ShoreBucket, item: water_bucket, count: 2 }
+    - { kind: health, who: ShoreBucket, health: 20 }
+    - { kind: completion, who: ShoreBucket }
+    - { kind: hasItem, who: PocketBucket, item: water_bucket, count: 1 }
+    - { kind: health, who: PocketBucket, health: 20 }
+    - { kind: completion, who: PocketBucket }
+    - { kind: hasItem, who: Bucketeer, item: obsidian, count: 3 }
+    - { kind: hasItem, who: Bucketeer, item: water_bucket, count: 1 }
+    - { kind: health, who: Bucketeer, health: 20 }
+    - { kind: survive, who: Bucketeer, seconds: 1 }
+    - { kind: completion, who: Bucketeer }

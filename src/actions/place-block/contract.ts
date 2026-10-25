@@ -1,11 +1,11 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
+import { wholeCell } from "../cell.js";
 import { registryNameSchema } from "../registry-name.js";
 
 export const PLACE_BLOCK = "place_block" as const;
 export const PLACE_BLOCK_DESCRIPTION =
-  "Place one carried block. With x, y, z it navigates into reach of that exact cell, which must be replaceable with adjacent solid support. Without them it picks the nearest clear cell within reach of where the bot stands that has a solid face to place against, floor first, then a wall, which is the way to put down a crafting table, furnace, or chest when the surroundings are unknown. Verifies the resulting block and inventory change.";
+  "Place one carried block. With x, y, z it navigates into reach of that exact cell, which must be replaceable with adjacent solid support. Without them it picks the nearest clear cell within reach of where the bot stands that has a solid face to place against, floor first, then a wall, which is the way to put down a crafting table, furnace, or chest when the surroundings are unknown. Verifies the resulting block and inventory change. With x, y, z this is the simpler one-cell form of build_structure, which takes many cells and can dig a wrong block out first.";
 
 const coordinate = (axis: string) => z.number().int().safe().describe(`Absolute target block ${axis} coordinate.`);
 
@@ -14,7 +14,7 @@ export const placeBlockInputSchema = z.strictObject({
   x: coordinate("X").optional(),
   y: coordinate("Y").optional(),
   z: coordinate("Z").optional(),
-});
+}).superRefine(wholeCell("Give all of x, y, and z, or none of them to let the action choose the cell."));
 
 export interface PlaceBlockRequest {
   readonly blockName: string;
@@ -24,9 +24,6 @@ export interface PlaceBlockRequest {
 
 export function parsePlaceBlockRequest(input: unknown): PlaceBlockRequest {
   const value = placeBlockInputSchema.parse(input ?? {});
-  const given = [value.x, value.y, value.z].filter((axis) => axis !== undefined).length;
-  if (given !== 0 && given !== 3)
-    throw new Error("Give all of x, y, and z, or none of them to let the action choose the cell.");
   return {
     blockName: value.block_name,
     target:
@@ -63,18 +60,11 @@ export const placeBlockResultSchema = actionResultSchema({
 
 export type BlockPlacementEvidence = z.output<typeof blockPlacementEvidenceSchema>;
 export type PlaceBlockResult = z.output<typeof placeBlockResultSchema>;
-export type PlaceBlockOutput = ActionOutput<typeof PLACE_BLOCK, PlaceBlockResult>;
 
 export const placeBlockOutcomesNearby = {
   noFreeCell:
     "[PLACE_NO_FREE_CELL] No clear cell with a solid face to place against within reach of the bot; move to open ground or dig a space first.",
 } as const;
-
-export const placeBlockAnnotations = {
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: true,
-} satisfies ToolAnnotations;
 
 export const placeBlockOutcomes = {
   unknownBlock: (blockName: string) => `[PLACE_UNKNOWN_BLOCK] Minecraft has no block named ${blockName}.`,

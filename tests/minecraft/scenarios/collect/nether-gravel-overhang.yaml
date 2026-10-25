@@ -1,0 +1,64 @@
+template: ../../templates/single-action.yaml
+
+tags: [regression]
+description: >-
+  Ask for the nether gold ore at (88, 38, -21) from the recorded tunnel on
+  seed 5831896158372390619, where every route steps or digs onto a naturally
+  suspended gravel column above lava. The original downward step reported
+  completion before the gravel fell and dropped the miner into the lava. The
+  collection may take the ore safely or refuse it truthfully; either way it must
+  leave the miner alive at full health, without regeneration, two seconds
+  later.
+
+# Suspended gravel exists only from generation, so this fixture cannot be
+# rebuilt on a flat world. Only the observed tunnel is carved; gravel is never
+# placed or reset, which would wake gravity before the action starts.
+world:
+  type: default
+  dimension: the_nether
+  structures: true
+  seed: "5831896158372390619"
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+geometry:
+  - fill: { block: air, from: [83, 41, -21], to: [87, 42, -21] }
+
+players:
+  - name: GravelMiner
+    pos: [86.5, 41, -20.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: netherrack, count: 83 }
+      - { item: cooked_mutton, count: 12 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    GravelMiner:
+      actions:
+        - action: collect_block
+          input: { block_name: nether_gold_ore, count: 1, x: 88, y: 38, z: -21, scaffold: true }
+          # The ore is reachable only by stepping onto the suspended gravel or
+          # digging beside it. Taking it safely or refusing it are both truthful;
+          # the goals judge safety, so either outcome may pass and today's refusal
+          # does not become the requirement.
+          expect: { status: [succeeded, failed] }
+      # The original step reported completion before the gravel fell: keep the
+      # runtime two seconds longer so a delayed collapse is still observed.
+      holdTicks: 40
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: health, who: GravelMiner, health: 20 }
+    - { kind: survive, who: GravelMiner, seconds: 1 }
+    - { kind: completion, who: GravelMiner }

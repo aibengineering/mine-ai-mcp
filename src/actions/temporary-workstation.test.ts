@@ -43,8 +43,8 @@ test("temporary station cleanup runs after success and an operation failure", as
       f.failure,
     );
     assert.equal(result.status, status);
-    assert.equal(result.workstation?.recovered, true);
-    assert.deepEqual(f.calls, ["place", "craft batch", "collect"]);
+    assert.equal(result.workstation?.recovered, true, `recovered after the batch ${status}`);
+    assert.deepEqual(f.calls, ["place", "craft batch", "collect"], `cleanup after the batch ${status}`);
   }
 });
 

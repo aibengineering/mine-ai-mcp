@@ -1,0 +1,83 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  An unarmoured bot with a sword and shield hunts a pinned blaze thirty-two
+  blocks across open ground and walks into two sword-armed wither skeletons on
+  the way, which give no windup before they swing. It must collect the blaze's
+  rod and survive with eight health, with no regeneration, so a guard raised
+  only after the first hit shows as damage. One unblocked swing (six health
+  and the wither that follows) leaves the bot below its fight bar of twelve,
+  and the hunt then never takes the rod. The legacy fixture
+  (blaze-crossfire-first-hit-shield) measured only the first exchange. This
+  is the crossing pen of combat/cover-fights, kept apart because it was
+  known-failing from 2026-10-20 to 22. The hit had four causes: the reflex
+  admitted the fight at reach, one tick short of a raised shield's five; a
+  fight ended when its target stepped back with the partner still in reach;
+  after a kill the body went back to the hunt, whose preparation lowered the
+  shield, before the partner was answered (all fixed 2026-10-21); and, with
+  the skeletons 144 degrees apart, the guard faced the nearer alone, though
+  vanilla's half-circle blocks both from between them (fixed 2026-10-22). It
+  then passed 31 of 32. The failure left: after a kill, the partner paused
+  3.4 blocks off, not closing, so the hunt took the body back and lowered
+  the shield, and the partner closed and swung inside the five ticks the
+  re-raised shield needed.
+
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -18 -60 -6 18 -55 36 air"
+
+geometry:
+  # Open ground with nothing to break a line of sight.
+  - fill: { block: stone, from: [-18, -61, -6], to: [18, -61, 36] }
+
+entities:
+  # The errand, pinned so its own charge never raises the guard, and far
+  # enough out that reaching it is a committed crossing. It holds a rod with a
+  # drop chance above one, so a kill always yields one.
+  - type: blaze
+    pos: [0.5, -58, 32.5]
+    nbt: '{NoAI:1b,NoGravity:1b,PersistenceRequired:1b,HandItems:[{id:"minecraft:blaze_rod",count:1},{}],HandDropChances:[2.0f,0.0f]}'
+  # What the bot walks into: the stone sword a fortress skeleton carries, so
+  # neither is a shooter and neither shows a windup on the wire.
+  - type: wither_skeleton
+    pos: [-1.5, -60, 13.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}]}'
+  - type: wither_skeleton
+    pos: [2.5, -60, 14.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:stone_sword",count:1},{}]}'
+
+players:
+  - name: Crossing
+    pos: [0.5, -60, 0.5]
+    equipment: { offhand: shield }
+    inventory:
+      - { item: iron_sword, count: 1 }
+
+params:
+  action: collect_mob_drop
+  input: { mob_name: blaze, drop_name: blaze_rod, count: 1 }
+
+tick:
+  - "gamemode spectator @a[name=!Crossing,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: kill, target: blaze }
+    - { kind: hasItem, who: Crossing, item: blaze_rod, count: 1 }
+    - { kind: health, who: Crossing, health: 8 }
+    - { kind: survive, who: Crossing, seconds: 1 }
+    - { kind: completion, who: Crossing }

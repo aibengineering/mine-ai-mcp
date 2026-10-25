@@ -1,0 +1,198 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Fire reaches six bots and the runtime's fire reflex must get each one out
+  alive. SoulFireBot is idle on open soul soil when soul fire appears in its
+  feet cell, as it did under a settled body after the fortress route;
+  SealedFireBot gets the same fire inside a sealed 1x2 cobblestone refuge.
+  FightFireBot is walking to a destination and fighting a zombie on its route
+  when soul fire appears under it, and must still arrive. EdgeBot is placed
+  on soul sand with its body's edge just over a lava strip, where
+  Mineflayer's lava flag is false. PocketBot is put in a one-cell lava pocket
+  one step below its bank, with a one-deep water cell two blocks east, and
+  MinerBot is digging obsidian when lava appears in its own cell, with the
+  same water. Lava contact sets a fifteen-second burn, fifteen health, so
+  those two must reach the water. MinerBot carries no block, so once the
+  lava sits under the open cell beside the obsidian it reports the obsidian
+  unmineable instead of mining it; a drop that spilled into that lava used
+  to burn, and the collection then explored past the trial's end.
+  Regeneration is off, so each health floor bounds the burn. The pocket and
+  dig pens used to burn to death or end on
+  their last heart: every orthogonal bank of the pocket is equally near, the
+  escape took the first one scanned, west, from where the pocket lies across
+  the way to the water; and a body that landed on the lip of the east bank
+  was released there, still over the pocket. The escape now prefers a bank
+  with water beside it and releases a burning body on the bank itself. The
+  lava pool, which has no water, is in known-failing/survival/lava-escapes.
+
+# Pens are 100 blocks apart along x. Fire and lava arrive by schedule once the
+# runtime is up, as the legacy drivers' /setblock and /tp did, so preparation
+# never burns a body. Each lava pen's bot is tagged the first tick its body
+# burns, so lava that missed it cannot pass; the soul-fire pens show contact
+# by the health they lose. Midnight keeps FightFireBot's zombie from burning.
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "fill -10 -60 -10 510 -50 10 air"
+
+setup:
+  # EdgeBot's remaining burn ticks, copied every tick by `tick` below.
+  - "scoreboard objectives add ml_fire dummy"
+
+geometry:
+  # SoulFireBot: an open soul-soil floor.
+  - fill: { block: soul_soil, from: [-6, -62, -6], to: [6, -61, 6] }
+
+  # SealedFireBot: a 1x2 air cell in a cobblestone block on soul soil.
+  - fill: { block: soul_soil, from: [98, -61, -2], to: [102, -61, 2] }
+  - fill: { block: cobblestone, from: [99, -60, -1], to: [101, -58, 1] }
+  - fill: { block: air, from: [100, -60, 0], to: [100, -59, 0] }
+
+  # FightFireBot: a soul-soil arena with the destination six blocks west.
+  # Its zombie is summoned on the route by the schedule.
+  - fill: { block: soul_soil, from: [192, -62, -8], to: [208, -61, 8] }
+
+  # EdgeBot: soul sand, whose top is at -60.125, beside a lava strip at x 301.
+  - fill: { block: netherrack, from: [295, -63, -5], to: [305, -62, 5] }
+  - fill: { block: soul_sand, from: [296, -61, -4], to: [300, -61, 4] }
+  - fill: { block: lava, from: [301, -61, -4], to: [304, -61, 4] }
+
+  # PocketBot: a stone shelf with the lava cell and the water cell.
+  - fill: { block: stone, from: [395, -62, -4], to: [409, -60, 4] }
+  - setblock: { block: lava, at: [400, -60, 0] }
+  - setblock: { block: water, at: [402, -60, 0] }
+
+  # MinerBot: a stone shelf; the bot stands in a one-deep hole with obsidian
+  # at head height to the north and a one-deep water cell two blocks east.
+  - fill: { block: stone, from: [495, -62, -4], to: [509, -60, 4] }
+  - setblock: { block: air, at: [500, -60, 0] }
+  - setblock: { block: obsidian, at: [500, -59, -1] }
+  - setblock: { block: water, at: [502, -60, 0] }
+
+players:
+  - name: SoulFireBot
+    pos: [0.5, -60, 0.5]
+  - name: SealedFireBot
+    pos: [100.5, -60, 0.5]
+  - name: FightFireBot
+    pos: [200.5, -60, 0.5]
+    inventory:
+      - { item: diamond_sword, count: 1 }
+  - name: EdgeBot
+    pos: [299.5, -60, 0.5]
+  - name: PocketBot
+    pos: [405.5, -59, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+  - name: MinerBot
+    pos: [500.5, -60, 0.5]
+    inventory:
+      - { item: diamond_pickaxe, count: 1 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+params:
+  players:
+    # Each idle wait covers vanilla's residual burn after leaving the fire.
+    SoulFireBot: { waitTicks: 400 }
+    SealedFireBot: { waitTicks: 400 }
+    FightFireBot:
+      actions:
+        - { action: navigate, input: { x: 194, y: -60, z: 0, range: 1 } }
+      # The zombie outlives the walk; keep the reflexes until the idle pens end.
+      holdTicks: 400
+    EdgeBot: { waitTicks: 400 }
+    PocketBot: { waitTicks: 400 }
+    MinerBot:
+      actions:
+        # The subject is the escape. The dig may resume and finish afterwards
+        # or stop truthfully; a runtime failure or cancellation still fails.
+        - action: collect_block
+          input: { block_name: obsidian, count: 1, scaffold: false }
+          expect: { status: [succeeded, partial, failed] }
+      # Keep the reflexes through the residual burn after the dig returns.
+      holdTicks: 300
+
+schedule:
+  - afterTicks: 0
+    run:
+      # Tags a reused player kept from an earlier trial must not count.
+      - "tag @a remove ml_burned_EdgeBot"
+      - "tag @a remove ml_burned_PocketBot"
+      - "tag @a remove ml_burned_MinerBot"
+      - "tag @a remove ml_fight_fire"
+      - "tp PocketBot 400.5 -60 0.5"
+      - "execute at SoulFireBot run setblock ~ ~ ~ soul_fire"
+      - "execute at SealedFireBot run setblock ~ ~ ~ soul_fire"
+      # The recorded overlap: the body's east edge reaches 0.06 into the lava.
+      - "tp EdgeBot 300.761841334797 -60.125 0.5"
+  # FightFireBot's zombie appears on its route once the walk is under way. A
+  # zombie present before the start would have the hostile reflex holding the
+  # body when the request arrives, and the runtime refuses a request then.
+  - afterTicks: 5
+    run: 'summon zombie 197.5 -60 0.5 {PersistenceRequired:1b,Tags:["fire_fight"]}'
+  # Fire under FightFireBot once the zombie is in contact range and the bot's
+  # feet are on the floor: the world-visible form of the moment the legacy
+  # driver waited for, the hostile reflex holding the body mid-request.
+  - afterTicks: 6
+    when: "entity @a[name=FightFireBot] at @a[name=FightFireBot] if block ~ ~-1 ~ minecraft:soul_soil if entity @e[type=zombie,tag=fire_fight,distance=..3.5]"
+    run:
+      - "execute at FightFireBot run setblock ~ ~ ~ soul_fire"
+      - "tag FightFireBot add ml_fight_fire"
+  - { afterTicks: 1, when: "entity @a[name=EdgeBot,scores={ml_fire=1..}]", run: "tag EdgeBot add ml_burned_EdgeBot" }
+  # MinerBot is already at its stance, so the dig is under way by now; a
+  # diamond pickaxe needs about 188 ticks for obsidian.
+  - { afterTicks: 40, run: "setblock 500 -60 0 lava" }
+  - { afterTicks: 1, when: "entity @a[name=PocketBot,scores={ml_fire=1..}]", run: "tag PocketBot add ml_burned_PocketBot" }
+  - { afterTicks: 41, when: "entity @a[name=MinerBot,scores={ml_fire=1..}]", run: "tag MinerBot add ml_burned_MinerBot" }
+
+tick:
+  - "gamemode spectator @a[name=!SoulFireBot,name=!SealedFireBot,name=!FightFireBot,name=!EdgeBot,name=!PocketBot,name=!MinerBot,gamemode=!spectator]"
+  - "execute as @a[name=EdgeBot] store result score @s ml_fire run data get entity @s Fire"
+  - "execute as @a[name=PocketBot] store result score @s ml_fire run data get entity @s Fire"
+  - "execute as @a[name=MinerBot] store result score @s ml_fire run data get entity @s Fire"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    # Soul fire costs two health on contact; anything worse is a slow escape.
+    - { kind: health, who: SoulFireBot, health: 12 }
+    - { kind: survive, who: SoulFireBot, seconds: 1 }
+    - { kind: completion, who: SoulFireBot }
+    - { kind: health, who: SealedFireBot, health: 12 }
+    - { kind: survive, who: SealedFireBot, seconds: 1 }
+    - { kind: completion, who: SealedFireBot }
+    # The fire came while the zombie was upon the bot, mid-request.
+    - { kind: entityCount, entity: player, tag: ml_fight_fire, min: 1 }
+    - { kind: reach, who: FightFireBot, pos: [194, -60, 0], radius: 2 }
+    - { kind: health, who: FightFireBot, health: 12 }
+    - { kind: survive, who: FightFireBot, seconds: 1 }
+    - { kind: completion, who: FightFireBot }
+    # The body burned, so it touched the lava; the legacy run ended at 2
+    # health, since lava contact sets a fifteen-second burn.
+    - { kind: entityCount, entity: player, tag: ml_burned_EdgeBot, min: 1 }
+    - { kind: survive, who: EdgeBot, seconds: 1 }
+    - { kind: completion, who: EdgeBot }
+    # Each lava pen's tag proves the lava reached the body. Water ends the
+    # burn, so half a heart left is a near death, not an escape.
+    - { kind: entityCount, entity: player, tag: ml_burned_PocketBot, min: 1 }
+    - { kind: health, who: PocketBot, health: 2 }
+    - { kind: survive, who: PocketBot, seconds: 1 }
+    - { kind: completion, who: PocketBot }
+    - { kind: entityCount, entity: player, tag: ml_burned_MinerBot, min: 1 }
+    - { kind: health, who: MinerBot, health: 2 }
+    - { kind: survive, who: MinerBot, seconds: 1 }
+    - { kind: completion, who: MinerBot }

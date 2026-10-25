@@ -116,6 +116,36 @@ export function hasMeleeKnockbackRoom(world: WorldView, position: Position3, att
   return hasSupportedCorridor(world, position, { x: (dx / distance) * 3, y: 0, z: (dz / distance) * 3 });
 }
 
+/** Lava within a knockback's reach of this position, at its feet or the step below. */
+export function atLavaShore(world: Pick<WorldView, "blockAt">, position: Position3): boolean {
+  const x = Math.floor(position.x);
+  const y = Math.floor(position.y);
+  const z = Math.floor(position.z);
+  for (let dx = -3; dx <= 3; dx++)
+    for (let dz = -3; dz <= 3; dz++)
+      for (const dy of [-1, 0]) {
+        const block = world.blockAt(x + dx, y + dy, z + dz);
+        if (block.kind === "loaded" && block.traits.liquid === "lava") return true;
+      }
+  return false;
+}
+
+/**
+ * A quarry that has gone down to a lava shore below the ground the pursuit
+ * began on. A hunted cube bounced off the basalt shelf at y 47 and the pursuit
+ * followed it, drop by drop, to the shore at y 33; a pack's knockback there
+ * put the bot in the lava, and the cubes on the islands beyond were out of
+ * reach. Ground is where the request began, not where the bot stands now:
+ * each drop of a chase looked like a small one. A hunt begun on the islands
+ * is already at the shore, and a quarry within one safe drop of the ground is
+ * still on it: the shelf itself has lava a few blocks off its cubes.
+ */
+export function quarryDownAtLavaShore(world: Pick<WorldView, "blockAt">, ground: Position3, quarry: Position3): boolean {
+  return quarry.y < ground.y - LAVA_SHORE_DESCENT && atLavaShore(world, quarry);
+}
+/** One safe drop of three blocks and the step onto it. */
+const LAVA_SHORE_DESCENT = 4;
+
 /** Keep a non-sweeping tool available instead of equipping a sword whose swing must be withheld. */
 export function combatItemsForTarget(bot: Bot, target: Entity) {
   const carried = readCombatItems(bot);

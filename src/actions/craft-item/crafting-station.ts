@@ -20,8 +20,10 @@ export async function prepareCraftingStation(
   bot: Bot,
   items: readonly CraftTarget[],
   required: boolean,
-  signal?: AbortSignal,
+  /** `timeoutMs` bounds each wait for the table's count; omitted, the shared receipt window applies. */
+  settle: { readonly signal?: AbortSignal; readonly timeoutMs?: number } = {},
 ): Promise<CraftingStation> {
+  const { signal } = settle;
   if (!required) return { kind: "ready", craftingTable: null, usedCarriedTable: 0 };
   const nearby = bot.findBlock({ matching: bot.registry.blocksByName.crafting_table!.id, maxDistance: 4 });
   if (nearby) return { kind: "ready", craftingTable: nearby, usedCarriedTable: 0 };
@@ -35,13 +37,13 @@ export async function prepareCraftingStation(
     if (bootstrap.kind !== "ready") return { kind: "plan_failed", preparation: bootstrap };
     const made = await executeCraftPlan(bot, bootstrap.applications, null, signal);
     if (made.kind === "failed") return { kind: "failed", error: craftItemOutcomes.executionFailed(made.cause) };
-    const observed = await settleInventoryCount(bot, table.name, 1, { signal });
+    const observed = await settleInventoryCount(bot, table.name, 1, settle);
     if (observed.count < 1)
       return { kind: "failed", error: "The crafting table made for this batch was not observed." };
   }
   const placement = await placeCarriedBlockNearby(bot, "crafting_table", { signal });
   if (placement.kind !== "placed") return { kind: "failed", error: craftItemOutcomes.craftingTableRequired };
-  await settleInventoryCount(bot, "crafting_table", Math.max(0, carriedBefore - 1), { signal });
+  await settleInventoryCount(bot, "crafting_table", Math.max(0, carriedBefore - 1), settle);
   return {
     kind: "ready",
     craftingTable: placement.block,

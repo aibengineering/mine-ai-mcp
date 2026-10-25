@@ -20,6 +20,15 @@ import {
 // The existing item/slot acknowledgement budget also bounds an offer the server
 // did not acknowledge. Admiration itself waits for equipment, not elapsed time.
 const ACKNOWLEDGEMENT_MS = 1_500;
+
+export interface BarterOptions {
+  /**
+   * How long an offer's acceptance, and a finished exchange's output, get to
+   * appear. Production omits it; a test shortens it to let the window lapse.
+   */
+  readonly acknowledgementMs?: number;
+}
+
 type Exchange = {
   phase: "offered" | "accepted";
   goldBefore: number;
@@ -41,8 +50,10 @@ export function beginBarter(
   navigation: NavigationRuntime,
   request: BarterRequest,
   lifetime: AbortSignal,
+  options: BarterOptions = {},
 ): RequestExecution<BarterResult> {
   lifetime.throwIfAborted();
+  const acknowledgementMs = options.acknowledgementMs ?? ACKNOWLEDGEMENT_MS;
   const inventoryBefore = carriedCount(bot, request.item_name);
   const desiredItems = new Set([request.item_name]);
   const capacityStop = (offeredGoldCount: number) =>
@@ -210,7 +221,7 @@ export function beginBarter(
             },
             [bot, bot.inventory],
             ["entityEquip", "entityGone", "updateSlot"],
-            { timeoutMs: ACKNOWLEDGEMENT_MS, context },
+            { timeoutMs: acknowledgementMs, context },
           );
           context.signal?.throwIfAborted();
           if (accepted !== "accepted")
@@ -246,7 +257,7 @@ export function beginBarter(
           },
           bot,
           [...DROPPED_ITEM_OBSERVATION_EVENTS],
-          { timeoutMs: ACKNOWLEDGEMENT_MS, context },
+          { timeoutMs: acknowledgementMs, context },
         );
         context.signal?.throwIfAborted();
         if (!output)
@@ -265,7 +276,7 @@ export function beginBarter(
   };
 }
 
-export function createBarterAction(bot: Bot, navigation: NavigationRuntime) {
+export function createBarterAction(bot: Bot, navigation: NavigationRuntime, options: BarterOptions = {}) {
   return defineAction({
     checkpointSchema: barterCheckpointSchema,
     name: BARTER,
@@ -275,7 +286,7 @@ export function createBarterAction(bot: Bot, navigation: NavigationRuntime) {
     parse: (input: unknown) => barterInputSchema.parse(input),
     execution: { kind: "resumable_task", prepare: () => prepareBotForMovement(bot, navigation) },
     annotations: { destructiveHint: true, idempotentHint: false, openWorldHint: false },
-    begin: (request, lifetime) => beginBarter(bot, navigation, request, lifetime),
+    begin: (request, lifetime) => beginBarter(bot, navigation, request, lifetime, options),
     formatResult: (result) =>
       `Carried ${result.barter.item} +${result.barter.gained}/${result.barter.requested} (inventory ${result.barter.inventoryBefore} → ${result.barter.inventoryAfter}). Gold spent ${result.barter.goldSpent}; offers ${result.barter.goldOffers}/${result.barter.goldBudget}; piglin #${result.barter.piglinId}.${result.status === "succeeded" ? "" : `\nObserved stop: ${result.error}`}`,
   });

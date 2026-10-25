@@ -1,0 +1,71 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [known-failing, regression]
+description: >-
+  Navigate through a compact, brightly lit walled arena past three bow
+  skeletons, two flanking the route and one beside the exit, and arrive at
+  full health with no regeneration. The walls keep the shooters in the
+  engagement area. Observed failing in two of three runs on 2026-10-20:
+  the bot arrived but had been hit, ending at 15 and at 12 health (the
+  third run arrived untouched); the legacy run of 2026-10-19 did not arrive
+  and took nine arrows, ending at 17. This is the
+  walled section of combat/skeleton-crossfire-navigation, split out until
+  crossfire from three sides is guarded. Seven guard faults fixed on
+  2026-10-22 took it from 15 passes in 20 to 19 in 22. Every failure left
+  is two arrows from different skeletons landing one or two ticks apart,
+  their entry points on the body 150 to 180 degrees apart: no single
+  heading blocks both, and the turn made once the first block is confirmed
+  reaches the server a tick too late for the second.
+
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -5 -60 -7 17 -55 7 air"
+
+# 23 x 15 walkable blocks lit by sea lanterns; six-block bedrock walls.
+geometry:
+  - fill: { block: bedrock, from: [-6, -64, -8], to: [18, -64, 8] }
+  - fill: { block: dirt, from: [-6, -63, -8], to: [18, -62, 8] }
+  - fill: { block: sea_lantern, from: [-6, -61, -8], to: [18, -61, 8] }
+  - fill: { block: bedrock, from: [-6, -63, -8], to: [-6, -55, 8] }
+  - fill: { block: bedrock, from: [18, -63, -8], to: [18, -55, 8] }
+  - fill: { block: bedrock, from: [-5, -63, -8], to: [17, -55, -8] }
+  - fill: { block: bedrock, from: [-5, -63, 8], to: [17, -55, 8] }
+
+entities:
+  - { type: skeleton, pos: [6.5, -60, 5.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [6.5, -60, -5.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: skeleton, pos: [11.5, -60, 0.5], nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+
+players:
+  - name: ArenaWalker
+    pos: [-4.5, -60, 0.5]
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+
+params:
+  action: navigate
+  input: { x: 14, y: -60, z: 0, range: 1, dig: false, scaffold: false }
+
+tick:
+  - "gamemode spectator @a[name=!ArenaWalker,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: reach, who: ArenaWalker, pos: [14.5, -60, 0.5], radius: 2 }
+    - { kind: health, who: ArenaWalker, health: 20 }
+    - { kind: survive, who: ArenaWalker, seconds: 1 }
+    - { kind: completion, who: ArenaWalker }

@@ -22,7 +22,6 @@ export interface AnsweredEntry {
   readonly consumed: Facts;
   readonly failure: { readonly kind: string; readonly why: string };
   readonly since: number;
-  readonly temporal: { readonly premise: string; readonly expiresAt: number; readonly why: string } | null;
 }
 
 interface RetainedAnswer {
@@ -38,11 +37,7 @@ export class Answered {
   constructor(private readonly now: () => number = Date.now) {}
 
   /** Capture after settlement, so the attempt's own construction cannot rearm itself. */
-  remember(
-    scope: AnsweredScope,
-    failure: AnsweredEntry["failure"],
-    temporal: AnsweredEntry["temporal"] = null,
-  ): AnsweredEntry {
+  remember(scope: AnsweredScope, failure: AnsweredEntry["failure"]): AnsweredEntry {
     this.forget(scope.capability, scope.scope);
     const entry: AnsweredEntry = {
       id: this.#nextId++,
@@ -53,7 +48,6 @@ export class Answered {
       consumed: structuredClone(scope.permissions()),
       failure,
       since: this.now(),
-      temporal,
     };
     this.#entries.set(entry.id, { entry, read: scope });
     return entry;
@@ -72,7 +66,6 @@ export class Answered {
 
   private current({ entry, read }: RetainedAnswer): boolean {
     return (
-      (entry.temporal === null || this.now() < entry.temporal.expiresAt) &&
       isDeepStrictEqual(entry.facts, read.facts()) &&
       isDeepStrictEqual(entry.consumed, read.permissions())
     );

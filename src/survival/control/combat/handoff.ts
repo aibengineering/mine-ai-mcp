@@ -1,6 +1,6 @@
 import type { Bot } from "mineflayer";
 import type { NavigationRuntime } from "../../../navigation/index.js";
-import { isSafeSupport, navigationFeet } from "../../../navigation/world/block-geometry.js";
+import { safeSupportingCell } from "../../../navigation/world/block-geometry.js";
 import type { Position3 } from "../../../utils/index.js";
 import { dragonDanger } from "../../../world/dragon-hazards.js";
 import { isBurning, isInLava } from "../../perception/body.js";
@@ -50,7 +50,6 @@ export async function secureCombatHandoff(
     },
   };
   const physicalSafety = () => {
-    const feet = navigationFeet(bot.entity.position, bot.entity.onGround);
     return (
       bot.health > 0 &&
       bot.entity.onGround &&
@@ -61,7 +60,9 @@ export async function secureCombatHandoff(
       // The body is stationary here. Expanding it to a retreat corridor can
       // intersect a projectile outside the walls of a completed shelter.
       incomingShieldProjectiles(bot).length === 0 &&
-      isSafeSupport(navigation.world.blockAt(feet.x, feet.y - 1, feet.z))
+      // The block holding the body, which need not be under its centre: a
+      // withdrawal can stop with the centre over an edge.
+      safeSupportingCell(navigation.world, bot.entity.position) !== null
     );
   };
   const failures: string[] = [];

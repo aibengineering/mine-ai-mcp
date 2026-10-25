@@ -1,0 +1,191 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Five wounded idle bots, one per pen and 100 blocks apart, each stand between
+  two native ranged attackers on a bedrock pad and request nothing; each must
+  survive and recover to 18 health. At 10 health without a shield under blazes
+  eighteen blocks either side; the same with a shield and arriving on fire from
+  a lava touch, whose burn the shield cannot block (it killed the equipped eyes
+  trial); the same with no blocks at all on ground that cannot be dug; at 10
+  health between bow skeletons twelve blocks either side; and at 5 health under
+  blazes with soul fire burning in all four cells around it. The first two pens
+  failed intermittently on 2026-10-20 and 21. The burning bot burned to death
+  when its shelter failed and it stood at hunger 19 without saturation, healing
+  a point every four seconds against a burn of one a second, because the hunger
+  reflex waited for hunger 17; it now eats. Other runs ended a bot at 15 to 17
+  health with a blaze fight still under way at the close, after recovering
+  long before it, so a pen now passes on reaching 18 under fire, at any tick
+  before its shooters are removed at tick 1200.
+
+# Midnight with natural regeneration switched on at the start: recovery is the
+# outcome. Each pen is a 17x17 bedrock pad in the superflat ground.
+# The world declares it off so the wounds hold while Mine Labs arranges them;
+# the first schedule entry turns it on, as the absorbed drivers did once
+# their wound was in place. Fixtures sharing this world declare it again.
+#   x:    0          100          200
+#   z 0:  Blaze      Burning      Unbuildable
+#   z100: Skeleton   SoulFire
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+geometry:
+  - fill: { block: bedrock, from: [-8, -61, -8], to: [8, -61, 8] }
+  - fill: { block: bedrock, from: [92, -61, -8], to: [108, -61, 8] }
+  - fill: { block: bedrock, from: [192, -61, -8], to: [208, -61, 8] }
+  - fill: { block: bedrock, from: [-8, -61, 92], to: [8, -61, 108] }
+  - fill: { block: bedrock, from: [92, -61, 92], to: [108, -61, 108] }
+  - fill: { block: soul_soil, from: [99, -61, 99], to: [101, -61, 101] }
+  - setblock: { at: [99, -60, 100], block: soul_fire }
+  - setblock: { at: [101, -60, 100], block: soul_fire }
+  - setblock: { at: [100, -60, 99], block: soul_fire }
+  - setblock: { at: [100, -60, 101], block: soul_fire }
+
+entities:
+  - { type: blaze, pos: [18.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_blaze"]}' }
+  - { type: blaze, pos: [-17.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_blaze"]}' }
+  - { type: blaze, pos: [118.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_burning"]}' }
+  - { type: blaze, pos: [82.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_burning"]}' }
+  - { type: blaze, pos: [218.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_unbuildable"]}' }
+  - { type: blaze, pos: [182.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pen_unbuildable"]}' }
+  - type: skeleton
+    pos: [12.5, -60, 100.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_skeleton"]}'
+  - type: skeleton
+    pos: [-11.5, -60, 100.5]
+    nbt: '{PersistenceRequired:1b,HandItems:[{id:"minecraft:bow",count:1},{}],Tags:["pen_skeleton"]}'
+  - { type: blaze, pos: [118.5, -60, 100.5], nbt: '{PersistenceRequired:1b,Tags:["pen_soul"]}' }
+  - { type: blaze, pos: [82.5, -60, 100.5], nbt: '{PersistenceRequired:1b,Tags:["pen_soul"]}' }
+
+setup:
+  - "scoreboard objectives add ml_hp dummy"
+  - "scoreboard players set #window ml_hp 0"
+
+schedule:
+  - { afterTicks: 0, run: "gamerule naturalRegeneration true" }
+  # A native lava touch: two ticks in a lava cell set the bot burning for
+  # fifteen seconds after the cell is cleared.
+  - { afterTicks: 0, run: "setblock 100 -60 0 minecraft:lava" }
+  - { afterTicks: 2, run: "setblock 100 -60 0 minecraft:air" }
+  # Recovery is judged under fire: while the window is open, the tick commands
+  # tag each pen whose Health, read in tenths so 17.9 does not count, reaches
+  # 18. At tick 1200 the window closes and the shooters are removed, twenty
+  # seconds before the bots stop. Read at the close instead, pens that had
+  # long since recovered and were dueling a blaze failed on the last blows
+  # (15.71, 14.78 and 16.95 in r3-c and j2-2); read only at tick 1200, the
+  # same happened to Unbuildable in three of five r4-wounded runs, back at 20
+  # within 13 to 37 s and fighting its next blaze at the reading. Without
+  # the window, a pen that never sheltered could heal back after the removal.
+  - afterTicks: 0
+    run:
+      - "tag @a remove ml_recovered_BlazeShelter"
+      - "tag @a remove ml_recovered_Burning"
+      - "tag @a remove ml_recovered_Unbuildable"
+      - "tag @a remove ml_recovered_SkeletonShelter"
+      - "tag @a remove ml_recovered_SoulFire"
+      - "scoreboard players set #window ml_hp 1"
+  - afterTicks: 1200
+    run:
+      - "scoreboard players set #window ml_hp 0"
+      - "kill @e[type=blaze,tag=pen_blaze]"
+      - "kill @e[type=blaze,tag=pen_burning]"
+      - "kill @e[type=blaze,tag=pen_unbuildable]"
+      - "kill @e[type=skeleton,tag=pen_skeleton]"
+      - "kill @e[type=blaze,tag=pen_soul]"
+
+players:
+  - name: BlazeShelter
+    pos: [0.5, -60, 0.5]
+    health: 10
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 32 }
+  # One point above the others: the lava touch costs about one through this
+  # armour, so the response starts near 10 health and burning.
+  - name: Burning
+    pos: [100.5, -60, 0.5]
+    health: 11
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: shield, count: 1 }
+      - { item: cooked_beef, count: 32 }
+  - name: Unbuildable
+    pos: [200.5, -60, 0.5]
+    health: 10
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cooked_beef, count: 32 }
+  - name: SkeletonShelter
+    pos: [0.5, -60, 100.5]
+    health: 10
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 32 }
+  - name: SoulFire
+    pos: [100.5, -60, 100.5]
+    health: 5
+    equipment: { head: diamond_helmet, chest: diamond_chestplate, legs: diamond_leggings, feet: golden_boots }
+    inventory:
+      - { item: diamond_sword, count: 1 }
+      - { item: diamond_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 32 }
+
+params:
+  waitTicks: 1600
+
+tick:
+  - "gamemode spectator @a[name=!BlazeShelter,name=!Burning,name=!Unbuildable,name=!SkeletonShelter,name=!SoulFire,gamemode=!spectator]"
+  - "execute if score #window ml_hp matches 1 store result score #BlazeShelter ml_hp run data get entity BlazeShelter Health 10"
+  - "execute if score #window ml_hp matches 1 if score #BlazeShelter ml_hp matches 180.. run tag BlazeShelter add ml_recovered_BlazeShelter"
+  - "execute if score #window ml_hp matches 1 store result score #Burning ml_hp run data get entity Burning Health 10"
+  - "execute if score #window ml_hp matches 1 if score #Burning ml_hp matches 180.. run tag Burning add ml_recovered_Burning"
+  - "execute if score #window ml_hp matches 1 store result score #Unbuildable ml_hp run data get entity Unbuildable Health 10"
+  - "execute if score #window ml_hp matches 1 if score #Unbuildable ml_hp matches 180.. run tag Unbuildable add ml_recovered_Unbuildable"
+  - "execute if score #window ml_hp matches 1 store result score #SkeletonShelter ml_hp run data get entity SkeletonShelter Health 10"
+  - "execute if score #window ml_hp matches 1 if score #SkeletonShelter ml_hp matches 180.. run tag SkeletonShelter add ml_recovered_SkeletonShelter"
+  - "execute if score #window ml_hp matches 1 store result score #SoulFire ml_hp run data get entity SoulFire Health 10"
+  - "execute if score #window ml_hp matches 1 if score #SoulFire ml_hp matches 180.. run tag SoulFire add ml_recovered_SoulFire"
+
+goal:
+  kind: all
+  timeout: 150
+  goals:
+    - { kind: entityCount, who: BlazeShelter, entity: player, tag: ml_recovered_BlazeShelter, min: 1 }
+    - { kind: survive, who: BlazeShelter, seconds: 1 }
+    - { kind: completion, who: BlazeShelter }
+
+    - { kind: entityCount, who: Burning, entity: player, tag: ml_recovered_Burning, min: 1 }
+    - { kind: survive, who: Burning, seconds: 1 }
+    - { kind: completion, who: Burning }
+
+    - { kind: entityCount, who: Unbuildable, entity: player, tag: ml_recovered_Unbuildable, min: 1 }
+    - { kind: survive, who: Unbuildable, seconds: 1 }
+    - { kind: completion, who: Unbuildable }
+
+    - { kind: entityCount, who: SkeletonShelter, entity: player, tag: ml_recovered_SkeletonShelter, min: 1 }
+    - { kind: survive, who: SkeletonShelter, seconds: 1 }
+    - { kind: completion, who: SkeletonShelter }
+
+    - { kind: entityCount, who: SoulFire, entity: player, tag: ml_recovered_SoulFire, min: 1 }
+    - { kind: survive, who: SoulFire, seconds: 1 }
+    - { kind: completion, who: SoulFire }

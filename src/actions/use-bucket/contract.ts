@@ -1,6 +1,6 @@
-import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { actionResultSchema, type ActionOutput } from "../action.js";
+import { actionResultSchema } from "../action.js";
+import { wholeCell } from "../cell.js";
 
 export const USE_BUCKET = "use_bucket" as const;
 export const USE_BUCKET_DESCRIPTION =
@@ -22,7 +22,7 @@ export const useBucketInputSchema = z.strictObject({
   x: coordinate("X").optional(),
   y: coordinate("Y").optional(),
   z: coordinate("Z").optional(),
-});
+}).superRefine(wholeCell("A target cell needs all three of x, y, and z."));
 
 export interface BucketCell {
   readonly x: number;
@@ -36,11 +36,9 @@ export type UseBucketRequest =
 
 export function parseUseBucketRequest(input: unknown): UseBucketRequest {
   const value = useBucketInputSchema.parse(input ?? {});
-  const named = [value.x, value.y, value.z].filter((part) => part !== undefined).length;
-  if (named !== 0 && named !== 3) {
-    throw new Error("A target cell needs all three of x, y, and z.");
-  }
-  const cell = named === 3 ? { x: value.x!, y: value.y!, z: value.z! } : null;
+  const cell = value.x !== undefined && value.y !== undefined && value.z !== undefined
+    ? { x: value.x, y: value.y, z: value.z }
+    : null;
   if (value.action === "pour") {
     if (!cell) throw new Error("pour needs the x, y, and z of the cell the liquid should end up in.");
     return { action: "pour", liquid: value.liquid, cell };
@@ -80,13 +78,6 @@ export const useBucketResultSchema = actionResultSchema({
 
 export type BucketUseEvidence = z.output<typeof bucketUseEvidenceSchema>;
 export type UseBucketResult = z.output<typeof useBucketResultSchema>;
-export type UseBucketOutput = ActionOutput<typeof USE_BUCKET, UseBucketResult>;
-
-export const useBucketAnnotations = {
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: true,
-} satisfies ToolAnnotations;
 
 export const useBucketOutcomes = {
   noBucket: (name: string) => `[BUCKET_MISSING] Bot inventory holds no ${name}.`,

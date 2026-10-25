@@ -5,13 +5,10 @@
  * offered and what the loop did about it, which a fake answers in a
  * millisecond rather than a thirty-second fixture.
  */
-import minecraftData from "minecraft-data";
-import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import type { BuildRequest } from "../navigation/processes/building/build-process.js";
+import { botFixture } from "./bot.js";
 import { observation } from "./navigation.js";
-
-const registry = minecraftData("1.21.4");
 
 const key = (position: { x: number; y: number; z: number }) => `${position.x},${position.y},${position.z}`;
 
@@ -31,19 +28,18 @@ export function structureWorld(options: StructureWorldOptions = {}) {
     blocks.set(key(position), { name, boundingBox: name === "air" ? "empty" : "block", position });
   for (let x = -6; x <= 40; x += 1) for (let z = -6; z <= 6; z += 1) put(new Vec3(x, 63, z), "stone");
   const carried = new Map(Object.entries(options.carried ?? { cobblestone: 64, obsidian: 14 }));
-  const position = (options.feet ?? new Vec3(0, 64, 0)).offset(0.5, 0, 0.5);
-  const bot = {
-    game: { dimension: "overworld" },
-    registry,
-    entity: { position, height: 1.8 },
-    inventory: {
-      items: () => [...carried].filter(([, count]) => count > 0).map(([name, count]) => ({ name, count })),
+  const bot = botFixture(
+    { position: (options.feet ?? new Vec3(0, 64, 0)).offset(0.5, 0, 0.5) },
+    {
+      blockAt: (at: Vec3) => {
+        if (options.loadedRadius !== undefined && at.distanceTo(bot.entity.position) > options.loadedRadius) return null;
+        return blocks.get(key(at)) ?? { name: "air", boundingBox: "empty" as const, position: at };
+      },
     },
-    blockAt: (at: Vec3) => {
-      if (options.loadedRadius !== undefined && at.distanceTo(bot.entity.position) > options.loadedRadius) return null;
-      return blocks.get(key(at)) ?? { name: "air", boundingBox: "empty" as const, position: at };
-    },
-  } as unknown as Bot;
+  );
+  // What the bot carries is the tally placement spends from.
+  bot.inventory.items = () =>
+    [...carried].filter(([, count]) => count > 0).map(([name, count]) => ({ name, count })) as never;
   const placements: string[] = [];
   const routes: string[] = [];
   const protectedSets: ReadonlySet<number>[] = [];

@@ -1,0 +1,208 @@
+template: ../../templates/flat-single-action.yaml
+
+tags: [acceptance, regression]
+description: >-
+  A wounded bot asks to go somewhere and must get there alive. StandDown: at
+  seven health on bedrock in a one-wide corridor, with nothing to build with
+  and a pinned spider in sight, it waits thirty seconds and then walks the
+  corridor; the hide that cannot be built must fail once and leave the body
+  alone (the first half of the 2026-09-04 livelock, where each retried hide
+  cancelled the model's request). Supply: nine health and hungry, it carries
+  eight iron ingots home past two zombies and a skeleton and must still have
+  them. Ascent: two health, hungry and with no food, it climbs from a cavern
+  up a staircase to the plateau while a zombie appears on a ledge in sight
+  once the route is under way (the 2026-09-09 cave, where hide and withdraw
+  looped for eleven minutes). Pocket: thirteen health, backed into a stepped
+  recess by two creepers, a spider and a skeleton, it gets out to open ground
+  once its reflex lets go of the body.
+
+# Regeneration on, as the supply and pocket fixtures had it: they carry food,
+# and eating is part of how they get home. The other two cannot heal: Ascent is
+# hungry with nothing to eat, and StandDown's maximum health is set to the
+# seven it starts with.
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: true
+    randomTickSpeed: 0
+
+# Pens two hundred blocks apart. Two seconds after Supply or Pocket reaches
+# its destination its request has returned; the hostiles left in its pen are
+# then removed rather than left beside a body with no reflexes.
+reset:
+  - "kill @e[type=!minecraft:player]"
+  - "fill -20 -60 -4 20 -55 4 air"
+  - "fill 176 -60 -12 236 -52 12 air"
+  - "fill 392 -59 -8 408 -53 8 air"
+  - "fill 592 -60 -8 624 -55 8 air"
+
+setup:
+  - "scoreboard objectives add pens dummy"
+  - "scoreboard players set #supply pens 0"
+  - "scoreboard players set #pocket pens 0"
+
+geometry:
+  # StandDown: bedrock underfoot so a shaft is refused before the first swing,
+  # and a corridor one wide so the only way out is along x.
+  - fill: { block: bedrock, from: [-20, -61, -1], to: [20, -61, 1] }
+  - fill: { block: stone, from: [-20, -60, -1], to: [20, -59, -1] }
+  - fill: { block: stone, from: [-20, -60, 1], to: [20, -59, 1] }
+  # Ascent: the 2026-09-09 cave built to the block. A stone mass with its
+  # plateau at y -44; a cavern seventeen wide and seven high; the zombie's
+  # alcove two blocks up the -x wall; a staircase three wide climbing +z.
+  - fill: { block: stone, from: [384, -60, -16], to: [416, -44, 32] }
+  - fill: { block: air, from: [392, -59, -8], to: [408, -53, 8] }
+  - fill: { block: air, from: [389, -57, -1], to: [391, -53, 1] }
+  - fill: { block: air, from: [399, -58, 9], to: [401, -56, 9] }
+  - fill: { block: air, from: [399, -57, 10], to: [401, -55, 10] }
+  - fill: { block: air, from: [399, -56, 11], to: [401, -54, 11] }
+  - fill: { block: air, from: [399, -55, 12], to: [401, -53, 12] }
+  - fill: { block: air, from: [399, -54, 13], to: [401, -52, 13] }
+  - fill: { block: air, from: [399, -53, 14], to: [401, -51, 14] }
+  - fill: { block: air, from: [399, -52, 15], to: [401, -50, 15] }
+  - fill: { block: air, from: [399, -51, 16], to: [401, -49, 16] }
+  - fill: { block: air, from: [399, -50, 17], to: [401, -48, 17] }
+  - fill: { block: air, from: [399, -49, 18], to: [401, -47, 18] }
+  - fill: { block: air, from: [399, -48, 19], to: [401, -46, 19] }
+  - fill: { block: air, from: [399, -47, 20], to: [401, -45, 20] }
+  - fill: { block: air, from: [399, -46, 21], to: [401, -44, 21] }
+  - fill: { block: air, from: [399, -45, 22], to: [401, -43, 22] }
+  - fill: { block: air, from: [399, -44, 23], to: [401, -42, 23] }
+  # Pocket: rock with a stepped drop east, and a recess walled north, south
+  # and west around the start.
+  - fill: { block: stone, from: [592, -64, -8], to: [624, -61, 8] }
+  - fill: { block: air, from: [604, -61, -8], to: [624, -61, 8] }
+  - fill: { block: air, from: [609, -62, -8], to: [624, -62, 8] }
+  - fill: { block: stone, from: [598, -60, -4], to: [599, -56, 4] }
+  - fill: { block: stone, from: [600, -61, -4], to: [607, -56, -3] }
+  - fill: { block: stone, from: [600, -61, 3], to: [607, -56, 4] }
+
+entities:
+  # 15.9 blocks away: in sight for the trigger, and out of the sixteen-block
+  # observation range half a block up the corridor.
+  - { type: spider, pos: [-15.4, -60, 0.5], nbt: '{PersistenceRequired:1b,NoAI:1b}' }
+  - { type: zombie, pos: [191.5, -60, 1.5], nbt: '{PersistenceRequired:1b,Tags:["supply"]}' }
+  - { type: skeleton, pos: [200.5, -60, -4.5], nbt: '{PersistenceRequired:1b,Tags:["supply"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+  - { type: zombie, pos: [215.5, -60, 2.5], nbt: '{PersistenceRequired:1b,Tags:["supply"]}' }
+  - { type: creeper, pos: [603.5, -60, -1.5], nbt: '{PersistenceRequired:1b,Tags:["pocket"]}' }
+  - { type: creeper, pos: [604.5, -61, 1.5], nbt: '{PersistenceRequired:1b,Tags:["pocket"]}' }
+  - { type: spider, pos: [602.5, -60, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pocket"]}' }
+  - { type: skeleton, pos: [608.5, -61, 0.5], nbt: '{PersistenceRequired:1b,Tags:["pocket"],HandItems:[{id:"minecraft:bow",count:1},{}]}' }
+
+players:
+  # A sword and nothing to build with: the hide has no answer here. Full food
+  # with no saturation, so the runtime still counts on recovering by
+  # regeneration, as on the live bot; the capped maximum is what stops it.
+  - name: StandDown
+    pos: [0.5, -60, 0.5]
+    health: 7
+    food: 20
+    saturation: 0
+    inventory:
+      - { item: iron_sword, count: 1 }
+  - name: Supply
+    pos: [181.5, -60, 0.5]
+    health: 9
+    food: 17
+    saturation: 0
+    equipment:
+      head: iron_helmet
+      chest: iron_chestplate
+      legs: iron_leggings
+      feet: iron_boots
+      offhand: shield
+    inventory:
+      - { item: iron_ingot, count: 8 }
+      - { item: iron_sword, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 24 }
+      - { item: cooked_beef, count: 12 }
+  # What EnderSeeker carried: tools, blocks enough to go wall-first, no food.
+  - name: Ascent
+    pos: [400.5, -59, 0.5]
+    health: 2
+    food: 17
+    saturation: 0
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: cobblestone, count: 40 }
+      - { item: dirt, count: 11 }
+  - name: Pocket
+    pos: [600.5, -60, 0.5]
+    health: 13
+    equipment: { head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots }
+    inventory:
+      - { item: iron_sword, count: 1 }
+      - { item: shield, count: 1 }
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_shovel, count: 1 }
+      - { item: bow, count: 1 }
+      - { item: arrow, count: 32 }
+      - { item: cobblestone, count: 64 }
+      - { item: cooked_beef, count: 16 }
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  players:
+    # Thirty seconds for the hide to fail and stand down. The walk is asked
+    # for once, and a reflex still holding the body five seconds later is the
+    # livelock.
+    StandDown:
+      waitTicks: 600
+      idleWithinTicks: 100
+      actions:
+        - { action: navigate, input: { x: 16, y: -60, z: 0, range: 1 } }
+    Supply:
+      actions:
+        - { action: navigate, input: { x: 230, y: -60, z: 0, range: 1 } }
+    Ascent:
+      actions:
+        - { action: navigate, input: { x: 400, y: -43, z: 28, range: 1, dig: true, scaffold: true } }
+    # The spider starts in reach, so the reflex owns the body first.
+    Pocket:
+      idleWithinTicks: 1200
+      actions:
+        - { action: navigate, input: { x: 618, y: -62, z: 0, range: 1 } }
+
+tick:
+  - "gamemode spectator @a[name=!StandDown,name=!Supply,name=!Ascent,name=!Pocket,gamemode=!spectator]"
+  - "execute if entity @a[name=Supply,x=227,y=-61,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #supply pens 1"
+  - "execute if entity @a[name=Pocket,x=615,y=-63,z=-3,dx=6,dy=3,dz=6] run scoreboard players add #pocket pens 1"
+
+schedule:
+  - { afterTicks: 0, run: "attribute StandDown minecraft:max_health base set 7" }
+  # The zombie takes its ledge once the bot has left its starting cell for
+  # the stairs, so it arrives mid-route, unable to move, in plain sight.
+  - when: "entity @a[name=Ascent,x=380,y=-62,z=1.5,dx=40,dy=30,dz=40]"
+    run: "summon minecraft:zombie 389.5 -57 0.5 {PersistenceRequired:1b,NoAI:1b}"
+  - { when: "score #supply pens matches 40..", run: "kill @e[tag=supply]" }
+  - { when: "score #pocket pens matches 40..", run: "kill @e[tag=pocket]" }
+
+goal:
+  kind: all
+  timeout: 300
+  goals:
+    - { kind: reach, who: StandDown, pos: [16.5, -60, 0.5], radius: 2 }
+    - { kind: survive, who: StandDown, seconds: 1 }
+    - { kind: completion, who: StandDown }
+    - { kind: reach, who: Supply, pos: [230.5, -60, 0.5], radius: 2 }
+    - { kind: hasItem, who: Supply, item: iron_ingot, count: 8 }
+    - { kind: survive, who: Supply, seconds: 1 }
+    - { kind: completion, who: Supply }
+    - { kind: reach, who: Ascent, pos: [400.5, -43, 28.5], radius: 2 }
+    - { kind: survive, who: Ascent, seconds: 1 }
+    - { kind: completion, who: Ascent }
+    - { kind: reach, who: Pocket, pos: [618.5, -62, 0.5], radius: 2 }
+    - { kind: survive, who: Pocket, seconds: 1 }
+    - { kind: completion, who: Pocket }

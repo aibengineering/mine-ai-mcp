@@ -1,9 +1,9 @@
 # Testing and scenarios
 
 Mine AI MCP proves itself at three speeds: colocated unit tests that run in
-about a minute with no server, Mine Labs scenarios that arrange a real Minecraft
-world and judge the outcome from outside the bot, and live playtests against a
-retained world. This page names the principles behind that shape, describes
+under fifteen seconds with no server, Mine Labs scenarios that arrange a real
+Minecraft world and judge the outcome from outside the bot, and live playtests
+against a retained world. This page names the principles behind that shape, describes
 the unit layer, then describes the scenario and playtest layers.
 
 ## What principles shape the tests?
@@ -14,8 +14,8 @@ Three practices with names and precedents meet in this package's tests.
   at the integration level, fewest end to end, because cost and flakiness rise
   with each layer. Mike Cohn described it in _Succeeding with Agile_ (2009) and
   Martin Fowler restated it as the practical test pyramid. Here the unit suite
-  runs in about a minute with no server, the scenarios need a Minecraft server
-  and take minutes each, and the playtests need a live MCP host. A one-tick
+  runs in under fifteen seconds with no server, the scenarios need a Minecraft
+  server and take minutes each, and the playtests need a live MCP host. A one-tick
   braking error belongs to the first layer; surviving a fortress belongs to the
   second.
 - **A test for every bug.** When a defect is found, write the test that fails
@@ -49,10 +49,12 @@ from the tests that described the old code.
 ## How is the unit layer arranged?
 
 Unit tests are colocated `*.test.ts` files run by `bun run test` using Bun and the `node:test` API;
-the same command typechecks the package and the scenario drivers first. The test
-command names `./src`, `./scenarios/src`, and `./tests` as explicit directories:
+the same command typechecks the package and the test and scenario code first, with
+`bun check` (Bun 1.4.3 or newer; the build still emits with `tsc`). The tests
+run with `--parallel`, so each file gets its own worker and fresh globals. The
+test command names `./src` and `./tests` as explicit directories:
 bare names are Bun path filters and can also select ignored private experiments.
-Three rules keep the suite small:
+Four rules keep the suite small and quick:
 
 - **Tests purchase confidence, not line coverage.** Keep public contract tests,
   meaningful boundaries, and regressions backed by an observed failure. A test
@@ -65,6 +67,18 @@ Three rules keep the suite small:
   bot-data stores are in [src/test-support/bot-data.ts](../../src/test-support/bot-data.ts).
   A test adds only the methods its subject calls as overrides. It never
   rebuilds the skeleton.
+- **Waiting and output go through options and helpers, not sleeps and prints.**
+  A production wait or clock is an option whose default is the production
+  value, such as eat-food's `settleMs`, the actions' `inventorySettleMs`, or
+  the mining request's `now`, so a test passes a window of a few milliseconds
+  and lets it lapse for real, or a clock it advances, instead of sleeping
+  through the deadline or mocking the global timers;
+  `deferred` and `nextTurn` in [src/test-support/async.ts](../../src/test-support/async.ts)
+  replace hand-rolled promises. Operator notices likewise go to a sink the
+  caller supplies (`OperatorNotices` for the host and supervisor, `log` on
+  `SqlBotData`, `report` on `observeBotStatus`), defaulting to the process
+  streams, so a test records them and asserts on them rather than patching
+  stdout. A test that must wait on a real timer says why in a comment.
 - **A test lives with the unit whose contract it exercises**, not with the file
   that was open when the bug was found. A test that builds a `MineflayerBot`
   belongs in the actuator's file, one that builds a `RouteExecutor` in the
@@ -76,8 +90,8 @@ Three rules keep the suite small:
 
 Scenarios run against Minecraft 1.21.4 servers managed by Mine Labs. Compatible resettable fixtures reuse their server; other fixtures receive a fresh world.
 Mine Labs controls server lifecycle, world generation, game ticks, and external
-verdicts. The scenario definitions and bot drivers are owned by this package under
-[scenarios/](../../scenarios/).
+verdicts. The scenario definitions and bot drivers are owned by this package, in
+the two catalogues described below.
 
 A scenario asserts on physical facts observed by Mine Labs independently of the
 bot: blocks remaining in the world, items present in inventory, or changes in
@@ -117,55 +131,65 @@ is also a distinct goal from acquiring its random loot.
 
 ## What scenario groups exist in the repository?
 
-Scenarios are organised by world shape in [scenarios/](../../scenarios/):
+[tests/minecraft/scenarios/](../../tests/minecraft/scenarios/) is the suite the
+package scripts run. Its fixtures are grouped by behavior (`barter`, `bucket`,
+`build`, `collect`, `combat`, `craft`, `drop`, `explore`, `hunt`, `pathfinder`,
+`portal`, `progression`, `sleep`, `storage` and `survival`), and flat,
+generated, Nether and End worlds appear side by side within a group. Each
+fixture declares its purpose and tags, and every one runs through the runtime
+host in `tests/minecraft/`. Most consolidate several related behaviors into one
+world, often with one bot per walled pen, so a regression in any of them fails
+the fixture. Its [README](../../tests/minecraft/README.md) describes the
+templates, drivers, pens, tags and evidence options.
 
-### Flat worlds (`scenarios/flat/`)
+[tests/minecraft/known-failing/](../../tests/minecraft/known-failing/) holds
+faithful fixtures for behavior that fails today, outside both tiers. A fixture
+moves into `scenarios/` when its behavior is fixed.
 
-- `collect/`: Verifies mining target blocks, item drop recovery, falling sand or
-  gravel columns, and inventory fullness limits.
-- `combat/`: Tests the combat reflex across hostile mob types (zombies,
-  skeletons, creepers, spiders, phantoms, and endermen), varied equipment, and
-  preemption of foreground tasks.
-- `evidence/`: Executes every published standard action against a test world and
-  dumps real request schemas and responses.
-- `explore/`: Verifies directional frontier expansion and chunk discovery.
-- `hunt/`: Tests native defeat goals, drop collection, and inventory
-  gains.
-- `pathfinder/`: Validates pathfinding across terrain obstacles, scaffolding,
-  descents, and underwater hazards.
-- `sleep/`: Tests bed placement, navigating to beds, skipping the night, and
-  detecting nearby hostiles.
-- `storage/`: Verifies container inspections, deposits, withdrawals, stack
-  recompaction, and container sorting.
-- `water/`: Tests background buoyancy reflexes in deep water while idle or
-  between pathfinder routes.
-
-### Default terrain worlds (`scenarios/default/`)
-
-- `progression/`: Runs the `primitive-progression-to-diamond` qualification
-  scenario, executing a complete dependency sequence from bare hands to diamond
-  tools on an authored survival map.
-- `terrain/`: Validates long-distance traversal across natural generated terrain
-  and unloaded chunk boundaries.
+The legacy catalogue that used to live in `scenarios/` was retired in October
+2026; [the migration ledger](../plans/2026-10-scenario-migration.md) records
+where each of its fixtures went.
 
 ## What package scripts run scenarios?
 
-`scenarios` runs `tests/minecraft/scenarios` repeatedly with two workers; appended
-options such as `--jobs` and `--repeat` override those defaults.
-`scenarios:spectator` builds the highlighter and opens that same suite in the
+Scenarios need Bun and **Java 21**. Mine Labs starts each Minecraft server, and
+the spectator build runs Gradle, with `$JAVA_HOME/bin/java` when `JAVA_HOME` is
+set and `java` on `PATH` otherwise. If the default Java is older, prefix the
+command, for example `JAVA_HOME=/path/to/jdk-21 bun run scenarios:once`.
+
+The suite has two tiers, split by the scenario tag `slow` (End fights, long
+Nether hunts and anything over about five minutes).
+`scenarios:once` runs the fast tier of `tests/minecraft/scenarios` once,
+skipping `slow` fixtures, which is the check to make after changing a
+fixture, template, driver or the host. `scenarios` repeats that fast tier until
+stopped; appended options such as `--jobs` and `--repeat` override its defaults.
+Every script runs one trial at a time at below-normal CPU priority, so a run
+does not take over a machine someone is using; append `--jobs N` or
+`--normal-priority` to opt out.
+`scenarios:full` runs every fixture in `tests/minecraft/scenarios` once, `slow`
+ones included.
+`scenarios:known-failing` runs `tests/minecraft/known-failing` once: faithful
+fixtures for behaviour that fails today, which neither tier discovers.
+`scenarios:spectator` builds the highlighter and opens the whole suite in the
 managed Java viewer. Its controls select scenarios and repetition. The YAML
 `client` command still runs the bot participant in either mode.
 
 Run these commands from the package root:
 
 ```sh
-# Soak the current suite with two workers.
+# Run the fast tier once.
+bun run scenarios:once
+
+# Soak the fast tier.
 bun run scenarios
+
+# Run every fixture once, slow ones included.
+bun run scenarios:full
 
 # Run one fixture once.
 bunx --bun mine-labs run tests/minecraft/scenarios/collect/mixed-trees.yaml --repeat 1
 
-# Run a folder once with two workers.
+# Run a folder once with two parallel workers.
 bunx --bun mine-labs run tests/minecraft/scenarios/combat --repeat 1 --jobs 2
 
 # Build the viewer mod and open the whole suite.
@@ -191,8 +215,9 @@ The scripts use Mine Labs' local output defaults: `.mine-labs` for headless
 runs and `.mine-labs/open` for the client. Pass `--out <directory>` to change
 the location. Stop a soak with Ctrl+C.
 
-The separate shared-world verification mode remains available directly:
-`bunx --bun mine-labs verify scenarios/verification --jobs 2`.
+A fixture can list surveyed spawn locations under `verification.locations`;
+`mine-labs run` expands them into one isolated trial per location, as
+`progression/progression-to-diamond` and `collect/cast-obsidian` do.
 
 ## How do live playtests differ from scenarios?
 

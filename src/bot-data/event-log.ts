@@ -1,8 +1,5 @@
 import { z } from "zod";
-import { combatExecutionSnapshotSchema } from "../survival/control/combat/execution.js";
 import { survivalReceiptSchema } from "../survival/evidence/contract.js";
-import { changesSchema, policyLifetimeSchema, policySnapshotSchema } from "../survival/policy/contract.js";
-import { combatPolicySchema } from "../survival/policy/combat/contract.js";
 import type { SqlBotData } from "./sql-bot-data.js";
 
 const survivalEventInputSchema = z.strictObject({
@@ -12,31 +9,7 @@ const survivalEventInputSchema = z.strictObject({
   payload: survivalReceiptSchema,
 });
 
-const combatEngagementEventInputSchema = z.strictObject({
-  type: z.literal("combat_engagement"),
-  observedAt: z.string(),
-  summary: z.string(),
-  payload: z.strictObject({
-    state: z.enum(["started", "waiting", "stall", "resumed", "ended"]),
-    requestId: z.number().nullable(),
-    targetId: z.number(),
-    targetDistance: z.number().nullable(),
-    bodyOwner: z.string(),
-    outcome: z.string().nullable(),
-    /** Older persisted engagements did not retain the final observation. */
-    observation: z.string().nullable().optional(),
-    execution: combatExecutionSnapshotSchema,
-  }),
-});
-
 export const NOTIFICATION_HINT = "Use read_recent_events to read and advance through recent events.";
-
-const survivalPolicyEventInputSchema = z.strictObject({
-  type: z.literal("survival_policy"),
-  observedAt: z.string(),
-  summary: z.string(),
-  payload: policySnapshotSchema,
-});
 
 const playerMessagePayloadSchema = z.strictObject({
   username: z.string().min(1),
@@ -89,125 +62,6 @@ const playerDimensionChangeEventInputSchema = z.strictObject({
   payload: playerDimensionChangePayloadSchema,
 });
 
-const hostileEncounterPayloadSchema = z.strictObject({
-  response: z.enum(["fight", "evade", "hide", "deflect"]),
-  outcome: z.enum([
-    "projectile_reflected",
-    "target_died",
-    "safe_separation",
-    "contact_ended",
-    "hidden",
-    "target_lost",
-    "target_unreachable",
-    "disengaged",
-    "bot_died",
-    "capability_limit",
-    "standing_down",
-    "failed",
-    "cancelled",
-  ]),
-  reason: z.string(),
-  // Null when the reflex claimed an idle body: nothing was interrupted.
-  interrupted: z.strictObject({ action: z.string(), startedAt: z.string() }).nullable(),
-  /** Session preference at settlement; older stored events predate withdrawal intent. */
-  policyRevision: z.string().optional(),
-  /** Historical receipts retain their original intent; live policy never reads this field. */
-  combatIntent: z.enum(["auto", "withdraw"]).optional(),
-  threats: z.array(z.strictObject({ id: z.number().int(), name: z.string() })),
-  healthBefore: z.number(),
-  healthAfter: z.number(),
-  killedTargetIds: z.array(z.number().int()),
-  attacks: z.number().int().nonnegative(),
-  combatStyles: z.array(z.enum(["bow", "shielded_melee", "melee"])),
-  weaponsUsed: z.array(z.string().min(1)),
-  shieldRaisedSwings: z.number().int().nonnegative(),
-  projectileGuards: z.number().int().nonnegative(),
-  explosions: z.number().int().nonnegative(),
-  /** What the emergency hide did, when the response was to hide. */
-  hide: z
-    .strictObject({
-      dug: z.number().int().nonnegative(),
-      walled: z.number().int().nonnegative(),
-      capped: z.boolean(),
-      /** The bot was already sealed in, so nothing dug and nothing placed is the box working. */
-      enclosed: z.boolean(),
-      ate: z.string().nullable(),
-      swings: z.number().int().nonnegative(),
-      hungerAfter: z.number(),
-    })
-    .optional(),
-  finalPosition: z.strictObject({ x: z.number(), y: z.number(), z: z.number() }),
-  finalDistances: z.array(z.strictObject({ id: z.number().int(), distance: z.number().nonnegative() })),
-});
-
-const hostileEncounterEventInputSchema = z.strictObject({
-  type: z.literal("hostile_encounter"),
-  observedAt: z.string().min(1),
-  summary: z.string().min(1),
-  payload: hostileEncounterPayloadSchema,
-});
-
-const hungerReflexPayloadSchema = z.strictObject({
-  food: z.string().min(1),
-  consumed: z.boolean(),
-  hungerBefore: z.number(),
-  hungerAfter: z.number(),
-  saturationBefore: z.number(),
-  saturationAfter: z.number(),
-  // Null when the reflex claimed an idle body: nothing was interrupted.
-  interrupted: z.strictObject({ action: z.string(), startedAt: z.string() }).nullable(),
-  error: z.string().optional(),
-});
-
-const hungerReflexEventInputSchema = z.strictObject({
-  type: z.literal("hunger_reflex"),
-  observedAt: z.string().min(1),
-  summary: z.string().min(1),
-  payload: hungerReflexPayloadSchema,
-});
-
-const breathReflexPayloadSchema = z.strictObject({
-  airBefore: z.number(),
-  airAfter: z.number().nullable(),
-  healthBefore: z.number(),
-  healthAfter: z.number(),
-  /** Roof blocks dug through on the way up. */
-  dug: z.number().int().nonnegative(),
-  interrupted: z.strictObject({ action: z.string(), startedAt: z.string() }).nullable(),
-});
-
-const breathReflexEventInputSchema = z.strictObject({
-  type: z.literal("breath_reflex"),
-  observedAt: z.string().min(1),
-  summary: z.string().min(1),
-  payload: breathReflexPayloadSchema,
-});
-
-const fireReflexEventInputSchema = z.strictObject({
-  type: z.literal("fire_reflex"),
-  observedAt: z.string().min(1),
-  summary: z.string().min(1),
-  payload: z.strictObject({
-    outcome: z.enum(["escaped", "blocked", "died"]),
-    healthBefore: z.number(),
-    healthAfter: z.number(),
-    interrupted: z.strictObject({ action: z.string(), startedAt: z.string() }).nullable(),
-  }),
-});
-
-const dragonReflexEventInputSchema = z.strictObject({
-  type: z.literal("dragon_reflex"),
-  observedAt: z.string().min(1),
-  summary: z.string().min(1),
-  payload: z.strictObject({
-    outcome: z.enum(["evaded", "stopped", "failed"]),
-    reason: z.string().nullable(),
-    healthBefore: z.number(),
-    healthAfter: z.number(),
-    interrupted: z.strictObject({ action: z.string(), startedAt: z.string() }).nullable(),
-  }),
-});
-
 const strongholdLocatedEventInputSchema = z.strictObject({
   type: z.literal("stronghold_located"),
   observedAt: z.string().min(1),
@@ -247,68 +101,21 @@ export const botEventInputSchema = z.discriminatedUnion("type", [
 ]);
 export type BotEventInput = z.output<typeof botEventInputSchema>;
 
-const playerMessageEventSchema = playerMessageEventInputSchema.extend({
-  eventId: z.number().int().positive(),
-  botId: z.string().min(1),
-});
+const storedEventFields = { eventId: z.number().int().positive(), botId: z.string().min(1) };
 
-const playerDeathEventSchema = playerDeathEventInputSchema.extend({
-  eventId: z.number().int().positive(),
-  botId: z.string().min(1),
-});
-
-const playerDimensionChangeEventSchema = playerDimensionChangeEventInputSchema.extend({
-  eventId: z.number().int().positive(),
-  botId: z.string().min(1),
-});
-
-const hostileEncounterEventSchema = hostileEncounterEventInputSchema.extend({
-  eventId: z.number().int().positive(),
-  botId: z.string().min(1),
-});
-
-const hungerReflexEventSchema = hungerReflexEventInputSchema.extend({
-  eventId: z.number().int().positive(),
-  botId: z.string().min(1),
-});
-
-const breathReflexEventSchema = breathReflexEventInputSchema.extend({
-  eventId: z.number().int().positive(),
-  botId: z.string().min(1),
-});
-
-/** Read-only compatibility for durable events written before survival policy replaced combat policy. */
-const historicalCombatPolicyEventSchema = z.strictObject({
-  type: z.literal("combat_policy"),
-  eventId: z.number().int().positive(),
-  botId: z.string().min(1),
-  observedAt: z.string(),
-  summary: z.string(),
-  payload: policySnapshotSchema.omit({ overrides: true }).extend({
-    defaults: combatPolicySchema,
-    effective: combatPolicySchema,
-    override: z.strictObject({
-      changes: changesSchema.shape.combat.unwrap(),
-      lifetime: policyLifetimeSchema,
-    }).nullable(),
-  }),
-});
-
+/**
+ * An event as read back: exactly what `recordEvent` accepts, plus its id and
+ * owner. Event types that are no longer written are not readable either; a
+ * store written before they were retired carries an older schema version and
+ * is refused when it opens (see `SQL_BOT_DATA_SCHEMA_VERSION`).
+ */
 export const botEventSchema = z.discriminatedUnion("type", [
-  historicalCombatPolicyEventSchema,
-  equipmentEventInputSchema.extend({ eventId: z.number().int().positive(), botId: z.string().min(1) }),
-  survivalEventInputSchema.extend({ eventId: z.number().int().positive(), botId: z.string().min(1) }),
-  combatEngagementEventInputSchema.extend({ eventId: z.number().int().positive(), botId: z.string().min(1) }),
-  survivalPolicyEventInputSchema.extend({ eventId: z.number().int().positive(), botId: z.string().min(1) }),
-  dragonReflexEventInputSchema.extend({ eventId: z.number().int().positive(), botId: z.string().min(1) }),
-  strongholdLocatedEventInputSchema.extend({ eventId: z.number().int().positive(), botId: z.string().min(1) }),
-  fireReflexEventInputSchema.extend({ eventId: z.number().int().positive(), botId: z.string().min(1) }),
-  playerMessageEventSchema,
-  playerDeathEventSchema,
-  playerDimensionChangeEventSchema,
-  hostileEncounterEventSchema,
-  hungerReflexEventSchema,
-  breathReflexEventSchema,
+  equipmentEventInputSchema.extend(storedEventFields),
+  survivalEventInputSchema.extend(storedEventFields),
+  strongholdLocatedEventInputSchema.extend(storedEventFields),
+  playerMessageEventInputSchema.extend(storedEventFields),
+  playerDeathEventInputSchema.extend(storedEventFields),
+  playerDimensionChangeEventInputSchema.extend(storedEventFields),
 ]);
 export type BotEvent = z.output<typeof botEventSchema>;
 

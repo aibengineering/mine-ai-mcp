@@ -19,8 +19,9 @@ import { decideFightBoundary, type FightBoundaryDecision } from "../../policy/co
 import { CombatPosition } from "../../positioning/combat/position.js";
 import { SurvivalPolicyState } from "../../state/survival-policy.js";
 import { type SurvivalResources } from "../../state/resources.js";
+import type { Position3 } from "../../../utils/index.js";
 import { FootingRecovery } from "../footing.js";
-import { creeperEscape } from "../../policy/combat/tactics.js";
+import { creeperEscape, creeperEscapeAdmits } from "../../policy/combat/tactics.js";
 
 export interface FightEnvironment {
   readonly bot: Bot;
@@ -37,6 +38,8 @@ export interface FightRequest {
   readonly signal: AbortSignal;
   readonly ownerSignal: AbortSignal;
   readonly minimumHealth: number;
+  /** Where a pursuing request began; see EngageOptions. */
+  readonly ground?: Position3;
 }
 /** The observed scene and evidence of one physical fight, shared by its tactics. */
 export class FightScene implements Disposable {
@@ -64,6 +67,8 @@ export class FightScene implements Disposable {
   projectileGuards = 0;
   explosions = 0;
   elapsedTicks = 0;
+  /** When a hovering flier was first seen above sword reach in this fight. */
+  hoverWaitStartedAt: number | null = null;
   constructor(
     readonly environment: FightEnvironment,
     readonly request: FightRequest,
@@ -148,7 +153,7 @@ export class FightScene implements Disposable {
     const creepers = this.perception.creeperClearance.observe(this.perception.tick, this.perception.resolvedIds);
     const blast = creeperEscape({ creepers, clearancePending: this.perception.creeperClearance.pending, stationaryCommitment: false });
     if (blast) {
-      this.perception.creeperClearance.require(creepers.filter(threat => blast.threatIds.includes(threat.id)));
+      this.perception.creeperClearance.require(creepers.filter(threat => creeperEscapeAdmits(blast).includes(threat.id)));
       return;
     }
     const facts = observeCombatDecision(this.bot, {

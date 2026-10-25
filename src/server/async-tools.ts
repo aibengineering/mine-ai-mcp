@@ -3,15 +3,14 @@ import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { Action, ActionOutput, ActionResult } from "../actions/action.js";
 import type { ActionRequestInput, ActionResponseInput, ActionCallStatus } from "../bot-data/action-call-log.js";
-import { notificationSummarySchema, type NotificationSummary } from "../bot-data/event-log.js";
+import type { NotificationSummary } from "../bot-data/event-log.js";
 import { acceptanceSchema, refusalSchema, submissionMetadataSchema, type AsyncActions } from "../session/async-actions.js";
 import { waitForActionInputSchema, cancelActionInputSchema, WAIT_FOR_ACTION_DESCRIPTION, CANCEL_ACTION_DESCRIPTION } from "../session/async-actions.js";
-import { combatResourcesSchema, progressSchema, reflexActivitySchema } from "../session/progress.js";
+import { progressChangeSchema, progressSchema } from "../session/progress.js";
 import { requestSchema } from "../survival/evidence/contract.js";
-import { formatNotifications } from "./notifications.js";
 import { survivalStatusSchema, type SurvivalStatus } from "../survival/evidence/contract.js";
 import { formatPolicyReminder, formatProtocol } from "./async-format.js";
-import { toolChangeSchema } from "../world/tool-tiers.js";
+import { mcpReply, recordReply, replyOutputSchema, undescribedRequestMetaSchema } from "./reply.js";
 
 export const liveProgressSchema = z.strictObject({
   actionId: z.string(), action: z.string(), progress: progressSchema, request: requestSchema.nullable(),
@@ -20,10 +19,6 @@ export const foregroundStatusSchema = z.strictObject({
   active: liveProgressSchema.nullable(),
   awaitingResult: z.strictObject({ actionId: z.string(), action: z.string() }).nullable(),
   storageError: z.string().nullable(),
-});
-const metaSchema = z.object({
-  rationale: z.string().trim().min(1).max(200),
-  response_format: z.enum(["markdown", "json"]).default("markdown"),
 });
 interface Runtime {
   actions: readonly Action[];
@@ -54,10 +49,7 @@ export function registerAsyncTools(server: Pick<McpServer, "registerTool">, runt
         progress,
         survival: survivalStatusSchema.optional(),
         vitalsDuringWait: z.strictObject({ healthBefore: z.number(), healthAfter: z.number(), foodBefore: z.number(), foodAfter: z.number() }).optional(),
-        duringWait: z.strictObject({ from: z.string(), to: z.string(), elapsedMs: z.number(), suspendedMs: z.number(),
-          distanceTravelledBlocks: z.number(), reflexDistanceBlocks: z.number(), combatResources: combatResourcesSchema,
-          reflexActivity: reflexActivitySchema,
-          checkpointDelta: z.record(z.string(), z.number()), toolChanges: z.array(toolChangeSchema) }),
+        duringWait: progressChangeSchema,
       }),
       z.strictObject({ state: z.literal("settled"), wakeReason: z.literal("settled"), actionId: z.string(), output,
         survival: survivalStatusSchema.optional() }),
@@ -87,43 +79,32 @@ export function registerAsyncTools(server: Pick<McpServer, "registerTool">, runt
   function register(name: string, description: string, input: z.ZodObject, output: z.ZodType,
     invoke: (args: Record<string, unknown>, requestId: number, signal: AbortSignal, rationale: string) => unknown | Promise<unknown>, readOnly: boolean, annotations?: ToolAnnotations) {
     server.registerTool(name, {
-      description, inputSchema: input.safeExtend(metaSchema.shape),
-      outputSchema: z.strictObject({
-        response: z.discriminatedUnion("format", [
-          z.strictObject({ format: z.literal("markdown"), markdown: z.string() }),
-          z.strictObject({ format: z.literal("json"), data: output }),
-        ]), notifications: notificationSummarySchema.optional(),
-      }),
+      description, inputSchema: input.safeExtend(undescribedRequestMetaSchema.shape),
+      outputSchema: replyOutputSchema(output),
       annotations: { ...(annotations ?? { destructiveHint: !readOnly, openWorldHint: true }), readOnlyHint: readOnly },
     }, async (args, extra) => {
-      const { rationale, response_format } = metaSchema.parse(args);
+      const { rationale, response_format } = undescribedRequestMetaSchema.parse(args);
       const { rationale: _rationale, response_format: _format, ...input } = args;
       const started = performance.now();
       const requestId = runtime.recordActionRequest({ actionName: name, rationale, requestedAt: new Date().toISOString(), request: args });
       const data = output.parse(await invoke(input, requestId, extra.signal, rationale)) as Record<string, unknown>;
       const result = data.output as Output | undefined;
       const isError = data.state === "refused" || data.state === "storage_failed" || result?.result.status === "failed" || result?.result.status === "cancelled";
-      const notifications = runtime.notificationSummary();
-      const action = result ? runtime.actions.find((entry) => entry.name === result.action) : undefined;
-      const policyReminder = result?.progress ? formatPolicyReminder(data.survival as SurvivalStatus | undefined, result.progress.reflexActivity) : null;
-      const markdown = result && action
-        ? `Action ID: ${data.actionId}\n${data.error ? `Storage error: ${data.error}\n` : ""}\n${render(action, result)}${policyReminder ? `\n\n${policyReminder}` : ""}`
-        : formatProtocol(data as Parameters<typeof formatProtocol>[0]);
-      const notificationNotice = formatNotifications(notifications);
-      const notice = notificationNotice ? `\n\n${notificationNotice}` : "";
-      const reply = response_format === "json"
-        ? { content: isError ? [{ type: "text" as const, text: String(data.error ?? (result && "error" in result.result ? result.result.error : "Action failed")) }] : [],
-          structuredContent: { response: { format: "json" as const, data }, notifications }, isError }
-        : { content: [{ type: "text" as const, text: markdown + notice }],
-          structuredContent: { response: { format: "markdown" as const, markdown: markdown + notice } }, isError };
-      try {
-        runtime.recordActionResponse({ requestId, respondedAt: new Date().toISOString(), durationMs: Math.round(performance.now() - started),
-          status: (result?.result.status ?? (data.state === "settled" ? "succeeded" : data.state)) as ActionCallStatus,
-          response: { ...reply, execution: data },
-        });
-      } catch (error) {
-        process.stderr.write(`[mine-ai-mcp] Call ${requestId} log failed after response: ${String(error)}\n`);
-      }
+      const reply = mcpReply(response_format, {
+        data: () => data, isError, notifications: runtime.notificationSummary(),
+        failure: () => String(data.error ?? (result && "error" in result.result ? result.result.error : "Action failed")),
+        markdown: () => {
+          const action = result ? runtime.actions.find((entry) => entry.name === result.action) : undefined;
+          const policyReminder = result?.progress ? formatPolicyReminder(data.survival as SurvivalStatus | undefined, result.progress.reflexActivity) : null;
+          return result && action
+            ? `Action ID: ${data.actionId}\n${data.error ? `Storage error: ${data.error}\n` : ""}\n${render(action, result)}${policyReminder ? `\n\n${policyReminder}` : ""}`
+            : formatProtocol(data as Parameters<typeof formatProtocol>[0]);
+        },
+      });
+      recordReply(runtime, { requestId, respondedAt: new Date().toISOString(), durationMs: Math.round(performance.now() - started),
+        status: (result?.result.status ?? (data.state === "settled" ? "succeeded" : data.state)) as ActionCallStatus,
+        response: { ...reply, execution: data },
+      }, name);
       return reply;
     });
   }

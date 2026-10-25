@@ -1,20 +1,18 @@
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
-import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { SqlBotData } from "../../bot-data/index.js";
-import type { NavigationRuntime } from "../../navigation/index.js";
-import { createMovements, type NavigationResult } from "../../navigation/index.js";
+import type { Navigate, NavigationResult, NavigationRuntime } from "../../navigation/index.js";
 import type { FrontierChunk, SessionFrontier } from "../../runtime/frontier.js";
 import { ActionRunner } from "../../session/action-runner.js";
+import { botFixture, registry } from "../../test-support/bot.js";
 import { headingForVector, parseExploreFrontierRequest, unitVectorForHeading } from "./contract.js";
 import {
   beginExploreFrontier,
   createExploreFrontierAction,
   formatExploreFrontierResult,
   exploreFrontier,
-  type ExploreFrontierDependencies,
 } from "./explore-frontier.js";
 
 interface TestFrontier extends SessionFrontier {
@@ -54,26 +52,12 @@ function frontierFixture(initialBoundary = 0): TestFrontier {
   };
 }
 
-function botFixture(yaw = 0) {
-  const hostMovements = { name: "host" };
-  const pathfinder = {
-    movements: hostMovements as unknown,
-    setGoal: () => {},
-    setMovements(movements: unknown) {
-      this.movements = movements;
-    },
-  };
-  const bot = Object.assign(new EventEmitter(), {
-    entity: { position: new Vec3(0, 64, 0), yaw, vehicle: null },
-    game: { dimension: "overworld" },
-    pathfinder,
-    clearControlStates: () => {},
-    deactivateItem: () => {},
-    currentWindow: null,
-    isSleeping: false,
-    dismount: () => {},
-    wake: async () => {},
-  }) as unknown as Bot;
+/** A bot standing at the origin, with what body preparation before a foreground action touches. */
+function explorer() {
+  const bot = botFixture(
+    { position: { x: 0, y: 64, z: 0 } },
+    { clearControlStates: () => undefined, deactivateItem: () => undefined },
+  );
   return { bot };
 }
 
@@ -85,38 +69,18 @@ function stoppedNavigation(reason = "No path to the goal"): NavigationResult {
   return { status: "stopped", reason, elapsedMs: 1 };
 }
 
-function testDependencies(navigate: ExploreFrontierDependencies["navigate"]): {
-  dependencies: ExploreFrontierDependencies;
-  movements: ReturnType<typeof createMovements>;
-} {
-  const movements = {
-    allowDigging: true,
-    allowPlacing: true,
-    scaffold: { itemType: 1, stateId: 2 },
-  } as unknown as ReturnType<typeof createMovements>;
-  return {
-    movements,
-    dependencies: {
-      createMovements: (() => movements) as typeof createMovements,
-      navigate,
-    },
-  };
+/** The navigation runtime as exploration sees it: the leg it is handed, and a cancel for body preparation. */
+function navigationWith(navigate: Navigate): NavigationRuntime {
+  return { navigate, cancel: () => undefined } as unknown as NavigationRuntime;
 }
 
-const fakeNavigation = { cancel: () => undefined } as unknown as NavigationRuntime;
-
+/** A grounded bot whose loaded column reports `biomeAt(feet)` by the connection's registry id. */
 function biomeBotFixture(biomeAt: (feet: Vec3) => string) {
-  const { bot } = botFixture();
-  bot.entity.onGround = true;
-  const targetBiome = { name: "warped_forest" };
-  bot.registry = {
-    biomesByName: { "minecraft:warped_forest": targetBiome },
-    biomesArray: [targetBiome],
-    biomes: [{ name: "plains" }, targetBiome],
-  } as unknown as Bot["registry"];
+  const { bot } = explorer();
   bot.world = {
+    ...bot.world,
     getColumnAt: () => ({}),
-    getBiome: (feet: Vec3) => (biomeAt(feet) === "warped_forest" ? 1 : 0),
+    getBiome: (feet: Vec3) => registry.biomesByName[biomeAt(feet) === "warped_forest" ? "warped_forest" : "plains"]!.id,
   } as unknown as Bot["world"];
   return bot;
 }
@@ -125,7 +89,7 @@ test("biome entry stops an active leg at the observed three-dimensional feet pos
   const bot = biomeBotFixture((feet) => (feet.x >= 5 && feet.y === 64 ? "warped_forest" : "plains"));
   const frontier = frontierFixture();
   let calls = 0;
-  const { dependencies } = testDependencies(async ({ stopSignal }) => {
+  const navigation = navigationWith(async ({ stopSignal }) => {
     calls++;
     assert.equal(stopSignal?.aborted, false);
     bot.entity.position = new Vec3(5.3, 64, 0.5);
@@ -142,7 +106,7 @@ test("biome entry stops an active leg at the observed three-dimensional feet pos
     { heading: 90, chunks: 2, biome: "warped_forest" },
     {},
     frontier,
-    dependencies,
+    navigation,
   );
   assert.equal(result.status, "succeeded");
   assert.deepEqual(result.explored.biome, {
@@ -158,7 +122,7 @@ test("biome entry stops an active leg at the observed three-dimensional feet pos
 
 test("an already entered target needs no expansion and unknown names fail without movement", async () => {
   const bot = biomeBotFixture(() => "warped_forest");
-  const { dependencies } = testDependencies(async () => {
+  const navigation = navigationWith(async () => {
     throw new Error("must not navigate");
   });
   const already = await exploreFrontier(
@@ -166,7 +130,7 @@ test("an already entered target needs no expansion and unknown names fail withou
     { heading: 90, chunks: 1, biome: "warped_forest" },
     {},
     frontierFixture(),
-    dependencies,
+    navigation,
   );
   assert.equal(already.status, "succeeded");
   assert.equal(already.explored.expandedChunks, 0);
@@ -175,7 +139,7 @@ test("an already entered target needs no expansion and unknown names fail withou
     { heading: 90, chunks: 1, biome: "typo" },
     {},
     frontierFixture(),
-    dependencies,
+    navigation,
   );
   assert.equal(unknown.status, "failed");
   assert.match("error" in unknown ? unknown.error : "", /EXPLORATION_UNKNOWN_BIOME/);
@@ -186,7 +150,7 @@ test("exhausting the existing boundary expansion without biome entry is partial"
   // A biome above the bot does not establish entry at its feet.
   const bot = biomeBotFixture((feet) => (feet.y > 64 ? "warped_forest" : "plains"));
   const frontier = frontierFixture();
-  const { dependencies } = testDependencies(async () => {
+  const navigation = navigationWith(async () => {
     bot.entity.position.x = 16;
     frontier.record({ dimension: "overworld", chunkX: 1, chunkZ: 0 });
     bot.emit("physicsTick");
@@ -197,7 +161,7 @@ test("exhausting the existing boundary expansion without biome entry is partial"
     { heading: 90, chunks: 1, biome: "warped_forest" },
     {},
     frontier,
-    dependencies,
+    navigation,
   );
   assert.equal(result.status, "partial");
   assert.equal(result.explored.expandedChunks, 1);
@@ -209,7 +173,7 @@ test("cancellation with a biome target retains runtime cancellation and releases
   const bot = biomeBotFixture(() => "plains");
   const frontier = frontierFixture();
   const controller = new AbortController();
-  const { dependencies } = testDependencies(async () => {
+  const navigation = navigationWith(async () => {
     controller.abort("cancel biome search");
     controller.signal.throwIfAborted();
     return completedNavigation();
@@ -220,34 +184,14 @@ test("cancellation with a biome target retains runtime cancellation and releases
       { heading: 90, chunks: 1, biome: "warped_forest" },
       { signal: controller.signal },
       frontier,
-      dependencies,
+      navigation,
     ),
   );
   assert.equal(bot.listenerCount("physicsTick"), 0);
   assert.equal(frontier.listenerCount(), 0);
 });
 
-test("parses a bounded chunk request and resolves degree headings", () => {
-  assert.deepEqual(parseExploreFrontierRequest({ heading: 0 }), {
-    heading: 0,
-    chunks: 1,
-  });
-  assert.deepEqual(parseExploreFrontierRequest({ heading: 90, chunks: 8 }), {
-    heading: 90,
-    chunks: 8,
-  });
-  for (const input of [
-    { heading: -10 },
-    { heading: 361 },
-    { heading: 90, chunks: 0 },
-    { heading: 90, chunks: 1.5 },
-    { heading: 90, chunks: 9 },
-    { heading: 90, surprise: true },
-    {},
-  ]) {
-    assert.throws(() => parseExploreFrontierRequest(input));
-  }
-
+test("resolves degree headings to unit vectors and back", () => {
   assert.equal(headingForVector(0, -1), 0);
   assert.equal(headingForVector(1, 0), 90);
   assert.equal(headingForVector(0, 1), 180);
@@ -265,10 +209,13 @@ test("parses a bounded chunk request and resolves degree headings", () => {
 
 test("extends the requested boundary through short legs while pricing exploration scaffolds", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
+  const { bot } = explorer();
   let calls = 0;
-  const runRoute: ExploreFrontierDependencies["navigate"] = async (options) => {
+  const runRoute: Navigate = async (options) => {
     assert.equal(options.timeoutMs, undefined, "terrain work must not be cut off by a per-leg clock");
+    // Exploration prices scaffolding high so a leg walks round a gap it could
+    // bridge, keeping carried blocks for the terrain that needs them.
+    assert.equal(options.movements.placementPenalty, 80);
     calls += 1;
     assert.ok("goal" in options);
     const expectedX = calls * 16;
@@ -281,20 +228,13 @@ test("extends the requested boundary through short legs while pricing exploratio
     frontier.record({ dimension: "overworld", chunkX: calls, chunkZ: calls === 1 ? 5 : -3 });
     return completedNavigation();
   };
-  const { dependencies: originalDependencies, movements } = testDependencies(runRoute);
-  const dependencies: ExploreFrontierDependencies = {
-    ...originalDependencies,
-    createMovements: (_bot, options) => {
-      assert.equal(options?.placementPenalty, 80);
-      return movements;
-    },
-  };
+  const navigation = navigationWith(runRoute);
   const result = await exploreFrontier(
     bot,
     parseExploreFrontierRequest({ heading: 90, chunks: 2 }),
     {},
     frontier,
-    dependencies,
+    navigation,
   );
 
   assert.deepEqual(result, {
@@ -312,9 +252,6 @@ test("extends the requested boundary through short legs while pricing exploratio
     source: { queryIds: ["frontier-nearest"] },
   });
   assert.equal(calls, 2);
-  assert.equal(movements.allowDigging, true);
-  assert.equal(movements.allowPlacing, true);
-  assert.deepEqual(movements.scaffold, { itemType: 1, stateId: 2 });
   assert.equal(frontier.listenerCount(), 0);
   assert.match(formatExploreFrontierResult(result), /Expanded \*\*2\/2\*\*/);
   assert.match(formatExploreFrontierResult(result), /End: `32, 64, 0`/);
@@ -338,19 +275,19 @@ test("explores with botData and populates nearestFrontier from frontier_navigati
   });
 
   const frontier = frontierFixture();
-  const { bot } = botFixture();
-  const runRoute: ExploreFrontierDependencies["navigate"] = async () => {
+  const { bot } = explorer();
+  const runRoute: Navigate = async () => {
     bot.entity.position = new Vec3(16, 64, 0);
     frontier.record({ dimension: "overworld", chunkX: 1, chunkZ: 0 });
     return completedNavigation();
   };
-  const { dependencies } = testDependencies(runRoute);
+  const navigation = navigationWith(runRoute);
   const result = await exploreFrontier(
     bot,
     parseExploreFrontierRequest({ heading: 90, chunks: 1 }),
     {},
     frontier,
-    dependencies,
+    navigation,
     data,
   );
 
@@ -366,8 +303,8 @@ test("explores with botData and populates nearestFrontier from frontier_navigati
 
 test("explores a diagonal as one normalized direction", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
-  const runRoute: ExploreFrontierDependencies["navigate"] = async (options) => {
+  const { bot } = explorer();
+  const runRoute: Navigate = async (options) => {
     assert.ok("goal" in options);
     const expectedX = Math.floor(16 / Math.sqrt(2));
     const expectedZ = Math.floor(-16 / Math.sqrt(2));
@@ -380,14 +317,14 @@ test("explores a diagonal as one normalized direction", async () => {
     frontier.record({ dimension: "overworld", chunkX: 1, chunkZ: -1 });
     return completedNavigation();
   };
-  const { dependencies } = testDependencies(runRoute);
+  const navigation = navigationWith(runRoute);
 
   const result = await exploreFrontier(
     bot,
     parseExploreFrontierRequest({ heading: 45 }),
     {},
     frontier,
-    dependencies,
+    navigation,
   );
 
   assert.equal(result.status, "succeeded");
@@ -397,9 +334,9 @@ test("explores a diagonal as one normalized direction", async () => {
 
 test("late spawn-ring commits cannot settle exploration without forward travel", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
+  const { bot } = explorer();
   let calls = 0;
-  const runRoute: ExploreFrontierDependencies["navigate"] = async () => {
+  const runRoute: Navigate = async () => {
     calls += 1;
     if (calls === 1) {
       frontier.record({ dimension: "overworld", chunkX: 1, chunkZ: 0 });
@@ -409,14 +346,14 @@ test("late spawn-ring commits cannot settle exploration without forward travel",
     bot.entity.position = new Vec3(16, 64, 0);
     return completedNavigation();
   };
-  const { dependencies } = testDependencies(runRoute);
+  const navigation = navigationWith(runRoute);
 
   const result = await exploreFrontier(
     bot,
     parseExploreFrontierRequest({ heading: 90, chunks: 1 }),
     {},
     frontier,
-    dependencies,
+    navigation,
   );
 
   assert.equal(calls, 2);
@@ -427,19 +364,19 @@ test("late spawn-ring commits cannot settle exploration without forward travel",
 
 test("side chunks are recorded without manufacturing directional progress", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
-  const runRoute: ExploreFrontierDependencies["navigate"] = async () => {
+  const { bot } = explorer();
+  const runRoute: Navigate = async () => {
     frontier.record({ dimension: "overworld", chunkX: 0, chunkZ: 8 });
     frontier.record({ dimension: "overworld", chunkX: 0, chunkZ: -8 });
     return stoppedNavigation();
   };
-  const { dependencies } = testDependencies(runRoute);
+  const navigation = navigationWith(runRoute);
   const result = await exploreFrontier(
     bot,
     parseExploreFrontierRequest({ heading: 90, chunks: 1 }),
     {},
     frontier,
-    dependencies,
+    navigation,
   );
 
   assert.equal(result.status, "failed");
@@ -450,18 +387,18 @@ test("side chunks are recorded without manufacturing directional progress", asyn
 
 test("another bot's shared write cannot settle this action", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
-  const runRoute: ExploreFrontierDependencies["navigate"] = async () => {
+  const { bot } = explorer();
+  const runRoute: Navigate = async () => {
     frontier.setBoundary(20);
     return stoppedNavigation();
   };
-  const { dependencies } = testDependencies(runRoute);
+  const navigation = navigationWith(runRoute);
   const result = await exploreFrontier(
     bot,
     parseExploreFrontierRequest({ heading: 90, chunks: 1 }),
     {},
     frontier,
-    dependencies,
+    navigation,
   );
 
   assert.equal(result.status, "failed");
@@ -471,19 +408,19 @@ test("another bot's shared write cannot settle this action", async () => {
 
 test("reports partial progress when navigation stops after one boundary column", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
-  const runRoute: ExploreFrontierDependencies["navigate"] = async () => {
+  const { bot } = explorer();
+  const runRoute: Navigate = async () => {
     frontier.record({ dimension: "overworld", chunkX: 1, chunkZ: 0 });
     bot.entity.position = new Vec3(16, 64, 0);
     return stoppedNavigation("stuck");
   };
-  const { dependencies } = testDependencies(runRoute);
+  const navigation = navigationWith(runRoute);
   const result = await exploreFrontier(
     bot,
     parseExploreFrontierRequest({ heading: 90, chunks: 2 }),
     {},
     frontier,
-    dependencies,
+    navigation,
   );
 
   assert.equal(result.status, "partial");
@@ -493,14 +430,14 @@ test("reports partial progress when navigation stops after one boundary column",
 
 test("caller cancellation remains a runtime outcome and always cleans up", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
+  const { bot } = explorer();
   const controller = new AbortController();
-  const runRoute: ExploreFrontierDependencies["navigate"] = async () => {
+  const runRoute: Navigate = async () => {
     controller.abort("test cancellation");
     throw new Error("test cancellation");
   };
-  const { dependencies } = testDependencies(runRoute);
-  const action = createExploreFrontierAction(bot, fakeNavigation, frontier, undefined, dependencies);
+  const navigation = navigationWith(runRoute);
+  const action = createExploreFrontierAction(bot, navigation, frontier);
   const runner = new ActionRunner();
 
   const output = await runner.run(action, { heading: 90, chunks: 2 }, controller.signal);
@@ -511,13 +448,13 @@ test("caller cancellation remains a runtime outcome and always cleans up", async
 
 test("a resumed request retains its original frontier target and cumulative own observations", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
+  const { bot } = explorer();
   let calls = 0;
   let announceStart = () => {};
   const started = new Promise<void>((resolve) => {
     announceStart = resolve;
   });
-  const { dependencies } = testDependencies(async ({ signal }) => {
+  const navigation = navigationWith(async ({ signal }) => {
     calls++;
     bot.entity.position.x += 16;
     frontier.record({ dimension: "overworld", chunkX: calls === 3 ? 21 : calls, chunkZ: 0 });
@@ -529,7 +466,7 @@ test("a resumed request retains its original frontier target and cumulative own 
     }
     return completedNavigation();
   });
-  const action = createExploreFrontierAction(bot, fakeNavigation, frontier, undefined, dependencies);
+  const action = createExploreFrontierAction(bot, navigation, frontier);
   const runner = new ActionRunner();
   const pending = runner.run(action, { heading: 90, chunks: 2 });
   await started;
@@ -564,17 +501,17 @@ test("a resumed request retains its original frontier target and cumulative own 
 
 test("an interrupted attempt that already expanded the requested column needs no replacement leg", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
+  const { bot } = explorer();
   const interrupted = new AbortController();
   let calls = 0;
-  const { dependencies } = testDependencies(async () => {
+  const navigation = navigationWith(async () => {
     calls++;
     bot.entity.position.x = 16;
     frontier.record({ dimension: "overworld", chunkX: 1, chunkZ: 0 });
     interrupted.abort("reflex takeover");
     return completedNavigation();
   });
-  const execute = beginExploreFrontier(bot, { heading: 90, chunks: 1 }, frontier, dependencies);
+  const execute = beginExploreFrontier(bot, { heading: 90, chunks: 1 }, frontier, navigation);
   await assert.rejects(execute({ signal: interrupted.signal }));
   assert.equal(frontier.listenerCount(), 0);
   bot.entity.position.x = 0;
@@ -587,17 +524,17 @@ test("an interrupted attempt that already expanded the requested column needs no
 
 test("resumption in another dimension settles the original expansion without another leg", async () => {
   const frontier = frontierFixture();
-  const { bot } = botFixture();
+  const { bot } = explorer();
   const interrupted = new AbortController();
   let calls = 0;
-  const { dependencies } = testDependencies(async () => {
+  const navigation = navigationWith(async () => {
     calls++;
     bot.entity.position.x = 16;
     frontier.record({ dimension: "overworld", chunkX: 1, chunkZ: 0 });
     interrupted.abort("reflex takeover");
     return completedNavigation();
   });
-  const execute = beginExploreFrontier(bot, { heading: 90, chunks: 2 }, frontier, dependencies);
+  const execute = beginExploreFrontier(bot, { heading: 90, chunks: 2 }, frontier, navigation);
   await assert.rejects(execute({ signal: interrupted.signal }));
   bot.game.dimension = "the_nether";
   const result = await execute({});

@@ -14,7 +14,6 @@ import { readNavigationPolicy } from "../../survival/state/navigation-policy.js"
 import type { Bot } from "mineflayer";
 import { occupiedCell } from "../../world/placement.js";
 import { enchantmentsOf } from "../../world/enchantments.js";
-import { DEFAULT_SCAFFOLD_BLOCKS } from "../../survival/policy/contract.js";
 import type { BreakEvaluation, MovementPolicy, PolicyDecision, ToolSelection } from "../movements/policy.js";
 import { BREAK_OPENS_INTO_LIQUID, createMovementPolicy, type ScaffoldSelection } from "../movements/policy.js";
 import { TRAIT_DAMAGING, TRAIT_LAVA } from "../world/block-geometry.js";
@@ -26,9 +25,6 @@ import {
   type WorldView,
 } from "../world/world.js";
 import { blockClass, observeMineflayerBlock } from "./world.js";
-
-/** The only carried blocks standard navigation may spend to create a route: the cheap, plentiful block of each terrain. */
-export const STANDARD_SCAFFOLD_ITEMS = DEFAULT_SCAFFOLD_BLOCKS;
 
 export function scaffoldBlockNames(bot: Bot): readonly string[] {
   return readNavigationPolicy(bot).scaffold_blocks;
@@ -78,8 +74,6 @@ export interface MineflayerMovementPolicyOptions {
   readonly allowDigging?: boolean;
   readonly maximumDrop?: number;
   readonly allowParkour?: boolean;
-  readonly allowDiagonalAscend?: boolean;
-  readonly allowDoors?: boolean;
   /** Whether this block and cell are explicitly targeted for removal by the calling task. */
   readonly isRequestedBreak?: (
     block: Extract<BlockObservation, { kind: "loaded" }>,
@@ -131,7 +125,8 @@ function opensIntoLiquid(world: WorldView, x: number, y: number, z: number): boo
   return false;
 }
 
-function dryGroundedDigTime(bot: Bot, block: WorldBlock, item: InventoryItem | null): number {
+/** Milliseconds to break `block` with `item` (bare hands when null), standing dry on the ground. */
+export function dryGroundedDigTime(bot: Bot, block: WorldBlock, item: InventoryItem | null): number {
   return block.digTime(
     item?.type ?? null,
     bot.game.gameMode === "creative",
@@ -335,12 +330,21 @@ const OPENS_INTO_LIQUID: PolicyDecision = {
   reason: BREAK_OPENS_INTO_LIQUID,
 };
 const AVOIDED_BITS = TRAIT_DAMAGING | TRAIT_LAVA;
+const LAVA_FLOWS_IN: PolicyDecision = {
+  kind: "prohibited",
+  reason: "lava beside this cell can flow into it on its next update",
+};
+const SIDES = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+] as const;
 
 export function createMineflayerMovementPolicy(
   bot: Bot,
   options: MineflayerMovementPolicyOptions = {},
 ): MovementPolicy {
-  const allowDoors = options.allowDoors ?? true;
   const allowParkour = options.allowParkour ?? true;
   const protectedBlockIds = new Set(
     [...ROUTE_PROTECTED_CROPS, ...(options.protectedBlockNames ?? [])].flatMap((name) => {
@@ -375,7 +379,7 @@ export function createMineflayerMovementPolicy(
   };
   /** A break the calling task must have asked for by cell: a container, a door, a sign. */
   const needsRequest = (observation: LoadedBlock, plan: BreakPlan) =>
-    plan.requiresExplicitRemoval || observation.traits.interactive || (allowDoors && observation.traits.openable);
+    plan.requiresExplicitRemoval || observation.traits.interactive || observation.traits.openable;
 
   // What breaking a state costs before its cell is known: prohibited outright,
   // breakable with the plan's tool and the terrain penalty, or breakable but
@@ -415,12 +419,36 @@ export function createMineflayerMovementPolicy(
     (observation.bits & AVOIDED_BITS) !== 0 ||
     (observation.kind === "loaded" && avoidedStates[observation.stateId] === 1);
 
+  // Whether lava beside a cell enters it on its next update. Spreading lava
+  // advances a cell every 30 ticks, and a route replanned as it spreads would
+  // otherwise skirt its front through the cells it fills next: a bot held up
+  // by a stall arrived as one filled and burned. The fire reflex already flees
+  // such a cell; a route must not walk into one. A flow spreads sideways while
+  // it has levels to lose (two a step in the overworld, one in the Nether), as
+  // a source or a falling column where it lands does; a flow over a drop or
+  // over flowing lava runs down instead, so a falling stream beside a bridge
+  // never spreads at the bridge's height.
+  const lavaState = bot.registry.blocksByName.lava!.minStateId;
+  const lavaFlowsInto = (world: WorldView, x: number, y: number, z: number): boolean => {
+    const decay = bot.game.dimension === "the_nether" ? 1 : 2;
+    for (const [dx, dz] of SIDES) {
+      const beside = world.blockAt(x + dx, y, z + dz);
+      if ((beside.bits & TRAIT_LAVA) === 0 || beside.kind !== "loaded") continue;
+      const level = beside.stateId - lavaState;
+      if (level > 0 && level < 8 && level + decay >= 8) continue;
+      const below = world.blockAt(x + dx, y - 1, z + dz);
+      if (below.kind === "loaded") {
+        if (below.traits.liquid === "lava" ? level !== 0 : below.traits.empty && below.traits.liquid === null) continue;
+      }
+      return true;
+    }
+    return false;
+  };
+
   const policy = createMovementPolicy({
     allowDigging: options.allowDigging ?? true,
     allowPlacing: scaffolding,
-    allowDoors,
     allowParkour,
-    allowDiagonalAscend: options.allowDiagonalAscend ?? true,
     allowSprinting: options.allowSprinting ?? true,
     maximumDrop: options.maximumDrop ?? DEFAULT_MAXIMUM_DROP,
     placementPenalty: options.placementPenalty ?? 20,
@@ -458,6 +486,8 @@ export function createMineflayerMovementPolicy(
         const observation = world.blockAt(x, y + dy, z);
         if (avoids(observation)) return AVOIDED_STEP;
       }
+      // The cell and the head above it.
+      for (let dy = 0; dy <= 1; dy += 1) if (lavaFlowsInto(world, x, y + dy, z)) return LAVA_FLOWS_IN;
       return ALLOWED_STEP;
     },
   });

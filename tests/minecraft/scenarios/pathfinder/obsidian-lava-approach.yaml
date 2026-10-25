@@ -1,6 +1,5 @@
-template: ../../templates/spectator.yaml
+template: ../../templates/single-action.yaml
 
-name: obsidian-lava-approach
 tags: [regression]
 description: >-
   Reproduce the approach where obsidian collection burned before pouring water in seed
@@ -11,8 +10,6 @@ description: >-
 # Seed 8674349's obsidian collection burned here before it ever poured water.
 # The drop to 50,-21,71 handed forward momentum into the eastward step-up.
 # Its feet cell was safe, but its body crossed into the lava at z=72.
-minecraft:
-  version: "1.21.4"
 world:
   type: default
   seed: 8674349
@@ -30,12 +27,6 @@ players:
     pos: [ 48.5, -19, 68.5 ]
     inventory:
       - { item: diamond_pickaxe, count: 1 }
-client:
-  command: bun
-  cwd: ../..
-  args:
-    - client-host.ts
-    - drivers/single-action.ts
 params:
   action: navigate
   input:

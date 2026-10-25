@@ -92,6 +92,13 @@ specific objective stop. A necessary reflex can finish its safe release; the
 objective cannot resume afterwards. Wait for the cancelled result before giving
 replacement work. Cancelling an old settled ID cannot stop a newer action.
 
+`cancelled` means the model, or the operator, stopped the request. A survival
+reflex that takes the body and hands the request back unfinished, without
+resuming it, ends it `failed` instead. Its error starts with the reflex's
+reason, for example `[HOSTILE_CONTACT] …`, and says the reflex returned it
+unfinished. A reflex that ends in a death or a lost connection keeps the
+outcome that cause reports.
+
 Disconnecting an MCP client, cancelling its wait, or reaching its timeout does
 not stop admitted work. Reconnect and read the Foreground action section of
 `view_status`. In JSON mode, inspect the `foreground` field alongside `response`

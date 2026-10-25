@@ -1,0 +1,43 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance]
+description: >-
+  Cross 160 blocks of seed 8675309's generated overworld in one navigate,
+  into chunks that are not loaded when the route starts, and arrive near the
+  destination column at full health. Guards the planner's continuation of a
+  route beyond its first segment over terrain it has not seen.
+# Migrated from default/terrain/long-haul-terrain, whose driver walked the
+# haul in 40-block legs through the navigation runtime itself. Here it is one
+# request. 63,-170 is land with no water on the line (the original bearing
+# ended at sea). An oak stands on the column: its leaves top out at y78 over
+# ground feet height 73, so the request names the ground rather than leaving
+# the ambiguity to NAVIGATION_HEIGHT_REQUIRED.
+world:
+  type: default
+  seed: 8675309
+  time: noon
+  difficulty: peaceful
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+    doFireTick: false
+players:
+  # A surface column for this seed: grass at y63.
+  - name: HaulBot
+    pos: [8.5, 64, -19.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: cobblestone, count: 64 }
+params:
+  action: navigate
+  input: { x: 63, y: 73, z: -170, range: 3 }
+goal:
+  kind: all
+  timeout: 240
+  goals:
+    - { kind: reach, who: HaulBot, pos: [63, 73, -170], radius: 4 }
+    - { kind: health, who: HaulBot, health: 20 }
+    - { kind: completion, who: HaulBot }
