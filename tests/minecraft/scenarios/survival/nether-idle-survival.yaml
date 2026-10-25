@@ -43,6 +43,11 @@ geometry:
   - fill: { block: netherrack, from: [122, 128, -119], to: [140, 128, -101] }
   - fill: { block: lava, from: [125, 129, -116], to: [137, 129, -104] }
   - fill: { block: netherrack, from: [138, 129, -119], to: [140, 129, -101] }
+  # DeltaBot's body cells. Basalt-delta decoration on this seed differs between
+  # fresh worlds; in one the shelf had basalt in the bot's cells, it
+  # suffocated on arrival, respawned without its kit, and the trial never
+  # started. Clearing the two cells keeps the native shelf around it.
+  - fill: { block: air, from: [192, 49, -20], to: [192, 50, -20] }
 
 players:
   # The legacy wounded-cliff lip; the drop falls 14 blocks east of it.
