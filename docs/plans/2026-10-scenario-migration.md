@@ -636,6 +636,71 @@ health or position checks, and both fixtures were rerun:
     hold that followed.
   - **Not investigated further;** it is listed under "Still flaky".
 
+### Merge verification (2026-10-25)
+
+Checks before merging PR #8, beyond the scenario tiers.
+
+- **MCP surface against main.** The evidence tour (`bun run evidence:capture`)
+  called every published tool through the real MCP server on main (2fe1306)
+  and on this branch.
+  - **Tools:** the same 37, with the same annotations and execution modes.
+  - **Schemas:** two output-schema removals, both of fields no client ever
+    received. `answered[].temporal` was always null, and the eight retired
+    event types can no longer be written.
+  - **Responses:** 62 of 63 identical after normalising numbers and IDs. The
+    one mismatch was an old race in which a bucket fill was confirmed by the
+    bucket alone; f613bf4 now also waits for the source cell to empty.
+- **Bot-data upgrade on real stores.** Copies of all 25 stores on the
+  author's machine were opened with `SqlBotData.create`. 24 upgraded, but
+  world 879121 failed: its old views named a table the upgrade dropped
+  ("error in view frontier_navigation: no such table: main.bot_status"), so
+  the store would not have opened. Fixed in 8fa8fd8 by dropping old views
+  first. All 25 now upgrade, keeping every row except the retired event
+  types.
+- **Fresh-world playthrough over real MCP.** The built host
+  (`dist/server/host.js`, via `startHost`) joined a new natural world (seed
+  20261025, normal difficulty, mobs on), and the model played over HTTP.
+  - **Progression:** from an empty inventory it collected logs, crafted tools,
+    mined stone, hunted cows, cooked beef, mined coal and iron, smelted
+    underground, crafted a bucket, and filled it from water it found itself,
+    reporting `water → air`.
+  - **The async contract:** pending waits, `wait_for_action`, status reads
+    mid-action, idempotent resubmission, a mid-action cancel ending
+    `cancelled`, and a stale policy revision refused.
+  - **Night:** six fight responses and one meal interrupted an exploration,
+    which resumed and succeeded at 20/20 health. Each was logged as an event.
+  - **Restart:** the host restarted on the same data root with its notes,
+    816-chunk frontier and 51 recorded requests intact.
+  - No stderr errors or crashes.
+- **Build and image.** `bun run build` passes. The Docker image builds in WSL
+  (Bun 1.4.3 base), and `bun run test` passes inside it on Linux: 1601 tests
+  at the time.
+- **First full tier at 56b3275:** 114 of 117. Three failures, all fixed:
+  - **`combat/bow-range`, BowLedge, 75a5881:** an unhandled rejection
+    ("pickup_observed") killed the client after its request succeeded. A
+    plan-ahead search that saw the goal met ran the pickup's arrival beside
+    the step still walking; its rejection was stored unawaited. Such a search
+    now leaves the arrival to the route, and its stored result can no longer
+    reject unhandled. Proof: bow-range 8 of 8.
+  - **`progression/progression-to-diamond` location 3, fae9a44:** at the
+    bottom of a one-wide shaft dug down to iron, the temporary furnace found
+    no cell. The nearby placement now also tries the level over the head.
+    Proof: 5 of 5 in a row, plus 9 more.
+  - **`progression/progression-to-diamond` location 2, 0f2b948:** in some
+    fresh worlds a leaf filled the bot's head cell. An eye inside a block sees
+    nothing else, so no dig could be planned and the search expanded only its
+    start. A digging move now clears a block in the stance's own head cell
+    first. Proof: 9 of 9 in a row.
+  - `combat/creeper-navigation` Mixed (11 health) passed 2 of 2 on rerun.
+- **Second full tier at 54e7689:** 115 of 117 in 31 min.
+  - **`survival/nether-idle-survival`** never started: DeltaBot was arranged
+    inside basalt that this world's generation placed in its cells, and
+    suffocated. Fixed in the fixture (98ed062) by clearing its two body
+    cells. Proof: 4 of 4.
+  - **`combat/cover-crossing-hunt`:** two wither skeletons took the bot to
+    10 health; the recovery hold could neither dig nor place cover and ran
+    out. It passed 6 of 6 on rerun: the recorded rare combat flake.
+
 ### Known-failing now
 
 | Fixture | Failure | Pattern | Next |
