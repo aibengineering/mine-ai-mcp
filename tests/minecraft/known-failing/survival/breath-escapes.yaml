@@ -20,12 +20,13 @@ description: >-
   body until the bot drowns about 25 s in. DeepRiser passes on the idle
   water-surface rise alone.
 
-# Pens are 100 blocks apart along x. Every swimmer waits on a dry stand on its
+# Pens are sealed shells 13 to 16 blocks apart along x, close enough to watch
+# together; nothing can cross between them. Every swimmer waits on a dry stand on its
 # pen's roof, because the host prepares a grounded, still body; the schedule
 # drops them all into the water on the first tick, so each starts with a full
 # bar.
 reset:
-  - "fill -8 -60 -12 420 -30 16 air"
+  - "fill -8 -60 -12 66 -30 16 air"
 
 geometry:
   # PocketSwimmer: water -59..-57 under an obsidian ceiling at -56, and a
@@ -35,44 +36,44 @@ geometry:
   - fill: { block: water, from: [8, -59, -2], to: [10, -57, 2] }
   - fill: { block: air, from: [8, -56, -2], to: [10, -55, 2] }
 
-  # TunnelSwimmer: a one-wide, two-high flooded tunnel east along z 0 to x 108,
-  # north along x 108 to z 5, then a chamber whose water is one deep under air.
-  - fill: { block: obsidian, from: [99, -60, -1], to: [110, -54, 9] }
-  - fill: { block: water, from: [100, -59, 0], to: [108, -58, 0] }
-  - fill: { block: water, from: [108, -59, 1], to: [108, -58, 5] }
-  - fill: { block: water, from: [107, -59, 6], to: [109, -59, 8] }
-  - fill: { block: air, from: [107, -58, 6], to: [109, -56, 8] }
+  # TunnelSwimmer: a one-wide, two-high flooded tunnel east along z 0 to x 24,
+  # north along x 24 to z 5, then a chamber whose water is one deep under air.
+  - fill: { block: obsidian, from: [15, -60, -1], to: [26, -54, 9] }
+  - fill: { block: water, from: [16, -59, 0], to: [24, -58, 0] }
+  - fill: { block: water, from: [24, -59, 1], to: [24, -58, 5] }
+  - fill: { block: water, from: [23, -59, 6], to: [25, -59, 8] }
+  - fill: { block: air, from: [23, -58, 6], to: [25, -56, 8] }
 
-  # LidSwimmer: PocketSwimmer's room, shorter, with the pocket at x 204..206.
-  - fill: { block: obsidian, from: [199, -60, -3], to: [207, -54, 3] }
-  - fill: { block: water, from: [200, -59, -2], to: [203, -57, 2] }
-  - fill: { block: water, from: [204, -59, -2], to: [206, -57, 2] }
-  - fill: { block: air, from: [204, -56, -2], to: [206, -55, 2] }
+  # LidSwimmer: PocketSwimmer's room, shorter, with the pocket at x 35..37.
+  - fill: { block: obsidian, from: [30, -60, -3], to: [38, -54, 3] }
+  - fill: { block: water, from: [31, -59, -2], to: [34, -57, 2] }
+  - fill: { block: water, from: [35, -59, -2], to: [37, -57, 2] }
+  - fill: { block: air, from: [35, -56, -2], to: [37, -55, 2] }
 
   # SkylightSwimmer: water -59..-57 under an obsidian ceiling at -56, broken by
-  # a one-block air shaft at x 304 rising to the roof at -54.
-  - fill: { block: obsidian, from: [299, -60, -3], to: [307, -54, 3] }
-  - fill: { block: water, from: [300, -59, -2], to: [306, -57, 2] }
-  - fill: { block: air, from: [304, -56, 0], to: [304, -55, 0] }
+  # a one-block air shaft at x 48 rising to the roof at -54.
+  - fill: { block: obsidian, from: [43, -60, -3], to: [51, -54, 3] }
+  - fill: { block: water, from: [44, -59, -2], to: [50, -57, 2] }
+  - fill: { block: air, from: [48, -56, 0], to: [48, -55, 0] }
 
   # DeepRiser: a one-by-one stone column, water -59..-42, open to the sky.
-  - fill: { block: stone, from: [399, -60, -1], to: [401, -41, 1] }
-  - fill: { block: water, from: [400, -59, 0], to: [400, -42, 0] }
-  - setblock: { block: air, at: [400, -41, 0] }
+  - fill: { block: stone, from: [56, -60, -1], to: [58, -41, 1] }
+  - fill: { block: water, from: [57, -59, 0], to: [57, -42, 0] }
+  - setblock: { block: air, at: [57, -41, 0] }
 
 players:
   - name: PocketSwimmer
     pos: [2.5, -53, 0.5]
   - name: TunnelSwimmer
-    pos: [101.5, -53, 4.5]
+    pos: [17.5, -53, 4.5]
   - name: LidSwimmer
-    pos: [201.5, -53, 0.5]
+    pos: [32.5, -53, 0.5]
     inventory:
       - { item: stone_pickaxe, count: 1 }
   - name: SkylightSwimmer
-    pos: [301.5, -53, 0.5]
+    pos: [45.5, -53, 0.5]
   - name: DeepRiser
-    pos: [401.5, -40, 0.5]
+    pos: [58.5, -40, 0.5]
 
 client:
   command: bun
@@ -90,10 +91,10 @@ schedule:
   - afterTicks: 0
     run:
       - "tp PocketSwimmer 1.5 -59 0.5"
-      - "tp TunnelSwimmer 100.5 -59 0.5"
-      - "tp LidSwimmer 200.5 -59 0.5"
-      - "tp SkylightSwimmer 300.5 -59 0.5"
-      - "tp DeepRiser 400.5 -59 0.5"
+      - "tp TunnelSwimmer 16.5 -59 0.5"
+      - "tp LidSwimmer 31.5 -59 0.5"
+      - "tp SkylightSwimmer 44.5 -59 0.5"
+      - "tp DeepRiser 57.5 -59 0.5"
 
 goal:
   kind: all
