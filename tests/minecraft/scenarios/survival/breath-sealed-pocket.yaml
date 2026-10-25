@@ -1,0 +1,62 @@
+template: ../../templates/flat-single-action-no-regen.yaml
+
+tags: [regression]
+description: >-
+  An empty-handed bot under water in a flooded obsidian room whose ceiling is
+  1.2 blocks above its head, with breathable air only in a pocket six blocks
+  east where the ceiling is higher. The roof probe, which looks half a block
+  above the body, sees open water, so the breath reflex holds jump against a
+  ceiling it cannot dig. Seven seconds in, with the reflex holding the body,
+  the agent asks to swim to the pocket. The bot must reach the air and
+  survive (PR #3's open-water claim).
+
+# The bot waits on the room's roof, because the host prepares a grounded,
+# still body; the schedule drops it into the water on the first tick, so it
+# starts with a full bar.
+reset:
+  - "fill -4 -60 -6 14 -50 6 air"
+
+geometry:
+  # The shell, solid obsidian, then the water and the pocket carved out of it.
+  - fill: { block: obsidian, from: [-1, -60, -3], to: [11, -54, 3] }
+  # The main room: water -59..-57 under an obsidian ceiling at -56.
+  - fill: { block: water, from: [0, -59, -2], to: [7, -57, 2] }
+  # The pocket: the same water, with air at -56 and -55 under a ceiling at -54.
+  - fill: { block: water, from: [8, -59, -2], to: [10, -57, 2] }
+  - fill: { block: air, from: [8, -56, -2], to: [10, -55, 2] }
+
+players:
+  - name: PocketDiver
+    pos: [2.5, -53, 0.5]
+
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/action-sequence.ts]
+
+params:
+  # The breath reflex fires at twelve points of air, 120 ticks after the drop;
+  # by 140 it owns the body.
+  waitTicks: 140
+  actions:
+    - action: navigate
+      input: { x: 9, y: -57, z: 0, range: 1, dig: false, scaffold: false }
+      # Wait for the reflex to let go before asking, as a model told the body
+      # is busy would; a body never released fails the trial.
+      idleWithinTicks: 700
+
+tick:
+  - "gamemode spectator @a[name=!PocketDiver,gamemode=!spectator]"
+
+schedule:
+  - afterTicks: 0
+    run:
+      - "tp PocketDiver 1.5 -59 0.5"
+
+goal:
+  kind: all
+  timeout: 90
+  goals:
+    - { kind: reach, who: PocketDiver, pos: [9.5, -57, 0.5], radius: 2 }
+    - { kind: survive, who: PocketDiver, seconds: 30 }
+    - { kind: completion, who: PocketDiver }
