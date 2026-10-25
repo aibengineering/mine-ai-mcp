@@ -328,6 +328,10 @@ export async function useBucket(
       item,
       lookAt: target.offset(0.5, 0.9, 0.5),
       expectedInventoryGain: { item: bucketFor(request.liquid, true), count: 1 },
+      // The inventory packet can beat the block update. Vanilla empties the
+      // cell in the same tick as the swap, and an infinite pool refills it
+      // only on a fluid tick five ticks later, so the cell is seen empty.
+      expectedCells: [{ position: target, matches: (block) => !isLiquidSource(bot, block, request.liquid) }],
       signal: context.signal,
     });
   } else {
