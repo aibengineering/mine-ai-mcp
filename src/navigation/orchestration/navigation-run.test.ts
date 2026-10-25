@@ -245,6 +245,101 @@ test("an arrival cancelled by observed pickup is stopped rather than an internal
   assert.deepEqual(errors, []);
 });
 
+test("a plan-ahead search that meets the goal leaves the arrival to the route still being walked", async () => {
+  // A blaze rod rolled into reach while a partial pickup route was walked. The
+  // plan-ahead search saw the goal met and ran the pickup arrival itself, beside
+  // the step that still owned the body. The pickup was then observed, its
+  // arrival rejected with the stop's reason, and nothing awaited that search
+  // until the step came back: an unhandled "pickup_observed" ended the client.
+  const stop = new AbortController();
+  let stepping = false;
+  const arrivals: string[] = [];
+  class RollingDropBot extends FakeNavigationBot {
+    constructor() {
+      super();
+      this.current = movingEntityObservation(-5, 5);
+    }
+    override async prepareMovement(step: PlannedStep, _token?: unknown, signal?: AbortSignal) {
+      stepping = true;
+      // The drop rolls to where the body is before the step reports itself done.
+      this.arrive(step.to, movingEntityObservation(step.to.x, step.to.x));
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, 30);
+        signal?.addEventListener("abort", () => (clearTimeout(timer), setTimeout(resolve, 30)), { once: true });
+      });
+      stepping = false;
+      return { kind: "completed", arrival: step.to } as const;
+    }
+  }
+  const outcome = await settle(createNavigator({ world: flatWorld(), bot: new RollingDropBot() }), {
+    goal: itemPickupGoal({ id: 7 }),
+    policy: walking(),
+    signal: stop.signal,
+    searchLimits: EARLY_COMMIT,
+    // The pickup arrival steers toward the item tick by tick, so it is still
+    // waiting on its signal when the inventory proves the pickup.
+    onArrival: async ({ signal }) => {
+      arrivals.push(stepping ? "while walking" : "after the route");
+      stop.abort("pickup_observed");
+      await new Promise((_, reject) => {
+        if (signal.aborted) reject(signal.reason);
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      });
+      return { kind: "completed" };
+    },
+  });
+
+  assert.deepEqual(arrivals, ["after the route"]);
+  assert.deepEqual({ kind: outcome.kind, reason: outcome.kind === "stopped" && outcome.reason }, {
+    kind: "stopped",
+    reason: "pickup_observed",
+  });
+});
+
+test("a plan-ahead search that throws while its segment is walked settles the run as an internal error", async () => {
+  // Nothing awaits a plan-ahead search until its segment has been walked, so
+  // its failure must wait there rather than escape as an unhandled rejection.
+  class SlowStepBot extends FakeNavigationBot {
+    override async prepareMovement(step: PlannedStep) {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      this.arrive(step.to);
+      return { kind: "completed", arrival: step.to } as const;
+    }
+  }
+  const actuator = new SlowStepBot();
+  actuator.current = observation(-5);
+  const real = createMovementCatalogue();
+  let continuing = false;
+  const catalogue: MovementCatalogue = {
+    generate(state, context, digContext) {
+      if (continuing) throw new Error("continuation catalogue failed");
+      return real.generate(state, context, digContext);
+    },
+  };
+  const errors: unknown[] = [];
+  const navigator = createNavigator({
+    world: flatWorld(),
+    bot: actuator,
+    catalogue,
+    telemetry: {
+      emit: (event) => {
+        if (event.kind === "search_started") continuing = event.reason === "segment_continuation";
+      },
+      error: (_runId, cause) => errors.push(cause),
+    },
+  });
+  const outcome = await settle(navigator, {
+    goal: nearGoal({ x: 5, y: 63, z: 0 }, 0),
+    policy: walking(),
+    searchLimits: EARLY_COMMIT,
+  });
+
+  assert.equal(outcome.kind, "failed");
+  if (outcome.kind === "failed") assert.equal(outcome.failure.kind, "internal_error");
+  assert.equal(errors.length, 1);
+  assert.equal(navigator.running, false);
+});
+
 // ── Continuing under one run ─────────────────────────────────────────────────
 
 test("a non-terminal arrival continues under the same navigation run", async () => {
