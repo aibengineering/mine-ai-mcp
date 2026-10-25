@@ -1,6 +1,6 @@
 template: ../../templates/flat-single-action-no-regen.yaml
 
-tags: [regression]
+tags: [known-failing, regression]
 description: >-
   An empty-handed bot under water in a flooded obsidian room whose ceiling is
   1.2 blocks above its head, with breathable air only in a pocket six blocks
@@ -9,6 +9,10 @@ description: >-
   ceiling it cannot dig. Seven seconds in, with the reflex holding the body,
   the agent asks to swim to the pocket. The bot must reach the air and
   survive (PR #3's open-water claim).
+  Observed at f8e0965, and with PR #3 merged: the idle water-surface rise
+  lifts the bot against the ceiling first, so the reflex fires at air 18 with
+  roof obsidian (the roofed case, 600 ticks). It holds the body until the bot
+  drowns 24 s in, and the agent's navigate is only admitted after the respawn.
 
 # The bot waits on the room's roof, because the host prepares a grounded,
 # still body; the schedule drops it into the water on the first tick, so it
