@@ -32,28 +32,3 @@ function obstruction(bot: Bot, position: Vec3): ReturnType<Bot["blockAt"]> {
 export function swimmingRoof(bot: Bot): ReturnType<Bot["blockAt"]> {
   return obstruction(bot, bot.entity.position.offset(0, 0.5, 0));
 }
-
-// What a rising body passes through as water: still or falling water, and the
-// plants that grow in it. A bubble column is left to a route, since one over
-// magma pulls down.
-const WATER_COLUMN = new Set(["water", "kelp", "kelp_plant", "seagrass", "tall_seagrass"]);
-
-/**
- * Where rising alone reaches air: the column over the body's own cell holds
- * water up to an open cell. Returns the cell's centre at body height, since
- * centring there clears a shoulder caught under an overhang beside the column
- * (OffsetDiver's deepslate, LowAirDiver's bedrock); null when anything solid
- * or lava closes the column, and a route has to find the air.
- */
-export function risingReachesAir(bot: Bot): Vec3 | null {
-  const feet = bot.entity.position.floored();
-  for (let dy = 1; dy <= 32; dy++) {
-    const block = bot.blockAt(feet.offset(0, dy, 0));
-    if (!block) return null;
-    if (WATER_COLUMN.has(block.name)) continue;
-    return block.boundingBox === "empty" && block.name !== "lava"
-      ? new Vec3(feet.x + 0.5, bot.entity.position.y, feet.z + 0.5)
-      : null;
-  }
-  return null;
-}

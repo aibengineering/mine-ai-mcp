@@ -77,5 +77,6 @@ export type { StepField, StepFieldProvider } from "./step-field.js";
 export type { NavigationEvent } from "./telemetry/index.js";
 
 export { canOccupyWater } from "./mineflayer/water.js";
+export { risingSurface } from "./world/swimming.js";
 
 export { canAccessLiquid, liquidAccessGoal } from "./goals/liquid-access.js";

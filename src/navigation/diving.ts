@@ -6,7 +6,15 @@ import { exactBlockGoal } from "./goals/index.js";
 import type { Navigate, NavigateOptions } from "./navigate.js";
 import type { MovementPolicy } from "./movements/policy.js";
 import type { WorldView } from "./world/world.js";
-import { DIVE_BACKSTOP_TICKS, DIVE_RESERVE_TICKS, openWaterSurface, swimTravelTicks } from "./world/swimming.js";
+import {
+  admitsDive,
+  DIVE_BACKSTOP_TICKS,
+  DIVE_RESERVE_TICKS,
+  openWaterSurface,
+  risingSurface,
+  swimTravelTicks,
+  type DiveAdmission,
+} from "./world/swimming.js";
 import type { RoutePlan } from "./movements/movement.js";
 
 const BREATHING_STOP = "Planned breathing stop";
@@ -36,8 +44,9 @@ export class Diving {
     if (!session?.owned) return null;
     if (this.bot.blockAt(this.bot.entity.position.offset(0, 1.62, 0))?.name === "air") return DIVE_BACKSTOP_TICKS;
     const feet = this.bot.entity.position.floored();
-    const surface = openWaterSurface(this.#read, feet);
-    if (!surface) return 300; // The admission premise disappeared: request immediate rescue.
+    // Planning asked for still water; rising needs only water of any kind.
+    const surface = openWaterSurface(this.#read, feet) ?? risingSurface(this.#read, feet);
+    if (!surface) return 300; // No way up at all: request immediate rescue.
     return swimTravelTicks(this.bot.entity.position, surface) + DIVE_BACKSTOP_TICKS;
   }
 
@@ -67,6 +76,19 @@ export class Diving {
     return BREATHING_STOP;
   }
 
+  /** Under water in a cell the dive's own budget does not cover, or with no dive at all. */
+  #movedUnderwater(dive: DiveAdmission | undefined, allowSwimming: boolean): boolean {
+    if (!allowSwimming || this.bot.blockAt(this.bot.entity.position.offset(0, 1.62, 0))?.name !== "water") return false;
+    return !dive || !admitsDive(this.#read, this.bot.entity.position.floored(), dive);
+  }
+
+  /** The server sends air once the head is under water; a body that never dived has none yet. */
+  async #awaitAir(signal: AbortSignal): Promise<boolean> {
+    for (let ticks = 0; airSupplyTicks(this.bot) === null && ticks < 20; ticks++)
+      await waitForPhysicsTicks(this.bot, 1, signal);
+    return airSupplyTicks(this.bot) !== null;
+  }
+
   async run(options: NavigateOptions, navigate: Navigate) {
     if (this.#session) throw new Error("Navigation already owns a dive session.");
     const session: DiveSession = { owned: false, returning: false, stop: new AbortController(),
@@ -78,6 +100,9 @@ export class Diving {
     const started = Date.now();
     let previousStop = "";
     let repeatedStops = 0;
+    let replannedUnderwater = false;
+    const aborted = () => session.stop.signal.aborted || session.cancelled.signal.aborted ||
+      options.signal?.aborted === true || options.stopSignal?.aborted === true;
     const tick = () => {
       if (!session.owned || session.returning || session.stop.signal.aborted) return;
       const feet = this.bot.entity.position.floored();
@@ -115,14 +140,25 @@ export class Diving {
         // A request beginning underwater must hold depth while its first search runs.
         session.owned = session.owned || (options.movements.allowSwimming && air !== null && openWaterSurface(this.#read, origin.floored()) !== null &&
           this.bot.blockAt(origin.offset(0, 1.62, 0))?.name === "water");
+        const dive = air !== null && options.movements.allowSwimming ? { origin, airTicks: air } : undefined;
         const movements: MovementPolicy = { ...options.movements,
           get scaffold() { return options.movements.scaffold; },
-          ...(air !== null && options.movements.allowSwimming ? { dive: { origin, airTicks: air } } : {}),
+          ...(dive && { dive }),
         };
         const result = await navigate({ ...options, movements,
           timeoutMs: options.timeoutMs === undefined ? undefined : Math.max(0, options.timeoutMs - (Date.now() - started)),
           stopSignal: AbortSignal.any([session.stop.signal, ...(options.stopSignal ? [options.stopSignal] : [])]),
         });
+        // A route that stops under water outside the dive it began with was
+        // moved there. KnockedIn, walking a pier, was pushed onto the seabed
+        // and replanned in the same tick, before the server had sent any air:
+        // with no dive admission it found no path after one node. Plan once
+        // more from where it is, with the air it has.
+        if (result.status === "stopped" && !replannedUnderwater && !aborted() &&
+          this.#movedUnderwater(dive, options.movements.allowSwimming)) {
+          replannedUnderwater = true;
+          if (await this.#awaitAir(lifetime)) continue;
+        }
         const continuingDive = session.stop.signal.aborted;
         const returnToProcess = options.onArrival !== undefined && session.owned &&
           this.bot.blockAt(this.bot.entity.position.offset(0, 1.62, 0))?.name === "water";

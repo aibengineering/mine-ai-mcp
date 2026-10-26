@@ -1,16 +1,16 @@
 import type { Bot } from "mineflayer";
+import { Vec3 } from "vec3";
 import {
   createMovements,
   headOutOfLiquidGoal,
   horizontalControlsToward,
-  type NavigationResult,
+  risingSurface,
   type NavigationRuntime,
 } from "../../navigation/index.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { airSupplyTicks } from "../../world/air-supply.js";
 import { airSupplyPoints, FULL_AIR_POINTS, isInWater } from "../perception/body.js";
 import { survivableSubmergedTicks } from "../policy/environment.js";
-import { risingReachesAir } from "../positioning/swim-escape.js";
 import type { Budgets } from "../state/budgets.js";
 
 /**
@@ -21,6 +21,16 @@ import type { Budgets } from "../state/budgets.js";
 export const ESCAPE_SEARCH = Object.freeze({ primaryTimeoutMs: 250, failureTimeoutMs: 500, maximumRadius: 16 });
 
 const HORIZONTAL = ["forward", "back", "left", "right"] as const;
+
+/**
+ * One route asked for: the ticks it could spend under water, and how it
+ * ended. A type, not an interface, so it is reportable `Facts`.
+ */
+export type AirRoute = {
+  readonly budgetTicks: number;
+  readonly status: "completed" | "stopped";
+  readonly reason?: string;
+};
 
 function release(bot: Bot): void {
   bot.setControlState("jump", false);
@@ -36,7 +46,7 @@ function release(bot: Bot): void {
  */
 export async function surface(
   bot: Bot,
-  navigation: Pick<NavigationRuntime, "navigate">,
+  navigation: Pick<NavigationRuntime, "navigate" | "world">,
   signal: AbortSignal,
   budgets: Budgets,
   maximumTicks: number,
@@ -53,7 +63,8 @@ export async function surface(
     measure: () => ticks,
     exhaustion: "stuck",
   });
-  const routes: { readonly budgetTicks: number; readonly result: NavigationResult }[] = [];
+  const routes: AirRoute[] = [];
+  const read = (x: number, y: number, z: number) => navigation.world.blockAt(x, y, z);
   signal.throwIfAborted();
   bot.on("physicsTick", tick);
   try {
@@ -63,8 +74,16 @@ export async function surface(
       // Respawn can replace the body's metadata. Unknown air cannot retain
       // ownership on the strength of an old oxygenLevel value.
       if (air === null || air >= FULL_AIR_POINTS || bot.health <= 0) break;
-      const column = isInWater(bot) ? risingReachesAir(bot) : null;
-      if (column || !isInWater(bot)) {
+      const inWater = isInWater(bot);
+      const feet = bot.entity.position.floored();
+      // Rising alone reaches air: centre on the cell, which clears a shoulder
+      // caught under an overhang beside the column (OffsetDiver's deepslate,
+      // LowAirDiver's bedrock), and hold jump.
+      const column = inWater && risingSurface(read, feet)
+        ? new Vec3(feet.x + 0.5, bot.entity.position.y, feet.z + 0.5)
+        : null;
+      // Rise up the open column, or wait out of the water while the bar refills.
+      if (column || !inWater) {
         const horizontal = column ? horizontalControlsToward(bot.entity, column, 0.05) : null;
         for (const control of HORIZONTAL) bot.setControlState(control, horizontal?.[control] ?? false);
         bot.setControlState("jump", column !== null);
@@ -90,7 +109,7 @@ export async function surface(
         timeoutMs: Math.max(1, (maximumTicks - ticks) * 50),
         searchLimits: ESCAPE_SEARCH,
       });
-      routes.push({ budgetTicks, result });
+      routes.push({ budgetTicks, status: result.status, ...(result.status === "stopped" && { reason: result.reason }) });
       if (result.status !== "completed") break;
     }
   } finally {
@@ -98,7 +117,6 @@ export async function surface(
     release(bot);
   }
   const airAfter = airSupplyPoints(bot);
-  const route = routes.at(-1)?.result;
   return {
     kind:
       bot.health <= 0
@@ -108,12 +126,7 @@ export async function surface(
           : airAfter >= FULL_AIR_POINTS
             ? ("air_full" as const)
             : ("stuck" as const),
-    routes: routes.map(({ budgetTicks, result }) => ({
-      budgetTicks,
-      status: result.status,
-      ...(result.status === "stopped" && { reason: result.reason }),
-    })),
-    ...(route?.status === "stopped" && { routeStopped: route.reason }),
+    routes,
     airAfter,
   };
 }

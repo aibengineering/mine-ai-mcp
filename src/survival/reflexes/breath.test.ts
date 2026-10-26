@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import type { NavigateOptions, NavigationResult, NavigationRuntime } from "../../navigation/index.js";
+import { MemoryWorld } from "../../navigation/world/memory-world.js";
 import { registry } from "../../test-support/bot.js";
 import { waterFixture } from "../../test-support/water.js";
 import { type SurvivalTransition } from "../control/contract.js";
@@ -22,8 +23,30 @@ function sealedWater(bot: { entity: { position: Vec3 } }) {
   return (p: Vec3) => (p.y < Math.floor(bot.entity.position.y) + 2 ? water : obsidian);
 }
 
+/**
+ * Navigation's view of the same water, read through `bot.blockAt`'s names so
+ * the two always agree: a test that opens the ceiling opens it for both.
+ */
+function worldOf(bot: { blockAt: (p: Vec3) => { name: string } | null }) {
+  const memory = new MemoryWorld();
+  const kinds = {
+    water: { stateId: 2, traits: { empty: true, liquid: "water" as const, liquidSource: true } },
+    air: { stateId: 0 },
+    obsidian: { stateId: 1 },
+  };
+  return {
+    subscribe: () => () => {},
+    blockAt(x: number, y: number, z: number) {
+      const name = bot.blockAt(new Vec3(x, y, z))?.name ?? "air";
+      memory.load({ x, y, z }, kinds[name as keyof typeof kinds] ?? kinds.obsidian);
+      return memory.blockAt(x, y, z);
+    },
+  };
+}
+
 /** A navigation runtime whose routes the test answers. */
 function navigation(
+  bot: { blockAt: (p: Vec3) => { name: string } | null },
   navigate: (options: NavigateOptions) => Promise<NavigationResult> = async () => ({
     status: "stopped",
     reason: "no route",
@@ -31,7 +54,7 @@ function navigation(
   }),
   diveBackstop: () => number | null = () => null,
 ): BreathNavigation {
-  return { navigate, diveBackstop, world: { subscribe: () => () => {} } } as unknown as BreathNavigation;
+  return { navigate, diveBackstop, world: worldOf(bot) } as unknown as BreathNavigation;
 }
 
 /** The real block registry, so a route's movement policy can be built, keeping the fixture's air key. */
@@ -62,7 +85,7 @@ test("an owned dive uses its escape floor and preserves the failed budget after 
   let floor: number | null = 70;
   const outcomes: SurvivalTransition[] = [];
   fixture.reflex.onTransition((event) => { if (event.kind === "outcome") outcomes.push(event); });
-  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation(undefined, () => floor));
+  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation(fixture.bot, undefined, () => floor));
   for (let tick = 0; tick < 10; tick++) fixture.bot.emit("physicsTick");
   assert.equal(fixture.reflex.runner.status().owner, "idle");
   fixture.bot.oxygenLevel = 4;
@@ -84,7 +107,7 @@ test("missing own air cannot claim the body using stale oxygenLevel", async (t) 
   const fixture = waterFixture(t);
   Object.defineProperty(fixture.bot, "oxygenLevel", { value: -1 });
   fixture.entity.isInWater = true;
-  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation());
+  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation(fixture.bot));
   for (let tick = 0; tick < 10; tick++) fixture.bot.emit("physicsTick");
   assert.equal(fixture.reflex.runner.status().owner, "idle");
   await control[Symbol.asyncDispose]();
@@ -94,7 +117,7 @@ test("closing a breath takeover releases it even after physics stops", async (t)
   const fixture = waterFixture(t);
   Object.assign(fixture.bot, { oxygenLevel: 8, health: 20, username: "Diver", blockAt: openWater(fixture.bot) });
   fixture.entity.isInWater = true;
-  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation());
+  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation(fixture.bot));
   for (let tick = 0; tick < 5; tick++) fixture.bot.emit("physicsTick");
   await settle();
   assert.equal(fixture.reflex.runner.status().owner, "takeover");
@@ -123,7 +146,7 @@ test("lost own-air metadata ends surfacing without resuming the interrupted acti
       });
     },
   });
-  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation());
+  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation(fixture.bot));
   for (let tick = 0; tick < 5; tick++) fixture.bot.emit("physicsTick");
   Object.assign(fixture.bot.entity, { metadata: [] });
   fixture.bot.emit("physicsTick");
@@ -143,6 +166,7 @@ test("close cancels a route to air and waits for it to settle", async (t) => {
     fixture.bot,
     fixture.reflex,
     navigation(
+      fixture.bot,
       ({ signal }) =>
         new Promise((_resolve, reject) => {
           announceRoute();
@@ -176,7 +200,7 @@ test("under a ceiling it routes to air on a budget of its air and health, then h
   const control = attachBreathReflex(
     fixture.bot,
     fixture.reflex,
-    navigation(async (options) => {
+    navigation(fixture.bot, async (options) => {
       routes.push(options);
       // Arrive in the pocket: the column over the body is open now.
       fixture.bot.blockAt = openWater(fixture.bot) as never;
@@ -208,7 +232,7 @@ test("with no route to air the body goes back at once, and the same ceiling is n
   const control = attachBreathReflex(
     fixture.bot,
     fixture.reflex,
-    navigation(async () => {
+    navigation(fixture.bot, async () => {
       routes++;
       return { status: "stopped", reason: "No path to head-out-of-liquid", elapsedMs: 0 };
     }),
@@ -257,7 +281,7 @@ test("claims the body at half air and records the surfacing", async (t) => {
       return admission;
     },
   });
-  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation());
+  const control = attachBreathReflex(fixture.bot, fixture.reflex, navigation(fixture.bot));
 
   fixture.entity.isInWater = true;
   for (let tick = 0; tick < 5; tick += 1) fixture.bot.emit("physicsTick");

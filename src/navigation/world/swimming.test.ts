@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryWorld } from "./memory-world.js";
-import { admitsDive, holdSwimDepth, openWaterSurface, swimTravelTicks } from "./swimming.js";
+import { admitsDive, holdSwimDepth, openWaterSurface, risingSurface, swimTravelTicks } from "./swimming.js";
 import { createMovementCatalogue } from "../movements/catalogue.js";
 import { createMovementPolicy } from "../movements/policy.js";
 import { WELL_FED, observation, planningStart } from "../../test-support/navigation.js";
@@ -155,4 +155,24 @@ test("budgeted submerged travel digs up through a roof it may break, and only wi
   assert.deepEqual(escape.plan.end, { x: 0, y: 61, z: 0 });
   assert.deepEqual(escape.plan.steps.flatMap(({ operations }) => operations.filter(({ kind }) => kind === "break")
     .map((operation) => "position" in operation ? operation.position : null)), [{ x: 0, y: 62, z: 0 }]);
+});
+
+test("rising reaches air through flowing water and plants, which a planned dive refuses, but not through a ceiling", () => {
+  // cast-obsidian's spawn column: the bot in its own poured bucket, flowing
+  // water at its feet and head, air two blocks up.
+  const world = new MemoryWorld();
+  const read = (x: number, y: number, z: number) => world.blockAt(x, y, z);
+  const flowing = { stateId: 3, traits: { empty: true, liquid: "water" as const, liquidSource: false } };
+  world.load({ x: 0, y: -50, z: 0 }, flowing);
+  world.load({ x: 0, y: -49, z: 0 }, flowing);
+  for (let y = -48; y <= -42; y++) world.load({ x: 0, y, z: 0 }, { stateId: 0 });
+  const feet = { x: 0, y: -50, z: 0 };
+  assert.equal(openWaterSurface(read, feet), null, "planning still asks for still water");
+  assert.deepEqual(risingSurface(read, feet), { x: 0, y: -49, z: 0 });
+  // Kelp counts as water to rise through.
+  world.load({ x: 0, y: -48, z: 0 }, { stateId: 5, traits: { empty: true, waterlogged: true } });
+  assert.deepEqual(risingSurface(read, feet), { x: 0, y: -48, z: 0 });
+  // A ceiling closes the column.
+  world.load({ x: 0, y: -47, z: 0 }, { stateId: 1 });
+  assert.equal(risingSurface(read, feet), null);
 });

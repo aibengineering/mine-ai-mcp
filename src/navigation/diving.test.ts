@@ -111,3 +111,48 @@ test("quantity completion still returns a mining process to air, while takeover 
   assert.equal(diving.active, false);
   assert.equal(bot.listenerCount("physicsTick"), 0);
 });
+
+test("a route knocked under water, outside any dive, plans once more with the air it has", async () => {
+  const { world, bot } = fixture();
+  const diving = new Diving(bot, world);
+  // On land, where the server has sent no air yet.
+  bot.entity.position.y = 64;
+  Reflect.set(bot.entity, "metadata", []);
+  const dives: unknown[] = [];
+  const result = await diving.run({ movements: createMovementPolicy(), goal: exactBlockGoal({ x: 0, y: 64, z: 0 }) }, async (request) => {
+    dives.push(request.movements.dive);
+    if (dives.length === 1) {
+      // Pushed to the bottom; the replan in the same tick finds nothing it may swim through.
+      bot.entity.position.y = 60.2;
+      Reflect.set(bot.entity, "metadata", [285]);
+      return { status: "stopped", reason: "no path found after expanding 1 node", elapsedMs: 0 };
+    }
+    return { status: "completed", elapsedMs: 0 };
+  });
+  assert.equal(result.status, "completed");
+  assert.deepEqual(dives, [undefined, { origin: new Vec3(0.5, 60.2, 0.5), airTicks: 285 }]);
+});
+
+test("an ordinary dive that stops inside its own budget is not planned again, and a moved body only once", async () => {
+  const { world, bot } = fixture();
+  const diving = new Diving(bot, world);
+  let calls = 0;
+  const stopped = await diving.run({ movements: createMovementPolicy(), goal: exactBlockGoal({ x: 0, y: 60, z: 0 }) }, async () => {
+    calls++;
+    bot.entity.position.y = 60.2;
+    return { status: "stopped", reason: "no path", elapsedMs: 0 };
+  });
+  assert.equal(stopped.status, "stopped");
+  assert.equal(calls, 1, "the dive began at 61.2 with 300 air, which covers 60.2");
+
+  bot.entity.position.y = 64;
+  Reflect.set(bot.entity, "metadata", []);
+  calls = 0;
+  await diving.run({ movements: createMovementPolicy(), goal: exactBlockGoal({ x: 0, y: 64, z: 0 }) }, async () => {
+    calls++;
+    bot.entity.position.y = 60.2;
+    Reflect.set(bot.entity, "metadata", [285]);
+    return { status: "stopped", reason: "no path", elapsedMs: 0 };
+  });
+  assert.equal(calls, 2);
+});

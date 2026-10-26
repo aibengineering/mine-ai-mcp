@@ -5,13 +5,19 @@ import { airSupplyPoints, isInWater } from "../perception/body.js";
 import { decideBreathResponse, needsBreathResponse } from "../policy/environment.js";
 import { geometryAnswer } from "../positioning/combat/geometry-answer.js";
 import { swimmingRoof } from "../positioning/swim-escape.js";
-import { ESCAPE_SEARCH, surface } from "../responses/breath.js";
+import { type AirRoute, ESCAPE_SEARCH, surface } from "../responses/breath.js";
 import { airSupplyTicks } from "../../world/air-supply.js";
 
 /** What the runner reports as the body's owner while the bot surfaces for air. */
 export const BREATH_REFLEX = "breath_reflex" as const;
 /** Check air every quarter second while another action or idle buoyancy owns movement. */
 const CHECK_INTERVAL_TICKS = 5;
+
+/** Why the body went back without full air, when navigation found no way to it. */
+function noRouteToAir(routes: readonly AirRoute[]): string | null {
+  const last = routes.at(-1);
+  return last?.status === "stopped" ? `No route to air: ${last.reason}` : null;
+}
 
 /** The breathing response owns only its registration; runtime attaches idle buoyancy separately. */
 export function attachBreathReflex(
@@ -62,15 +68,15 @@ export function attachBreathReflex(
         ? { kind: "resume" }
         : {
             kind: "return",
-            reason: outcome.kind === "air_unknown" ? "Own air metadata is unavailable." : "Full air was not observed.",
+            reason: outcome.kind === "air_unknown"
+              ? "Own air metadata is unavailable."
+              : noRouteToAir(outcome.routes) ?? "Full air was not observed.",
           },
     failure: (outcome) =>
       outcome.kind === "stuck"
         ? {
             kind: "stuck",
-            why: outcome.routeStopped === undefined
-              ? "The surface attempt ended before full air was observed."
-              : `No route to air: ${outcome.routeStopped}`,
+            why: noRouteToAir(outcome.routes) ?? "The surface attempt ended before full air was observed.",
           }
         : null,
     describe: (outcome) => outcome,
