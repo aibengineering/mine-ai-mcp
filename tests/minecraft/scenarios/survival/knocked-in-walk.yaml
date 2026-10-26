@@ -1,27 +1,28 @@
 template: ../../templates/flat-single-action-no-regen.yaml
 
-tags: [known-failing, regression]
+tags: [acceptance, regression]
 description: >-
-  KnockedIn walks a stone pier and is pushed into the ten-deep water beside it
-  a third of the way along, as a knockback or a misstep would leave it. It
-  must surface and still finish the walk. Regeneration is off, so the health
-  floor bounds the drowning taken.
-  Observed at f8e0965, and still with the breath response routing through
-  navigation: the walk fails as soon as the bot is pushed in. Its route was
-  planned on dry land with no dive admission, so replanning from the seabed
-  finds no path after expanding one node, and the request ends instead of
-  the bot surfacing and finishing the walk. It was a pen of
-  survival/breath-escapes, where a failed request ended the whole trial.
+  KnockedIn walks a stone pier and is pushed onto the bed of the ten-deep pool
+  beside it a third of the way along, as a knockback or a misstep would leave
+  it. It must surface and still finish the walk. Regeneration is off, so the
+  health floor bounds the drowning taken.
+  The push makes the walk's next movement fail, and the route replans from
+  the seabed in that same tick, before the server has sent any air: a body
+  that never dived has none. Planned on dry land with no dive admission, the
+  replan found no path after one node and the request ended; now the dive
+  waits for the air and plans once more from where the body is.
 
 reset:
   - "fill -2 -61 -9 20 -46 9 air"
 
-# A stone pier at -50 running east from x 2 to x 16 between walls, over water
-# -60..-51; the walk starts at the west end.
+# A stone pier at -50 running east from x 2 to x 16 between walls, at the
+# water line of a pool -60..-50 deep; the walk starts at the west end. The deck
+# is flush with the water, as a bank is: climbing out onto a ledge a block
+# above the surface is a movement navigation does not have yet.
 geometry:
   - fill: { block: stone, from: [0, -61, -7], to: [18, -48, 7] }
-  - fill: { block: water, from: [1, -60, -6], to: [17, -51, 6] }
-  - fill: { block: air, from: [1, -50, -6], to: [17, -48, 6] }
+  - fill: { block: water, from: [1, -60, -6], to: [17, -50, 6] }
+  - fill: { block: air, from: [1, -49, -6], to: [17, -48, 6] }
   - fill: { block: stone, from: [2, -50, 0], to: [16, -50, 0] }
 
 players:

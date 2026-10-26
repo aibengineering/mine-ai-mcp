@@ -180,7 +180,7 @@ retired legacy fixture to the scenario that now covers it.
 | `progression` | [progression-to-diamond](scenarios/progression/progression-to-diamond.yaml), [tool-tier-progression](scenarios/progression/tool-tier-progression.yaml) |
 | `sleep` | [bed-lifecycle](scenarios/sleep/bed-lifecycle.yaml) |
 | `storage` | [full-inventory-storage](scenarios/storage/full-inventory-storage.yaml) |
-| `survival` | [breath-escapes](scenarios/survival/breath-escapes.yaml), [bucket-fall-saves](scenarios/survival/bucket-fall-saves.yaml), [death-recovery](scenarios/survival/death-recovery.yaml), [dragon-landing-idle-escape](scenarios/survival/dragon-landing-idle-escape.yaml), [eating-reflex](scenarios/survival/eating-reflex.yaml), [end-knockback-water-landing](scenarios/survival/end-knockback-water-landing.yaml), [fire-reflex](scenarios/survival/fire-reflex.yaml), [nether-idle-survival](scenarios/survival/nether-idle-survival.yaml) |
+| `survival` | [breath-escapes](scenarios/survival/breath-escapes.yaml), [bucket-fall-saves](scenarios/survival/bucket-fall-saves.yaml), [death-recovery](scenarios/survival/death-recovery.yaml), [dragon-landing-idle-escape](scenarios/survival/dragon-landing-idle-escape.yaml), [eating-reflex](scenarios/survival/eating-reflex.yaml), [end-knockback-water-landing](scenarios/survival/end-knockback-water-landing.yaml), [fire-reflex](scenarios/survival/fire-reflex.yaml), [knocked-in-walk](scenarios/survival/knocked-in-walk.yaml), [nether-idle-survival](scenarios/survival/nether-idle-survival.yaml) |
 
 Every route course runs on `drivers/pathfinder-course.ts`. It runs named
 navigate legs and checks each one with `view_status` once it settles
