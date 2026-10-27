@@ -4,7 +4,7 @@ import type { ReflexDriver } from "../control/driver.js";
 import { airSupplyPoints, isInWater } from "../perception/body.js";
 import { decideBreathResponse, needsBreathResponse } from "../policy/environment.js";
 import { geometryAnswer } from "../positioning/combat/geometry-answer.js";
-import { swimmingRoof } from "../positioning/swim-escape.js";
+import { swimmingRoof } from "../positioning/swimming-roof.js";
 import { type AirRoute, ESCAPE_SEARCH, surface } from "../responses/breath.js";
 import { airSupplyTicks } from "../../world/air-supply.js";
 

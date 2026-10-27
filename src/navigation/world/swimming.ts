@@ -60,17 +60,23 @@ export function holdSwimDepth(y: number, velocityY: number, targetY: number): bo
   return y + velocityY * 4 < targetY;
 }
 
+/** How far a route may swim under water, from where, and who answers for reaching air. */
 export interface DiveAdmission {
   readonly origin: Position3;
   readonly airTicks: number;
+  /**
+   * `"each_cell"`, the default and the runtime's planned dive: every submerged
+   * cell needs its own ascent column, because the dive must be able to surface
+   * wherever it is stopped. `"goal"`: the route's own goal ends in air, as a
+   * swim to air does, so a cell need only lie within the budget, and water
+   * under a solid block is the surface the route opens by breaking it. Under
+   * an obsidian ceiling no cell has its own way up, and an air pocket six
+   * blocks along was unreachable while each cell was asked for one.
+   */
+  readonly ascent?: "each_cell" | "goal";
 }
 
-/**
- * A cell of caller-budgeted submerged travel: the route itself ends in air, so
- * the cell needs no ascent column of its own, only to lie within the budget.
- * Under an obsidian ceiling every cell lacks one, and an air pocket six blocks
- * along was unreachable to a dive that asked each cell for its own way up.
- */
+/** A cell within a `"goal"` dive's budget, whatever is above it. */
 export function admitsBudgetedSwim(feet: BlockPosition, budget: DiveAdmission): boolean {
   return swimTravelTicks(budget.origin, feet) <= budget.airTicks;
 }

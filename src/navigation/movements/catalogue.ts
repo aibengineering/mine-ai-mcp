@@ -58,7 +58,7 @@ import {
   packKey,
 } from "../world/world.js";
 import type { PlannedStep } from "./movement.js";
-import { travelsSubmerged, type DigContext, type MovementPolicy, type ScaffoldSelection } from "./policy.js";
+import type { DigContext, MovementPolicy, ScaffoldSelection } from "./policy.js";
 
 import type { StepField } from "../step-field.js";
 import { type StanceSight, priceExcavation, releasesLava, stanceSight } from "./excavation.js";
@@ -215,17 +215,16 @@ function prepare(x: number, y: number, z: number, context: MovementGenerationCon
 function canOccupyWater(context: MovementGenerationContext, x: number, y: number, z: number): boolean {
   if (!context.policy.allowSwimming) return false;
   const occupancy = waterOccupancy(context.view.blockAt, x, y, z);
-  if (occupancy === "submerged") {
-    const { submergedTravel, dive } = context.policy;
-    if (submergedTravel) return admitsBudgetedSwim({ x, y, z }, submergedTravel);
-    return dive !== undefined && admitsDive(context.view.blockAt, { x, y, z }, dive);
-  }
-  if (occupancy === "unavailable" && context.policy.submergedTravel) return surfaceUnderSolidHead(context, x, y, z);
+  const { dive } = context.policy;
+  if (occupancy === "submerged") return dive !== undefined && (dive.ascent === "goal"
+    ? admitsBudgetedSwim({ x, y, z }, dive)
+    : admitsDive(context.view.blockAt, { x, y, z }, dive));
+  if (occupancy === "unavailable" && dive?.ascent === "goal") return surfaceUnderSolidHead(context, x, y, z);
   return occupancy !== "unavailable";
 }
 
 /**
- * Still water under a solid block, which budgeted travel may break to make a
+ * Still water under a solid block, which a `"goal"` dive may break to make a
  * surface: the movement's own head cell then prices the dig, or refuses it.
  * Water admission reads the head as it stands, so SealedDiver, pressed under
  * two blocks of stone with a pickaxe, found no stance to dig up from.
@@ -511,7 +510,7 @@ function fall(context: MovementGenerationContext, a: Approach, out: MovementCand
   // Submerged descent uses the priced one-cell swim edges. A land-priced fall
   // would otherwise route past a midwater goal to the seabed and then rise.
   const from = context.state.node.feet;
-  if (travelsSubmerged(context.policy) && isWater(look(context, from.x, from.y, from.z))) return;
+  if (context.policy.dive && isWater(look(context, from.x, from.y, from.z))) return;
   const { x, y, z } = a;
   for (let distance = 1; distance <= Math.max(context.policy.maximumDrop, context.policy.maximumBucketDrop ?? 0); distance += 1) {
     const landingY = y - distance;
@@ -818,7 +817,7 @@ function surface(context: MovementGenerationContext, out: MovementCandidates): v
 
 /** Vertical open-water travel uses the same body and air admission as lateral swimming. */
 function verticalSwim(context: MovementGenerationContext, out: MovementCandidates): void {
-  if (!context.policy.allowSwimming || !travelsSubmerged(context.policy) || !isWater(context.feetCell)) return;
+  if (!context.policy.allowSwimming || !context.policy.dive || !isWater(context.feetCell)) return;
   const { x, y, z } = context.state.node.feet;
   for (const dy of [-1, 1]) {
     if (!isWater(look(context, x, y + dy, z))) continue;
@@ -912,7 +911,7 @@ export function createMovementCatalogue(): MovementCatalogue {
         gapJumps(context, direction.x, direction.z, movements);
       }
       for (const direction of DIAGONALS) {
-        if (travelsSubmerged(generation.policy) && waterOccupancy(view.blockAt, feet.x, feet.y, feet.z) === "submerged") continue;
+        if (generation.policy.dive && waterOccupancy(view.blockAt, feet.x, feet.y, feet.z) === "submerged") continue;
         if (!diagonalClear(context, direction.x, direction.z)) continue;
         const column = approach.aim(context, direction.x, direction.z);
         ascend(context, column, movements);

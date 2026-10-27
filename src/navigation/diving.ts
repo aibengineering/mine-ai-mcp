@@ -140,7 +140,9 @@ export class Diving {
         // A request beginning underwater must hold depth while its first search runs.
         session.owned = session.owned || (options.movements.allowSwimming && air !== null && openWaterSurface(this.#read, origin.floored()) !== null &&
           this.bot.blockAt(origin.offset(0, 1.62, 0))?.name === "water");
-        const dive = air !== null && options.movements.allowSwimming ? { origin, airTicks: air } : undefined;
+        // A caller that answers for reaching air brings its own admission.
+        const callerDive = options.movements.dive;
+        const dive = callerDive ?? (air !== null && options.movements.allowSwimming ? { origin, airTicks: air } : undefined);
         const movements: MovementPolicy = { ...options.movements,
           get scaffold() { return options.movements.scaffold; },
           ...(dive && { dive }),
@@ -154,7 +156,7 @@ export class Diving {
         // and replanned in the same tick, before the server had sent any air:
         // with no dive admission it found no path after one node. Plan once
         // more from where it is, with the air it has.
-        if (result.status === "stopped" && !replannedUnderwater && !aborted() &&
+        if (result.status === "stopped" && !callerDive && !replannedUnderwater && !aborted() &&
           this.#movedUnderwater(dive, options.movements.allowSwimming)) {
           replannedUnderwater = true;
           if (await this.#awaitAir(lifetime)) continue;

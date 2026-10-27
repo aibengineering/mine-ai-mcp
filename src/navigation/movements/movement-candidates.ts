@@ -27,7 +27,6 @@ import { type BlockPosition, blockLabel } from "../world/world.js";
 import type { GeneratedMovement, MovementGenerationContext, PlanningState } from "./catalogue.js";
 import { type Dig, confirmDigs, prepareExcavationDigs, releasesLava } from "./excavation.js";
 import { NO_CELL } from "./expansion-cells.js";
-import { travelsSubmerged } from "./policy.js";
 import {
   type MovementKind,
   type PlacementPlan,
@@ -312,7 +311,7 @@ export class MovementCandidates implements GeneratedMovements {
         if (grid.cellOpens(cell)) breakPenalty += grid.cellActivationPenalty(cell);
       }
     }
-    const expectedTicks = (this.#kind[row] === "swim" && travelsSubmerged(context.policy)
+    const expectedTicks = (this.#kind[row] === "swim" && context.policy.dive
       ? (this.toY[row]! < context.state.node.feet.y ? SWIM_DOWN_TICKS : this.toY[row]! > context.state.node.feet.y ? SWIM_UP_TICKS : SWIM_HORIZONTAL_TICKS)
       : context.policy.movementTicks[this.#kind[row]!]) * this.#tickScale + breakTicks;
     const hazardPenalty = hazard + this.#hazard;

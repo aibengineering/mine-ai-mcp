@@ -46,7 +46,7 @@ survival/
   positioning/
     combat/            cover, exposure, construction and refuge movement
     fire-escape.ts     feasible fire exits
-    swim-escape.ts     feasible surfacing exits
+    swimming-roof.ts   whether the next swim stroke hits a roof
     footing.ts         projected landings
   responses/           fire, breath, footing, hide, recover, evade and deflect
     fight/             scene, weapons, movement and individual fight turns

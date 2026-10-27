@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryWorld } from "./memory-world.js";
-import { admitsDive, holdSwimDepth, openWaterSurface, risingSurface, swimTravelTicks } from "./swimming.js";
+import { admitsDive, holdSwimDepth, openWaterSurface, risingSurface, swimTravelTicks, type DiveAdmission } from "./swimming.js";
 import { createMovementCatalogue } from "../movements/catalogue.js";
 import { createMovementPolicy } from "../movements/policy.js";
 import { WELL_FED, observation, planningStart } from "../../test-support/navigation.js";
@@ -94,30 +94,30 @@ function sealedRoom() {
   return world;
 }
 
-test("budgeted submerged travel reaches air a ceiling hides, within the budget and not past it", () => {
+test("a dive whose goal ends in air reaches air a ceiling hides, within its budget and not past it", () => {
   const world = sealedRoom();
   const feet = { x: 0, y: 60, z: 0 };
-  const search = (submergedTravel?: { origin: typeof feet; airTicks: number }) => new IncrementalSearch({
+  const search = (dive: DiveAdmission) => new IncrementalSearch({
     id: "escape",
     start: planningStart(feet),
     goal: headOutOfLiquidGoal().resolve(observation(0.5, 60, 0.5)) as Extract<ResolvedGoal, { kind: "active" }>,
     now: () => 0,
     context: {
       world, player: WELL_FED, catalogue: createMovementCatalogue(),
-      policy: createMovementPolicy({ allowDigging: false, allowPlacing: false, ...(submergedTravel && { submergedTravel }) }),
+      policy: createMovementPolicy({ allowDigging: false, allowPlacing: false, dive }),
     },
   }).advance({ maximumMilliseconds: Infinity });
   // A planned dive asks every cell for its own way up; under the ceiling none has one.
-  assert.notEqual(search().kind, "complete");
-  const escape = search({ origin: feet, airTicks: 300 });
+  assert.notEqual(search({ origin: feet, airTicks: 300 }).kind, "complete");
+  const escape = search({ origin: feet, airTicks: 300, ascent: "goal" });
   assert.equal(escape.kind, "complete");
   if (escape.kind !== "complete") return;
   assert.ok(escape.plan.end.x >= 6 && escape.plan.end.y === 61, `surfaced at ${JSON.stringify(escape.plan.end)}`);
   // Six blocks of swimming is 92 ticks: a 60-tick budget cannot reach the pocket.
-  assert.notEqual(search({ origin: feet, airTicks: 60 }).kind, "complete");
+  assert.notEqual(search({ origin: feet, airTicks: 60, ascent: "goal" }).kind, "complete");
 });
 
-test("budgeted submerged travel digs up through a roof it may break, and only with a budget", () => {
+test("a dive whose goal ends in air digs up through a roof it may break; a planned dive does not", () => {
   // SealedDiver's chamber: water three deep under two blocks of stone, air above.
   const world = new MemoryWorld();
   const water = { stateId: 2, traits: { empty: true, liquid: "water" as const, liquidSource: true, safeToBreak: false } };
@@ -126,7 +126,7 @@ test("budgeted submerged travel digs up through a roof it may break, and only wi
     world.load({ x, y, z }, inside && y >= 59 && y <= 61 ? water : y >= 64 ? { stateId: 0 } : { stateId: 1 });
   }
   const feet = { x: 0, y: 60, z: 0 };
-  const search = (submergedTravel?: { origin: typeof feet; airTicks: number }) => new IncrementalSearch({
+  const search = (dive?: DiveAdmission) => new IncrementalSearch({
     id: "dig-up",
     start: planningStart(feet),
     goal: headOutOfLiquidGoal().resolve(observation(0.5, 60, 0.5)) as Extract<ResolvedGoal, { kind: "active" }>,
@@ -135,7 +135,7 @@ test("budgeted submerged travel digs up through a roof it may break, and only wi
       world, player: WELL_FED, catalogue: createMovementCatalogue(),
       policy: createMovementPolicy({
         allowPlacing: false,
-        ...(submergedTravel && { submergedTravel }),
+        ...(dive && { dive }),
         // The Mineflayer policy's rule: a break beside a water source floods.
         confirmBreak: (_block, { x, y, z }, view) =>
           [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => {
@@ -148,7 +148,8 @@ test("budgeted submerged travel digs up through a roof it may break, and only wi
     },
   }).advance({ maximumMilliseconds: Infinity });
   assert.notEqual(search().kind, "complete");
-  const escape = search({ origin: feet, airTicks: 400 });
+  assert.notEqual(search({ origin: feet, airTicks: 400 }).kind, "complete");
+  const escape = search({ origin: feet, airTicks: 400, ascent: "goal" });
   assert.equal(escape.kind, "complete");
   if (escape.kind !== "complete") return;
   // One break opens the cell over the surface: the head is in air beneath the second.

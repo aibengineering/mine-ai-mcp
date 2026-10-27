@@ -212,7 +212,7 @@ test("under a ceiling it routes to air on a budget of its air and health, then h
   assert.equal(routes.length, 1);
   // 8 points of air is 120 ticks, then 20 health at ten ticks each, less a
   // 20-tick margin for the estimates.
-  assert.deepEqual(routes[0]!.movements.submergedTravel, { origin: new Vec3(0.5, -58, 0.5), airTicks: 300 });
+  assert.deepEqual(routes[0]!.movements.dive, { origin: new Vec3(0.5, -58, 0.5), airTicks: 300, ascent: "goal" });
   assert.equal(routes[0]!.searchLimits?.maximumRadius, 16);
   fixture.bot.emit("physicsTick");
   await settle();

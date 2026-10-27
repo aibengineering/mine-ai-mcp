@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { answerBlocks } from "../../test-support/world.js";
-import { swimmingRoof } from "./swim-escape.js";
+import { swimmingRoof } from "./swimming-roof.js";
 
 test("all four off-center shoulders detect the overhang, and the column's centre clears it", () => {
   for (const [x, z, roofX, roofZ] of [

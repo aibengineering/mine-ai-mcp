@@ -80,6 +80,7 @@ Base policies configure feature toggles:
 - `allowDownward`: Enables straight-down floor digging.
 - `maximumDrop`: Maximum safe fall height, defaulting to 3 blocks.
 - `placementPenalty`: Extra cost added to each scaffold placement, defaulting to 8 ticks.
+- `dive`: Submerged admission, `{ origin, airTicks, ascent }`. The runtime supplies a planned dive's, with `ascent: "each_cell"`: every submerged cell needs its own ascent column, because the dive must be able to surface wherever it is stopped. A caller whose goal ends in air supplies its own with `ascent: "goal"`, and the runtime keeps it: a submerged cell then needs only to lie within `airTicks` of swimming from `origin`, and still water under a solid block counts as the surface the route opens by breaking it. The breath response swims to air under a ceiling this way, with `headOutOfLiquidGoal`.
 
 Decisions evaluate to one of three variants: `"allowed"`, `"prohibited"` with a reason string, or `"penalized"` with an added tick cost.
 
@@ -117,7 +118,10 @@ remaining safe targets instead of repeatedly attempting the same wet work.
 
 Existing still-water mining is preserved: a surface swimming stance, or a supported
 submerged stance with an open ascent column and the runtime's live air budget, may
-admit water around the target. This exception never admits lava. Flowing water at
+admit water around the target. The ascent column is `openWaterSurface`'s, which only
+still water passes; `risingSurface` asks the looser question of a body already under
+water, whether rising reaches air through water of any kind, and the dive backstop
+uses it so a dive in its own poured, flowing water is not rescued at full air. This exception never admits lava. Flowing water at
 the working stance requires isolation before mining.
 
 ### Terrain preservation and tools

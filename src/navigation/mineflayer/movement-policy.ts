@@ -86,8 +86,8 @@ export interface MineflayerMovementPolicyOptions {
   readonly breakPenalty?: number;
   /** Cells a route may never dig, as packed keys: the blocks of a structure being built. */
   readonly protectedCells?: ReadonlySet<number>;
-  /** See `MovementPolicy.submergedTravel`. */
-  readonly submergedTravel?: DiveAdmission;
+  /** A caller's own dive admission; see `MovementPolicy.dive`. */
+  readonly dive?: DiveAdmission;
 }
 
 /** Whether the cell holds water or lava, and whether as a source; null when it holds neither or is not loaded. */
@@ -449,7 +449,7 @@ export function createMineflayerMovementPolicy(
   };
 
   const policy = createMovementPolicy({
-    ...(options.submergedTravel && { submergedTravel: options.submergedTravel }),
+    ...(options.dive && { dive: options.dive }),
     allowDigging: options.allowDigging ?? true,
     allowPlacing: scaffolding,
     allowParkour,

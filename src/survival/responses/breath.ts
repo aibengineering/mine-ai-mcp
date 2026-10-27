@@ -95,7 +95,7 @@ export async function surface(
       const budgetTicks = survivableSubmergedTicks(airSupplyTicks(bot) ?? 0, bot.health);
       const result = await navigation.navigate({
         movements: createMovements(bot, {
-          submergedTravel: { origin: bot.entity.position.clone(), airTicks: budgetTicks },
+          dive: { origin: bot.entity.position.clone(), airTicks: budgetTicks, ascent: "goal" },
           // A hand-dug obsidian ceiling never opens; stone by hand under
           // water takes over half a minute. Price breaks by their time alone,
           // which under water is the air they spend.

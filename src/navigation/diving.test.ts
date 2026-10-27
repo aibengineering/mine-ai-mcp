@@ -156,3 +156,17 @@ test("an ordinary dive that stops inside its own budget is not planned again, an
   });
   assert.equal(calls, 2);
 });
+
+test("a caller's own dive admission is kept, and its stop is never planned again", async () => {
+  const { world, bot } = fixture();
+  const diving = new Diving(bot, world);
+  const dive = { origin: new Vec3(0.5, 61.2, 0.5), airTicks: 453, ascent: "goal" as const };
+  let calls = 0;
+  const result = await diving.run({ movements: createMovementPolicy({ dive }), goal: exactBlockGoal({ x: 0, y: 64, z: 0 }) }, async (request) => {
+    calls++;
+    assert.equal(request.movements.dive, dive);
+    return { status: "stopped", reason: "no path", elapsedMs: 0 };
+  });
+  assert.equal(result.status, "stopped");
+  assert.equal(calls, 1, "a breath escape with no route hands the body back at once");
+});
