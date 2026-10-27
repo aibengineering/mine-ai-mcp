@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 FROM eclipse-temurin:21-jre AS java
-FROM oven/bun:1.4.3
+FROM oven/bun:1.4.4
 USER root
 COPY --from=java /opt/java/openjdk /opt/java/openjdk
 ENV JAVA_HOME=/opt/java/openjdk
