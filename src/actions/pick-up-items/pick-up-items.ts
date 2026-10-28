@@ -7,7 +7,8 @@ import {createMovements, type NavigationRuntime, nearGoal} from '../../navigatio
 import {prepareBotForMovement} from '../../session/prepare-body.js';
 import type {ObserveRequest} from '../../session/request.js';
 import type {DiscardedItems} from '../../world/discarded-items.js';
-import {droppedItemName, pickupObservedItem} from '../../world/item-pickup.js';
+import { droppedItemName } from "../../world/dropped-items.js";
+import { pickupObservedItem } from "../item-pickup.js";
 import {type ActionContext, defineAction} from '../action.js';
 import {pickupCheckpointSchema} from '../checkpoint-schemas.js';
 import {inventoryCounts} from '../collect-block/collection-facts.js';

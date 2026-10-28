@@ -11,13 +11,8 @@ import type { NavigationObservation } from "../navigation/world/world.js";
 import { botFixture, type FakeStack } from "../test-support/bot.js";
 import { FakeNavigationBot, flatWorld, observation } from "../test-support/navigation.js";
 import { armSignal } from "../utils/index.js";
-import {
-  DROPPED_ITEM_OBSERVATION_EVENTS,
-  droppedItemName,
-  findNewItemEntity,
-  pickupObservedItem,
-  snapshotEntityIds,
-} from "./item-pickup.js";
+import { DROPPED_ITEM_OBSERVATION_EVENTS, droppedItemName, findNewItemEntity, snapshotEntityIds } from "../world/dropped-items.js";
+import { pickupObservedItem } from "./item-pickup.js";
 
 const DROP = new Vec3(3, 64, 0);
 

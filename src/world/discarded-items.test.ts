@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createDiscardedItems, DISCARD_MEMORY_MS } from "./discarded-items.js";
-import { findNewItemEntity } from "./item-pickup.js";
+import { findNewItemEntity } from "./dropped-items.js";
 
 test("remembers discarded ids until they expire, extending on a repeat and pruning the rest", () => {
   const discarded = createDiscardedItems(1_000);

@@ -9,7 +9,7 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { asVec3, cellKey } from "../../../utils/index.js";
 import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../../world/block-visibility.js";
-import { droppedItemCount, droppedItemName } from "../../../world/item-pickup.js";
+import { droppedItemCount, droppedItemName } from "../../../world/dropped-items.js";
 import { stepIntoPickupReach } from "../../steering/pickup-approach.js";
 import type { useItemAt } from "../../../world/item-use.js";
 import { isAir } from "../../../world/block-classification.js";

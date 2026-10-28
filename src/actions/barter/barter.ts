@@ -5,7 +5,8 @@ import { prepareBotForMovement } from "../../session/prepare-body.js";
 import { armSignal, waitForSignal } from "../../utils/signals.js";
 import { hasInventorySpaceFor } from "../../world/inventory-capacity.js";
 import { carriedCount } from "../../world/inventory-count.js";
-import { DROPPED_ITEM_OBSERVATION_EVENTS, droppedItemName, pickupObservedItem } from "../../world/item-pickup.js";
+import { DROPPED_ITEM_OBSERVATION_EVENTS, droppedItemName } from "../../world/dropped-items.js";
+import { pickupObservedItem } from "../item-pickup.js";
 import { observeMobAge } from "../../world/mob-age.js";
 import { defineAction, type RequestExecution } from "../action.js";
 import {

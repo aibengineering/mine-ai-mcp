@@ -26,7 +26,7 @@ import { prepareBotForMovement } from "../../session/prepare-body.js";
 import type { ObserveRequest } from "../../session/request.js";
 import { asVec3 } from "../../utils/index.js";
 import { createDiscardedItems, type DiscardedItems } from "../../world/discarded-items.js";
-import { droppedItemName } from "../../world/item-pickup.js";
+import { droppedItemName } from "../../world/dropped-items.js";
 import { useItemAt } from "../../world/item-use.js";
 import { observeToolTierLoss } from "../../world/tool-loss.js";
 import { carriedSolidBlocks, placeSolidBlockInto } from "../../world/placement.js";
