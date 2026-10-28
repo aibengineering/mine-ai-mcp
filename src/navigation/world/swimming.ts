@@ -28,6 +28,28 @@ export function openWaterSurface(read: WorldView["blockAt"], feet: BlockPosition
   return null;
 }
 
+/**
+ * Where rising alone reaches air from these feet: the column above holds water
+ * of any kind, still, flowing or falling, or water plants, up to a cell the
+ * head can take. Returns the feet cell whose head is then in air.
+ *
+ * Looser than `openWaterSurface`, which a plan dives under only where the
+ * water is still, since a current carries a body it did not plan for. A body
+ * already under water rises through a current all the same: in its own poured
+ * bucket at cast-obsidian's spawn column, two blocks under air with a full
+ * bar, the strict test saw no way up and the dive backstop demanded a rescue.
+ */
+export function risingSurface(read: WorldView["blockAt"], feet: BlockPosition): BlockPosition | null {
+  for (let y = feet.y; y <= feet.y + 32; y++) {
+    const head = read(feet.x, y + 1, feet.z);
+    if (head.kind !== "loaded") return null;
+    const water = head.traits.liquid === "water" || (head.traits.waterlogged && head.collisionShapes.length === 0);
+    if (water) continue;
+    return head.traits.liquid === null && isHeadPassable(head) ? { x: feet.x, y, z: feet.z } : null;
+  }
+  return null;
+}
+
 export function swimTravelTicks(from: Position3, to: Position3): number {
   return Math.hypot(to.x - from.x, to.z - from.z) * SWIM_HORIZONTAL_TICKS +
     Math.max(0, from.y - to.y) * SWIM_DOWN_TICKS + Math.max(0, to.y - from.y) * SWIM_UP_TICKS + 8;
@@ -38,9 +60,25 @@ export function holdSwimDepth(y: number, velocityY: number, targetY: number): bo
   return y + velocityY * 4 < targetY;
 }
 
+/** How far a route may swim under water, from where, and who answers for reaching air. */
 export interface DiveAdmission {
   readonly origin: Position3;
   readonly airTicks: number;
+  /**
+   * `"each_cell"`, the default and the runtime's planned dive: every submerged
+   * cell needs its own ascent column, because the dive must be able to surface
+   * wherever it is stopped. `"goal"`: the route's own goal ends in air, as a
+   * swim to air does, so a cell need only lie within the budget, and water
+   * under a solid block is the surface the route opens by breaking it. Under
+   * an obsidian ceiling no cell has its own way up, and an air pocket six
+   * blocks along was unreachable while each cell was asked for one.
+   */
+  readonly ascent?: "each_cell" | "goal";
+}
+
+/** A cell within a `"goal"` dive's budget, whatever is above it. */
+export function admitsBudgetedSwim(feet: BlockPosition, budget: DiveAdmission): boolean {
+  return swimTravelTicks(budget.origin, feet) <= budget.airTicks;
 }
 
 export function admitsDive(read: WorldView["blockAt"], feet: BlockPosition, budget: DiveAdmission, workTicks = 0): boolean {

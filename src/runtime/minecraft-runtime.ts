@@ -455,7 +455,7 @@ export async function createMinecraftRuntime(
     { debugExecuteJavaScript: options.debugExecuteJavaScript },
   );
   installActionQueryCatalog(botData, actionSqlQueries(actions));
-  resources.use(attachBreathReflex(bot, reflexes, () => navigation.diveBackstop?.() ?? null));
+  resources.use(attachBreathReflex(bot, reflexes, navigation));
   resources.use(attachIdleWaterControl(bot, navigation, runner));
   resources.use(attachFireReflex(bot, reflexes, navigation.world));
   resources.use(attachFootingReflex(reflexes, combat, footingRecovery, navigation.releaseForTakeover,

@@ -59,7 +59,11 @@ export interface ScaffoldSelection {
 }
 
 export interface MovementPolicy {
-  /** Scoped open-water admission, supplied by the navigation runtime. */
+  /**
+   * Scoped submerged admission. The navigation runtime supplies a planned
+   * dive's; a caller whose goal ends in air supplies its own, with `ascent:
+   * "goal"`, and the runtime keeps it.
+   */
   readonly dive?: DiveAdmission;
   readonly allowDigging: boolean;
   readonly allowPlacing: boolean;

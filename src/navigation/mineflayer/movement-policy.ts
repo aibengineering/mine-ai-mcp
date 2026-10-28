@@ -17,6 +17,7 @@ import { enchantmentsOf } from "../../world/enchantments.js";
 import type { BreakEvaluation, MovementPolicy, PolicyDecision, ToolSelection } from "../movements/policy.js";
 import { BREAK_OPENS_INTO_LIQUID, createMovementPolicy, type ScaffoldSelection } from "../movements/policy.js";
 import { TRAIT_DAMAGING, TRAIT_LAVA } from "../world/block-geometry.js";
+import type { DiveAdmission } from "../world/swimming.js";
 import {
   packKey,
   type BlockObservation,
@@ -85,6 +86,8 @@ export interface MineflayerMovementPolicyOptions {
   readonly breakPenalty?: number;
   /** Cells a route may never dig, as packed keys: the blocks of a structure being built. */
   readonly protectedCells?: ReadonlySet<number>;
+  /** A caller's own dive admission; see `MovementPolicy.dive`. */
+  readonly dive?: DiveAdmission;
 }
 
 /** Whether the cell holds water or lava, and whether as a source; null when it holds neither or is not loaded. */
@@ -446,6 +449,7 @@ export function createMineflayerMovementPolicy(
   };
 
   const policy = createMovementPolicy({
+    ...(options.dive && { dive: options.dive }),
     allowDigging: options.allowDigging ?? true,
     allowPlacing: scaffolding,
     allowParkour,

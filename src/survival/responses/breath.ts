@@ -1,15 +1,56 @@
 import type { Bot } from "mineflayer";
-import { horizontalControlsToward } from "../../navigation/index.js";
+import { Vec3 } from "vec3";
+import {
+  createMovements,
+  headOutOfLiquidGoal,
+  horizontalControlsToward,
+  risingSurface,
+  type NavigationRuntime,
+} from "../../navigation/index.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
+import { airSupplyTicks } from "../../world/air-supply.js";
 import { airSupplyPoints, FULL_AIR_POINTS, isInWater } from "../perception/body.js";
-import { nearbySwimEscape, swimmingRoof } from "../positioning/swim-escape.js";
+import { survivableSubmergedTicks } from "../policy/environment.js";
 import type { Budgets } from "../state/budgets.js";
+
 /**
- * Rise for air, swimming clear of an overhang or digging a sealed roof, until
- * the bar is full or the time is up.
+ * How far a route to air looks, and for how long. Every tick searching is a
+ * tick of air, so the search is short; sixteen blocks holds any route the air
+ * and health could pay for at fourteen ticks a block.
  */
-export async function surface(bot: Bot, signal: AbortSignal, budgets: Budgets, maximumTicks: number) {
-  let dug = 0;
+export const ESCAPE_SEARCH = Object.freeze({ primaryTimeoutMs: 250, failureTimeoutMs: 500, maximumRadius: 16 });
+
+const HORIZONTAL = ["forward", "back", "left", "right"] as const;
+
+/**
+ * One route asked for: the ticks it could spend under water, and how it
+ * ended. A type, not an interface, so it is reportable `Facts`.
+ */
+export type AirRoute = {
+  readonly budgetTicks: number;
+  readonly status: "completed" | "stopped";
+  readonly reason?: string;
+};
+
+function release(bot: Bot): void {
+  bot.setControlState("jump", false);
+  for (const control of HORIZONTAL) bot.setControlState(control, false);
+}
+
+/**
+ * Get the head into air and keep it there until the bar is full. Straight up
+ * when the column overhead leads to air; otherwise navigation routes to the
+ * nearest air, through water under a roof within what the air and health can
+ * pay for, digging only what the carried tools can harvest. With no route the
+ * body goes back to its owner at once rather than held until it drowns.
+ */
+export async function surface(
+  bot: Bot,
+  navigation: Pick<NavigationRuntime, "navigate" | "world">,
+  signal: AbortSignal,
+  budgets: Budgets,
+  maximumTicks: number,
+) {
   let ticks = 0;
   const tick = () => {
     ticks++;
@@ -22,63 +63,58 @@ export async function surface(bot: Bot, signal: AbortSignal, budgets: Budgets, m
     measure: () => ticks,
     exhaustion: "stuck",
   });
-  let escape: ReturnType<typeof nearbySwimEscape> = null;
-  const blocked: NonNullable<ReturnType<typeof nearbySwimEscape>>[] = [];
-  let bestDistance = Infinity;
-  let stalledTicks = 0;
+  const routes: AirRoute[] = [];
+  const read = (x: number, y: number, z: number) => navigation.world.blockAt(x, y, z);
   signal.throwIfAborted();
-  const stopDigging = () => {
-    if (bot.targetDigBlock) bot.stopDigging();
-  };
-  signal.addEventListener("abort", stopDigging, { once: true });
   bot.on("physicsTick", tick);
-  bot.setControlState("jump", true);
   try {
     while (!budget.exhausted) {
       signal.throwIfAborted();
       const air = airSupplyPoints(bot);
       // Respawn can replace the body's metadata. Unknown air cannot retain
       // ownership on the strength of an old oxygenLevel value.
-      if (air === null || air >= FULL_AIR_POINTS) break;
-      const roof = isInWater(bot) ? swimmingRoof(bot) : null;
-      if (bot.health <= 0) break;
-      if (escape) {
-        const distance = Math.hypot(bot.entity.position.x - escape.x, bot.entity.position.z - escape.z);
-        if (distance < bestDistance - 0.02) {
-          bestDistance = distance;
-          stalledTicks = 0;
-        } else stalledTicks++;
-        // One second without closing distance leaves time to try another
-        // corridor or dig. Holding a failed lateral input can drown too.
-        if (distance < 0.08 || stalledTicks >= 20) {
-          if (stalledTicks >= 20) blocked.push(escape);
-          escape = null;
-        }
+      if (air === null || air >= FULL_AIR_POINTS || bot.health <= 0) break;
+      const inWater = isInWater(bot);
+      const feet = bot.entity.position.floored();
+      // Rising alone reaches air: centre on the cell, which clears a shoulder
+      // caught under an overhang beside the column (OffsetDiver's deepslate,
+      // LowAirDiver's bedrock), and hold jump.
+      const column = inWater && risingSurface(read, feet)
+        ? new Vec3(feet.x + 0.5, bot.entity.position.y, feet.z + 0.5)
+        : null;
+      // Rise up the open column, or wait out of the water while the bar refills.
+      if (column || !inWater) {
+        const horizontal = column ? horizontalControlsToward(bot.entity, column, 0.05) : null;
+        for (const control of HORIZONTAL) bot.setControlState(control, horizontal?.[control] ?? false);
+        bot.setControlState("jump", column !== null);
+        await waitForPhysicsTicks(bot, 1, signal);
+        continue;
       }
-      if (roof && !escape) {
-        escape = nearbySwimEscape(bot, blocked);
-        bestDistance = Infinity;
-        stalledTicks = 0;
-      }
-      const horizontal = escape ? horizontalControlsToward(bot.entity, escape, 0.05) : null;
-      for (const control of ["forward", "back", "left", "right"] as const)
-        bot.setControlState(control, horizontal?.[control] ?? false);
-      if (roof?.diggable && !escape) {
-        try {
-          await bot.dig(roof);
-          dug += 1;
-        } catch {
-          signal.throwIfAborted();
-          // A refused dig yields one tick before another attempt.
-        }
-      }
-      await waitForPhysicsTicks(bot, 1, signal);
+      // Navigation takes the controls from here.
+      release(bot);
+      const budgetTicks = survivableSubmergedTicks(airSupplyTicks(bot) ?? 0, bot.health);
+      const result = await navigation.navigate({
+        movements: createMovements(bot, {
+          dive: { origin: bot.entity.position.clone(), airTicks: budgetTicks, ascent: "goal" },
+          // A hand-dug obsidian ceiling never opens; stone by hand under
+          // water takes over half a minute. Price breaks by their time alone,
+          // which under water is the air they spend.
+          requireHarvestTool: true,
+          breakPenalty: 0,
+          scaffolding: false,
+          allowParkour: false,
+        }),
+        goal: headOutOfLiquidGoal(),
+        signal,
+        timeoutMs: Math.max(1, (maximumTicks - ticks) * 50),
+        searchLimits: ESCAPE_SEARCH,
+      });
+      routes.push({ budgetTicks, status: result.status, ...(result.status === "stopped" && { reason: result.reason }) });
+      if (result.status !== "completed") break;
     }
   } finally {
     bot.off("physicsTick", tick);
-    signal.removeEventListener("abort", stopDigging);
-    bot.setControlState("jump", false);
-    for (const control of ["forward", "back", "left", "right"] as const) bot.setControlState(control, false);
+    release(bot);
   }
   const airAfter = airSupplyPoints(bot);
   return {
@@ -90,7 +126,7 @@ export async function surface(bot: Bot, signal: AbortSignal, budgets: Budgets, m
           : airAfter >= FULL_AIR_POINTS
             ? ("air_full" as const)
             : ("stuck" as const),
-    dug,
+    routes,
     airAfter,
   };
 }

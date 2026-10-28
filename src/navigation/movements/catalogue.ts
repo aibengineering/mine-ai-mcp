@@ -12,7 +12,7 @@ import {
   isWater,
 } from "../world/block-geometry.js";
 import { waterOccupancy } from "../world/water.js";
-import { admitsDive } from "../world/swimming.js";
+import { admitsBudgetedSwim, admitsDive } from "../world/swimming.js";
 import { type CellRole, ExpansionCells, FEET, HEAD, NO_CELL, policyPenalty } from "./expansion-cells.js";
 import { type GeneratedMovements, MovementCandidates } from "./movement-candidates.js";
 /**
@@ -215,9 +215,26 @@ function prepare(x: number, y: number, z: number, context: MovementGenerationCon
 function canOccupyWater(context: MovementGenerationContext, x: number, y: number, z: number): boolean {
   if (!context.policy.allowSwimming) return false;
   const occupancy = waterOccupancy(context.view.blockAt, x, y, z);
-  if (occupancy === "submerged") return context.policy.dive !== undefined &&
-    admitsDive(context.view.blockAt, { x, y, z }, context.policy.dive);
+  const { dive } = context.policy;
+  if (occupancy === "submerged") return dive !== undefined && (dive.ascent === "goal"
+    ? admitsBudgetedSwim({ x, y, z }, dive)
+    : admitsDive(context.view.blockAt, { x, y, z }, dive));
+  if (occupancy === "unavailable" && dive?.ascent === "goal") return surfaceUnderSolidHead(context, x, y, z);
   return occupancy !== "unavailable";
+}
+
+/**
+ * Still water under a solid block, which a `"goal"` dive may break to make a
+ * surface: the movement's own head cell then prices the dig, or refuses it.
+ * Water admission reads the head as it stands, so SealedDiver, pressed under
+ * two blocks of stone with a pickaxe, found no stance to dig up from.
+ */
+function surfaceUnderSolidHead(context: MovementGenerationContext, x: number, y: number, z: number): boolean {
+  const feet = look(context, x, y, z);
+  const head = look(context, x, y + 1, z);
+  return feet.kind === "loaded" && feet.traits.liquid === "water" && feet.traits.liquidSource &&
+    !feet.traits.waterlogged && feet.collisionShapes.length === 0 &&
+    head.kind === "loaded" && head.traits.liquid === null && !isHeadPassable(head);
 }
 
 /** Whether the cell may be passed as it stands: wading for water, the block's own geometry otherwise. */

@@ -13,7 +13,7 @@
  * block upward costs twice a block sideways; the constants below say why.
  */
 import type { GeneratedMovement } from "../movements/catalogue.js";
-import { navigationFeet } from "../world/block-geometry.js";
+import { isHeadPassable, navigationFeet } from "../world/block-geometry.js";
 import { stanceReachesItem, withinItemPickupReach } from "../world/item-geometry.js";
 import {
   samePosition,
@@ -275,6 +275,27 @@ export function customGoal(
         isSatisfied: (node) => isSatisfied(node, observation),
       };
     },
+  };
+}
+
+/**
+ * Any stance whose head is out of liquid, such as the end of a swim to air.
+ *
+ * Judged against the search's predicted world, so a roof the route digs
+ * through counts once it is gone. No heuristic points anywhere: the nearest
+ * such stance is unknown, so the search spreads evenly and its radius bounds it.
+ */
+export function headOutOfLiquidGoal(): Goal {
+  return {
+    resolve: () => ({
+      kind: "active",
+      revision: "head-out-of-liquid",
+      heuristic: () => 0,
+      isSatisfied: (node, world) => {
+        const head = world.blockAt(node.feet.x, node.feet.y + 1, node.feet.z);
+        return head.kind === "loaded" && head.traits.liquid === null && isHeadPassable(head);
+      },
+    }),
   };
 }
 

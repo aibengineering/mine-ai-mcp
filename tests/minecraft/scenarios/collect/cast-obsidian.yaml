@@ -3,17 +3,18 @@ template: ../../templates/single-action.yaml
 # One full portal-sized collection in unmodified natural terrain, at separated
 # surface locations surveyed on vanilla 1.21.4; no terrain is placed or reset.
 # `mine-labs run` expands verification.locations into isolated trials,
-# cast-obsidian@1 and @2, each failing if the collector leaves its 256-block
-# radius; `mine-labs verify` can still share one world. The third verified
-# location, 8.5,64,-19.5, fails today and is
-# known-failing/collect/cast-obsidian-spawn-column. Two trials of about
-# 2.5 minutes each put the file in the slow tier.
+# cast-obsidian@1 to @3, each failing if the collector leaves its 256-block
+# radius; `mine-labs verify` can still share one world. At the third, the
+# spawn column 8.5,64,-19.5, the dive's backstop once read the bot's own
+# poured, flowing water as no way up and called a rescue at full air, which
+# abandoned the collection. Trials of 2.5 to 4.5 minutes put the file in the
+# slow tier.
 # Checks the final quantity only. The mine process considers lava only when no
 # existing obsidian remains, so choosing the cheaper option is not covered here.
 tags: [acceptance, slow]
 description: Collect ten obsidian for a portal in natural terrain on seed 8675309,
   recover the water bucket, and complete without a recorded death, at each of
-  two separated surface locations.
+  three separated surface locations.
 world:
   type: default
   seed: 8675309
@@ -31,6 +32,7 @@ verification:
   locations:
     - [-807.5, 114, 800.5]
     - [1608.5, 75, 1600.5]
+    - [8.5, 64, -19.5]
 players:
   # Each verification location replaces this position.
   - name: Collector
