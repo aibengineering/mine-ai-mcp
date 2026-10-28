@@ -1,3 +1,8 @@
+/**
+ * Effects the body has verified, per bot: food eaten, an arrow loosed, scaffold
+ * placed. Navigation, the world model, actions and survival publish them; the
+ * runtime listens. It lives here, below all of them, so none reaches up to it.
+ */
 export type CombatResourceReceipt =
   | { readonly kind: "arrow_release_command" }
   | { readonly kind: "food_eaten" }

@@ -5,7 +5,7 @@ import { blockClass } from "../navigation/mineflayer/world.js";
 import { asVec3, cellIntersectsBody, type Position3 } from "../utils/index.js";
 import { isReplaceableForPlacement } from "./block-classification.js";
 import { carriedCount, settleInventoryCount } from "./inventory-count.js";
-import { recordCombatResourceReceipt } from "../runtime/combat-resource-receipts.js";
+import { recordCombatResourceReceipt } from "./combat-resource-receipts.js";
 
 export type WorldBlock = NonNullable<ReturnType<Bot["blockAt"]>>;
 export type InventoryItem = ReturnType<Bot["inventory"]["items"]>[number];

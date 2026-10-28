@@ -1,6 +1,6 @@
 import type { Bot } from "mineflayer";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
-import { recordCombatResourceReceipt } from "../../runtime/combat-resource-receipts.js";
+import { recordCombatResourceReceipt } from "../../world/combat-resource-receipts.js";
 
 /** A vanilla shield blocks only after five ticks of use. */
 export const SHIELD_READY_TICKS = 5;

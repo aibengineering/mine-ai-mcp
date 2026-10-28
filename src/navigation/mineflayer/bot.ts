@@ -14,7 +14,7 @@ import { horizontalControlsToward } from "../steering/local-steering.js";
  * at the integration edge, and nowhere else in navigation.
  */
 import type { Bot } from "mineflayer";
-import { recordCombatResourceReceipt } from "../../runtime/combat-resource-receipts.js";
+import { recordCombatResourceReceipt } from "../../world/combat-resource-receipts.js";
 import { Vec3 } from "vec3";
 import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../world/block-visibility.js";
 import { occupiedCell, placeWithoutLooking, type WorldBlock } from "../../world/placement.js";

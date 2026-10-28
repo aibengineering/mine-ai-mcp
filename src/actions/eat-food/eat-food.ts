@@ -1,6 +1,6 @@
 import { eatCheckpointSchema } from "../checkpoint-schemas.js";
 import type { Bot } from "mineflayer";
-import { recordCombatResourceReceipt } from "../../runtime/combat-resource-receipts.js";
+import { recordCombatResourceReceipt } from "../../world/combat-resource-receipts.js";
 import { carriedCount, settledNow, settleInventoryCount, type SettledInventoryCount } from "../../world/index.js";
 import { defineAction, type ActionContext } from "../action.js";
 import { unconfirmedCount } from "../markdown.js";
