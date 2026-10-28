@@ -13,7 +13,7 @@
 import type { Goal } from "./goals/goal.js";
 import type { MovementPolicy } from "./movements/policy.js";
 import type { Navigator } from "./orchestration/navigator.js";
-import type { MovementFailure, NavigationOutcome } from "./orchestration/outcome.js";
+import type { NavigationOutcome } from "./outcome.js";
 import type { BlockPosition } from "./world/world.js";
 import {
   describeCalculationFailure,
@@ -22,6 +22,7 @@ import {
   type NavigationCalculationFailureEvent,
   type NavigationCalculationFailureResult,
 } from "./orchestration/process-events.js";
+import type { MovementFailure } from "./execution/movement-failure.js";
 import type { SearchLimits } from "./search/search-result.js";
 
 /** Baritone's inline search budgets: enough to find a useful first segment without holding movement up indefinitely. */

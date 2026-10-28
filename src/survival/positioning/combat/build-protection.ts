@@ -1,10 +1,10 @@
 import type { Bot } from "mineflayer";
 import type { Vec3 } from "vec3";
-import { isReplaceableForPlacement } from "../../../world/block-classification.js";
-import { findPlacementSupport, placeBlock } from "../../../world/placement.js";
+import { findPlacementSupport, placeBlock } from "../../../world/procedures/placement.js";
 import type { CombatPolicy } from "../../policy/combat/contract.js";
 import { clearInstantObstructionAt, extinguishFireAt } from "../fire-clearance.js";
 import { capBlock } from "./hide-blocks.js";
+import { isReplaceableForPlacement } from "../../../world/block-classification.js";
 
 export type ProtectionBuild =
   | { readonly kind: "built"; readonly placed: readonly Vec3[] }

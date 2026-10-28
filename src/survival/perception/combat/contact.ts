@@ -1,6 +1,5 @@
+import { meleeDistance, waitingForDescendingCube, MELEE_RANGE } from "./reach.js";
 import type { Bot } from "mineflayer";
-import { MELEE_RANGE } from "../../weapons/equipment.js";
-import { meleeDistance, waitingForDescendingCube } from "../../weapons/melee.js";
 import { meleeImminent } from "./observations.js";
 
 type Entity = Parameters<Bot["attack"]>[0];

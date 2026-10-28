@@ -3,10 +3,10 @@
 The controller owns physical combat until its effects and movement release have
 settled. Its callers retain the requested objective and interpret the outcome.
 
-[`control/controller.ts`](../../src/survival/control/combat/controller.ts) admits one
-operation and reconciles policy changes. [`control/engagement.ts`](../../src/survival/control/combat/engagement.ts)
+[`control/controller.ts`](../../src/survival/combat/controller.ts) admits one
+operation and reconciles policy changes. [`control/engagement.ts`](../../src/survival/combat/engagement.ts)
 dispatches the selected response while retaining the quarry.
-[`responses/fight/run.ts`](../../src/survival/responses/fight/run.ts) composes scene
+[`combat/fight/run.ts`](../../src/survival/combat/fight/run.ts) composes scene
 observation, weapons, locomotion, cover and Enderman mechanics. Changing a tactic
 does not require editing admission or request lifetime code.
 
@@ -66,7 +66,7 @@ require a return regardless of that estimate.
 ## Position and movement ownership
 
 Immediate tactics use a shared [pure decision](../../src/survival/policy/combat/tactics.ts).
-The [tactical controller](../../src/survival/control/combat/tactics.ts) assembles
+The [tactical controller](../../src/survival/combat/fight/tactics.ts) assembles
 surrounding creepers, retained clearance, projectile impact/coverage, current
 equipment, retreat geometry and permissions. It observes every physics tick,
 including during a bow draw, guard, cooldown, approach or construction effect.
@@ -129,7 +129,7 @@ projectile guard. A closing creeper interrupts shield readiness and returns the
 body to the escape route; fresh arrows cannot keep readmitting that guard while
 clearance is pending. Evasion receipts retain explosions observed during escape.
 
-[`CombatExecution`](../../src/survival/control/combat/execution.ts) names logical phases and
+[`CombatExecution`](../../src/survival/combat/execution.ts) names logical phases and
 awaits complete physical effects. Repeated hold ticks preserve phase duration;
 nested effects restore the surrounding phase. Navigation never restarts merely
 because another physics tick arrives.
@@ -231,7 +231,7 @@ release and the applicable supported-body obligation before clearing locomotion.
 Typed cancellation and an admitted footing transfer can end that old obligation;
 the next owner still waits for authority. Unexpected cleanup failure is reported.
 
-[`settlement.ts`](../../src/survival/control/combat/settlement.ts) consumes response-specific
+[`settlement.ts`](../../src/survival/combat/settlement.ts) consumes response-specific
 results and maps `died` to `target_died` only when formatting the receipt.
 Fight, deflection, withdrawal and enclosure keep their physical discriminants;
 enclosure recovery is required evidence rather than an optional hint. Cancellation

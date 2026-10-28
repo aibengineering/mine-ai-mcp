@@ -4,6 +4,7 @@ import type { Bot } from "mineflayer";
 import type { Item } from "prismarine-item";
 import type { Position3 } from "../../utils/index.js";
 
+import { MELEE_RANGE } from "../perception/combat/reach.js";
 export type CombatLoadout =
   | { readonly kind: "bow"; readonly weapon: Item; readonly shield: Item | null }
   | {
@@ -23,8 +24,8 @@ const EMPTY_HAND_COOLDOWN_TICKS = 5;
  * 4.6 blocks. Inside six blocks it reaches melee range before the arrow leaves.
  */
 const BOW_MINIMUM_RANGE = 6;
-/** Maximum eye-to-body melee reach, shared by ordinary and knockback attacks. */
-export const MELEE_RANGE = 3;
+/** How a fight deals damage: drawn bow, melee behind a raised shield, or plain melee. */
+export type CombatStyle = "bow" | "shielded_melee" | "melee";
 /** Prefer weapon families in this order, with their conservative full-strength cooldowns. */
 const MELEE_FAMILIES = [
   { name: "sword", cooldownTicks: 13 },

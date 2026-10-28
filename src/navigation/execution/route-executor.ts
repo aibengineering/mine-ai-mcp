@@ -18,7 +18,7 @@
  * ("settled"). After every step the run is asked whether the goal is still the
  * same, so a revised goal ends the route early rather than walking it out.
  */
-import type { NavigationBot } from "../bot.js";
+import type { NavigationBot } from "./bot.js";
 import {
   type PlannedOperation,
   type PlannedStep,
@@ -26,7 +26,6 @@ import {
   airMatcher,
   stateMatcher,
 } from "../movements/movement.js";
-import type { MovementFailure, MovementPhase } from "../orchestration/outcome.js";
 import { canReleaseOnObservedGround, safeSupportingCell } from "../world/block-geometry.js";
 import { type BlockPosition, type WorldView, activationGroupAt, samePosition } from "../world/world.js";
 import type { MovementController, MovementExecution, MovementSnapshot } from "./movement-controller.js";
@@ -34,6 +33,7 @@ import { type AttemptToken, ExpectedMutationLedger, type MutationResult } from "
 import { executeWorldEffect } from "./world-effect.js";
 import type { OpenedPassages } from "./opened-passages.js";
 import { SupportedPositionController } from "./supported-position-controller.js";
+import type { MovementFailure, MovementPhase } from "./movement-failure.js";
 
 export type StepDecision = "continue" | "goal_satisfied" | "goal_revised";
 

@@ -9,14 +9,8 @@
  * running host still builds the real actions.
  */
 import type { z } from "zod";
-import {
-  CANCEL_ACTION_DESCRIPTION,
-  cancelActionInputSchema,
-  submissionMetadataSchema,
-  WAIT_FOR_ACTION_DESCRIPTION,
-  waitForActionInputSchema,
-} from "../session/async-actions.js";
 import { ACTION_CATALOG } from "./catalog.js";
+import { CANCEL_ACTION_DESCRIPTION, cancelActionInputSchema, submissionMetadataSchema, WAIT_FOR_ACTION_DESCRIPTION, waitForActionInputSchema } from "./async-control.js";
 
 /** One published tool, as tool discovery describes it before MCP adds its metadata. */
 export interface ActionToolDescription {

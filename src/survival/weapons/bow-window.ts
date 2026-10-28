@@ -1,5 +1,5 @@
-import { SHIELD_READY_TICKS } from "./item-use.js";
 import { HEAD_TURN_LEAD_TICKS, type observeProjectileDefence } from "./shield-facing.js";
+import { SHIELD_READY_TICKS } from "../perception/combat/observations.js";
 
 /** A shot must leave time to restore protection, not merely release its arrow. */
 export function assessBowWindow(

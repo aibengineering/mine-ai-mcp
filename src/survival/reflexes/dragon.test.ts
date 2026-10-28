@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { ReflexDriver } from "../control/driver.js";
 import { SurvivalPolicyState } from "../state/survival-policy.js";
 import { attachDragonReflex } from "./dragon.js";

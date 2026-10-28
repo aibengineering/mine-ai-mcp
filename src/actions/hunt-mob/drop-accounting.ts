@@ -1,6 +1,6 @@
 import type { Bot, BotEvents } from "mineflayer";
-import { DROPPED_ITEM_OBSERVATION_EVENTS } from "../../world/item-pickup.js";
 import type { HuntDropSighting } from "./contract.js";
+import { DROPPED_ITEM_OBSERVATION_EVENTS } from "../../world/dropped-items.js";
 
 /** Request-lifetime observations, including items appearing while a reflex owns the body.
  * Sightings are not kill attribution, and disappearance does not prove destruction or pickup.

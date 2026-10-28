@@ -7,7 +7,7 @@ import { defineAction, actionResultSchema, type Action } from "../actions/index.
 import { DEBUG_EXECUTE_JAVASCRIPT } from "../actions/debug-execute-javascript/contract.js";
 import type { ActionRequestInput, ActionResponseInput } from "../bot-data/action-call-log.js";
 import { NOTIFICATION_HINT, notificationSummarySchema, type NotificationSummary } from "../bot-data/event-log.js";
-import { ActionRunner } from "../session/action-runner.js";
+import { ActionRunner } from "../runner/action-runner.js";
 import { createMinecraftMcpServer } from "./mcp.js";
 
 const inputSchema = z.strictObject({

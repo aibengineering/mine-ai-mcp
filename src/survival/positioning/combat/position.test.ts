@@ -3,7 +3,7 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import { MemoryWorld } from "../../../navigation/world/memory-world.js";
 import { shieldCoverage } from "../../weapons/shield-facing.js";
-import { decideCombatPosition, positionExposed, projectileReachesBody, type PositionThreat } from "./exposure.js";
+import { decideCombatPosition, positionExposed, projectileReachesBody, type PositionThreat } from "../../perception/combat/exposure.js";
 import { clearPlannedRay, positionWorld, standingBody } from "./geometry.js";
 import { endermanRoof, roofLurePath, roofEngagementAvailable, findCombatPosition, findRoofPosition } from "./planner.js";
 

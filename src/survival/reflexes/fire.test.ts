@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { MemoryWorld } from "../../navigation/world/memory-world.js";
 import { botFixture } from "../../test-support/bot.js";
 import { ReflexDriver } from "../control/driver.js";
-import { decideFireResponse } from "../policy/environment.js";
 import { attachFireReflex } from "./fire.js";
+import { decideFireResponse } from "../policy/environment.js";
 
 test("fire response selection replays from the observed escape availability", () => {
   const recorded = JSON.parse(

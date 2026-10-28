@@ -3,7 +3,7 @@ import { Vec3 } from "vec3";
 import type { Goal } from "../../../navigation/index.js";
 import { obstaclesOf, worldViewRaycaster } from "../../../navigation/world/line-of-sight.js";
 import { STANDING_EYE_HEIGHT } from "../../../world/block-visibility.js";
-import { bowTrajectory, clearBowTrajectory } from "../../weapons/bow-trajectory.js";
+import { bowTrajectory, clearBowTrajectory } from "./bow-trajectory.js";
 import { standingCell } from "./geometry.js";
 
 /** Reach an actual firing line; a hovering target need not have a melee stance. */

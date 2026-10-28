@@ -1,10 +1,10 @@
 import { MemoryWorld as GoalTestWorld } from "../world/memory-world.js";
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { PlanningNode } from "./goal.js";
 import type { NavigationObservation } from "../world/world.js";
 import { safeFromEntitiesGoal } from "./index.js";
 import { observation } from "../../test-support/navigation.js";
+import type { PlanningNode } from "../movements/catalogue.js";
 
 const goalTestWorld = new GoalTestWorld();
 

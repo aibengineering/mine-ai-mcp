@@ -1,9 +1,9 @@
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { waitForPhysicsTicks } from "../../../utils/physics-ticks.js";
-import type { useItemAt } from "../../../world/item-use.js";
+import type { useItemAt } from "../../../world/procedures/item-use.js";
 import { HORIZONTAL, sourceFeeding, sourceInSight } from "../../../world/liquid.js";
-import type { PlaceIntoCell } from "../../../world/placement.js";
+import type { PlaceIntoCell } from "../../../world/procedures/placement.js";
 import { holdWaterPosition } from "../../steering/hold-water-position.js";
 import type { BlockPosition } from "../../world/world.js";
 import { blockReader, observeMineflayerBlock } from "../../mineflayer/world.js";

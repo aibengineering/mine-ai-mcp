@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { BodyAbort } from "../../session/abort.js";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { type SurvivalTransition } from "./contract.js";
 import { ReflexDriver } from "./driver.js";
 

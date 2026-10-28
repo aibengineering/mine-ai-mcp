@@ -3,9 +3,8 @@ import type { Bot } from "mineflayer";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
-import type { Action, ActionOutput, ActionResult } from "../actions/index.js";
-import { actionSqlQueries, createActions, StrongholdEyeFlights } from "../actions/index.js";
-import { AsyncActions, ExecutionStore } from "../session/async-actions.js";
+import { type Action, type ActionOutput, type ActionResult, actionSqlQueries, createActions, StrongholdEyeFlights } from "../actions/index.js";
+import { AsyncActions, ExecutionStore } from "../runner/async-actions.js";
 import {
   readRequestIncidents,
   recordIncident,
@@ -31,15 +30,14 @@ import { INCIDENT_HISTORY_MS, type IncidentProvenance } from "../diagnostics/inc
 import { ExecutionScope, observeExecution } from "../execution/execution-scope.js";
 import { createNavigationRuntime, type NavigationRuntime } from "../navigation/index.js";
 import type { StepFieldProvider } from "../navigation/step-field.js";
-import { ActionRunner, type ActionRunnerStatus } from "../session/action-runner.js";
+import { ActionRunner } from "../runner/action-runner.js";
 import { attachIdleWaterControl } from "../survival/baseline/idle-water.js";
 import { ReflexDriver } from "../survival/control/driver.js";
 import type { SurvivalStatus } from "../survival/evidence/contract.js";
-import { attachSurvivalReceipts } from "../survival/evidence/receipts.js";
+import { attachSurvivalReceipts } from "./survival-events.js";
 import { SurvivalObserver } from "../survival/evidence/status.js";
 import { attachEndermanGazeControl } from "../survival/guards/enderman-gaze.js";
 import { createCombatController, createHostileStepFieldProvider, type CombatController } from "../survival/index.js";
-import { CombatPerception } from "../survival/perception/combat/observations.js";
 import { attachBreathReflex } from "../survival/reflexes/breath.js";
 import { attachDragonReflex } from "../survival/reflexes/dragon.js";
 import { attachFireReflex } from "../survival/reflexes/fire.js";
@@ -48,13 +46,15 @@ import { guardFooting } from "../survival/weapons/footing-guard.js";
 import { attachHostileReflex } from "../survival/reflexes/hostile.js";
 import { attachHungerReflex } from "../survival/reflexes/hunger.js";
 import { FootingRecovery } from "../survival/responses/footing.js";
-import { attachSessionFrontier, type SessionFrontier, type SessionFrontierStatus } from "./frontier.js";
+import { attachSessionFrontier, type SessionFrontier, type SessionFrontierStatus } from "../bot-data/frontier.js";
 import { observeEquipmentEvents } from "./equipment-events.js";
 import { observeCombatResourceEvents } from "./combat-resource-events.js";
 import { observeReflexActivity } from "./reflex-activity.js";
 import { observeBotStatus } from "./bot-status.js";
 import { observePlayerEvents } from "./player-events.js";
 import { snapshotTools } from "../world/tool-tiers.js";
+import type { ActionRunnerStatus } from "../session/body-owner.js";
+import { CombatPerception } from "../survival/perception/combat/observations.js";
 
 export interface MinecraftRuntimeOptions {
   readonly botData: SqlBotDataOptions;

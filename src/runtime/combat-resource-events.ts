@@ -3,8 +3,8 @@ import { ATTACK_DRAGON_PERCH } from "../actions/attack-dragon-perch/contract.js"
 import { PREPARE_DRAGON_PERCH } from "../actions/prepare-dragon-perch/contract.js";
 import { DESTROY_END_CRYSTAL } from "../actions/destroy-end-crystal/contract.js";
 import { COLLECT_MOB_DROP } from "../actions/hunt-mob/contract.js";
-import type { ActionRunner } from "../session/action-runner.js";
-import { onCombatResourceReceipt } from "./combat-resource-receipts.js";
+import type { ActionRunner } from "../runner/action-runner.js";
+import { onCombatResourceReceipt } from "../execution/combat-resource-receipts.js";
 
 const COMBAT_ACTIONS = new Set<string>([COLLECT_MOB_DROP, DESTROY_END_CRYSTAL, ATTACK_DRAGON_PERCH, PREPARE_DRAGON_PERCH]);
 type PendingShot = { readonly scope: string; readonly arrows: number; readonly at: number };

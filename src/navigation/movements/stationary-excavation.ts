@@ -1,7 +1,7 @@
-import type { GeneratedMovement, PlanningState } from "./catalogue.js";
 import type { Excavation } from "./excavation.js";
 import { stateMatcher, type PlannedStep } from "./movement.js";
 import { blockLabel } from "../world/world.js";
+import type { GeneratedMovement, PlanningState } from "./catalogue.js";
 
 /** Execute priced excavation from one supported stance without travelling away. */
 export function stationaryExcavation(

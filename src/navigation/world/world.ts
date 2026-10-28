@@ -6,27 +6,12 @@
  * search, not here. The Mineflayer producers of every shape here live in
  * `mineflayer/world.ts` and `mineflayer/bot.ts`.
  */
-import type { Position3 } from "../../utils/geometry.js";
+import type { BlockPosition, CollisionBox, Position3 } from "../../utils/geometry.js";
 import { type BlockGeometry, describeBlockGeometry, observationBits } from "./block-geometry.js";
-
-/** One block cell: integer coordinates, the unit search plans in. */
-export interface BlockPosition {
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-}
 
 /** A point in continuous space, such as where an entity actually is; the one structural position the package shares. */
 export type { Position3 };
-
-export interface CollisionBox {
-  readonly minX: number;
-  readonly minY: number;
-  readonly minZ: number;
-  readonly maxX: number;
-  readonly maxY: number;
-  readonly maxZ: number;
-}
+export type { BlockPosition, CollisionBox };
 
 export interface BlockTraits {
   readonly empty: boolean;

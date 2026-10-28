@@ -1,8 +1,8 @@
-import type { CombatController } from "../control/combat/contract.js";
+import type { CombatController } from "../combat/contract.js";
 
 import type { ReflexDriver } from "../control/driver.js";
-import { decideFootingResponse } from "../policy/environment.js";
 import type { FootingRecovery } from "../responses/footing.js";
+import { decideFootingResponse } from "../policy/environment.js";
 
 /** Combat uses the same impulse history internally; other owners yield to its landing. */
 export function attachFootingReflex(

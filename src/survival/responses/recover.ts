@@ -1,14 +1,14 @@
 import { incomingShieldProjectiles } from "../perception/combat/shield-projectiles.js";
 import type { Bot } from "mineflayer";
-import { eatFood } from "../../actions/eat-food/eat-food.js";
 import { REGENERATION_HUNGER } from "../../world/food.js";
-import { carriedCount } from "../../world/inventory-count.js";
-import { recoveryScope } from "../control/combat/scopes/recovery.js";
+import { carriedCount } from "../../world/watchers/inventory-count.js";
+import { recoveryScope } from "./scopes/recovery.js";
 import { isInFire, isInLava } from "../perception/body.js";
 import { selectPolicyFood } from "../perception/food.js";
 import { hasRegeneration } from "../perception/combat/recovery.js";
 import type { SurvivalPolicy } from "../policy/contract.js";
 import { type SurvivalResources } from "../state/resources.js";
+import { eatFood } from "../../world/procedures/eating.js";
 
 export type CoveredRecovery =
   | { readonly kind: "recovered"; readonly ate: string | null }

@@ -11,7 +11,7 @@ import { createMinecraftMcpServer, createMinecraftRuntime } from "@aibengineerin
 
 import { actionEvidenceJsonPath, type ActionEvidence } from "./evidence-file.ts";
 import { renderActionEvidencePage } from "./page.ts";
-import { droppedItemName } from "../../src/world/item-pickup.ts";
+import { droppedItemName } from "../../src/world/dropped-items.ts";
 
 /** What the tour needs from its host: a prepared bot, the fixture and the trial's lifetime. */
 export interface EvidenceContext {

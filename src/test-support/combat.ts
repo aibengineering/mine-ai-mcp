@@ -2,18 +2,19 @@ import type { Bot } from "mineflayer";
 import { afterEach } from "node:test";
 import { ExecutionScope } from "../execution/execution-scope.js";
 import type { NavigationRuntime } from "../navigation/index.js";
-import type { ResponseContext } from "../survival/control/combat/context.js";
-import { createCombatController } from "../survival/control/combat/controller.js";
-import { CombatExecution } from "../survival/control/combat/execution.js";
-import { combatResourceRefusal } from "../survival/control/combat/preparation.js";
-import { CombatPerception } from "../survival/perception/combat/observations.js";
+import type { ResponseContext } from "../survival/perception/combat/context.js";
+import { createCombatController } from "../survival/combat/controller.js";
+import { CombatExecution } from "../survival/combat/execution.js";
+import { combatResourceRefusal } from "../survival/combat/preparation.js";
 import { CreeperClearance } from "../survival/perception/combat/creepers.js";
 import { DEFAULT_COMBAT_POLICY } from "../survival/policy/combat/contract.js";
 import { DEFAULT_FOOD_POLICY, DEFAULT_SURVIVAL_POLICY } from "../survival/policy/contract.js";
 import { CombatPosition } from "../survival/positioning/combat/position.js";
-import { EndCombat } from "../survival/responses/end/execute.js";
+import { EndCombat } from "../survival/combat/end/execute.js";
+import { EndCore } from "../survival/combat/end/core.js";
 import { FootingRecovery } from "../survival/responses/footing.js";
 import { survivalResources, type SurvivalResources } from "../survival/state/resources.js";
+import { CombatPerception } from "../survival/perception/combat/observations.js";
 
 const resources = new Set<Disposable>();
 function own<T extends Disposable>(resource: T): T {
@@ -56,6 +57,14 @@ export class TestEndCombat extends EndCombat {
     const scope = own(new ExecutionScope({ bot: bot.username, operation: "end_test", targetId: null }));
     const context = combatTestContext(bot);
     super(bot, navigation, footing, () => DEFAULT_SURVIVAL_POLICY, context.survival, new CombatExecution(scope), context, recordDecision);
+  }
+}
+/** The End fight's shared body alone, for tests that drive one attack against stubbed escape and danger. */
+export class TestEndCore extends EndCore {
+  constructor(bot: Bot, navigation: NavigationRuntime, footing: FootingRecovery) {
+    const scope = own(new ExecutionScope({ bot: bot.username, operation: "end_test", targetId: null }));
+    const context = combatTestContext(bot);
+    super(bot, navigation, footing, () => DEFAULT_SURVIVAL_POLICY, context.survival, new CombatExecution(scope), context, () => {});
   }
 }
 export function combatResourceRefusalForTest(

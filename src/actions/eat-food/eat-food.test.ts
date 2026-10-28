@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture, type FakeStack } from "../../test-support/bot.js";
-import { formatEatFoodResult, eatFood, type EatFoodDependencies } from "./eat-food.js";
-import { INVENTORY_SETTLE_MS } from "../../world/inventory-count.js";
+import { formatEatFoodResult } from "./eat-food.js";
+import { INVENTORY_SETTLE_MS } from "../../world/watchers/inventory-count.js";
+import { eatFood, type EatFoodDependencies } from "../../world/procedures/eating.js";
 
 /** A hungry bot carrying one stack of the named item. */
 function hungryBot(name = "cooked_beef", count = 2) {

@@ -9,22 +9,23 @@ import { defineAction, actionResultSchema } from "../../actions/action.js";
 import { SqlBotData } from "../../bot-data/index.js";
 import { botFixture } from "../../test-support/bot.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
-import { ActionRunner } from "../../session/action-runner.js";
-import type { CombatController, CombatOutcome } from "../control/combat/contract.js";
+import { ActionRunner } from "../../runner/action-runner.js";
+import type { CombatController, CombatOutcome } from "../combat/contract.js";
 import { ReflexDriver } from "../control/driver.js";
-import { attachSurvivalReceipts } from "../evidence/receipts.js";
+import { attachSurvivalReceipts } from "../../runtime/survival-events.js";
 import { SurvivalObserver } from "../evidence/status.js";
 import type { PolicyChanges } from "../policy/contract.js";
 import { SurvivalPolicyState } from "../state/survival-policy.js";
 
 import { MemoryWorld } from "../../navigation/world/memory-world.js";
-import { observeHostileResponse } from "../control/combat/observation.js";
-import { executeHostileResponse } from "../control/combat/respond.js";
-import { completeResponse, encounterReceipt } from "../control/combat/settlement.js";
-import { CombatPerception } from "../perception/combat/observations.js";
+import { observeHostileResponse } from "../combat/observation.js";
+import { executeHostileResponse } from "../combat/respond.js";
+import { completeResponse, encounterReceipt } from "../combat/settlement.js";
 import { attachHostileReflex } from "./hostile.js";
-import { blockClass, observeMineflayerBlock } from "../../navigation/mineflayer/world.js";
+import { observeMineflayerBlock } from "../../navigation/mineflayer/world.js";
 import { flatWorld } from "../../test-support/navigation.js";
+import { blockClass } from "../../world/block-class.js";
+import { CombatPerception } from "../perception/combat/observations.js";
 
 type Entity = Parameters<Bot["attack"]>[0];
 

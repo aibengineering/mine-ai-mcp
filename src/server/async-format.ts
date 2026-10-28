@@ -1,4 +1,4 @@
-import type { Acceptance, AsyncActions, LiveProgress, WaitOutcome } from "../session/async-actions.js";
+import type { Acceptance, AsyncActions, LiveProgress, WaitOutcome } from "../runner/async-actions.js";
 import type { CombatResources, Progress, ProgressPosition, ReflexState } from "../session/progress.js";
 import type { BuildStructureRequest } from "../actions/build-structure/contract.js";
 import type { RequestSnapshot } from "../session/request.js";

@@ -25,7 +25,10 @@
  * keeps for the reflex — stays on the caller's side of this boundary.
  */
 import type { Bot } from "mineflayer";
-import { nearEntityGoal, type BlockPosition, type MovementPolicy, type Navigate } from "../../index.js";
+import { nearEntityGoal } from "../../goals/index.js";
+import type { BlockPosition } from "../../../utils/geometry.js";
+import type { MovementPolicy } from "../../movements/policy.js";
+import type { Navigate } from "../../navigate.js";
 
 /** A loaded Mineflayer entity, which is what `matches` is asked about. */
 export type MinecraftEntity = Bot["entities"][number];

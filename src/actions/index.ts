@@ -2,7 +2,7 @@
  * Every model-runnable action this host offers, built once with its dependencies.
  * The list itself, shared with tool discovery, is `ACTION_CATALOG` in catalog.ts.
  */
-import { createDiscardedItems } from "../world/discarded-items.js";
+import { createDiscardedItems } from "../world/watchers/discarded-items.js";
 import type { Action } from "./action.js";
 import { ACTION_CATALOG, type ActionDependencies } from "./catalog.js";
 

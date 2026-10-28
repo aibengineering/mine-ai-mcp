@@ -4,8 +4,8 @@ import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../test-support/bot.js";
-import type { CrystalObservation } from "../../survival/perception/combat/crystal.js";
 import { createDestroyEndCrystalAction } from "./index.js";
+import type { CrystalObservation } from "../../survival/perception/combat/crystal.js";
 
 // The legacy End caller (a scenario driver since retired) moved on to the next
 // tower when a crystal request failed its walk back but its evidence had

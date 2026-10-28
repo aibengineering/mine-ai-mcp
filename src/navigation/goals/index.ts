@@ -12,7 +12,6 @@
  * Heuristics are priced in ticks per axis, following Baritone, because a
  * block upward costs twice a block sideways; the constants below say why.
  */
-import type { GeneratedMovement } from "../movements/catalogue.js";
 import { isHeadPassable, navigationFeet } from "../world/block-geometry.js";
 import { stanceReachesItem, withinItemPickupReach } from "../world/item-geometry.js";
 import {
@@ -21,7 +20,8 @@ import {
   type EntityObservation,
   type NavigationObservation,
 } from "../world/world.js";
-import type { Goal, GoalEndPredicate, PlanningNode, ResolvedGoal } from "./goal.js";
+import type { Goal, GoalEndPredicate, ResolvedGoal } from "./goal.js";
+import type { PlanningNode, GeneratedMovement } from "../movements/catalogue.js";
 type Distance = (position: BlockPosition) => number;
 type Satisfaction = (position: BlockPosition) => boolean;
 

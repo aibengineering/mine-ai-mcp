@@ -12,7 +12,7 @@
  * `createNavigator().startRun` in `orchestration/navigation-run.test.ts`.
  * The principles behind that rule are in `docs/mcp/testing.md`.
  */
-import type { EffectHandle, MovementPreparation, NavigationBot } from "../navigation/bot.js";
+import type { EffectHandle, MovementPreparation, NavigationBot } from "../navigation/execution/bot.js";
 import type {
   MovementControlIntent,
   MovementExecution,
@@ -20,15 +20,15 @@ import type {
 } from "../navigation/execution/movement-controller.js";
 import type { AttemptToken } from "../navigation/execution/mutations.js";
 import { MineflayerBot } from "../navigation/mineflayer/bot.js";
-import type { GeneratedMovement, PlanningState } from "../navigation/movements/catalogue.js";
 import type { GeneratedMovements } from "../navigation/movements/movement-candidates.js";
 import type { MovementKind, PlannedOperation, PlannedStep, RoutePlan } from "../navigation/movements/movement.js";
 import type { NavigationRequest, Navigator } from "../navigation/orchestration/navigator.js";
-import type { NavigationOutcome } from "../navigation/orchestration/outcome.js";
-import { OverlayInterner, PlanningOverlay } from "../navigation/search/planning-overlay.js";
+import type { NavigationOutcome } from "../navigation/outcome.js";
+import { OverlayInterner, PlanningOverlay } from "../navigation/movements/planning-overlay.js";
 import type { NavigationEvent, TelemetrySink } from "../navigation/telemetry/index.js";
 import { MemoryWorld } from "../navigation/world/memory-world.js";
 import type { NavigationObservation, Position3 } from "../navigation/world/world.js";
+import type { GeneratedMovement, PlanningState } from "../navigation/movements/catalogue.js";
 
 export class FakeNavigationBot implements NavigationBot {
   current = observation();

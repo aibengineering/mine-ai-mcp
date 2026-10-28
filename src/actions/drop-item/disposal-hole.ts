@@ -8,7 +8,7 @@ import type { BlockPosition } from "../../navigation/world/world.js";
 import { waitForSignal } from "../../utils/signals.js";
 import type { ActionContext } from "../action.js";
 import type { DroppedItem, HoleClosure } from "./contract.js";
-import { type InventoryItem, type placeSolidBlockInto } from "../../world/placement.js";
+import { type InventoryItem, type placeSolidBlockInto } from "../../world/procedures/placement.js";
 import { PLAYER_HALF_WIDTH } from "../../world/player-physics.js";
 
 const SIDES = [

@@ -1,9 +1,9 @@
 import type { Bot } from "mineflayer";
 import type { Vec3 } from "vec3";
 import { observedEyeHeight } from "../../world/block-visibility.js";
-import { isReplaceableForPlacement } from "../../world/block-classification.js";
 import { clearCombatRay } from "../../world/entity-geometry.js";
 import { fireAt } from "../perception/body.js";
+import { isReplaceableForPlacement } from "../../world/block-classification.js";
 
 /** Clear observed fire without excavating terrain or changing equipment. */
 export function extinguishFireAt(

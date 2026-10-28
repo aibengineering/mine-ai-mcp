@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import type { Bot } from "mineflayer";
-import type { Goal } from "../../index.js";
+import type { Goal } from "../../goals/goal.js";
 import type { NavigationArrival, NavigationCalculationFailureEvent } from "../../orchestration/process-events.js";
 import type { BlockPosition } from "../../world/world.js";
 import { raycastThrough } from "../../../test-support/world.js";

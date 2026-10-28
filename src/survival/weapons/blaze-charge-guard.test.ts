@@ -4,8 +4,8 @@ import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../test-support/bot.js";
-import { isWindingUp } from "../perception/combat/observations.js";
 import { observeProjectileDefence } from "./shield-facing.js";
+import { isWindingUp } from "../perception/combat/observations.js";
 
 // Metadata is indexed exactly as the shared 1.21.4 registry indexes it: a
 // fixture must never write to that registry, which every botFixture shares.

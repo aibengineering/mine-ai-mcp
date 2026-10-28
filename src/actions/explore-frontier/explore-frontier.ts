@@ -15,7 +15,7 @@ import {
   type NavigationResult,
   type NavigationRuntime,
 } from "../../navigation/index.js";
-import type { FrontierChunk, SessionFrontier } from "../../runtime/frontier.js";
+import type { FrontierChunk, SessionFrontier } from "../../bot-data/frontier.js";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
 import type { RequestExecution, ActionContext } from "../action.js";
 import { defineSqlAction, sqlActionSource, type SqlAction } from "../sql-action.js";

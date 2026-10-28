@@ -1,10 +1,9 @@
 import type { Bot } from "mineflayer";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
-import { recordCombatResourceReceipt } from "../../runtime/combat-resource-receipts.js";
+import { recordCombatResourceReceipt } from "../../execution/combat-resource-receipts.js";
 
-/** A vanilla shield blocks only after five ticks of use. */
-export const SHIELD_READY_TICKS = 5;
 
+import { SHIELD_READY_TICKS } from "../perception/combat/observations.js";
 interface BowDraw extends Disposable {
   release(): void;
 }

@@ -1,6 +1,6 @@
 import { type TestContext } from "node:test";
 import { Vec3 } from "vec3";
-import { ActionRunner } from "../session/action-runner.js";
+import { ActionRunner } from "../runner/action-runner.js";
 import { ReflexDriver } from "../survival/control/driver.js";
 import { botFixture } from "./bot.js";
 

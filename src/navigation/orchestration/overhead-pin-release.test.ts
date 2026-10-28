@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { FakeNavigationBot, flatWorld, observation, onEvent, settle } from "../../test-support/navigation.js";
 import { nextTurn } from "../../test-support/async.js";
-import type { EffectHandle } from "../bot.js";
+import type { EffectHandle } from "../execution/bot.js";
 import { exactBlockGoal } from "../goals/index.js";
 import { createMovementPolicy } from "../movements/policy.js";
 import type { PlannedOperation, PlannedStep } from "../movements/movement.js";

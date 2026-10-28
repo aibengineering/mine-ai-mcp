@@ -1,4 +1,4 @@
-import type { ResponseDecision } from "../../control/contract.js";
+import type { ResponseDecision } from "../decision.js";
 import { combatResponseExclusions, type CombatDecisionFacts } from "./decision.js";
 import type { EvadeReason, HideReason, HostileDirective, HostileResponse } from "./response.js";
 

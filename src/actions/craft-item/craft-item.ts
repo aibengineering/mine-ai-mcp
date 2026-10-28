@@ -3,9 +3,8 @@ import type { Bot } from "mineflayer";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { planCraftingFromInventory, type CraftPreparation, type CraftTarget } from "../../utils/craft-plan.js";
 import type { Position3 } from "../../utils/index.js";
-import { executeCraftPlan } from "../../world/crafting.js";
+import { executeCraftPlan } from "../../world/procedures/crafting.js";
 import { carriedCount, settledNow, settleInventoryMinimum, type SettledInventoryCount } from "../../world/index.js";
-import type { WorldBlock } from "../../world/placement.js";
 import { defineAction, type ActionContext } from "../action.js";
 import { markdownCodeBlock, unconfirmedCount } from "../markdown.js";
 import { formatWorkstation, useTemporaryWorkstation, workstationOperations } from "../temporary-workstation.js";
@@ -21,6 +20,7 @@ import {
   type CraftItemResult,
 } from "./contract.js";
 import { prepareCraftingStation } from "./crafting-station.js";
+import type { WorldBlock } from "../../world/block-classification.js";
 
 type FailedCraftPreparation = Exclude<CraftPreparation, { readonly kind: "ready" }>;
 

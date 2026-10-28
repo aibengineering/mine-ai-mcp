@@ -1,8 +1,8 @@
-import type { ActionRunner } from "../session/action-runner.js";
+import type { ActionRunner } from "../runner/action-runner.js";
 import { reflexStateKey, type ReflexStateIdentity } from "../session/progress.js";
-import type { CombatController } from "../survival/control/combat/contract.js";
+import type { CombatController } from "../survival/combat/contract.js";
 import type { ReflexDriver } from "../survival/control/driver.js";
-import type { Facts } from "../survival/state/answered.js";
+import type { Facts } from "../utils/facts.js";
 
 function record(value: Facts | undefined): value is { readonly [name: string]: Facts } {
   return value !== null && typeof value === "object" && !Array.isArray(value);

@@ -9,8 +9,8 @@ import { Vec3 } from "vec3";
 import type { IncidentReference } from "../bot-data/incident-log.js";
 import type { NavigationEvent } from "../navigation/index.js";
 import { MemoryWorld } from "../navigation/world/memory-world.js";
-import { CombatProgress } from "../survival/control/combat/progress.js";
-import { observeDamageRegistry } from "../world/damage-registry.js";
+import { CombatProgress } from "../survival/combat/progress.js";
+import { observeDamageRegistry } from "../world/watchers/damage-registry.js";
 import { observeIncidents } from "./incident-observer.js";
 
 test("failure evidence separates lost support, server corrections, and local motion and detaches every listener", async (t) => {

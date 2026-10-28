@@ -3,7 +3,7 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import type { Bot } from "mineflayer";
 import { botFixture } from "../../../test-support/bot.js";
-import type { Goal } from "../../index.js";
+import type { Goal } from "../../goals/goal.js";
 import { hunt, type EngagementOutcome, type HuntRequest, type HuntResult, type HuntTarget } from "./hunt-process.js";
 
 /**

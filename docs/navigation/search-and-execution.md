@@ -21,7 +21,7 @@ A search starts under the longer failure budget. The first time any candidate is
 
 ## The planning overlay models prospective edits
 
-The planning overlay in [search/planning-overlay.ts](../../src/navigation/search/planning-overlay.ts) models block modifications predicted along a candidate route.
+The planning overlay in [movements/planning-overlay.ts](../../src/navigation/movements/planning-overlay.ts) models block modifications predicted along a candidate route.
 
 Edits are stored in an immutable treap keyed by integer block coordinates. Every combination of world edits produces a deterministic content hash. This hash allows A* to detect identical planning states regardless of the order in which edits occurred.
 
@@ -31,7 +31,7 @@ When an edge assumes digging a block or placing a scaffold, the overlay records 
 
 The route executor in [execution/route-executor.ts](../../src/navigation/execution/route-executor.ts) executes an immutable route plan step by step.
 
-A step executes world interactions before movement. Breaks, placements, and block activations run first through the bot port in [bot.ts](../../src/navigation/bot.ts). Once interactions settle, the step hands physical movement to a controller.
+A step executes world interactions before movement. Breaks, placements, and block activations run first through the bot port in [bot.ts](../../src/navigation/execution/bot.ts). Once interactions settle, the step hands physical movement to a controller.
 
 Execution runs as a state machine on the physics tick:
 

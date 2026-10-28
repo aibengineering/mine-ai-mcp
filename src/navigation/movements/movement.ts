@@ -4,8 +4,8 @@
  *
  * These are planning facts. Nothing here touches the bot.
  */
-import type { PlanningNode } from "../goals/goal.js";
 import type { BlockObservation, BlockPosition, Position3 } from "../world/world.js";
+import type { PlanningNode } from "./catalogue.js";
 
 export interface BlockMatcher {
   matches(block: BlockObservation): boolean;

@@ -1,6 +1,6 @@
 import type { Bot } from "mineflayer";
 import { asVec3, cellKey } from "../../../utils/index.js";
-import type { BlockPosition } from "../../index.js";
+import type { BlockPosition } from "../../../utils/geometry.js";
 import { withinItemPickupReach } from "../../world/item-geometry.js";
 import type { MineRequest, MineTarget } from "./mine-process.js";
 

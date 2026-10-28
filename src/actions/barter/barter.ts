@@ -4,8 +4,8 @@ import { createMovements, nearEntityGoal, type NavigationRuntime } from "../../n
 import { prepareBotForMovement } from "../../session/prepare-body.js";
 import { armSignal, waitForSignal } from "../../utils/signals.js";
 import { hasInventorySpaceFor } from "../../world/inventory-capacity.js";
-import { carriedCount } from "../../world/inventory-count.js";
-import { DROPPED_ITEM_OBSERVATION_EVENTS, droppedItemName, pickupObservedItem } from "../../world/item-pickup.js";
+import { carriedCount } from "../../world/watchers/inventory-count.js";
+import { pickupObservedItem } from "../../navigation/processes/item-pickup.js";
 import { observeMobAge } from "../../world/mob-age.js";
 import { defineAction, type RequestExecution } from "../action.js";
 import {
@@ -16,6 +16,7 @@ import {
   type BarterRequest,
   type BarterResult,
 } from "./contract.js";
+import { DROPPED_ITEM_OBSERVATION_EVENTS, droppedItemName } from "../../world/dropped-items.js";
 
 // The existing item/slot acknowledgement budget also bounds an offer the server
 // did not acknowledge. Admiration itself waits for equipment, not elapsed time.

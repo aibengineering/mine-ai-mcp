@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture } from "../../test-support/bot.js";
 import { SurvivalPolicyState } from "../state/survival-policy.js";
-import { readNavigationPolicy } from "../state/navigation-policy.js";
+import { readNavigationPolicy } from "../../navigation/mineflayer/navigation-policy.js";
 import { createMovements } from "../../navigation/runtime.js";
 
 test("bucket navigation flags are independent and live across set, clear and death reset", async () => {

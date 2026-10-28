@@ -1,3 +1,8 @@
+import type { Bot } from "mineflayer";
+
+/** A block as Mineflayer reports it at a loaded position. */
+export type WorldBlock = NonNullable<ReturnType<Bot["blockAt"]>>;
+
 /** The least a block has to say about itself to be classified at all. */
 export interface NamedBlock {
   readonly name: string;
@@ -96,4 +101,22 @@ export interface MineableBlock extends NamedBlock {
  */
 export function plausibleToBreak(block: MineableBlock | null): boolean {
   return block !== null && block.diggable !== false && !isLiquid(block);
+}
+
+/** Blocks that hurt a body standing in or on them. */
+const DAMAGING = new Set([
+  "magma_block",
+  "fire",
+  "soul_fire",
+  "campfire",
+  "soul_campfire",
+  "cactus",
+  "sweet_berry_bush",
+  "wither_rose",
+  "powder_snow",
+]);
+
+/** Whether a block of this name damages a body that touches it, lava included. */
+export function damagesOnContact(name: string): boolean {
+  return name === "lava" || DAMAGING.has(name);
 }

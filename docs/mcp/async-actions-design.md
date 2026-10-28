@@ -17,10 +17,10 @@ Returning to the model and releasing the bot's body are separate events.
 Before this change, the implementation separated several concerns:
 
 - [Action definitions](../../src/actions/action.ts) classify information, control, ordinary tasks, and resumable tasks, and provide per-action result schemas and formatters.
-- [The runner](../../src/session/action-runner.ts) admits foreground work and arbitrates physical ownership with reflexes. It retains a logical request across resumptions, but does not retain settled results.
+- [The runner](../../src/runner/action-runner.ts) admits foreground work and arbitrates physical ownership with reflexes. It retains a logical request across resumptions, but does not retain settled results.
 - [Request evidence](../../src/session/request.ts) has a baseline, current checkpoint, and observed completion condition. Coverage and detail vary between actions.
 - [The MCP adapter](../../src/server/mcp.ts) currently awaits execution, renders the final output, and records the response. Its request signal reaches the executor.
-- [Navigation evidence](../../src/navigation/orchestration/outcome.ts) contains positions, timing, and execution counters. The inspected contracts do not expose an accumulated physical-distance counter.
+- [Navigation evidence](../../src/navigation/outcome.ts) contains positions, timing, and execution counters. The inspected contracts do not expose an accumulated physical-distance counter.
 - [The runtime supervisor](../../src/server/runtime-supervisor.ts) protects a separate bot process from unresponsive execution. HTTP requests are no longer a sufficient inventory of work once submissions return immediately.
 
 These baseline observations were made during concurrent development. See the

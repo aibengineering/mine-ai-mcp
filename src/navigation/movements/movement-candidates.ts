@@ -21,10 +21,8 @@ import {
   isSafeSupport,
   isSolid,
 } from "../world/block-geometry.js";
-import type { BlockObservation } from "../world/world.js";
+import { type BlockObservation, type BlockPosition, blockLabel } from "../world/world.js";
 import { SWIM_DOWN_TICKS, SWIM_UP_TICKS, SWIM_HORIZONTAL_TICKS } from "../world/swimming.js";
-import { type BlockPosition, blockLabel } from "../world/world.js";
-import type { GeneratedMovement, MovementGenerationContext, PlanningState } from "./catalogue.js";
 import { type Dig, confirmDigs, prepareExcavationDigs, releasesLava } from "./excavation.js";
 import { NO_CELL } from "./expansion-cells.js";
 import {
@@ -36,6 +34,7 @@ import {
   type WorldPrecondition,
   stateMatcher,
 } from "./movement.js";
+import type { GeneratedMovement, MovementGenerationContext, PlanningState } from "./catalogue.js";
 
 /**
  * What `generate` returns: rows search reads by index, and a movement for

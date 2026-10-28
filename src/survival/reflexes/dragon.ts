@@ -1,5 +1,5 @@
 import type { Bot } from "mineflayer";
-import type { CombatController } from "../control/combat/contract.js";
+import type { CombatController } from "../combat/contract.js";
 
 import { incomingDragonFireballs, readDragonBreathHazards } from "../../world/dragon-hazards.js";
 import { dragonPhase } from "../../world/end-fight.js";

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryWorld } from "../world/memory-world.js";
-import { createMovementCatalogue } from "./catalogue.js";
 import { createMovementPolicy } from "./policy.js";
 import { WELL_FED, planningStart } from "../../test-support/navigation.js";
+import { createMovementCatalogue } from "./catalogue.js";
 
 test("only water-dependent drops receive the bucket movement kind", () => {
   const world = new MemoryWorld();

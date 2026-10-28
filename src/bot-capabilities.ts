@@ -1,6 +1,6 @@
 import type { Bot } from "mineflayer";
-import { acknowledgeEndCredits } from "./world/end-credits.js";
-import { observeDamageRegistry } from "./world/damage-registry.js";
+import { acknowledgeEndCredits } from "./world/procedures/end-credits.js";
+import { observeDamageRegistry } from "./world/watchers/damage-registry.js";
 
 /**
  * Mineflayer creation options every Mine AI MCP bot shares.

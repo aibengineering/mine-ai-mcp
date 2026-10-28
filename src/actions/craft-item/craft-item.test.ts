@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { NavigationRuntime } from "../../navigation/index.js";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { craftingBot } from "../../test-support/crafting.js";
 import {
   createCraftItemAction,

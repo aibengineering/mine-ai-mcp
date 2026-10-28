@@ -1,7 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-
-/** Named observations, not an opaque fingerprint or a full policy revision. */
-export type Facts = null | boolean | number | string | readonly Facts[] | { readonly [name: string]: Facts };
+import type { Facts } from "../../utils/facts.js";
 
 export interface AnsweredScope {
   readonly capability: string;

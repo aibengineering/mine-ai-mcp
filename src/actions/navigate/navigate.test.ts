@@ -4,7 +4,7 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import type { Navigate, NavigationResult, NavigationRuntime } from "../../navigation/index.js";
 import type { MovementPolicy } from "../../navigation/movements/policy.js";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { botFixture, type FakeStack } from "../../test-support/bot.js";
 import { worldOf, type FakeBlock } from "../../test-support/world.js";
 import { createNavigateAction, formatNavigateResult } from "./navigate.js";

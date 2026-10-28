@@ -26,7 +26,7 @@ nothing had been eaten.
 
 So every receipt that counts an item after acting waits for the count it
 expects, through
-[`settleInventoryCount`](../../src/world/inventory-count.ts). The wait is a few
+[`settleInventoryCount`](../../src/world/watchers/inventory-count.ts). The wait is a few
 ticks, because a receipt that cannot say what the inventory holds should say so
 quickly rather than hold the model. `inventoryAfter` is the count observed when
 that wait ended, and `confirmed` says which way it ended: `true` when the server
@@ -35,24 +35,28 @@ the number is the last one seen and not an outcome — never that the act failed
 The witness each action already had, `consumed` or `placed`, still reports
 whether the act itself was observed.
 
-## How do the five layers divide responsibility?
+## How do the layers divide responsibility?
 
-The codebase enforces a five-layer structure with dependencies importing
-strictly downward:
+The codebase is layered, and every import reads downward;
+[src/architecture.test.ts](../../src/architecture.test.ts) checks it, type imports
+included. Top to bottom:
 
-1. **Server layer** ([src/server/](../../src/server/)): Implements the MCP
-   protocol adapter, JSON Schema export, HTTP transport, and process
-   lifecycle.
-2. **Session runtime layer** ([src/session/](../../src/session/)): Controls the
-   foreground action runner, single-body locking, request continuation, and
-   chunk listeners.
-3. **Action layer** ([src/actions/](../../src/actions/)): Authors individual
-   tools, input validation schemas, result formats, and execution routines.
-4. **World layer** ([src/world/](../../src/world/) and
-   [src/bot-data/](../../src/bot-data/)): Manages block placement geometry,
-   chunk column analysis, and SQLite persistence.
-5. **Physical layer**: Owns the live Mineflayer bot connection, physics engine,
-   and plugin bindings.
+1. **Server** ([src/server/](../../src/server/)): the MCP protocol adapter, JSON
+   Schema export, HTTP transport, and process lifecycle.
+2. **Runtime** ([src/runtime/](../../src/runtime/)): builds one connected bot and
+   owns every long-lived part; [diagnostics](../../src/diagnostics/) records incidents.
+3. **Runner** ([src/runner/](../../src/runner/)): the foreground action runner,
+   single-body locking, request continuation, and asynchronous submissions.
+4. **Actions** ([src/actions/](../../src/actions/)): individual tools, input
+   validation schemas, result formats, and execution routines.
+5. **Bot data** ([src/bot-data/](../../src/bot-data/)): SQLite persistence of events,
+   incidents, frontier and knowledge.
+6. **Survival** ([src/survival/](../../src/survival/)): reflexes and requested fights.
+7. **Session** ([src/session/](../../src/session/)): the body as reflexes see it, and a
+   request's state, progress and interruption causes.
+8. **Navigation** ([src/navigation/](../../src/navigation/)): route planning and walking.
+9. **World** ([src/world/](../../src/world/)): game facts, watchers and block, item and
+   food procedures; [execution](../../src/execution/) and [utils](../../src/utils/) sit below.
 
 ## What is a host?
 
@@ -80,7 +84,7 @@ A new Minecraft connection requires an explicit host restart.
 ## How does the foreground session lock the bot's body?
 
 The bot has one physical body. Concurrency is governed by a single foreground
-lock in [src/session/action-runner.ts](../../src/session/action-runner.ts). Only
+lock in [src/runner/action-runner.ts](../../src/runner/action-runner.ts). Only
 one model-directed task or autonomous reflex may control the bot at any instant.
 
 If a new action request arrives while a task runs, the runner refuses the call
@@ -135,7 +139,7 @@ in-memory databases.
 ## What is the frontier?
 
 The frontier tracks the boundary between explored and unexplored territory.
-Managed by [src/runtime/frontier.ts](../../src/runtime/frontier.ts), it processes
+Managed by [src/bot-data/frontier.ts](../../src/bot-data/frontier.ts), it processes
 loaded chunk columns and records biome samples, material palettes, and
 surface-water fractions.
 
@@ -156,7 +160,7 @@ read cursor.
 ## How does action cancellation work?
 
 A running foreground task receives an `AbortSignal` managed by
-[src/session/action-runner.ts](../../src/session/action-runner.ts). Calling
+[src/runner/action-runner.ts](../../src/runner/action-runner.ts). Calling
 `cancel_foreground_action` requires the target `action_id` and a reason. It
 prevents resumption and signals that objective to stop while necessary reflex
 work can complete safe release. It does not cancel whichever physical owner

@@ -9,7 +9,6 @@
 import type { Goal } from "../goals/goal.js";
 import { exactBlockGoal, itemPickupGoal, nearEntityGoal, nearGoal } from "../goals/index.js";
 import type { PlannedStep } from "../movements/movement.js";
-import { createMovementCatalogue, type MovementCatalogue } from "../movements/catalogue.js";
 import { createMovementPolicy } from "../movements/policy.js";
 import { createMovements } from "../runtime.js";
 import type { NavigationObservation } from "../world/world.js";
@@ -25,6 +24,7 @@ import {
   onEvent,
   settle,
 } from "../../test-support/navigation.js";
+import { createMovementCatalogue, type MovementCatalogue } from "../movements/catalogue.js";
 
 const walking = () => createMovementPolicy({ allowSprinting: false });
 /** Commit as soon as there is a segment worth walking, so a run is made of continuations rather than one route. */

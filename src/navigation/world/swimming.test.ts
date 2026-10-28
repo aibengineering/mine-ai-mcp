@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryWorld } from "./memory-world.js";
 import { admitsDive, holdSwimDepth, openWaterSurface, risingSurface, swimTravelTicks, type DiveAdmission } from "./swimming.js";
-import { createMovementCatalogue } from "../movements/catalogue.js";
 import { createMovementPolicy } from "../movements/policy.js";
 import { WELL_FED, observation, planningStart } from "../../test-support/navigation.js";
 import type { ResolvedGoal } from "../goals/goal.js";
 import { headOutOfLiquidGoal } from "../goals/index.js";
 import { IncrementalSearch } from "../search/search.js";
+import { createMovementCatalogue } from "../movements/catalogue.js";
 
 function pool() {
   const world = new MemoryWorld();

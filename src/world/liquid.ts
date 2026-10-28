@@ -9,9 +9,8 @@
  */
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { isLiquid, isReplaceableForPlacement } from "./block-classification.js";
 import { STANDING_EYE_HEIGHT } from "./block-visibility.js";
-import type { WorldBlock } from "./placement.js";
+import { type WorldBlock, isLiquid, isReplaceableForPlacement } from "./block-classification.js";
 
 export type LiquidName = "water" | "lava";
 

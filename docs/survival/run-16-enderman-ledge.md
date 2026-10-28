@@ -46,7 +46,7 @@ contradicted by both the damage and velocity packets.
 
 ## Where the behavior is owned
 
-- [Combat controller](../../src/survival/control/combat/controller.ts): pursuit requires
+- [Combat controller](../../src/survival/combat/controller.ts): pursuit requires
   `hasMeleeKnockbackRoom`. After an approach fails, defending the current stance
   is allowed only when `guarded` and grounded. With no shield, this fight returns
   `unreachable`, then neutralises item use and stops its footing hold.

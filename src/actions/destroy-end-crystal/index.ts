@@ -1,7 +1,6 @@
 import { crystalCheckpointSchema } from "../checkpoint-schemas.js";
 import type { Bot } from "mineflayer";
-import type { CombatController } from "../../survival/control/combat/contract.js";
-import { CrystalObservation } from "../../survival/perception/combat/crystal.js";
+import type { CombatController } from "../../survival/combat/contract.js";
 
 import { defineAction } from "../action.js";
 import {
@@ -16,6 +15,7 @@ import {
   destroyEndCrystalInputSchema,
 } from "./contract.js";
 export * from "./contract.js";
+import { CrystalObservation } from "../../survival/perception/combat/crystal.js";
 export function createDestroyEndCrystalAction(bot: Bot, combat: CombatController) {
   return defineAction({
     checkpointSchema: crystalCheckpointSchema,

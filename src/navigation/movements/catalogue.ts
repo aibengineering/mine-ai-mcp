@@ -44,8 +44,7 @@ import { type GeneratedMovements, MovementCandidates } from "./movement-candidat
  * is built the first time something reads `step`, which only happens for the
  * steps of a route about to be walked.
  */
-import type { PlanningNode } from "../goals/goal.js";
-import type { PlanningOverlay } from "../search/planning-overlay.js";
+import type { PlanningOverlay } from "./planning-overlay.js";
 import {
   type BlockObservation,
   type BlockPosition,
@@ -64,6 +63,13 @@ import type { StepField } from "../step-field.js";
 import { type StanceSight, priceExcavation, releasesLava, stanceSight } from "./excavation.js";
 
 export type { GeneratedMovements } from "./movement-candidates.js";
+
+/** One search node: where the feet are, the scaffold left, and the predicted world it sees. */
+export interface PlanningNode {
+  readonly feet: BlockPosition;
+  readonly remainingScaffolds: number;
+  readonly overlayId: string;
+}
 
 export interface PlanningState {
   readonly node: PlanningNode;

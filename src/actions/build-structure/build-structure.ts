@@ -26,7 +26,7 @@ import { asVec3 } from "../../utils/index.js";
 import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../world/block-visibility.js";
 import { placeBlock } from "../../world/index.js";
 import { defineAction, type ActionContext } from "../action.js";
-import { observeToolTierLoss } from "../../world/tool-loss.js";
+import { observeToolTierLoss } from "../../world/watchers/tool-loss.js";
 import {
   buildStructureOutcomes,
   NAMED_CELLS_PER_REASON,

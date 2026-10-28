@@ -1,7 +1,7 @@
 import type { Bot } from "mineflayer";
-import type { CombatController } from "../control/combat/contract.js";
+import type { CombatController } from "../combat/contract.js";
 
-import type { ActionRunner } from "../../session/action-runner.js";
+import type { BodyOwner } from "../../session/body-owner.js";
 import { airSupplyTicks } from "../../world/air-supply.js";
 import { isInWater } from "../perception/body.js";
 import type { ReflexDriver } from "../control/driver.js";
@@ -16,7 +16,7 @@ export class SurvivalObserver implements Disposable {
 
   constructor(
     readonly bot: Bot,
-    readonly runner: ActionRunner,
+    readonly runner: BodyOwner,
     readonly driver: ReflexDriver,
     readonly combat: CombatController,
   ) {

@@ -2,12 +2,11 @@
  * What a navigation run reports as it goes: the event vocabulary and the sinks
  * that receive it. Events describe transitions; they never decide them.
  */
+import type { NavigationCalculationFailure, NavigationOutcome, SearchReason } from "../outcome.js";
 import type { MovementKind, RoutePlan } from "../movements/movement.js";
 import type { BlockPosition, WorldChange } from "../world/world.js";
-import type { MovementPhase, NavigationOutcome, SearchReason } from "../orchestration/outcome.js";
-import type { NavigationCalculationFailure } from "../orchestration/process-events.js";
-import type { PartialRouteCheckpoint, SearchEvidence } from "../search/search-result.js";
-import type { SearchLimitEvidence } from "../orchestration/outcome.js";
+import type { SearchLimitEvidence, PartialRouteCheckpoint, SearchEvidence } from "../search/search-result.js";
+import type { MovementPhase } from "../execution/movement-failure.js";
 export type NavigationEvent =
   | { readonly kind: "dive"; readonly runId: string; readonly atMs: number; readonly state: "breathing" | "resumed" | "released" }
   | { readonly kind: "search_finished"; readonly runId: string; readonly searchId: string; readonly atMs: number;

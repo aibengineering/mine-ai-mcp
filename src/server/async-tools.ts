@@ -4,13 +4,12 @@ import { z } from "zod";
 import type { Action, ActionOutput, ActionResult } from "../actions/action.js";
 import type { ActionRequestInput, ActionResponseInput, ActionCallStatus } from "../bot-data/action-call-log.js";
 import type { NotificationSummary } from "../bot-data/event-log.js";
-import { acceptanceSchema, refusalSchema, submissionMetadataSchema, type AsyncActions } from "../session/async-actions.js";
-import { waitForActionInputSchema, cancelActionInputSchema, WAIT_FOR_ACTION_DESCRIPTION, CANCEL_ACTION_DESCRIPTION } from "../session/async-actions.js";
+import { acceptanceSchema, refusalSchema, type AsyncActions } from "../runner/async-actions.js";
 import { progressChangeSchema, progressSchema } from "../session/progress.js";
-import { requestSchema } from "../survival/evidence/contract.js";
-import { survivalStatusSchema, type SurvivalStatus } from "../survival/evidence/contract.js";
+import { requestSchema, survivalStatusSchema, type SurvivalStatus } from "../survival/evidence/contract.js";
 import { formatPolicyReminder, formatProtocol } from "./async-format.js";
 import { mcpReply, recordReply, replyOutputSchema, undescribedRequestMetaSchema } from "./reply.js";
+import { submissionMetadataSchema, waitForActionInputSchema, cancelActionInputSchema, WAIT_FOR_ACTION_DESCRIPTION, CANCEL_ACTION_DESCRIPTION } from "../actions/async-control.js";
 
 export const liveProgressSchema = z.strictObject({
   actionId: z.string(), action: z.string(), progress: progressSchema, request: requestSchema.nullable(),

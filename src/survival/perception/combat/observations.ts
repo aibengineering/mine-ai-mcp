@@ -1,20 +1,21 @@
 import type { Bot, BotEvents } from "mineflayer";
-import { SHIELD_READY_TICKS } from "../../weapons/item-use.js";
 import { entityDimensions } from "../../../world/entity-dimensions.js";
 import { hasExposedBody } from "../../../world/entity-visibility.js";
-import type { PositionThreat } from "../../positioning/combat/exposure.js";
+import type { PositionThreat } from "./exposure.js";
 import { bowDrawAimedAtBot, isDrawingBow } from "./attention.js";
 import { incomingBlazeProjectiles, isIncomingBlazeProjectile } from "./blaze-projectiles.js";
 import { readProjectileSpawn } from "./projectile-spawn.js";
-import { isCreeper } from "./creepers.js";
+import { isCreeper, CreeperClearance } from "./creepers.js";
 import { canBeBystander, isHostile } from "./threats.js";
 import { trackArrowFlights } from "./arrow-flight.js";
 import { bowDrawHeldOnBot, bowReleaseInTicks, trackBowDraws } from "./bow-timing.js";
-import { CreeperClearance } from "./creepers.js";
 type Entity = Parameters<Bot["attack"]>[0];
 const RANGED_SPECIES = new Set(["blaze"]);
 const BLAZE_CHARGING_FLAG = 1;
 const BLAZE_MELEE_RANGE = 2;
+/** A vanilla shield blocks only after five ticks of use. */
+export const SHIELD_READY_TICKS = 5;
+
 /** Vanilla's first blaze shot follows sixty ticks after a newly observed charge. */
 const BLAZE_CHARGE_TICKS = 60;
 function hasBow(entity: Entity): boolean {

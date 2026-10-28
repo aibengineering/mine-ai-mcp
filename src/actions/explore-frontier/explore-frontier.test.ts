@@ -4,8 +4,8 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import { SqlBotData } from "../../bot-data/index.js";
 import type { Navigate, NavigationResult, NavigationRuntime } from "../../navigation/index.js";
-import type { FrontierChunk, SessionFrontier } from "../../runtime/frontier.js";
-import { ActionRunner } from "../../session/action-runner.js";
+import type { FrontierChunk, SessionFrontier } from "../../bot-data/frontier.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { botFixture, registry } from "../../test-support/bot.js";
 import { headingForVector, parseExploreFrontierRequest, unitVectorForHeading } from "./contract.js";
 import {

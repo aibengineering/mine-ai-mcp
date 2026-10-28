@@ -5,7 +5,7 @@ import type { Goal } from "../goals/goal.js";
 import { anyGoal, exactBlockGoal } from "../goals/index.js";
 import { observeMineflayerBlock } from "../mineflayer/world.js";
 import type { NavigationResult } from "../navigate.js";
-import { driveHorizontalSteering, steeringPortFor } from "../steering/local-steering.js";
+import { driveHorizontalSteering, steeringPortFor } from "../execution/local-steering.js";
 import { isSafeSupport, navigationFeet } from "../world/block-geometry.js";
 
 export type PortalBlock = "end_portal" | "nether_portal";

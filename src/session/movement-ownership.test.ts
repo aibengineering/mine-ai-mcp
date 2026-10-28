@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
 test("movement inputs belong to navigation, survival, and the bounded raw action", () => {
-  const root = fileURLToPath(new URL("../", import.meta.url));
+  const root = fileURLToPath(new URL("..", import.meta.url));
   const invalid: { file: string; call: string }[] = [];
   for (const entry of readdirSync(root, { recursive: true, encoding: "utf8" })) {
     const file = entry.replaceAll("\\", "/");
@@ -21,7 +21,9 @@ test("movement inputs belong to navigation, survival, and the bounded raw action
           const ownsMovement = file.startsWith("navigation/") || file.startsWith("survival/");
           const preparesBody = file.startsWith("session/") && call === "clearControlStates";
           const rawBodyAction = file === "actions/raw-action/raw-action.ts" && call === "setControlState";
-          if (!ownsMovement && !preparesBody && !rawBodyAction) invalid.push({ file, call });
+          // The one sneak write, shared by steering and by placement crouching against an interactable block.
+          const sneakWrite = file === "world/procedures/sneak.ts" && call === "setControlState";
+          if (!ownsMovement && !preparesBody && !rawBodyAction && !sneakWrite) invalid.push({ file, call });
         }
       }
       ts.forEachChild(node, visit);

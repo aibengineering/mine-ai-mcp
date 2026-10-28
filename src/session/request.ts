@@ -1,5 +1,5 @@
-import type { Facts } from "../survival/state/answered.js";
 import type { BodyAbortCause } from "./abort.js";
+import type { Facts } from "../utils/facts.js";
 
 /** Action-owned evidence is read from its retained executor, never copied into a new attempt. */
 export interface RequestEvidence {

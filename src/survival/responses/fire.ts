@@ -4,15 +4,15 @@ import { horizontalControlsToward, type WorldView } from "../../navigation/index
 import { preferredScaffoldItem } from "../../navigation/mineflayer/movement-policy.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { advancingLavaAt } from "../../world/lava-flow.js";
-import { occupiedCell, placeSolidBlockInto } from "../../world/placement.js";
+import { occupiedCell, placeSolidBlockInto } from "../../world/procedures/placement.js";
 import { fireContactCells, isBurning, isInFire, isInLava } from "../perception/body.js";
 import { extinguishFireAt } from "../positioning/fire-clearance.js";
 import {
   clearFireEscape,
   fireEscapeDeparture,
   nearbyFireEscape,
-  type FireEscapeReason,
 } from "../positioning/fire-escape.js";
+import type { FireEscapeReason } from "../policy/environment.js";
 
 export type FireEscapeOutcome = "escaped" | "blocked" | "died";
 

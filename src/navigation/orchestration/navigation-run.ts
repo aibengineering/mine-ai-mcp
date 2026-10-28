@@ -37,12 +37,12 @@
  * listener, and the continuation search before `execute` measures what was
  * left behind rather than asserting zero.
  */
+import type { NavigationCalculationFailure, NavigationEvidence, NavigationFailure, NavigationOutcome, NavigationSettlement, SearchReason } from "../outcome.js";
 import { executeWorldEffect } from "../execution/world-effect.js";
 import { OpenedPassages } from "../execution/opened-passages.js";
 import { RouteExecutor, type RouteContext, type StepDecision } from "../execution/route-executor.js";
-import type { PlanningNode, ResolvedGoal } from "../goals/goal.js";
+import type { ResolvedGoal } from "../goals/goal.js";
 import { priceExcavation } from "../movements/excavation.js";
-import type { MovementCatalogue } from "../movements/catalogue.js";
 import {
   airMatcher,
   type PlannedStep,
@@ -51,7 +51,7 @@ import {
   stateMatcher,
 } from "../movements/movement.js";
 import type { MovementPolicy, ScaffoldSelection } from "../movements/policy.js";
-import { EMPTY_OVERLAY_IDENTITY, OverlayInterner, PlanningOverlay } from "../search/planning-overlay.js";
+import { EMPTY_OVERLAY_IDENTITY, OverlayInterner, PlanningOverlay } from "../movements/planning-overlay.js";
 import { IncrementalSearch } from "../search/search.js";
 import type { StepField, StepFieldProvider } from "../step-field.js";
 import { forRun, type RunTelemetry, type TelemetrySink } from "../telemetry/index.js";
@@ -69,15 +69,8 @@ import {
   type WorldChange,
 } from "../world/world.js";
 import type { NavigationRequest } from "./navigator.js";
-import type {
-  MovementFailure,
-  NavigationEvidence,
-  NavigationFailure,
-  NavigationOutcome,
-  NavigationSettlement,
-  SearchReason,
-} from "./outcome.js";
-import type { NavigationCalculationFailure } from "./process-events.js";
+import type { PlanningNode, MovementCatalogue } from "../movements/catalogue.js";
+import type { MovementFailure } from "../execution/movement-failure.js";
 
 type ActiveGoal = Extract<ResolvedGoal, { kind: "active" }>;
 type PlanningResult =

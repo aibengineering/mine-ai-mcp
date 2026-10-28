@@ -1,6 +1,6 @@
 import type { Position3 } from "../../utils/index.js";
 import { holdSwimDepth } from "../world/swimming.js";
-import { horizontalControlsToward, type HorizontalSteeringControl } from "./local-steering.js";
+import { horizontalControlsToward, type HorizontalSteeringControl } from "../execution/local-steering.js";
 
 interface WaterPositionBot {
   readonly entity: { readonly position: Position3; readonly velocity?: Position3; readonly onGround?: boolean; readonly yaw?: number; readonly isInWater?: boolean };

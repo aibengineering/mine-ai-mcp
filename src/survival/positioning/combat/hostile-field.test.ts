@@ -3,9 +3,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture, registry } from "../../../test-support/bot.js";
-import type { HostileContext } from "../../control/combat/context.js";
+import type { HostileContext } from "../../perception/combat/context.js";
 import { DEFAULT_COMBAT_POLICY, type CombatPolicy } from "../../policy/combat/contract.js";
-import { DEFAULT_NAVIGATION_POLICY } from "../../policy/contract.js";
 import { SurvivalPolicyState } from "../../state/survival-policy.js";
 import {
   createHostileStepFieldProvider,
@@ -13,6 +12,7 @@ import {
   HOSTILE_AVOIDANCE_CAP,
   SEVERE_AVOIDANCE_STACK,
 } from "./hostile-field.js";
+import { DEFAULT_NAVIGATION_POLICY } from "../../../navigation/policy.js";
 
 /** What a cell packed with severe hostiles is worth once the cap has stopped rising. */
 const SEVERE_CAP = HOSTILE_AVOIDANCE_CAP * SEVERE_AVOIDANCE_STACK;

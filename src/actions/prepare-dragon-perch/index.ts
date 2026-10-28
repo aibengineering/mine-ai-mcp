@@ -1,5 +1,5 @@
 import type { Bot } from "mineflayer";
-import type { CombatController } from "../../survival/control/combat/contract.js";
+import type { CombatController } from "../../survival/combat/contract.js";
 import { PerchObservation } from "../../survival/perception/combat/perch.js";
 import { defineAction } from "../action.js";
 import {

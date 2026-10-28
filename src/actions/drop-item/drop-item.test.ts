@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture, EQUIPMENT_SLOTS, type FakeStack } from "../../test-support/bot.js";
-import { createDiscardedItems, type DiscardedItems } from "../../world/discarded-items.js";
+import { createDiscardedItems, type DiscardedItems } from "../../world/watchers/discarded-items.js";
 import { parseDropItemRequest } from "./contract.js";
 import { formatDropItemResult, dropItem, type DropItemDependencies } from "./drop-item.js";
 

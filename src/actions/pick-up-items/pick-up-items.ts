@@ -6,13 +6,14 @@ import {type LastDeath, readLastDeath, type SqlBotData} from '../../bot-data/ind
 import {createMovements, type NavigationRuntime, nearGoal} from '../../navigation/index.js';
 import {prepareBotForMovement} from '../../session/prepare-body.js';
 import type {ObserveRequest} from '../../session/request.js';
-import type {DiscardedItems} from '../../world/discarded-items.js';
-import {droppedItemName, pickupObservedItem} from '../../world/item-pickup.js';
+import type {DiscardedItems} from '../../world/watchers/discarded-items.js';
+import { pickupObservedItem } from '../../navigation/processes/item-pickup.js';
 import {type ActionContext, defineAction} from '../action.js';
 import {pickupCheckpointSchema} from '../checkpoint-schemas.js';
 import {inventoryCounts} from '../collect-block/collection-facts.js';
 
 import {parsePickUpItemsRequest, PICK_UP_ITEMS, PICK_UP_ITEMS_DESCRIPTION, pickUpItemsInputSchema, type PickUpItemsRequest, type PickUpItemsResult, pickUpItemsResultSchema} from './contract.js';
+import { droppedItemName } from "../../world/dropped-items.js";
 
 const STALE_RECOVERY_MS = 5 * 60_000;
 type Point = {

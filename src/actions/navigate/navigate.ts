@@ -20,7 +20,7 @@ import { prepareBotForMovement } from "../../session/prepare-body.js";
 import type { ObserveRequest } from "../../session/request.js";
 import { asVec3, type Position3 } from "../../utils/index.js";
 import { defineAction, type ActionContext } from "../action.js";
-import { observeToolTierLoss } from "../../world/tool-loss.js";
+import { observeToolTierLoss } from "../../world/watchers/tool-loss.js";
 import {
   navigateOutcomes,
   parseNavigateRequest,

@@ -13,11 +13,11 @@ import type { Action, ActionOutput, ActionResult, RuntimeFailure } from "../acti
 import { VIEW_STATUS } from "../actions/view-status/contract.js";
 import type { ActionRequestInput, ActionResponseInput } from "../bot-data/action-call-log.js";
 import type { NotificationSummary } from "../bot-data/event-log.js";
-import type { ActionRunner } from "../session/action-runner.js";
+import type { ActionRunner } from "../runner/action-runner.js";
 import { mcpReply, recordReply, replyOutputSchema, requestMetaSchema } from "./reply.js";
 import type { SurvivalStatus } from "../survival/evidence/contract.js";
 import { formatSurvivalStatus } from "../survival/evidence/format.js";
-import type { AsyncActions } from "../session/async-actions.js";
+import type { AsyncActions } from "../runner/async-actions.js";
 import { foregroundStatusSchema, isForeground, registerAsyncTools } from "./async-tools.js";
 import { formatFinalProgress, formatForegroundStatus } from "./async-format.js";
 import { ReferenceToolCatalogue } from "./tool-catalogue.js";

@@ -231,7 +231,7 @@ and reobserve; they never silently extend an active budget.
 ## Transfer and request continuation
 
 The shared [reflex driver](../../src/survival/control/driver.ts) requests admission
-from [the runner](../../src/session/action-runner.ts). The runner reserves the
+from [the runner](../../src/runner/action-runner.ts). The runner reserves the
 successor before aborting current execution, performs the admitted release hook,
 and awaits cleanup before granting physical ownership. Higher-priority survival
 responses use the same protocol.

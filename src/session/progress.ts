@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { RequestEvidence } from "./request.js";
-import type { Facts } from "../survival/state/answered.js";
 import { toolChangeSchema, toolChanges, toolSnapshotSchema, type ToolSnapshot } from "../world/tool-tiers.js";
+import type { Facts } from "../utils/facts.js";
 
 export const progressPositionSchema = z.strictObject({
   dimension: z.string(), x: z.number().finite(), y: z.number().finite(), z: z.number().finite(),

@@ -1,10 +1,10 @@
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { preferredScaffoldItem } from "../../../navigation/mineflayer/movement-policy.js";
-import { isReplaceableForPlacement } from "../../../world/block-classification.js";
 import { observedEyeHeight } from "../../../world/block-visibility.js";
-import { findPlacementSupport, occupiedCell } from "../../../world/placement.js";
+import { findPlacementSupport, occupiedCell } from "../../../world/procedures/placement.js";
 import type { CreeperObservation } from "../../perception/combat/creepers.js";
+import { isReplaceableForPlacement } from "../../../world/block-classification.js";
 
 /** One supported block on an exposed blast-to-body segment. This is partial
  * protection, not a claim of enclosure or permission to stop observing fuses. */

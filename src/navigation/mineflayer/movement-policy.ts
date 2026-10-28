@@ -1,5 +1,5 @@
-import { bucketAvailable } from "../../navigation/mineflayer/water-landing.js";
-import { readNavigationPolicy } from "../../survival/state/navigation-policy.js";
+import { bucketAvailable } from "./water-landing.js";
+import { readNavigationPolicy } from "./navigation-policy.js";
 /**
  * The production movement policy: what the bot may dig, place, or step on,
  * and what each costs, answered with Mineflayer's own knowledge of blocks,
@@ -12,10 +12,9 @@ import { readNavigationPolicy } from "../../survival/state/navigation-policy.js"
  * to save a corner.
  */
 import type { Bot } from "mineflayer";
-import { occupiedCell } from "../../world/placement.js";
+import { occupiedCell } from "../../world/procedures/placement.js";
 import { enchantmentsOf } from "../../world/enchantments.js";
-import type { BreakEvaluation, MovementPolicy, PolicyDecision, ToolSelection } from "../movements/policy.js";
-import { BREAK_OPENS_INTO_LIQUID, createMovementPolicy, type ScaffoldSelection } from "../movements/policy.js";
+import { type BreakEvaluation, type MovementPolicy, type PolicyDecision, type ToolSelection, BREAK_OPENS_INTO_LIQUID, createMovementPolicy, type ScaffoldSelection } from "../movements/policy.js";
 import { TRAIT_DAMAGING, TRAIT_LAVA } from "../world/block-geometry.js";
 import type { DiveAdmission } from "../world/swimming.js";
 import {
@@ -25,7 +24,8 @@ import {
   type LoadedBlock,
   type WorldView,
 } from "../world/world.js";
-import { blockClass, observeMineflayerBlock } from "./world.js";
+import { observeMineflayerBlock } from "./world.js";
+import { blockClass } from "../../world/block-class.js";
 
 export function scaffoldBlockNames(bot: Bot): readonly string[] {
   return readNavigationPolicy(bot).scaffold_blocks;
