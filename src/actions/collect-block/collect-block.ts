@@ -25,11 +25,10 @@ import { evaluateMineTarget, type MineTargetDecision } from "../../navigation/pr
 import { prepareBotForMovement } from "../../session/prepare-body.js";
 import type { ObserveRequest } from "../../session/request.js";
 import { asVec3 } from "../../utils/index.js";
-import { createDiscardedItems, type DiscardedItems } from "../../world/discarded-items.js";
-import { droppedItemName } from "../../world/item-pickup.js";
-import { useItemAt } from "../../world/item-use.js";
-import { observeToolTierLoss } from "../../world/tool-loss.js";
-import { carriedSolidBlocks, placeSolidBlockInto } from "../../world/placement.js";
+import { createDiscardedItems, type DiscardedItems } from "../../world/watchers/discarded-items.js";
+import { useItemAt } from "../../world/procedures/item-use.js";
+import { observeToolTierLoss } from "../../world/watchers/tool-loss.js";
+import { carriedSolidBlocks, placeSolidBlockInto } from "../../world/procedures/placement.js";
 import { defineAction, type ActionContext } from "../action.js";
 import { blockMatchesSelector, expectedDropName, inventoryCounts, inventoryGains } from "./collection-facts.js";
 import { createCollectionMovements } from "./collection-movements.js";
@@ -48,6 +47,7 @@ import {
   type CollectBlockRequest,
   type CollectBlockResult,
 } from "./contract.js";
+import { droppedItemName } from "../../world/dropped-items.js";
 
 const sumValues = (record: Record<string, number>): number => Object.values(record).reduce((total, n) => total + n, 0);
 

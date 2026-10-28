@@ -2,7 +2,7 @@ import minecraftData from "minecraft-data";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createSetSurvivalPolicyAction } from "../../actions/set-survival-policy/index.js";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { botFixture } from "../../test-support/bot.js";
 import { recoveryAvailable } from "../perception/combat/recovery.js";
 import { DEFAULT_COMBAT_POLICY } from "../policy/combat/contract.js";

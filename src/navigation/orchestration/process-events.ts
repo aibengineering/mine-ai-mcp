@@ -4,9 +4,9 @@
  * Reaching a spatial goal, or failing one inline calculation, is an event the
  * caller resolves — navigation does not decide whether the process is done.
  */
-import type { PlanningNode } from "../goals/goal.js";
 import type { NavigationObservation } from "../world/world.js";
-import type { NavigationFailure } from "./outcome.js";
+import type { NavigationCalculationFailure } from "../outcome.js";
+import type { PlanningNode } from "../movements/catalogue.js";
 
 /** A spatial goal was reached, but the caller decides whether its process is done. */
 export interface NavigationArrival {
@@ -17,11 +17,6 @@ export interface NavigationArrival {
 }
 
 export type NavigationArrivalResult = { readonly kind: "completed" } | { readonly kind: "continue" };
-
-export type NavigationCalculationFailure = Extract<
-  NavigationFailure,
-  { readonly kind: "no_path" } | { readonly kind: "search_limit" }
->;
 
 /** An inline path calculation failed; the caller may revise its process goal and continue. */
 export interface NavigationCalculationFailureEvent {

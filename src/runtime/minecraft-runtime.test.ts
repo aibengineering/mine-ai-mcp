@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { z } from "zod";
-import type { CombatDecision } from "../survival/control/combat/contract.js";
+import type { CombatDecision } from "../survival/combat/contract.js";
 
 import type { Bot } from "mineflayer";
 import os from "node:os";
@@ -11,7 +11,7 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import { readRecentEventsResultSchema } from "../actions/read-recent-events/contract.js";
 import { ExecutionScope } from "../execution/execution-scope.js";
-import { CombatExecution, combatExecutionSnapshotSchema } from "../survival/control/combat/execution.js";
+import { CombatExecution, combatExecutionSnapshotSchema } from "../survival/combat/execution.js";
 import { deferred } from "../test-support/async.js";
 import { botFixture } from "../test-support/bot.js";
 import { fakeCombat } from "../test-support/hunt-mob.js";

@@ -1,5 +1,5 @@
-import type { Facts } from "../state/answered.js";
 import type { SurvivalReceipt, SurvivalStatus } from "./contract.js";
+import type { Facts } from "../../utils/facts.js";
 
 function label(value: string): string {
   return value.replace(/_reflex$/, "").replaceAll("_", " ");

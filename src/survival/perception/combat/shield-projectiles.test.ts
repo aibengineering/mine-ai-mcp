@@ -4,7 +4,7 @@ import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../../test-support/bot.js";
-import { projectileReachesBody } from "../../positioning/combat/exposure.js";
+import { projectileReachesBody } from "./exposure.js";
 import { confirmShieldBlock, observeProjectileDefence, projectileShieldFacing, shieldFacing } from "../../weapons/shield-facing.js";
 import { arrowFlight, trackArrowFlights } from "./arrow-flight.js";
 import { CombatPerception } from "./observations.js";

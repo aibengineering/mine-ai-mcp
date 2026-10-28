@@ -1,6 +1,8 @@
 import type { Continuation } from "../../session/abort.js";
-import type { AnsweredEntry, AnsweredScope, Facts } from "../state/answered.js";
+import type { AnsweredEntry, AnsweredScope } from "../state/answered.js";
 import type { REFLEX_PRIORITY } from "./priority.js";
+import type { Facts } from "../../utils/facts.js";
+import type { ResponseDecision } from "../policy/decision.js";
 export type ReflexName = (typeof REFLEX_PRIORITY)[number];
 
 export type DangerObservation<Danger> =
@@ -8,20 +10,9 @@ export type DangerObservation<Danger> =
   | { readonly kind: "unknown"; readonly missing: string }
   | null;
 
-export type ResponseExclusion =
-  | { readonly kind: "prohibited"; readonly field: string }
-  | { readonly kind: "missing_equipment"; readonly item: string }
-  | { readonly kind: "unsuitable_geometry"; readonly scope: string }
-  | { readonly kind: "answered"; readonly entry: number }
-  | { readonly kind: "infeasible_now"; readonly premise: string };
 
-export type ResponseDecision<Response> =
-  | { readonly kind: "respond"; readonly response: Response; readonly name: string; readonly reason: string }
-  | {
-      readonly kind: "stand_down";
-      readonly candidates: readonly { readonly response: string; readonly excluded: ResponseExclusion }[];
-    }
-  | { readonly kind: "handled"; readonly by: string };
+
+
 
 export interface ReflexDefinition<Danger, Response, Outcome> {
   readonly name: ReflexName;

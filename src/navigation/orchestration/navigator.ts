@@ -4,23 +4,23 @@
  * The navigator decides who may move the bot. It does not search, and it does
  * not execute — those belong to `search/` and `execution/`.
  */
-import type { NavigationBot } from "../bot.js";
+import type { NavigationBot } from "../execution/bot.js";
 import { ExpectedMutationLedger } from "../execution/mutations.js";
 import type { Goal } from "../goals/goal.js";
-import { createMovementCatalogue, type MovementCatalogue } from "../movements/catalogue.js";
 import type { MovementPolicy } from "../movements/policy.js";
-import type { SearchLimits } from "../search/search-result.js";
 import type { StepFieldProvider } from "../step-field.js";
 import { silentTelemetry, type TelemetrySink } from "../telemetry/index.js";
 import type { WorldView } from "../world/world.js";
 import { NavigationRun, type RunContext } from "./navigation-run.js";
-import type { NavigationOutcome } from "./outcome.js";
+import type { NavigationOutcome } from "../outcome.js";
 import type {
   NavigationArrival,
   NavigationArrivalResult,
   NavigationCalculationFailureEvent,
   NavigationCalculationFailureResult,
 } from "./process-events.js";
+import { createMovementCatalogue, type MovementCatalogue } from "../movements/catalogue.js";
+import type { SearchLimits } from "../search/search-result.js";
 
 export interface NavigationRequest {
   readonly goal: Goal;

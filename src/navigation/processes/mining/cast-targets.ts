@@ -1,7 +1,7 @@
 import type { Bot } from "mineflayer";
 import { asVec3, cellKey } from "../../../utils/index.js";
 import { findLoadedBlockPositions } from "../../../world/loaded-block-scan.js";
-import type { BlockPosition } from "../../index.js";
+import type { BlockPosition } from "../../../utils/geometry.js";
 import type { MinePoolTarget, MineRequest } from "./mine-process.js";
 import { carriesWaterBucket } from "./cast-obsidian.js";
 

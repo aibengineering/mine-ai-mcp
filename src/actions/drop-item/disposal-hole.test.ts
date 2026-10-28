@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { blockClass } from "../../navigation/mineflayer/world.js";
 import { createMovementPolicy } from "../../navigation/movements/policy.js";
 import { botFixture, registry, type FakeStack } from "../../test-support/bot.js";
 import { prepareDisposalHole, observeHoleDrops, sealDisposalHole, snapshotDroppedCounts } from "./disposal-hole.js";
+import { blockClass } from "../../world/block-class.js";
 
 const Block = blockClass({ registry } as Pick<Bot, "registry">);
 

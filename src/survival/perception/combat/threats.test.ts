@@ -5,8 +5,8 @@ import { EventEmitter } from "node:events";
 import { botFixture, registry } from "../../../test-support/bot.js";
 import { CombatPerception } from "./observations.js";
 import { Vec3 } from "vec3";
-import type { HostileContext } from "../../control/combat/context.js";
-import { observeHostileResponse } from "../../control/combat/observation.js";
+import type { HostileContext } from "./context.js";
+import { observeHostileResponse } from "../../combat/observation.js";
 import { DEFAULT_COMBAT_POLICY } from "../../policy/combat/contract.js";
 import { isThreat, observeHostileContact, shouldAvoidEntity, SPIDER_PASSIVE_SKY_LIGHT } from "./threats.js";
 

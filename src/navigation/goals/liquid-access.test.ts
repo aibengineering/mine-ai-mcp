@@ -3,10 +3,10 @@ import test from "node:test";
 import { flatWorld, observation, planningStart, WELL_FED } from "../../test-support/navigation.js";
 import { liquidAccessGoal, canAccessLiquid } from "./liquid-access.js";
 import { anyGoal } from "./index.js";
-import { createMovementCatalogue } from "../movements/catalogue.js";
 import { createMovementPolicy } from "../movements/policy.js";
 import { MemoryWorld } from "../world/memory-world.js";
 import { IncrementalSearch } from "../search/search.js";
+import { createMovementCatalogue } from "../movements/catalogue.js";
 
 const source = { x: 3, y: 62, z: 0 };
 const lid = { ...source, y: 63 };

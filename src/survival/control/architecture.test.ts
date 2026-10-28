@@ -9,10 +9,12 @@ test("survival policy selects from facts without importing the bot, mutable stor
   const invalid = sourceImports(survival, "policy").filter(({ target, typeOnly }) => {
     if (target === "mineflayer") return true;
     if (typeOnly) return false;
-    // Food's fixed regeneration threshold is shared game data; decisions receive no live bot.
+    // Food's fixed regeneration threshold is shared game data, and navigation owns its own
+    // policy section as a schema; decisions receive no live bot.
     return !(
       target.startsWith("policy/") ||
       target === "../world/food.js" ||
+      target === "../navigation/policy.js" ||
       target === "zod" ||
       target === "node:util"
     );
@@ -44,7 +46,7 @@ test("physical responses cannot register reflexes or own an idle baseline", () =
         target.startsWith("baseline/") ||
         target.startsWith("guards/") ||
         target === "control/driver.js" ||
-        target === "../session/action-runner.js"),
+        target === "../runner/action-runner.js"),
   );
   assert.deepEqual(invalid, [], "Runtime attaches lifetimes; physical responses execute under the admitted signal.");
 });

@@ -5,10 +5,11 @@ import { Vec3 } from "vec3";
 import { botFixture } from "../../test-support/bot.js";
 import { type LoadedBlock, loadedObservation } from "../../navigation/world/world.js";
 import { TERRAIN_BREAK_PENALTY } from "../../navigation/mineflayer/movement-policy.js";
-import { blockClass, observeMineflayerBlock } from "../../navigation/mineflayer/world.js";
+import { observeMineflayerBlock } from "../../navigation/mineflayer/world.js";
 import { createCollectionMovements, type CollectionMovementOptions } from "./collection-movements.js";
 import { flatWorld } from "../../test-support/navigation.js";
 import { createMovements } from "../../navigation/runtime.js";
+import { blockClass } from "../../world/block-class.js";
 
 /** Air around the origin: no liquid beside any cell these tests break. */
 const world = flatWorld();

@@ -1,10 +1,10 @@
-import { saveWaterLanding } from "../../navigation/mineflayer/water-landing.js";
-import { readNavigationPolicy } from "../../survival/state/navigation-policy.js";
+import { saveWaterLanding } from "./water-landing.js";
+import { readNavigationPolicy } from "./navigation-policy.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { SupportedPositionController } from "../execution/supported-position-controller.js";
 import { holdWaterPosition } from "../steering/hold-water-position.js";
 import { holdSwimDepth } from "../world/swimming.js";
-import { horizontalControlsToward } from "../steering/local-steering.js";
+import { horizontalControlsToward, centerOnCell, driveHorizontalSteering, steeringPortFor, type HorizontalSteeringOutcome, type HorizontalSteeringPort, type HorizontalSteeringRequest } from "../execution/local-steering.js";
 /**
  * Mineflayer's implementation of the bot port.
  *
@@ -14,12 +14,12 @@ import { horizontalControlsToward } from "../steering/local-steering.js";
  * at the integration edge, and nowhere else in navigation.
  */
 import type { Bot } from "mineflayer";
-import { recordCombatResourceReceipt } from "../../runtime/combat-resource-receipts.js";
+import { recordCombatResourceReceipt } from "../../execution/combat-resource-receipts.js";
 import { Vec3 } from "vec3";
 import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../world/block-visibility.js";
-import { occupiedCell, placeWithoutLooking, type WorldBlock } from "../../world/placement.js";
+import { occupiedCell, placeWithoutLooking } from "../../world/procedures/placement.js";
 import { AIR_COAST_TICKS, COAST_TICKS, PLAYER_HALF_WIDTH } from "../../world/player-physics.js";
-import type { EffectHandle, MovementPreparation, NavigationBot } from "../bot.js";
+import type { EffectHandle, MovementPreparation, NavigationBot } from "../execution/bot.js";
 import {
   createMovementController,
   recenterControls,
@@ -32,14 +32,6 @@ import {
 import type { AttemptToken } from "../execution/mutations.js";
 import { DIG_REACH } from "../movements/excavation.js";
 import type { PlannedOperation, PlannedStep } from "../movements/movement.js";
-import {
-  centerOnCell,
-  driveHorizontalSteering,
-  steeringPortFor,
-  type HorizontalSteeringOutcome,
-  type HorizontalSteeringPort,
-  type HorizontalSteeringRequest,
-} from "../steering/local-steering.js";
 import { navigationFeet } from "../world/block-geometry.js";
 import {
   blockLabel,
@@ -51,6 +43,7 @@ import {
   type WorldView,
 } from "../world/world.js";
 import { CLIMBABLES, observeMineflayerBlock, type MineflayerBlock } from "./world.js";
+import type { WorldBlock } from "../../world/block-classification.js";
 
 const NETHER_VINES = new Set(["weeping_vines", "weeping_vines_plant", "twisting_vines", "twisting_vines_plant"]);
 // Prismarine applies gravity and drag after assigning its 0.2 climb impulse;

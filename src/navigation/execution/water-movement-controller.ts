@@ -1,7 +1,7 @@
 import { COAST_TICKS, PLAYER_HALF_WIDTH } from "../../world/player-physics.js";
 import { holdSwimDepth } from "../world/swimming.js";
 import type { PlannedStep } from "../movements/movement.js";
-import { horizontalControlsToward } from "../steering/local-steering.js";
+import { horizontalControlsToward } from "./local-steering.js";
 import { blockPosition, samePosition, type Position3 } from "../world/world.js";
 import type {
   MovementControlIntent,

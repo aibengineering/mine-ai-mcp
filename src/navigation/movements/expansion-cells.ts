@@ -23,7 +23,7 @@
  * nothing. The columns are overwritten by the next expansion, which is why a
  * generated movement is only good until the catalogue's next `generate`.
  */
-import type { PlanningOverlay } from "../search/planning-overlay.js";
+import type { PlanningOverlay } from "./planning-overlay.js";
 import { type BlockObservation, type BlockPosition, UNLOADED, type WorldView } from "../world/world.js";
 import type { Dig } from "./excavation.js";
 import type { MovementPolicy, PolicyDecision } from "./policy.js";

@@ -1,4 +1,4 @@
-import { setNavigationPolicyProvider } from "./navigation-policy.js";
+import { setNavigationPolicyProvider } from "../../navigation/mineflayer/navigation-policy.js";
 import type { Bot } from "mineflayer";
 import { randomUUID } from "node:crypto";
 import type { CombatPolicy } from "../policy/combat/contract.js";

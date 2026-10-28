@@ -1,6 +1,22 @@
 /** What a search was allowed to spend, and the evidence it returns about progress. */
 import type { BlockPosition } from "../world/world.js";
 
+/** The node nearest the goal when a search stopped short. */
+export interface ClosestNodeEvidence {
+  readonly position: BlockPosition;
+  readonly heuristic: number;
+  readonly routeCost: number;
+  readonly basis: "best_heuristic_search_node";
+}
+
+/** Which bound stopped a search, and how close it got. */
+export interface SearchLimitEvidence {
+  readonly kind: "search_time" | "radius";
+  readonly limit: number;
+  readonly observed: number;
+  readonly closest: ClosestNodeEvidence;
+}
+
 export interface SearchLimits {
   /**
    * How long to keep searching once something is worth committing.

@@ -1,7 +1,7 @@
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { botFixture } from "../../test-support/bot.js";
 import {
   createSendMessageAction,

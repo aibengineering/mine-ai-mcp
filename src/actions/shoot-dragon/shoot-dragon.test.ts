@@ -8,11 +8,11 @@ import { TestEndCombat } from "../../test-support/combat.js";
 import type { DragonShotObservation } from "../../survival/perception/combat/dragon-shot.js";
 import type { FootingRecovery } from "../../survival/responses/footing.js";
 import type { NavigationRuntime } from "../../navigation/index.js";
-import { ActionRunner } from "../../session/action-runner.js";
-import type { CombatController } from "../../survival/control/combat/contract.js";
+import { ActionRunner } from "../../runner/action-runner.js";
+import type { CombatController } from "../../survival/combat/contract.js";
 import { createShootDragonAction } from "./index.js";
 
-// The shot itself is proven beside EndCombat (survival/responses/end/shoot-dragon.test.ts)
+// The shot itself is proven beside EndCombat (survival/combat/end/shoot-dragon.test.ts)
 // and the observation beside DragonShotObservation; this file proves only what
 // the action adds: one observation carried across a takeover and its resume.
 function fixture() {

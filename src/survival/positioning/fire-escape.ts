@@ -5,6 +5,7 @@ import { cellIntersectsBody } from "../../utils/geometry.js";
 import { advancingLavaAt } from "../../world/lava-flow.js";
 import { isBurning, isInFire, isInLava } from "../perception/body.js";
 
+import type { FireEscapeReason } from "../policy/environment.js";
 /** A local escape borrows navigation's live world and block geometry. */
 export interface FireEscapeDeparture {
   readonly position: Vec3;
@@ -83,7 +84,6 @@ export function clearFireEscape(
 }
 
 /** Immediate swimming/jumping reach; longer journeys belong to navigation. */
-export type FireEscapeReason = "contact" | "advancing_lava";
 export const FIRE_ESCAPE_RADIUS = 4;
 
 export function nearbyFireEscape(bot: Bot, world: WorldView, reason: FireEscapeReason = "contact"): Vec3 | null {

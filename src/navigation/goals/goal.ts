@@ -7,15 +7,9 @@
  * observation, so a search slice cannot be judged against a goal that moved
  * underneath it.
  */
-import type { BlockPosition, NavigationObservation, WorldView } from "../world/world.js";
-import type { GeneratedMovement, GenerationContext, PlanningState } from "../movements/catalogue.js";
+import type { NavigationObservation, WorldView } from "../world/world.js";
 import type { DigContext } from "../movements/policy.js";
-export interface PlanningNode {
-  readonly feet: BlockPosition;
-  readonly remainingScaffolds: number;
-  readonly overlayId: string;
-}
-
+import type { GeneratedMovement, GenerationContext, PlanningNode, PlanningState } from "../movements/catalogue.js";
 export type GoalEndPredicate = (node: PlanningNode, observation: NavigationObservation) => boolean;
 
 export type ResolvedGoal =

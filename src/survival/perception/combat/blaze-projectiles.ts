@@ -1,5 +1,5 @@
 import type { Bot } from "mineflayer";
-import { projectileReachesBody } from "../../positioning/combat/exposure.js";
+import { projectileReachesBody } from "./exposure.js";
 
 type Entity = Parameters<Bot["attack"]>[0];
 

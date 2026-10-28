@@ -1,7 +1,7 @@
 import type { Bot } from "mineflayer";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { SupportedPositionController } from "../execution/supported-position-controller.js";
-import { setSneaking } from "../mineflayer/sneak.js";
+import { setSneaking } from "../../world/procedures/sneak.js";
 import type { WorldView } from "../world/world.js";
 
 /** Apply navigation's stationary controller while another action owns looking. */

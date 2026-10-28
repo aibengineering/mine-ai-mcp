@@ -6,7 +6,8 @@ import { Vec3 } from "vec3";
 import { MemoryWorld as GoalTestWorld } from "../../navigation/world/memory-world.js";
 import { flatWorld, observation } from "../../test-support/navigation.js";
 import { entityDimensions } from "../../world/entity-dimensions.js";
-import { hasMeleeKnockbackRoom, meleeApproachGoal, meleeDistance, quarryDownAtLavaShore } from "./melee.js";
+import { hasMeleeKnockbackRoom, meleeApproachGoal, quarryDownAtLavaShore } from "./melee.js";
+import { meleeDistance } from "../perception/combat/reach.js";
 
 const goalTestWorld = new GoalTestWorld();
 

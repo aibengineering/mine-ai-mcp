@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { BodyAbort } from "../session/abort.js";
 import { bodyAbortCauseSchema } from "../survival/evidence/contract.js";
-import type { EndCombatResult } from "../survival/responses/end/execute.js";
 import { actionResultSchema } from "./action.js";
 import { crystalMeleeEvidenceSchema, dragonBowEvidenceSchema } from "./checkpoint-schemas.js";
+import type { EndCombatResult } from "../survival/combat/end/core.js";
 
 export const endCombatEvidenceSchema = z.strictObject({
   outcome: z.enum(["crystal_destroyed", "shot_missed", "dragon_damaged", "weapon_unavailable", "perch_ready", "perch_approaching", "perch_ended", "dragon_died", "evaded", "stopped"]),

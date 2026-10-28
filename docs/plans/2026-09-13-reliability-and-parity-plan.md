@@ -307,7 +307,7 @@ physics lines.
 ### Today
 
 [contract.ts](../../src/actions/destroy-end-crystal/contract.ts) takes only
-`entity_id`; [end/execute.ts](../../src/survival/responses/end/execute.ts)
+`entity_id`; [end/execute.ts](../../src/survival/combat/end/execute.ts)
 shoots whenever a bow and arrow are carried and only falls back to melee when
 they are not. Forcing melee means dropping the bow, which the driver did during
 the last run.
@@ -421,7 +421,7 @@ refusal test for a stale death.
 ### Today
 
 Navigation progress reports distance, elapsed time and scaffold stock every
-wait. Combat progress ([control/combat/progress.ts](../../src/survival/control/combat/progress.ts))
+wait. Combat progress ([combat/progress.ts](../../src/survival/combat/progress.ts))
 tracks hits, volleys and health but nothing about what the fight cost.
 Durability changes are already observed in
 [runtime/equipment-events.ts](../../src/runtime/equipment-events.ts) and

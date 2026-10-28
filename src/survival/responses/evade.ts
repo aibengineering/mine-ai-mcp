@@ -1,14 +1,13 @@
+import { encounterBaseline, type EvadeResponseResult } from "./encounter.js";
 import type { Bot } from "mineflayer";
 import { createMovements, safeFromEntitiesGoal, type NavigationRuntime } from "../../navigation/index.js";
 import { isHeadPassable, isPassable, isSafeSupport, navigationFeet } from "../../navigation/world/block-geometry.js";
-import type { ResponseContext } from "../control/combat/context.js";
-import { encounterBaseline, type EvadeResponseResult } from "../control/combat/response-result.js";
+import type { ResponseContext } from "../perception/combat/context.js";
 import { incomingShieldProjectiles } from "../perception/combat/shield-projectiles.js";
 import { observeExposedAvoidanceContact } from "../perception/combat/threats.js";
 import { permittedCombatItems } from "../policy/combat/permissions.js";
 import { creeperEscape, creeperEscapeAdmits } from "../policy/combat/tactics.js";
 import type { HostileDirective } from "../policy/combat/response.js";
-import { equipCombatLoadout, readCombatItems, selectMeleeLoadout } from "../weapons/equipment.js";
 import { combatItemsForTarget } from "../weapons/melee.js";
 import {
   guardRetreatProjectiles,
@@ -16,6 +15,7 @@ import {
   retreatGuardLimit,
 } from "../weapons/projectile-guard.js";
 import { defendWhileRetreating } from "../weapons/retreat-melee.js";
+import { equipCombatLoadout, readCombatItems, selectMeleeLoadout } from "../weapons/equipment.js";
 const EVADE_ARRIVAL_MARGIN = 8;
 // A hostile this close in front of a moving body is about to be run into.
 const CLOSING_AHEAD_RANGE = 3;

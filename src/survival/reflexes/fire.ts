@@ -3,9 +3,9 @@ import type { WorldView } from "../../navigation/index.js";
 import { advancingLavaAt } from "../../world/lava-flow.js";
 import type { ReflexDriver } from "../control/driver.js";
 import { isBurning, isInFire, isInLava } from "../perception/body.js";
-import { decideFireResponse, type FireFacts } from "../policy/environment.js";
-import { FIRE_ESCAPE_RADIUS, nearbyFireEscape, type FireEscapeReason } from "../positioning/fire-escape.js";
+import { FIRE_ESCAPE_RADIUS, nearbyFireEscape } from "../positioning/fire-escape.js";
 import { escapeFire } from "../responses/fire.js";
+import { type FireEscapeReason, decideFireResponse, type FireFacts } from "../policy/environment.js";
 
 /** Fire owns its environmental authority; combat policy cannot prohibit escape. */
 export function attachFireReflex(bot: Bot, driver: ReflexDriver, world: WorldView): AsyncDisposable {

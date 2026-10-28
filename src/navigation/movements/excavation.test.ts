@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { flatWorld, observation, planningStart, WELL_FED } from "../../test-support/navigation.js";
 import { excavateGoal } from "../goals/excavate.js";
-import { createMovementCatalogue } from "./catalogue.js";
 import { DIG_REACH, prepareExcavation, stanceSight } from "./excavation.js";
 import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../world/block-visibility.js";
 import { obstaclesOf, worldViewRaycaster } from "../world/line-of-sight.js";
 import { MemoryWorld } from "../world/memory-world.js";
 import type { BlockPosition, Position3 } from "../world/world.js";
 import { createMovementPolicy } from "./policy.js";
+import { createMovementCatalogue } from "./catalogue.js";
 
 function excavationWorld() {
   const world = flatWorld();

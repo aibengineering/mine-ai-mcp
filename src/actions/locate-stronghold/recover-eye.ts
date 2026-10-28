@@ -1,13 +1,12 @@
 import type { Bot } from "mineflayer";
 import { createMovements, type NavigationRuntime } from "../../navigation/index.js";
 import { armSignal, asVec3, type Position3 } from "../../utils/index.js";
-import { carriedCount } from "../../world/inventory-count.js";
+import { carriedCount } from "../../world/watchers/inventory-count.js";
 import {
-  DROPPED_ITEM_OBSERVATION_EVENTS,
-  droppedItemName,
   pickupObservedItem,
   type ObservedItemPickupOptions,
-} from "../../world/item-pickup.js";
+} from "../../navigation/processes/item-pickup.js";
+import { DROPPED_ITEM_OBSERVATION_EVENTS, droppedItemName } from "../../world/dropped-items.js";
 
 /** How long a vanished eye's drop gets to become identifiable before recovery gives up on it. */
 const EYE_DROP_SETTLE_MS = 1_500;

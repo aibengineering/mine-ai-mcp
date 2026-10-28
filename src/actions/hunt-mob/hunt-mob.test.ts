@@ -4,11 +4,11 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { hunt } from "../../navigation/processes/hunting/hunt-process.js";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import type { CombatController } from "../../survival/index.js";
 import { Budgets } from "../../survival/state/budgets.js";
 import { SurvivalPolicyState } from "../../survival/state/survival-policy.js";
-import { createDiscardedItems } from "../../world/discarded-items.js";
+import { createDiscardedItems } from "../../world/watchers/discarded-items.js";
 import { botFixture } from "../../test-support/bot.js";
 import {
   dependencies,

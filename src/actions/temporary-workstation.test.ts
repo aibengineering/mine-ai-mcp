@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
 import { craftingBot } from "../test-support/crafting.js";
-import type { WorldBlock } from "../world/placement.js";
 import type { ActionResult } from "./action.js";
 import { useTemporaryWorkstation, type WorkstationOperations } from "./temporary-workstation.js";
+import type { WorldBlock } from "../world/block-classification.js";
 
 function fixture() {
   const { bot } = craftingBot({ crafting_table: 1 });

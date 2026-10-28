@@ -19,7 +19,7 @@ import {
   stepUpStep,
 } from "../../test-support/navigation.js";
 import { nextTurn } from "../../test-support/async.js";
-import type { MovementPreparation } from "../bot.js";
+import type { MovementPreparation } from "./bot.js";
 import type { PlannedStep } from "../movements/movement.js";
 import type { NavigationObservation, Position3 } from "../world/world.js";
 import {

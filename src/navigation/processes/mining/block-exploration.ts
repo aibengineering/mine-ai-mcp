@@ -2,16 +2,11 @@ import type { Bot } from "mineflayer";
 import type { Vec3 } from "vec3";
 import { cellKey } from "../../../utils/index.js";
 import { findLoadedBlockPositions } from "../../../world/loaded-block-scan.js";
-import {
-  ASCENT_TICKS_PER_BLOCK,
-  customGoal,
-  DESCENT_TICKS_PER_BLOCK,
-  HORIZONTAL_TICKS_PER_BLOCK,
-  type BlockPosition,
-  type Goal,
-  type MovementPolicy,
-  type Navigate,
-} from "../../index.js";
+import { ASCENT_TICKS_PER_BLOCK, customGoal, DESCENT_TICKS_PER_BLOCK, HORIZONTAL_TICKS_PER_BLOCK } from "../../goals/index.js";
+import type { BlockPosition } from "../../../utils/geometry.js";
+import type { Goal } from "../../goals/goal.js";
+import type { MovementPolicy } from "../../movements/policy.js";
+import type { Navigate } from "../../navigate.js";
 
 /**
  * Baritone's no-known-ore fallback: keep moving away from one remembered

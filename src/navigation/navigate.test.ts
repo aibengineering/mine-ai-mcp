@@ -10,7 +10,7 @@ import { exactBlockGoal } from "./goals/index.js";
 import { createMovementPolicy } from "./movements/policy.js";
 import { runNavigation } from "./navigate.js";
 import type { NavigationRequest, Navigator } from "./orchestration/navigator.js";
-import type { NavigationEvidence, NavigationOutcome } from "./orchestration/outcome.js";
+import type { NavigationEvidence, NavigationOutcome } from "./outcome.js";
 
 const evidence = (unrestoredPassages: NavigationEvidence["unrestoredPassages"] = []) =>
   ({ unrestoredPassages }) as unknown as NavigationEvidence;

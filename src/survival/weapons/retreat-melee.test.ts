@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { Vec3 } from "vec3";
-import type { HostileContext } from "../control/combat/context.js";
+import type { HostileContext } from "../perception/combat/context.js";
 import { defendWhileRetreating } from "./retreat-melee.js";
 
 function fixture() {

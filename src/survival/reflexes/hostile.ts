@@ -1,38 +1,37 @@
 import { isDeepStrictEqual } from "node:util";
 import type { Bot, BotEvents } from "mineflayer";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
-import type { ResponseContext } from "../control/combat/context.js";
-import type { CombatController } from "../control/combat/contract.js";
-import { answeredResponseEntries, answeredResponses, responseScope } from "../control/combat/scopes/response.js";
-import { CombatPerception } from "../perception/combat/observations.js";
+import type { ResponseContext } from "../perception/combat/context.js";
+import type { CombatController } from "../combat/contract.js";
+import { answeredResponseEntries, answeredResponses, responseScope } from "../responses/scopes/response.js";
 import { responsePolicyChanged } from "../policy/combat/permissions.js";
 import { decideHostileReflex } from "../policy/combat/reflex-decision.js";
 
 import type { NavigationRuntime } from "../../navigation/index.js";
 import { BodyAbort } from "../../session/abort.js";
-import { observeCombatDecision } from "../control/combat/observation.js";
+import { observeCombatDecision } from "../combat/observation.js";
 import type { ReflexDriver } from "../control/driver.js";
 import { incomingFireball } from "../perception/combat/fireball.js";
-import { ensureOffHandShield, holdsShield, OFF_HAND_SLOT } from "../weapons/equipment.js";
 import { HOSTILE_OBSERVATION_RANGE, isHostile, observeHostileContact } from "../perception/combat/threats.js";
 import { combatDecisionEvidence, decideCombatResponse } from "../policy/combat/decision.js";
-import type { Facts } from "../state/answered.js";
 
-import { executeHostileResponse } from "../control/combat/respond.js";
+import { executeHostileResponse } from "../combat/respond.js";
 import {
-  encounterBaseline,
-  type EncounterEvidence,
   type HostileSettlement,
-} from "../control/combat/response-result.js";
+} from "../combat/response-result.js";
 import {
   completeResponse,
   describeResponse,
   responseContinuation,
   responseFailure,
-} from "../control/combat/settlement.js";
+} from "../combat/settlement.js";
 import type { HostileResponse } from "../policy/combat/response.js";
 
-import type { ResponseDecision } from "../control/contract.js";
+import type { Facts } from "../../utils/facts.js";
+import type { ResponseDecision } from "../policy/decision.js";
+import { CombatPerception } from "../perception/combat/observations.js";
+import { encounterBaseline, type EncounterEvidence } from "../responses/encounter.js";
+import { ensureOffHandShield, holdsShield, OFF_HAND_SLOT } from "../weapons/equipment.js";
 
 type ShieldPreparation = { readonly kind: "prepare_shield" };
 type ShieldPrepared = { readonly kind: "shield_prepared"; readonly equipped: boolean; readonly error: string | null };

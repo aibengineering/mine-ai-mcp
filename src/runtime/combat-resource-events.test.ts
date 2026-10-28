@@ -6,7 +6,7 @@ import { Vec3 } from "vec3";
 import type { CombatResourceObservation } from "../session/progress.js";
 import { botFixture } from "../test-support/bot.js";
 import { observeCombatResourceEvents } from "./combat-resource-events.js";
-import { recordCombatResourceReceipt } from "./combat-resource-receipts.js";
+import { recordCombatResourceReceipt } from "../execution/combat-resource-receipts.js";
 
 function fixture() {
   const arrow = { name: "arrow", type: 1, count: 3, slot: 10 };

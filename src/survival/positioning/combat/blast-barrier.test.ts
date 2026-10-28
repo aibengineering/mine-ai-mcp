@@ -3,7 +3,7 @@ import test from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../../test-support/bot.js";
 import { blastBarrierCells } from "./blast-barrier.js";
-import { blastBarrierScope } from "../../control/combat/scopes/blast-barrier.js";
+import { blastBarrierScope } from "../../responses/scopes/blast-barrier.js";
 import { DEFAULT_COMBAT_POLICY } from "../../policy/combat/contract.js";
 import { Answered } from "../../state/answered.js";
 

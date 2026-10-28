@@ -2,12 +2,12 @@ import { HORIZONTAL_TICKS_PER_BLOCK, exactBlockGoal } from "../goals/index.js";
 import { IncrementalSearch } from "../search/search.js";
 import { MemoryWorld } from "../world/memory-world.js";
 import { blockKey } from "../world/world.js";
-import { type GeneratedMovement, type GenerationContext, createMovementCatalogue } from "./catalogue.js";
 import { createMovementPolicy } from "./policy.js";
 import type { StepField } from "../step-field.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { WELL_FED, flatWorld, observation, planningStart } from "../../test-support/navigation.js";
+import { type GeneratedMovement, type GenerationContext, createMovementCatalogue } from "./catalogue.js";
 
 type Cell = { x: number; y: number; z: number };
 

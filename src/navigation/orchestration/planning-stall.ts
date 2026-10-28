@@ -1,5 +1,5 @@
 import type { NavigationObservation, Position3 } from "../world/world.js";
-import type { NavigationFailure } from "./outcome.js";
+import type { NavigationFailure } from "../outcome.js";
 
 const STALL_MS = 20_000;
 

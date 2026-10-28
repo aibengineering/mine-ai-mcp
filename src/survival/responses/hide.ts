@@ -6,18 +6,18 @@ import { navigationFeet } from "../../navigation/world/block-geometry.js";
 import { cellIntersectsBody } from "../../utils/geometry.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { findPlacementSupport, type WorldBlock } from "../../world/index.js";
-import type { ResponseContext } from "../control/combat/context.js";
+import type { ResponseContext } from "../perception/combat/context.js";
 import { recoveryAvailable } from "../perception/combat/recovery.js";
 import { isThreat } from "../perception/combat/threats.js";
 import { permitsHide, permittedCombatItems } from "../policy/combat/permissions.js";
 import { buildProtection, fullProtectionBlock } from "../positioning/combat/build-protection.js";
 import { countCapBlocks } from "../positioning/combat/hide-blocks.js";
 import { PROTECTION_SIDES, protectionShell } from "../positioning/combat/planner.js";
-import { equipCombatLoadout, selectMeleeLoadout } from "../weapons/equipment.js";
 import { CombatItemUse } from "../weapons/item-use.js";
 import { canMeleeTarget, combatItemsForTarget, hasSweepBystander } from "../weapons/melee.js";
 import { shieldFacing } from "../weapons/shield-facing.js";
 import { recoverUnderCover, type CoveredRecovery } from "./recover.js";
+import { equipCombatLoadout, selectMeleeLoadout } from "../weapons/equipment.js";
 
 function shelterFeet(bot: Bot): Vec3 {
   const cell = navigationFeet(bot.entity.position, bot.entity.onGround);

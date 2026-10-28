@@ -1,6 +1,6 @@
 import type { EntityBody } from "../../../world/entity-geometry.js";
 import type { Bot } from "mineflayer";
-import { PROJECTILE_HIT_MARGIN, projectileContact } from "../../positioning/combat/exposure.js";
+import { PROJECTILE_HIT_MARGIN, projectileContact } from "./exposure.js";
 import { isIncomingBlazeProjectile } from "./blaze-projectiles.js";
 import { arrowFlight } from "./arrow-flight.js";
 

@@ -12,9 +12,16 @@ criteria used to qualify survival control.
 ## One survival module
 
 The production home is [src/survival](../../src/survival). Its first level names
-responsibilities. Combat-specific observation, policy, control and positioning
-have subfolders inside those responsibilities; they share the response, state and
-evidence homes with the environmental reflexes.
+responsibilities, and they are layers: a folder imports only folders below it in
+the tree that follows, type imports included, which
+[the architecture test](../../src/architecture.test.ts) checks. Shared vocabulary
+lives in the lowest folder that needs it: decision types in `policy`, reach and
+exposure in `perception`, the response context in `perception/combat`.
+
+Combat is one component in [combat](../../src/survival/combat): the dispatcher,
+the mob fight and the End fight. Combat-specific observation, policy, weapons and
+positioning keep subfolders inside those responsibilities; they share the
+response, state and evidence homes with the environmental reflexes.
 
 The reviewed design specifies ownership and dependency boundaries; it does not
 prescribe these folder names. The `combat` subfolders are an implementation choice
@@ -32,43 +39,45 @@ full low-health night remain unqualified, as recorded in the plan. The combat
 subfolder names are not markers for pending migration.
 
 ```text
-survival/
-  control/             driver, registration and priority
-    combat/            admitted operations, dispatch and settlement
-      scopes/          response and recovery failure premises
+survival/              top layer first; each folder imports only those below it
+  evidence/            composed status and formatting
   reflexes/            fire, breath, footing, dragon, hostile and hunger
-  policy/
-    environment.ts     environmental response decisions
-    combat/            response, health, permissions and progress decisions
-  perception/
-    body.ts            air, burning and liquid contact
-    combat/            threats, relationships, projectiles and End observations
+  guards/              continuous Enderman gaze protection
+  baseline/            idle buoyancy, released on admission
+  control/             driver, registration and priority
+  combat/              admitted operations, dispatch and settlement
+    fight/             scene, tactics, weapons, movement and individual fight turns
+    end/               the End fight: shared core and escape, then crystal, perch and dragon shot
+  responses/           fire, breath, footing, hide, recover, evade and deflect
+    scopes/            response and recovery failure premises
+  weapons/             equipment, aim, item use, melee and projectile guards
   positioning/
-    combat/            cover, exposure, construction and refuge movement
+    combat/            cover, construction and refuge movement
     fire-escape.ts     feasible fire exits
     swimming-roof.ts   whether the next swim stroke hits a roof
     footing.ts         projected landings
-  responses/           fire, breath, footing, hide, recover, evade and deflect
-    fight/             scene, weapons, movement and individual fight turns
-    end/               crystal attacks, perch attacks and End escape
-  weapons/             equipment, aim, item use, melee and projectile guards
-  guards/              continuous Enderman gaze protection
-  baseline/            idle buoyancy, released on admission
+    geometry-answer.ts whether a failed geometry still holds
+  perception/
+    body.ts            air, burning and liquid contact
+    combat/            threats, reach, exposure, projectiles, End observations and the response context
   state/               Answered, budgets, survival policy store and resources
-  evidence/            composed status, receipts and formatting
+  policy/
+    decision.ts        what a decision returns: respond, stand down, or handled
+    environment.ts     environmental response decisions
+    combat/            response, health, permissions and progress decisions
 ```
 
-The normal mob path is `control/combat/controller → engagement → selected response`.
-[runMobFight](../../src/survival/responses/fight/run.ts) composes one physical fight
+The normal mob path is `combat/controller → engagement → selected response`.
+[runMobFight](../../src/survival/combat/fight/run.ts) composes one physical fight
 and releases its effects before another response starts. The fight scene asks
 policy at health and position boundaries; tactics execute the selected decision.
 
-[Observation assembly](../../src/survival/control/combat/observation.ts) combines
+[Observation assembly](../../src/survival/combat/observation.ts) combines
 native facts, effective policy and retained answers. Policy receives values;
 perception observes the world. Neither selects by importing a live executor or
 mutable policy store. [SurvivalPolicyState](../../src/survival/state/survival-policy.ts)
 owns editable overrides and settlement alongside the other state owners.
-[Failure scopes](../../src/survival/control/combat/scopes) combine world and
+[Failure scopes](../../src/survival/responses/scopes) combine world and
 inventory observations with the permissions an attempt consumed.
 
 All six registrations live in [reflexes](../../src/survival/reflexes) and use one
@@ -115,7 +124,7 @@ writers in actions, runtime or unrelated modules.
 
 ## Ownership and decisions
 
-[`ActionRunner`](../../src/session/action-runner.ts) owns admission, request
+[`ActionRunner`](../../src/runner/action-runner.ts) owns admission, request
 lifetime, body reservation and transfer. It reserves the successor before aborting
 the previous execution, invokes any admitted release hook, and waits for physical
 cleanup before allowing the successor to steer. Connection loss permanently closes

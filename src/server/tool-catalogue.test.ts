@@ -11,13 +11,13 @@ import { AjvJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/ajv
 import { z } from "zod";
 import { createActions, defineAction, actionResultSchema } from "../actions/index.js";
 import { notificationSummarySchema } from "../bot-data/event-log.js";
-import { ActionRunner } from "../session/action-runner.js";
-import { AsyncActions } from "../session/async-actions.js";
-import { factsSchema } from "../survival/evidence/contract.js";
+import { ActionRunner } from "../runner/action-runner.js";
+import { AsyncActions } from "../runner/async-actions.js";
 import { botFixture } from "../test-support/bot.js";
 import { temporaryBotData } from "../test-support/bot-data.js";
 import { createMinecraftMcpHttpApplication } from "./http.js";
 import { createMinecraftMcpServer } from "./mcp.js";
+import { factsSchema } from "../utils/facts.js";
 import { ReferenceToolCatalogue } from "./tool-catalogue.js";
 
 type Schema = Record<string, any>;

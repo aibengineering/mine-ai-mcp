@@ -10,8 +10,8 @@ import {
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { airSupplyTicks } from "../../world/air-supply.js";
 import { airSupplyPoints, FULL_AIR_POINTS, isInWater } from "../perception/body.js";
-import { survivableSubmergedTicks } from "../policy/environment.js";
 import type { Budgets } from "../state/budgets.js";
+import { survivableSubmergedTicks } from "../policy/environment.js";
 
 /**
  * How far a route to air looks, and for how long. Every tick searching is a

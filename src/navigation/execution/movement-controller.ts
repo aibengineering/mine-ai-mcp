@@ -17,7 +17,7 @@
  */
 import { AIR_COAST_TICKS, COAST_TICKS, PLAYER_HALF_WIDTH, stoppingDistance } from "../../world/player-physics.js";
 import type { PlannedOperation, PlannedStep } from "../movements/movement.js";
-import { horizontalControlsToward } from "../steering/local-steering.js";
+import { horizontalControlsToward } from "./local-steering.js";
 import { navigationFeet } from "../world/block-geometry.js";
 import { type BlockPosition, type Position3, blockPosition, samePosition } from "../world/world.js";
 import { WaterMovementController } from "./water-movement-controller.js";

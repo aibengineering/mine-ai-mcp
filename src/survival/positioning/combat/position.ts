@@ -1,30 +1,18 @@
 import { isIncomingArrow } from "../../perception/combat/shield-projectiles.js";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import type { SupportedPositionHold } from "../../../navigation/index.js";
-import {
-  centerOnCell,
-  createMovements,
-  exactBlockGoal,
-  steeringPortFor,
-  type Goal,
-  type MovementPolicy,
-  type NavigationRuntime,
-} from "../../../navigation/index.js";
+import { type SupportedPositionHold, centerOnCell, createMovements, exactBlockGoal, steeringPortFor, type Goal, type MovementPolicy, type NavigationRuntime } from "../../../navigation/index.js";
 import { isHeadPassable, isPassable, isSafeSupport, navigationFeet } from "../../../navigation/world/block-geometry.js";
-import { isReplaceableForPlacement } from "../../../world/block-classification.js";
 import { clearCombatRay, nearestBodyPoint } from "../../../world/entity-geometry.js";
-import { occupiedCell } from "../../../world/placement.js";
-import { positionThreat, type CombatPerception } from "../../perception/combat/observations.js";
+import { occupiedCell } from "../../../world/procedures/placement.js";
 import { fireAt } from "../../perception/body.js";
 import { canBeBystander, isHostile } from "../../perception/combat/threats.js";
 import { type CombatPolicy } from "../../policy/combat/contract.js";
 import { Answered, type AnsweredScope } from "../../state/answered.js";
-import { MELEE_RANGE } from "../../weapons/equipment.js";
 import { extinguishFireAt } from "../fire-clearance.js";
 import { buildProtection, fullProtectionBlock } from "./build-protection.js";
-import { positionExposed, projectileReachesBody, type PositionThreat } from "./exposure.js";
-import { geometryAnswer } from "./geometry-answer.js";
+import { positionExposed, projectileReachesBody, type PositionThreat } from "../../perception/combat/exposure.js";
+import { geometryAnswer } from "../geometry-answer.js";
 import { positionWorld, standingBody, standingCell, type CombatPositionPlan } from "./geometry.js";
 import { countCapBlocks } from "./hide-blocks.js";
 import {
@@ -38,6 +26,9 @@ import {
   type RoofOpening,
   type RoofPosition,
 } from "./planner.js";
+import { MELEE_RANGE } from "../../perception/combat/reach.js";
+import { positionThreat, type CombatPerception } from "../../perception/combat/observations.js";
+import { isReplaceableForPlacement } from "../../../world/block-classification.js";
 
 type Entity = Parameters<Bot["attack"]>[0];
 

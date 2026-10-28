@@ -1,12 +1,12 @@
 import type { Bot } from "mineflayer";
-import { eatFood } from "../../actions/eat-food/eat-food.js";
-import type { CombatController } from "../control/combat/contract.js";
+import type { CombatController } from "../combat/contract.js";
 import type { ReflexDriver } from "../control/driver.js";
 import { selectPolicyFood } from "../perception/food.js";
 import { BodyAbort } from "../../session/abort.js";
 import { isRawFood } from "../../world/food.js";
 import { rawFoodPermitted } from "../policy/food.js";
 import type { SurvivalPolicyState } from "../state/survival-policy.js";
+import { eatFood } from "../../world/procedures/eating.js";
 import { decideHungerResponse, needsFood } from "../policy/environment.js";
 
 /** What the runner reports as the body's owner while the bot eats. */

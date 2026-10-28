@@ -29,23 +29,24 @@
  */
 
 // The per-bot runtime, and the physical ownership it arbitrates.
+export type { NavigationCalculationFailure } from "./outcome.js";
 export type {
   BreakBlockInPlace,
   BreakBlockInPlaceOptions,
   BreakBlockInPlaceResult,
 } from "./execution/in-place-break.js";
-export { setSneaking } from "./mineflayer/sneak.js";
+export { setSneaking } from "../world/procedures/sneak.js";
 export { enterPortal, portalApproachGoal, type PortalBlock } from "./processes/portal-entry.js";
 export { createNavigationRuntime, createMovements } from "./runtime.js";
 export type { NavigationRuntime } from "./runtime.js";
-export { centerOnCell, horizontalControlsToward, steeringPortFor } from "./steering/local-steering.js";
+export { centerOnCell, horizontalControlsToward, steeringPortFor } from "./execution/local-steering.js";
 export { SupportedPositionHold } from "./steering/supported-position.js";
 export { hasSupportedCorridor } from "./world/block-geometry.js";
 export { isPassable, isHeadPassable, isSafeSupport } from "./world/block-geometry.js";
 
 // The navigation transaction.
 export type { Navigate, NavigateOptions, NavigationResult } from "./navigate.js";
-export { describeCalculationFailure, type NavigationCalculationFailure } from "./orchestration/process-events.js";
+export { describeCalculationFailure } from "./orchestration/process-events.js";
 
 // Goals: what a route is asked to satisfy.
 export type { Goal } from "./goals/goal.js";

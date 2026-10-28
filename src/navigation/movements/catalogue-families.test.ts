@@ -10,11 +10,11 @@
  * because every individual movement still looked right.
  */
 import { MemoryWorld } from "../world/memory-world.js";
-import { createMovementCatalogue } from "./catalogue.js";
 import { createMovementPolicy } from "./policy.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { WELL_FED, planningStart } from "../../test-support/navigation.js";
+import { createMovementCatalogue } from "./catalogue.js";
 
 const SOLID = { stateId: 1 } as const;
 const AIR = { stateId: 0 } as const;

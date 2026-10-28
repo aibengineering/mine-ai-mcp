@@ -1,5 +1,5 @@
 import type { Bot } from "mineflayer";
-import type { CombatEngagement } from "../control/combat/contract.js";
+import type { CombatEngagement } from "../combat/contract.js";
 import { endermanGazeRisk } from "../perception/combat/gaze.js";
 
 /** Correct both requested looks and an idle gaze as Endermen move into it. */

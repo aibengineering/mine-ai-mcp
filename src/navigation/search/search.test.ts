@@ -1,18 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { WELL_FED, flatWorld, movementList, observation, planningStart } from "../../test-support/navigation.js";
-import type { PlanningNode, ResolvedGoal } from "../goals/goal.js";
+import type { ResolvedGoal } from "../goals/goal.js";
 import { exactBlockGoal } from "../goals/index.js";
-import {
-  type GeneratedMovement,
-  type MovementCatalogue,
-  type PlanningState,
-  createMovementCatalogue,
-} from "../movements/catalogue.js";
 import { createMovementPolicy } from "../movements/policy.js";
 import type { StepField } from "../step-field.js";
-import type { SearchLimits } from "./search-result.js";
 import { IncrementalSearch, type SearchUpdate } from "./search.js";
+import { type PlanningNode, type GeneratedMovement, type MovementCatalogue, type PlanningState, createMovementCatalogue } from "../movements/catalogue.js";
+import type { SearchLimits } from "./search-result.js";
 
 type ActiveGoal = Extract<ResolvedGoal, { kind: "active" }>;
 

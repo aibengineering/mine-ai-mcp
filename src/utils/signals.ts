@@ -1,4 +1,3 @@
-import type { ActionContext } from "../actions/action.js";
 
 export interface EventSource {
   on(event: string, listener: (...args: any[]) => void): any;
@@ -30,7 +29,8 @@ export interface SignalOptions {
    * with `settle`. An unbounded signal listens until cancelled or aborted.
    */
   timeoutMs?: number;
-  context?: ActionContext;
+  /** Only its signal is read: an abort ends the wait. */
+  context?: { readonly signal?: AbortSignal };
 }
 
 /**

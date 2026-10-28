@@ -38,20 +38,15 @@ import {
   type BlockPlacementResult,
   type WorldBlock,
 } from "../../../world/index.js";
-import {
-  anyGoal,
-  describeCalculationFailure,
-  nearGoal,
-  packKey,
-  type BlockPosition,
-  type BreakBlockInPlace,
-  type Goal,
-  type MovementPolicy,
-  type Navigate,
-  type NavigationResult,
-} from "../../index.js";
+import { anyGoal, nearGoal } from "../../goals/index.js";
+import { describeCalculationFailure } from "../../orchestration/process-events.js";
+import { packKey, samePosition, type Position3 } from "../../world/world.js";
+import type { BlockPosition } from "../../../utils/geometry.js";
+import type { BreakBlockInPlace } from "../../execution/in-place-break.js";
+import type { Goal } from "../../goals/goal.js";
+import type { MovementPolicy } from "../../movements/policy.js";
+import type { Navigate, NavigationResult } from "../../navigate.js";
 import { navigationFeet } from "../../world/block-geometry.js";
-import { samePosition, type Position3 } from "../../world/world.js";
 
 /**
  * How far a cell may be from the feet to be worked without moving, measured

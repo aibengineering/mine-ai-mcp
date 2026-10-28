@@ -1,9 +1,10 @@
 import type { Bot, BotEvents } from "mineflayer";
 import { STANDING_EYE_HEIGHT } from "../../world/block-visibility.js";
-import type { HostileContext } from "../control/combat/context.js";
+import type { HostileContext } from "../perception/combat/context.js";
 import { isThreat } from "../perception/combat/threats.js";
-import { MELEE_RANGE, selectMeleeLoadout } from "./equipment.js";
-import { hasSweepBystander, meleeDistance } from "./melee.js";
+import { selectMeleeLoadout } from "./equipment.js";
+import { hasSweepBystander } from "./melee.js";
+import { meleeDistance, MELEE_RANGE } from "../perception/combat/reach.js";
 
 /**
  * Strike reachable threats with the current hand while navigation owns movement.

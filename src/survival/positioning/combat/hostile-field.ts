@@ -20,14 +20,14 @@ import { packKey, TERRAIN_BREAK_PENALTY, type StepField, type StepFieldProvider 
 import { observedEyeHeight, type BlockRaycaster } from "../../../world/block-visibility.js";
 import { entityDimensions } from "../../../world/entity-dimensions.js";
 import { exposedBodyFrom, type EntityBody } from "../../../world/entity-geometry.js";
-import type { HostileContext } from "../../control/combat/context.js";
+import type { HostileContext } from "../../perception/combat/context.js";
 import {
   HOSTILE_CONTACT_RANGE,
   HOSTILE_OBSERVATION_RANGE,
   shouldAvoidEntity,
 } from "../../perception/combat/threats.js";
 import type { HostileResponse } from "../../policy/combat/response.js";
-import type { NavigationPolicy } from "../../policy/contract.js";
+import type { NavigationPolicy } from "../../../navigation/policy.js";
 
 /** How far one species is worth avoiding, and by how much at its own cell. */
 interface Avoidance {

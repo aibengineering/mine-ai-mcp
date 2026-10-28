@@ -2,7 +2,7 @@ import type { Bot } from "mineflayer";
 import { planCraftingFromInventory, type CraftPreparation, type CraftTarget } from "../../utils/craft-plan.js";
 import type { Position3 } from "../../utils/index.js";
 import { carriedCount, placeCarriedBlockNearby, settleInventoryCount, type WorldBlock } from "../../world/index.js";
-import { executeCraftPlan } from "../../world/crafting.js";
+import { executeCraftPlan } from "../../world/procedures/crafting.js";
 import { craftItemOutcomes } from "./contract.js";
 
 type CraftingStation =

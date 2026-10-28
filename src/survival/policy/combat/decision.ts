@@ -1,9 +1,9 @@
-import type { ResponseExclusion } from "../../control/contract.js";
-import type { Facts } from "../../state/answered.js";
+import type { ResponseExclusion } from "../decision.js";
 import type { CombatPolicy } from "./contract.js";
 import { needsCombatRecovery } from "./health.js";
 import type { EvadeReason, HostileDirective, HostileThreat } from "./response.js";
 import { compareTargets, type TargetFacts } from "./target-utility.js";
+import type { Facts } from "../../../utils/facts.js";
 
 /** Intent authorizes a quarry; automatic engagement permission does not erase it. */
 export type CombatPurpose =

@@ -9,7 +9,7 @@ import {
 } from "../../navigation/index.js";
 import { scaffoldBlockNames } from "../../navigation/mineflayer/movement-policy.js";
 import { bucketDropTotals } from "../../navigation/mineflayer/water-landing.js";
-import { observeToolTierLoss } from "../../world/tool-loss.js";
+import { observeToolTierLoss } from "../../world/watchers/tool-loss.js";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
 import type { ObserveRequest } from "../../session/request.js";
 import { armSignal, asVec3, type Position3 } from "../../utils/index.js";

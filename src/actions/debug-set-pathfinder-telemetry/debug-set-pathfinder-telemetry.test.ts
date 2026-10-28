@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { NavigationEvent } from "../../navigation/index.js";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { createDebugSetPathfinderTelemetryAction } from "./index.js";
 
 test("debug telemetry subscribes once, writes JSON events, and disables cleanly", async () => {

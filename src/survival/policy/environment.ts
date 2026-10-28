@@ -1,6 +1,9 @@
+import type { ResponseDecision } from "./decision.js";
 import { REGENERATION_HUNGER } from "../../world/food.js";
-import type { ResponseDecision } from "../control/contract.js";
-import type { FireEscapeReason } from "../positioning/fire-escape.js";
+
+/** What a fire exit is escaping: flames touching the body, or lava flowing toward it. */
+export type FireEscapeReason = "contact" | "advancing_lava";
+
 export interface FireFacts {
   readonly reason: FireEscapeReason;
   readonly advancing: boolean;

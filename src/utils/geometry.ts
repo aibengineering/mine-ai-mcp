@@ -22,6 +22,23 @@ export interface Position3 {
   readonly z: number;
 }
 
+/** One block cell: integer coordinates, the unit search plans in. */
+export interface BlockPosition {
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+/** An axis-aligned box, such as one collision shape of a block. */
+export interface CollisionBox {
+  readonly minX: number;
+  readonly minY: number;
+  readonly minZ: number;
+  readonly maxX: number;
+  readonly maxY: number;
+  readonly maxZ: number;
+}
+
 /** Convert any structural position into this package's Vec3 implementation. */
 export function asVec3(position: Position3): Vec3 {
   return new Vec3(position.x, position.y, position.z);

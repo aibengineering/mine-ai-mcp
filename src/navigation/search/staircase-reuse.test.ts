@@ -1,5 +1,4 @@
-import { exactBlockGoal } from "../goals/index.js";
-import { createMovementCatalogue } from "../movements/catalogue.js";
+import { exactBlockGoal, nearGoal } from "../goals/index.js";
 import { createMovementPolicy } from "../movements/policy.js";
 import { MemoryWorld } from "../world/memory-world.js";
 import { IncrementalSearch, type SearchUpdate } from "./search.js";
@@ -80,9 +79,9 @@ for (const [pockets, label] of [
 
 // ── Replay of the live geometry ─────────────────────────────────────────────────────────
 
-import { nearGoal } from "../goals/index.js";
 import { DEFAULT_SEARCH_LIMITS } from "../navigate.js";
 import { STAIRCASE_REGION } from "./fixtures/staircase-region.js";
+import { createMovementCatalogue } from "../movements/catalogue.js";
 
 function regionWorld(): MemoryWorld {
   const world = new MemoryWorld();

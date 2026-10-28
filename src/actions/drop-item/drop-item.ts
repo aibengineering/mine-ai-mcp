@@ -13,10 +13,9 @@ import {
   type NavigationRuntime,
 } from "../../navigation/index.js";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
-import { createDiscardedItems, type DiscardedItems } from "../../world/discarded-items.js";
-import { carriedCount, settleInventoryCount } from "../../world/inventory-count.js";
-import { droppedItemName, snapshotEntityIds } from "../../world/item-pickup.js";
-import { placeSolidBlockInto } from "../../world/placement.js";
+import { createDiscardedItems, type DiscardedItems } from "../../world/watchers/discarded-items.js";
+import { carriedCount, settleInventoryCount } from "../../world/watchers/inventory-count.js";
+import { placeSolidBlockInto } from "../../world/procedures/placement.js";
 import { defineAction, type ActionContext } from "../action.js";
 import { equipmentSlots } from "../equip/index.js";
 import { describeNavigation } from "../navigation-result.js";
@@ -42,6 +41,7 @@ import {
   sealDisposalHole,
   snapshotDroppedCounts,
 } from "./disposal-hole.js";
+import { droppedItemName, snapshotEntityIds } from "../../world/dropped-items.js";
 
 /**
  * How long a toss is given to clear the slot it emptied.

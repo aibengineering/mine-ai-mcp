@@ -9,55 +9,15 @@ import { entityDimensions } from "../../world/entity-dimensions.js";
 import { exposedBodyFrom } from "../../world/entity-geometry.js";
 import { hasExposedBody } from "../../world/entity-visibility.js";
 import { canBeBystander, isHostile } from "../perception/combat/threats.js";
-import { MELEE_RANGE, readCombatItems } from "./equipment.js";
+import { readCombatItems } from "./equipment.js";
+import { MELEE_RANGE, airborneCube, distanceToBody, meleeDistance } from "../perception/combat/reach.js";
 
 type Entity = Parameters<Bot["attack"]>[0];
 
-/** Reach is measured from the player's eyes to the target's body, including a jumping body's lower face. */
-export function meleeDistance(bot: Bot, entity: Entity): number {
-  return distanceToBody(
-    bot.entity.position,
-    { position: entity.position, ...entityDimensions(bot, entity) },
-    observedEyeHeight(bot.entity),
-  );
-}
-
-/** Nearby bodies separated by terrain cannot attack one another. */
 export function canMeleeTarget(bot: Bot, entity: Entity): boolean {
   return meleeDistance(bot, entity) <= MELEE_RANGE && hasExposedBody(bot, entity);
 }
 
-/** A jumping cube's temporary height is not a ledge to climb onto. */
-function airborneCube(bot: Bot, entity: Entity): boolean {
-  if (entity.name !== "magma_cube" && entity.name !== "slime") return false;
-  const { width } = entityDimensions(bot, entity);
-  for (let x = Math.floor(entity.position.x - width / 2); x <= Math.floor(entity.position.x + width / 2); x++)
-    for (let z = Math.floor(entity.position.z - width / 2); z <= Math.floor(entity.position.z + width / 2); z++) {
-      const block = bot.blockAt(entity.position.clone().set(x, entity.position.y - 0.01, z));
-      if (!block || block.boundingBox !== "empty") return false;
-    }
-  return true;
-}
-
-export function waitingForDescendingCube(bot: Bot, entity: Entity): boolean {
-  if (entity.position.y <= bot.entity.position.y || !airborneCube(bot, entity)) return false;
-  const { width } = entityDimensions(bot, entity);
-  const dx = Math.max(0, Math.abs(entity.position.x - bot.entity.position.x) - width / 2);
-  const dz = Math.max(0, Math.abs(entity.position.z - bot.entity.position.z) - width / 2);
-  return Math.hypot(dx, dz) <= MELEE_RANGE && meleeDistance(bot, entity) > MELEE_RANGE;
-}
-
-export function distanceToBody(
-  feet: Position3,
-  body: { position: Position3; width: number; height: number },
-  eyeHeight = STANDING_EYE_HEIGHT,
-): number {
-  const eyeY = feet.y + eyeHeight;
-  const dx = Math.max(0, Math.abs(body.position.x - feet.x) - body.width / 2);
-  const dz = Math.max(0, Math.abs(body.position.z - feet.z) - body.width / 2);
-  const dy = Math.max(0, body.position.y - eyeY, eyeY - body.position.y - body.height);
-  return Math.hypot(dx, dy, dz);
-}
 
 /** The approach and swing must agree on reach, including targets above or below a ledge. */
 export function meleeApproachGoal(bot: Bot, targetId: number, world: WorldView): Goal {

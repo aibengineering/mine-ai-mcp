@@ -8,7 +8,7 @@
 import { type MovementPolicy } from "../movements/policy.js";
 import { type BlockPosition, type WorldView, blockLabel, loadedObservation } from "../world/world.js";
 import { waterMiningStance } from "../world/water.js";
-import type { NavigationBot } from "../bot.js";
+import type { NavigationBot } from "./bot.js";
 import { prepareExcavation } from "../movements/excavation.js";
 
 export interface BreakBlockInPlaceOptions {

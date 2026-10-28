@@ -1,5 +1,5 @@
 import { bucketAvailable, predictWaterLanding, saveWaterLanding, waterLandingActive, type WaterLandingEvidence } from "../../navigation/mineflayer/water-landing.js";
-import { readNavigationPolicy } from "../state/navigation-policy.js";
+import { readNavigationPolicy } from "../../navigation/mineflayer/navigation-policy.js";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { z } from "zod";
@@ -11,10 +11,10 @@ import {
   safeSupportingCell,
 } from "../../navigation/world/block-geometry.js";
 import type { BlockPosition, Position3, WorldView } from "../../navigation/world/world.js";
-import { isReplaceableForPlacement } from "../../world/block-classification.js";
 import { observedEyeHeight } from "../../world/block-visibility.js";
-import { findPlacementSupport, occupiedCell, placeBlock, type BlockPlacementResult } from "../../world/placement.js";
+import { findPlacementSupport, occupiedCell, placeBlock, type BlockPlacementResult } from "../../world/procedures/placement.js";
 import { lowerImpulseLanding, projectedFooting } from "../positioning/footing.js";
+import { isReplaceableForPlacement } from "../../world/block-classification.js";
 
 const impulseSchema = z.object({
   entityId: z.number(),

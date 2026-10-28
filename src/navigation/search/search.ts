@@ -26,15 +26,14 @@
  */
 import type { ResolvedGoal } from "../goals/goal.js";
 import type { PlannedStep, RoutePlan } from "../movements/movement.js";
-import type { ClosestNodeEvidence, SearchLimitEvidence } from "../orchestration/outcome.js";
-import type { PartialRouteCheckpoint, SearchLimits, SearchEvidence } from "./search-result.js";
 import { blockKey, packKey } from "../world/world.js";
-import type { GenerationContext, MovementCatalogue, PlanningState } from "../movements/catalogue.js";
 import { ArrivalFrontier } from "./arrival-frontier.js";
 import { NodeStore } from "./node-store.js";
 import { OpenSet } from "./open-set.js";
-
+import type { ClosestNodeEvidence, SearchLimitEvidence, PartialRouteCheckpoint, SearchLimits, SearchEvidence } from "./search-result.js";
+import type { GenerationContext, MovementCatalogue, PlanningState } from "../movements/catalogue.js";
 export type { SearchEvidence } from "./search-result.js";
+
 export type SearchUpdate =
   | { readonly kind: "progress"; readonly evidence: SearchEvidence; readonly checkpoint?: PartialRouteCheckpoint }
   | {

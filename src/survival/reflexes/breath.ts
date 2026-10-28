@@ -2,11 +2,11 @@ import type { Bot } from "mineflayer";
 import type { NavigationRuntime } from "../../navigation/index.js";
 import type { ReflexDriver } from "../control/driver.js";
 import { airSupplyPoints, isInWater } from "../perception/body.js";
-import { decideBreathResponse, needsBreathResponse } from "../policy/environment.js";
-import { geometryAnswer } from "../positioning/combat/geometry-answer.js";
+import { geometryAnswer } from "../positioning/geometry-answer.js";
 import { swimmingRoof } from "../positioning/swimming-roof.js";
 import { type AirRoute, ESCAPE_SEARCH, surface } from "../responses/breath.js";
 import { airSupplyTicks } from "../../world/air-supply.js";
+import { decideBreathResponse, needsBreathResponse } from "../policy/environment.js";
 
 /** What the runner reports as the body's owner while the bot surfaces for air. */
 export const BREATH_REFLEX = "breath_reflex" as const;

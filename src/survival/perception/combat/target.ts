@@ -1,8 +1,7 @@
+import { meleeDistance, MELEE_RANGE } from "./reach.js";
 import type { Bot } from "mineflayer";
 import { hasExposedBody } from "../../../world/entity-visibility.js";
 import type { TargetFacts } from "../../policy/combat/target-utility.js";
-import { MELEE_RANGE } from "../../weapons/equipment.js";
-import { meleeDistance } from "../../weapons/melee.js";
 /** Solid ground immediately below is a preference, never a promise that a drop will be collected. */
 export function targetFacts(bot: Bot, entity: Bot["entities"][number], hasHitUs = false): TargetFacts {
   const floor = bot.blockAt(entity.position.offset(0, -0.1, 0));

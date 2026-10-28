@@ -3,7 +3,7 @@ import test, { type TestContext } from "node:test";
 import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import type { NavigationRuntime } from "../../navigation/index.js";
-import { ActionRunner } from "../../session/action-runner.js";
+import { ActionRunner } from "../../runner/action-runner.js";
 import { botFixture } from "../../test-support/bot.js";
 import { beginBarter, createBarterAction } from "./barter.js";
 import { barterInputSchema, barterResultSchema } from "./contract.js";

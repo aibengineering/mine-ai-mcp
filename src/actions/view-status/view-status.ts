@@ -15,7 +15,7 @@ import {
 } from "../../navigation/mineflayer/movement-policy.js";
 import { waterLandingSupply } from "../../navigation/mineflayer/water-landing.js";
 import { HOSTILE_OBSERVATION_RANGE, observeHostileContact } from "../../survival/perception/combat/threats.js";
-import { readNavigationPolicy } from "../../survival/state/navigation-policy.js";
+import { readNavigationPolicy } from "../../navigation/mineflayer/navigation-policy.js";
 import type { Position3 } from "../../utils/index.js";
 import { airSupplyTicks } from "../../world/air-supply.js";
 import { readDragonClouds } from "../../world/dragon-hazards.js";

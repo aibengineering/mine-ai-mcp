@@ -4,13 +4,14 @@ import { BREAK_OPENS_INTO_LIQUID } from "../movements/policy.js";
 import { MemoryWorld } from "../world/memory-world.js";
 import { type LoadedBlock, loadedObservation } from "../world/world.js";
 import { TERRAIN_BREAK_PENALTY } from "./movement-policy.js";
-import { blockClass, observeMineflayerBlock } from "./world.js";
+import { observeMineflayerBlock } from "./world.js";
 import minecraftData from "minecraft-data";
 import type { Bot } from "mineflayer";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { botFixture, type FakeBot, type FakeStack } from "../../test-support/bot.js";
 import { flatWorld } from "../../test-support/navigation.js";
+import { blockClass } from "../../world/block-class.js";
 
 /** Air around the origin: no liquid beside any cell these tests break. */
 const world = flatWorld();

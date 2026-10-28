@@ -4,11 +4,11 @@ import { Vec3 } from "vec3";
 import { botFixture } from "../../../test-support/bot.js";
 import { flatWorld } from "../../../test-support/navigation.js";
 import { answerBlocks } from "../../../test-support/world.js";
-import { blockClass } from "../../mineflayer/world.js";
 import { createMovementPolicy } from "../../movements/policy.js";
 import { evaluateMineTarget, lavaClosuresOf } from "./target-safety.js";
 import { createMineflayerMovementPolicy } from "../../mineflayer/movement-policy.js";
 import { observeMineflayerBlock } from "../../mineflayer/world.js";
+import { blockClass } from "../../../world/block-class.js";
 
 test("lava preparation counts permitted building material, not reserved inventory", () => {
   const bot = botFixture({ items: [{ type: 1, name: "oak_log", count: 64 }] });

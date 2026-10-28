@@ -2,12 +2,12 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { z } from "zod";
 import type { NavigationRuntime } from "../navigation/index.js";
-import { carriedCount } from "../world/inventory-count.js";
-import { placeCarriedBlockNearby, type NearbyPlacement } from "../world/nearby-placement.js";
-import type { WorldBlock } from "../world/placement.js";
+import { carriedCount } from "../world/watchers/inventory-count.js";
+import { placeCarriedBlockNearby, type NearbyPlacement } from "../world/procedures/nearby-placement.js";
 import { collectBlock } from "./collect-block/collect-block.js";
 import { parseCollectBlockRequest } from "./collect-block/contract.js";
 import type { ActionContext, ActionResult } from "./action.js";
+import type { WorldBlock } from "../world/block-classification.js";
 
 export const temporaryWorkstationInputSchema = z
   .boolean()

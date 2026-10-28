@@ -3,7 +3,7 @@ import test from "node:test";
 import { recordEvent } from "../../bot-data/index.js";
 import { botFixture } from "../../test-support/bot.js";
 import { temporaryBotData } from "../../test-support/bot-data.js";
-import { createDiscardedItems } from "../../world/discarded-items.js";
+import { createDiscardedItems } from "../../world/watchers/discarded-items.js";
 import { createPickUpItemsAction } from "./pick-up-items.js";
 
 test("death recovery returns its named no-record refusal with schema-valid current position", async (t) => {

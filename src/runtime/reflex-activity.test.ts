@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ActionRunner } from "../session/action-runner.js";
+import type { ActionRunner } from "../runner/action-runner.js";
 import type { ReflexActivityObservation } from "../session/progress.js";
-import type { CombatDecision } from "../survival/control/combat/contract.js";
+import type { CombatDecision } from "../survival/combat/contract.js";
 import type { SurvivalTransition } from "../survival/control/contract.js";
 import { decisionStates, observeReflexActivity } from "./reflex-activity.js";
 

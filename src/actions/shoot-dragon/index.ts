@@ -1,5 +1,5 @@
 import type { Bot } from "mineflayer";
-import type { CombatController } from "../../survival/control/combat/contract.js";
+import type { CombatController } from "../../survival/combat/contract.js";
 import { DragonShotObservation } from "../../survival/perception/combat/dragon-shot.js";
 import { defineAction } from "../action.js";
 import { dragonShotCheckpointSchema } from "../checkpoint-schemas.js";

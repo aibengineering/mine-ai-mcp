@@ -1,11 +1,12 @@
 import type { Bot } from "mineflayer";
 import { isDeepStrictEqual } from "node:util";
 import { BodyAbort } from "../../session/abort.js";
-import type { ActionRunner } from "../../session/action-runner.js";
-import { Answered, type Facts } from "../state/answered.js";
+import type { BodyOwner } from "../../session/body-owner.js";
+import { Answered } from "../state/answered.js";
 import { Budgets } from "../state/budgets.js";
 import type { ReflexDefinition, ReflexName, ReflexSnapshot, SurvivalTransition } from "./contract.js";
 import { REFLEX_PRIORITY } from "./priority.js";
+import type { Facts } from "../../utils/facts.js";
 
 interface RegisteredReflex {
   readonly name: ReflexName;
@@ -29,7 +30,7 @@ export class ReflexDriver implements AsyncDisposable {
 
   constructor(
     readonly bot: Bot,
-    readonly runner: ActionRunner,
+    readonly runner: BodyOwner,
   ) {
     this.#dimension = bot.game?.dimension;
     bot.on("death", this.#death);

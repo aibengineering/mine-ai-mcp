@@ -2,7 +2,7 @@ import { MemoryWorld as GoalTestWorld } from "../../world/memory-world.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Vec3 } from "vec3";
-import { packKey } from "../../index.js";
+import { packKey } from "../../world/world.js";
 import { structureWorld } from "../../../test-support/structure-world.js";
 import { build, enclosesBot, type BuildCell, type BuildRequest, type BuildResult } from "./build-process.js";
 import { observation } from "../../../test-support/navigation.js";

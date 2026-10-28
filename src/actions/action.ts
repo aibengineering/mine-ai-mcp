@@ -4,7 +4,7 @@ import type { ObserveRequest, RequestSnapshot } from "../session/request.js";
 import { progressSchema, type Progress } from "../session/progress.js";
 import { requestSchema, survivalStatusSchema, type SurvivalStatus } from "../survival/evidence/contract.js";
 import { policySnapshotSchema, type PolicySnapshot } from "../survival/policy/contract.js";
-import type { Facts } from "../survival/state/answered.js";
+import type { Facts } from "../utils/facts.js";
 
 export type ActionResult =
   { status: "succeeded" } | { status: "partial" | "failed" | "cancelled"; error: string };

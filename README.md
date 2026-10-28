@@ -183,7 +183,7 @@ do not assume Claude's `timeout` field works in another client's schema.
 
 - [Overview](docs/mcp/README.md): Quick start, host startup flags, and making a first call.
 - [Async actions](docs/mcp/async-actions.md): Submit work, inspect progress, retrieve typed results, before starting the next objective.
-- [Concepts](docs/mcp/concepts.md): Quality standard, five-layer architecture, foreground locking, and lifecycle.
+- [Concepts](docs/mcp/concepts.md): Quality standard, layered architecture, foreground locking, and lifecycle.
 - [Tools](docs/mcp/tools.md): Every published tool grouped by job, arguments, and verification evidence.
 - [Bot data](docs/mcp/bot-data.md): SQLite storage, tables and views, worked example queries, and query bounds.
 - [Events and responses](docs/mcp/events-and-responses.md): Response representations, notification summaries, and event stream cursors.

@@ -27,15 +27,12 @@
  */
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { plausibleToBreak } from "../../../world/block-classification.js";
 import { waterMiningStance } from "../../world/water.js";
-import {
-  observeMineflayerBlock,
-  type BlockPosition,
-  type MineflayerBlock,
-  type MovementPolicy,
-  type WorldView,
-} from "../../index.js";
+import { observeMineflayerBlock, type MineflayerBlock } from "../../mineflayer/world.js";
+import type { BlockPosition } from "../../../utils/geometry.js";
+import type { MovementPolicy } from "../../movements/policy.js";
+import type { WorldView } from "../../world/world.js";
+import { plausibleToBreak } from "../../../world/block-classification.js";
 
 /** The six cells that can pour into a mined one, or drop into it. */
 const NEIGHBOURS = [

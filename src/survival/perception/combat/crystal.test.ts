@@ -5,13 +5,13 @@ import test, { type TestContext } from "node:test";
 import { Vec3 } from "vec3";
 import { botFixture } from "../../../test-support/bot.js";
 import { TestEndCombat as EndCombat } from "../../../test-support/combat.js";
-import type { CombatController } from "../../control/combat/contract.js";
+import type { CombatController } from "../../combat/contract.js";
 import { CrystalObservation } from "./crystal.js";
 
 import { createDestroyEndCrystalAction } from "../../../actions/destroy-end-crystal/index.js";
 import type { NavigationRuntime } from "../../../navigation/index.js";
 import { MemoryWorld } from "../../../navigation/world/memory-world.js";
-import { ActionRunner } from "../../../session/action-runner.js";
+import { ActionRunner } from "../../../runner/action-runner.js";
 import type { FootingRecovery } from "../../responses/footing.js";
 
 function fixture(t: TestContext) {

@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { policySnapshotSchema } from "../policy/contract.js";
-import type { Facts } from "../state/answered.js";
-
-export const factsSchema: z.ZodType<Facts, Facts> = z.lazy(() =>
-  z.union([z.null(), z.boolean(), z.number(), z.string(), z.array(factsSchema), z.record(z.string(), factsSchema)]),
-);
+import { factsSchema } from "../../utils/facts.js";
 
 export const bodyAbortCauseSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("preempted"), by: z.string() }),

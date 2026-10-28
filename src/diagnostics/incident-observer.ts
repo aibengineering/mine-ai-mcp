@@ -1,21 +1,20 @@
 import type { Bot } from "mineflayer";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { IncidentReference, IncidentRetention, IncidentTrigger } from "../bot-data/incident-log.js";
-import { writeIncidentArtifact } from "../bot-data/incident-log.js";
+import { type IncidentReference, type IncidentRetention, type IncidentTrigger, writeIncidentArtifact } from "../bot-data/incident-log.js";
 import type { NavigationRuntime } from "../navigation/index.js";
-import { deathMessage } from "../runtime/player-events.js";
-import type { ActionRunnerStatus } from "../session/action-runner.js";
-import type { CombatExecutionSnapshot, CombatPhase } from "../survival/control/combat/execution.js";
+import { deathMessage } from "../world/death-message.js";
+import type { CombatExecutionSnapshot, CombatPhase } from "../survival/combat/execution.js";
 import type { SurvivalStatus } from "../survival/evidence/contract.js";
-import type { CombatPerception } from "../survival/perception/combat/observations.js";
 import type { CombatPositionPlan } from "../survival/positioning/combat/geometry.js";
 import type { FootingRecoverySnapshot } from "../survival/responses/footing.js";
 import { airSupplyTicks } from "../world/air-supply.js";
-import { damageSourceName } from "../world/damage-registry.js";
+import { damageSourceName } from "../world/watchers/damage-registry.js";
 import { IncidentRecorder } from "./incident-recorder.js";
 import { observeCombatPackets } from "./combat-packets.js";
 import { projectileSnapshot } from "./projectile-snapshot.js";
+import type { ActionRunnerStatus } from "../session/body-owner.js";
+import type { CombatPerception } from "../survival/perception/combat/observations.js";
 
 const vectorSchema = z.object({ x: z.number(), y: z.number(), z: z.number() });
 const velocityComponent = z.number().int().min(-32768).max(32767);

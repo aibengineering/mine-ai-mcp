@@ -3,7 +3,7 @@ import type { Bot } from "mineflayer";
 import type { Item } from "prismarine-item";
 import { Vec3 } from "vec3";
 import { entityDimensions } from "../../world/entity-dimensions.js";
-import { type PositionThreat } from "../positioning/combat/exposure.js";
+import { type PositionThreat } from "../perception/combat/exposure.js";
 import { shieldCoverage } from "./shield-facing.js";
 const ENDERMAN_EYE_HEIGHT = 2.55;
 const SHIELD_ARC_COSINE = Math.cos((70 * Math.PI) / 180);

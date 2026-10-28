@@ -30,7 +30,9 @@ import {
   type PourAim,
   type useItemAt,
 } from "../../../world/index.js";
-import type { BlockPosition, BreakBlockInPlace, MovementPolicy } from "../../index.js";
+import type { BlockPosition } from "../../../utils/geometry.js";
+import type { BreakBlockInPlace } from "../../execution/in-place-break.js";
+import type { MovementPolicy } from "../../movements/policy.js";
 
 /**
  * How close the route brings the bot to a lava source, feet cell to cell.

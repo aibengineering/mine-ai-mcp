@@ -4,13 +4,12 @@ import { observedEyeHeight, STANDING_EYE_HEIGHT } from "../../world/block-visibi
 import { clearCombatRay } from "../../world/entity-geometry.js";
 import { hasExposedBody } from "../../world/entity-visibility.js";
 import { arrowImpact, incomingShieldProjectiles } from "../perception/combat/shield-projectiles.js";
-import { isWindingUpAtBot } from "../perception/combat/observations.js";
 import { canBeBystander, isHostile } from "../perception/combat/threats.js";
-import { MELEE_RANGE } from "./equipment.js";
 import { arrowFlight } from "../perception/combat/arrow-flight.js";
 import { bowReleaseInTicks } from "../perception/combat/bow-timing.js";
-import { meleeDistance } from "./melee.js";
-import { projectileContact } from "../positioning/combat/exposure.js";
+import { projectileContact } from "../perception/combat/exposure.js";
+import { meleeDistance, MELEE_RANGE } from "../perception/combat/reach.js";
+import { isWindingUpAtBot } from "../perception/combat/observations.js";
 
 type Entity = Parameters<Bot["attack"]>[0];
 const GUARD_COSINE = Math.cos((70 * Math.PI) / 180);

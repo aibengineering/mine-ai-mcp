@@ -17,17 +17,12 @@ import {
   type CombatStyle,
 } from "../../survival/index.js";
 import { Budgets } from "../../survival/state/budgets.js";
-import { readCombatItems } from "../../survival/weapons/equipment.js";
 import { waitForSignal, type Position3 } from "../../utils/index.js";
-import { createDiscardedItems, type DiscardedItems } from "../../world/discarded-items.js";
+import { createDiscardedItems, type DiscardedItems } from "../../world/watchers/discarded-items.js";
 import { hasInventorySpaceFor } from "../../world/inventory-capacity.js";
 import {
-  DROPPED_ITEM_OBSERVATION_EVENTS,
-  findNewItemEntity,
   pickupObservedItem,
-  snapshotEntityIds,
-  type ObservedItemEntity,
-} from "../../world/item-pickup.js";
+} from "../../navigation/processes/item-pickup.js";
 import { defineAction, type ActionContext } from "../action.js";
 import {
   huntMobOutcomes,
@@ -46,6 +41,8 @@ import { observeHuntDrops } from "./drop-accounting.js";
 import { quarryDownAtLavaShore } from "../../survival/weapons/melee.js";
 import { collectionTargetSafetyTier, compareCollectionTargets } from "./target-selection.js";
 import { closestLoadedSpawner, SpawnerCamp, spawnerCampGoal } from "./spawner-camp.js";
+import { DROPPED_ITEM_OBSERVATION_EVENTS, findNewItemEntity, snapshotEntityIds, type ObservedItemEntity } from "../../world/dropped-items.js";
+import { readCombatItems } from "../../survival/weapons/equipment.js";
 
 type Entity = Parameters<Bot["attack"]>[0];
 

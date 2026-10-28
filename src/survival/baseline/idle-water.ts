@@ -1,7 +1,6 @@
 import type { Bot } from "mineflayer";
-import type { NavigationRuntime } from "../../navigation/index.js";
-import { horizontalControlsToward } from "../../navigation/index.js";
-import type { ActionRunner } from "../../session/action-runner.js";
+import { type NavigationRuntime, horizontalControlsToward } from "../../navigation/index.js";
+import type { BodyOwner } from "../../session/body-owner.js";
 import type { Position3 } from "../../utils/index.js";
 import { isInWater } from "../perception/body.js";
 
@@ -9,7 +8,7 @@ import { isInWater } from "../perception/body.js";
 export function attachIdleWaterControl(
   bot: Bot,
   navigation: Pick<NavigationRuntime, "active">,
-  runner: ActionRunner,
+  runner: BodyOwner,
 ): Disposable {
   let anchor: Position3 | null = null;
   let ownsControls = false;

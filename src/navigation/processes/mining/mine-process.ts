@@ -9,27 +9,19 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { asVec3, cellKey } from "../../../utils/index.js";
 import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../../world/block-visibility.js";
-import { droppedItemCount, droppedItemName } from "../../../world/item-pickup.js";
 import { stepIntoPickupReach } from "../../steering/pickup-approach.js";
-import type { useItemAt } from "../../../world/item-use.js";
-import { isAir } from "../../../world/block-classification.js";
+import type { useItemAt } from "../../../world/procedures/item-use.js";
 import { HORIZONTAL, isLiquidSource, sourceInSight, USE_RAY_REACH } from "../../../world/liquid.js";
 import { findLoadedBlockPositions } from "../../../world/loaded-block-scan.js";
-import type { PlaceIntoCell } from "../../../world/placement.js";
+import type { PlaceIntoCell } from "../../../world/procedures/placement.js";
 import { excavateGoal } from "../../goals/excavate.js";
-import {
-  anyGoal,
-  describeCalculationFailure,
-  exactBlockGoal,
-  itemPickupGoal,
-  nearGoal,
-  type BlockPosition,
-  type BreakBlockInPlace,
-  type Goal,
-  type MovementPolicy,
-  type Navigate,
-  type NavigationResult,
-} from "../../index.js";
+import { anyGoal, exactBlockGoal, itemPickupGoal, nearGoal } from "../../goals/index.js";
+import { describeCalculationFailure } from "../../orchestration/process-events.js";
+import type { BlockPosition } from "../../../utils/geometry.js";
+import type { BreakBlockInPlace } from "../../execution/in-place-break.js";
+import type { Goal } from "../../goals/goal.js";
+import type { MovementPolicy } from "../../movements/policy.js";
+import type { Navigate, NavigationResult } from "../../navigate.js";
 import { blockReader, observeMineflayerBlock } from "../../mineflayer/world.js";
 import { isSafeSupport } from "../../world/block-geometry.js";
 import { PICKUP_OVERLAP_MARGIN, stanceReachesItem, withinItemPickupReach } from "../../world/item-geometry.js";
@@ -44,6 +36,8 @@ import { DROP_PICKUP_TIMEOUT_MS, MineDropTracker } from "./mine-drops.js";
 import { clearMiningWater } from "./mining-water.js";
 import { waterMiningStance } from "../../world/water.js";
 import { lavaClosuresOf, lavaFacesOf, type MineTargetDecision } from "./target-safety.js";
+import { droppedItemCount, droppedItemName } from "../../../world/dropped-items.js";
+import { isAir } from "../../../world/block-classification.js";
 
 /** A loaded Mineflayer block, which is what `matches` is asked about. */
 export type MinecraftBlock = NonNullable<ReturnType<Bot["blockAt"]>>;

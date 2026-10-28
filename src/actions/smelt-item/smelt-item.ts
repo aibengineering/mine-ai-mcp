@@ -3,23 +3,12 @@ import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { createMovements, nearGoal, type NavigationRuntime } from "../../navigation/index.js";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
-import { carriedCount, settleInventoryCount, settleInventoryMinimum } from "../../world/inventory-count.js";
+import { carriedCount, settleInventoryCount, settleInventoryMinimum } from "../../world/watchers/inventory-count.js";
 import { waitForSignal } from "../../utils/signals.js";
 import { defineAction, type ActionContext } from "../action.js";
 import { describeNavigation } from "../navigation-result.js";
 import { formatWorkstation, useTemporaryWorkstation, workstationOperations } from "../temporary-workstation.js";
-import type { ExistingFurnaceRequest } from "./contract.js";
-import {
-  parseSmeltItemRequest,
-  SMELT_ITEM,
-  SMELT_ITEM_DESCRIPTION,
-  smeltItemInputSchema,
-  smeltItemResultSchema,
-  smeltItemOutcomes,
-  type SmeltItemRequest,
-  type SmeltItemResult,
-  type SmeltEvidence,
-} from "./contract.js";
+import { type ExistingFurnaceRequest, parseSmeltItemRequest, SMELT_ITEM, SMELT_ITEM_DESCRIPTION, smeltItemInputSchema, smeltItemResultSchema, smeltItemOutcomes, type SmeltItemRequest, type SmeltItemResult, type SmeltEvidence } from "./contract.js";
 
 const FURNACE_REACH = 4.5;
 const COOK_MS_PER_ITEM = 10_000;

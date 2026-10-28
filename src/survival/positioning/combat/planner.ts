@@ -4,9 +4,9 @@ import { obstaclesOf } from "../../../navigation/world/line-of-sight.js";
 import type { WorldView } from "../../../navigation/world/world.js";
 import { STANDING_EYE_HEIGHT } from "../../../world/block-visibility.js";
 import { exposedBodyFrom, nearestBodyPoint } from "../../../world/entity-geometry.js";
-import { MELEE_RANGE } from "../../weapons/equipment.js";
-import { positionExposed, type PositionThreat } from "./exposure.js";
+import { positionExposed, type PositionThreat } from "../../perception/combat/exposure.js";
 import { clearPlannedRay, positionWorld, standingBody, standingCell, type CombatPositionPlan } from "./geometry.js";
+import { MELEE_RANGE } from "../../perception/combat/reach.js";
 
 export const PROTECTION_SIDES = [new Vec3(1, 0, 0), new Vec3(0, 0, 1), new Vec3(-1, 0, 0), new Vec3(0, 0, -1)];
 

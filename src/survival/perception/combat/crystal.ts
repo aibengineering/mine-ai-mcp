@@ -1,9 +1,24 @@
-import type { CrystalStaircase } from "../../positioning/combat/crystal-staircase.js";
 import type { Bot, BotEvents } from "mineflayer";
 import { Vec3 } from "vec3";
+import type { BuildCell } from "../../../navigation/processes/building/build-process.js";
 import { z } from "zod";
-import type { Facts } from "../../state/answered.js";
-import { damageSourceName } from "../../../world/damage-registry.js";
+import { damageSourceName } from "../../../world/watchers/damage-registry.js";
+import type { Facts } from "../../../utils/facts.js";
+
+/** The tower a crystal attack builds, and where it swings from. */
+export interface CrystalStaircase {
+  readonly cells: readonly BuildCell[];
+  /** Feet cell of the swing: on the covered rim below the pedestal when reach allows, else on top of the tower. */
+  readonly stance: Vec3;
+  /** Whether the stance keeps the whole body under the pedestal's top face. */
+  readonly covered: boolean;
+  readonly pedestal: Vec3;
+  /** The tower's top layers; routes to and from the stance must not mine them. */
+  readonly tower: readonly Vec3[];
+  /** Scaffold blocks a straight pillar from the island to the stance needs, for the alternative approach. */
+  readonly pillarBlocks: number;
+}
+
 
 export type CrystalWeapon = "auto" | "bow" | "melee";
 export type CrystalApproach = "staircase" | "pillar";

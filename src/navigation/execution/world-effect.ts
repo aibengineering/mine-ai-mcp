@@ -1,4 +1,4 @@
-import type { NavigationBot } from "../bot.js";
+import type { NavigationBot } from "./bot.js";
 import type { BlockMatcher, PlannedOperation } from "../movements/movement.js";
 import type { BlockPosition } from "../world/world.js";
 import type { AttemptToken, ExpectedMutationLedger, MutationResult } from "./mutations.js";

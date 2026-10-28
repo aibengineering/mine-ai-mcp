@@ -3,7 +3,7 @@ import { Vec3 } from "vec3";
 import type { BlockPosition, WorldView } from "../world/world.js";
 import { predictWaterLanding, waterableLanding } from "../world/water-landing.js";
 export { predictWaterLanding, waterableLanding } from "../world/water-landing.js";
-import { horizontalControlsToward } from "../steering/local-steering.js";
+import { horizontalControlsToward } from "../execution/local-steering.js";
 import { blockReader } from "./world.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { observedEyeHeight } from "../../world/block-visibility.js";

@@ -1,13 +1,13 @@
 import type { Bot } from "mineflayer";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
-import { damagesOnContact } from "../mineflayer/world.js";
 import {
   nearestPickupPoint,
   PICKUP_OVERLAP_MARGIN,
   type PickupHazards,
   withinItemPickupReach,
 } from "../world/item-geometry.js";
-import { horizontalControlsToward } from "./local-steering.js";
+import { horizontalControlsToward } from "../execution/local-steering.js";
+import { damagesOnContact } from "../../world/block-classification.js";
 
 /** A second: past a block drop's ten-tick pickup delay, and across a cell even against a current. */
 const PICKUP_APPROACH_TICKS = 20;

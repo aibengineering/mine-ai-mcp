@@ -39,11 +39,3 @@ export const eatFoodResultSchema = actionResultSchema({
 export type EatFoodEvidence = z.output<typeof eatFoodEvidenceSchema>;
 export type EatFoodResult = z.output<typeof eatFoodResultSchema>;
 
-export const eatFoodOutcomes = {
-  unknownFood: (foodName: string) => `[EAT_UNKNOWN_FOOD] Minecraft does not classify ${foodName} as food.`,
-  notCarried: (foodName: string) => `[EAT_FOOD_MISSING] Bot inventory contains no ${foodName}.`,
-  notObserved: (foodName: string) =>
-    `[EAT_NOT_OBSERVED] No inventory decrease for ${foodName} was observed after the consume call.`,
-  rejected: (cause: unknown) =>
-    `[EAT_REJECTED] Mineflayer could not consume the selected food: ${cause instanceof Error ? cause.message : String(cause)}`,
-} as const;

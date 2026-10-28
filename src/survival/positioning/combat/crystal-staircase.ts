@@ -1,28 +1,16 @@
 import { crystalBlastCovered, crystalMeleeAimFrom, crystalMeleeReach } from "./crystal-melee.js";
-import { STANDING_EYE_HEIGHT } from "../../../world/block-visibility.js";
+import { STANDING_EYE_HEIGHT, visibleBlockAim } from "../../../world/block-visibility.js";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { type BuildCell, build } from "../../../navigation/processes/building/build-process.js";
 import { createMovements, type NavigationRuntime } from "../../../navigation/index.js";
 import { observeMineflayerBlock } from "../../../navigation/mineflayer/world.js";
 import { DIG_REACH } from "../../../navigation/movements/excavation.js";
-import { visibleBlockAim } from "../../../world/block-visibility.js";
 import { placeBlock } from "../../../world/index.js";
 import type { SurvivalPolicy } from "../../policy/contract.js";
 
-export interface CrystalStaircase {
-  readonly cells: readonly BuildCell[];
-  /** Feet cell of the swing: on the covered rim below the pedestal when reach allows, else on top of the tower. */
-  readonly stance: Vec3;
-  /** Whether the stance keeps the whole body under the pedestal's top face. */
-  readonly covered: boolean;
-  readonly pedestal: Vec3;
-  /** The tower's top layers; routes to and from the stance must not mine them. */
-  readonly tower: readonly Vec3[];
-  /** Scaffold blocks a straight pillar from the island to the stance needs, for the alternative approach. */
-  readonly pillarBlocks: number;
-}
 
+import type { CrystalStaircase } from "../../perception/combat/crystal.js";
 /** Fixed clockwise square spiral ending at the north-east attack corner.
  * Treads attach directly to obsidian; only gaps around the tower's round
  * corners need a lower support beside the preceding tread.
