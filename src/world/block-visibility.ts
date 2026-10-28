@@ -1,6 +1,5 @@
 import { Vec3 } from "vec3";
-import type { Position3 } from "../utils/index.js";
-import type { CollisionBox } from "../navigation/world/world.js";
+import type { CollisionBox, Position3 } from "../utils/index.js";
 
 export const STANDING_EYE_HEIGHT = 1.62;
 

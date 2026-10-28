@@ -1,7 +1,7 @@
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { setSneaking } from "../navigation/mineflayer/sneak.js";
-import { blockClass } from "../navigation/mineflayer/world.js";
+import { blockClass } from "./block-class.js";
 import { asVec3, cellIntersectsBody, type Position3 } from "../utils/index.js";
 import { isReplaceableForPlacement } from "./block-classification.js";
 import { carriedCount, settleInventoryCount } from "./inventory-count.js";

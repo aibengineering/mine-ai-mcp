@@ -1,6 +1,6 @@
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import type { Position3 } from "../navigation/world/world.js";
+import type { Position3 } from "../utils/index.js";
 import { dragonPhase, entityMetadata, isDragonPerched, observedDragonLandingCenter, perchedDragonHeadPosition } from "./end-fight.js";
 
 export interface DragonCloud {

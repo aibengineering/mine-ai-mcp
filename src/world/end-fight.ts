@@ -1,6 +1,6 @@
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import type { BlockPosition, Position3 } from "../navigation/world/world.js";
+import type { BlockPosition, Position3 } from "../utils/index.js";
 
 type ObservedEntity = Parameters<Bot["attack"]>[0];
 
