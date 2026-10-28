@@ -1,5 +1,5 @@
 import { saveWaterLanding } from "../../navigation/mineflayer/water-landing.js";
-import { readNavigationPolicy } from "../../survival/state/navigation-policy.js";
+import { readNavigationPolicy } from "../policy-provider.js";
 import { waitForPhysicsTicks } from "../../utils/physics-ticks.js";
 import { SupportedPositionController } from "../execution/supported-position-controller.js";
 import { holdWaterPosition } from "../steering/hold-water-position.js";

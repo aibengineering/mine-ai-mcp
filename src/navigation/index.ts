@@ -37,6 +37,8 @@ export type {
 export { setSneaking } from "./mineflayer/sneak.js";
 export { enterPortal, portalApproachGoal, type PortalBlock } from "./processes/portal-entry.js";
 export { createNavigationRuntime, createMovements } from "./runtime.js";
+export { DEFAULT_NAVIGATION_POLICY, type NavigationPolicy } from "./navigation-policy.js";
+export { readNavigationPolicy, setNavigationPolicyProvider } from "./policy-provider.js";
 export type { NavigationRuntime } from "./runtime.js";
 export { centerOnCell, horizontalControlsToward, steeringPortFor } from "./steering/local-steering.js";
 export { SupportedPositionHold } from "./steering/supported-position.js";

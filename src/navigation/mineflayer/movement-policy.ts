@@ -1,5 +1,5 @@
 import { bucketAvailable } from "../../navigation/mineflayer/water-landing.js";
-import { readNavigationPolicy } from "../../survival/state/navigation-policy.js";
+import { readNavigationPolicy } from "../policy-provider.js";
 /**
  * The production movement policy: what the bot may dig, place, or step on,
  * and what each costs, answered with Mineflayer's own knowledge of blocks,

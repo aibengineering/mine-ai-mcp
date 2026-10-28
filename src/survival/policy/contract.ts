@@ -1,13 +1,8 @@
 import { z } from "zod";
 import { combatPolicySchema, DEFAULT_COMBAT_POLICY } from "./combat/contract.js";
-export const DEFAULT_SCAFFOLD_BLOCKS = Object.freeze([
-  "dirt",
-  "cobblestone",
-  "cobbled_deepslate",
-  "netherrack",
-  "basalt",
-  "end_stone",
-]);
+// Pure data, imported directly: navigation's index would bring the whole engine with it.
+import { DEFAULT_NAVIGATION_POLICY, type NavigationPolicy } from "../../navigation/navigation-policy.js";
+export { DEFAULT_NAVIGATION_POLICY, type NavigationPolicy };
 
 /**
  * The survival policy: the rules every automatic response follows when the
@@ -70,13 +65,8 @@ export const navigationPolicySchema = z.strictObject({
         "Does not change species radii, critical-health exposure cost, or engagement decisions. Read at each route search.",
     ),
 });
-export type NavigationPolicy = z.infer<typeof navigationPolicySchema>;
-export const DEFAULT_NAVIGATION_POLICY: Readonly<NavigationPolicy> = Object.freeze({
-  scaffold_blocks: DEFAULT_SCAFFOLD_BLOCKS,
-  hostile_avoidance_multiplier: 1,
-  bucket_fall_save: true,
-  bucket_drops: true,
-});
+// Navigation owns the shape it reads; the schema here is how the model edits it.
+navigationPolicySchema satisfies z.ZodType<NavigationPolicy>;
 
 export const survivalPolicySchema = z.strictObject({
   navigation: navigationPolicySchema.describe("Threat avoidance when choosing routes."),

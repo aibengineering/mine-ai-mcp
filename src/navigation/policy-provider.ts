@@ -1,5 +1,5 @@
 import type { Bot } from "mineflayer";
-import { DEFAULT_NAVIGATION_POLICY, type NavigationPolicy } from "../policy/contract.js";
+import { DEFAULT_NAVIGATION_POLICY, type NavigationPolicy } from "./navigation-policy.js";
 
 const providers = new WeakMap<Bot, () => Readonly<NavigationPolicy>>();
 

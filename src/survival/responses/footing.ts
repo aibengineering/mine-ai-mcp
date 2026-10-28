@@ -1,5 +1,5 @@
 import { bucketAvailable, predictWaterLanding, saveWaterLanding, waterLandingActive, type WaterLandingEvidence } from "../../navigation/mineflayer/water-landing.js";
-import { readNavigationPolicy } from "../state/navigation-policy.js";
+import { readNavigationPolicy } from "../../navigation/index.js";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 import { z } from "zod";

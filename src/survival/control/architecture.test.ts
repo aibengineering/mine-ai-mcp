@@ -10,9 +10,11 @@ test("survival policy selects from facts without importing the bot, mutable stor
     if (target === "mineflayer") return true;
     if (typeOnly) return false;
     // Food's fixed regeneration threshold is shared game data; decisions receive no live bot.
+    // Navigation's defaults are data too: the policy edits them, navigation reads them.
     return !(
       target.startsWith("policy/") ||
       target === "../world/food.js" ||
+      target === "../navigation/navigation-policy.js" ||
       target === "zod" ||
       target === "node:util"
     );
