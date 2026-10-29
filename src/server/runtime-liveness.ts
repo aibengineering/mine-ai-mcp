@@ -10,7 +10,7 @@ export const RUNTIME_UNRESPONSIVE_MS = 5_000;
 // it answers, exactly as a wedge does. The supervisor holds its verdict while a
 // request is pending — three windows at most — so a wedged child still dies by
 // the request it swallowed, within fifteen seconds of going quiet.
-export const RUNTIME_PENDING_REQUEST_MS = RUNTIME_UNRESPONSIVE_MS * 3;
+export const RUNTIME_PENDING_REQUEST_WINDOWS = 3;
 
 const ownerSchema = z.object({
   bot: z.string(),
