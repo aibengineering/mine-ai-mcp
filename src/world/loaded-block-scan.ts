@@ -1,3 +1,4 @@
+import { setImmediate as yieldToEventLoop } from "node:timers/promises";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
 
@@ -159,4 +160,120 @@ export function findLoadedBlockPositions(bot: Bot, scan: LoadedBlockScan): reado
   }
   if (scan.limit === Number.POSITIVE_INFINITY) candidates.sort(compareCandidates);
   return candidates.map(({ x, y, z }) => new Vec3(x, y, z));
+}
+
+/** One kind in a cooperative multi-kind scan, with every state its name selects. */
+export interface LoadedBlockNameScanEntry {
+  readonly name: string;
+  readonly stateIds: ReadonlySet<number>;
+}
+
+export interface LoadedBlockNameScan {
+  readonly center: { readonly x: number; readonly y: number; readonly z: number };
+  /** Horizontal radius from the centre; omitted, every loaded column is searched. */
+  readonly radius?: number;
+  /** The kinds to count at once; when two names select one state, its cells count into both. */
+  readonly names: readonly LoadedBlockNameScanEntry[];
+  /** How many nearest positions to keep per name; the found count always covers everything loaded. */
+  readonly limit: number;
+}
+
+export interface LoadedBlockNameMatches {
+  readonly name: string;
+  /** Matching blocks loaded, whatever the limit. */
+  readonly found: number;
+  /** The nearest matches, nearest first; at most the limit. */
+  readonly positions: readonly Vec3[];
+}
+
+/**
+ * Count every requested kind through the loaded columns in one cooperative pass.
+ *
+ * A view naming eight kinds would otherwise run the single-name scan eight times
+ * over the same cells, and one of those passes blocks the event loop for seconds:
+ * a runtime that is only reading its world looks exactly like a wedged one from
+ * the heartbeat's side, and the supervisor kills it mid-read. Here every cell is
+ * read once and filed into each name that wants its state, lists stay bounded
+ * while counts stay whole, and between loaded sections the pass hands the event
+ * loop back, the same truce the crystal and frontier searches keep with it.
+ */
+export async function findLoadedBlocksByName(
+  bot: Bot,
+  scan: LoadedBlockNameScan,
+): Promise<readonly LoadedBlockNameMatches[]> {
+  const zero = (): LoadedBlockNameMatches[] => scan.names.map(({ name }) => ({ name, found: 0, positions: [] }));
+  if (scan.limit === 0) return zero();
+  // prismarine-world's public type omits the 1.18+ column `minY`, as in the
+  // single-name scan above; parse the library gap once, here, too.
+  const columns = bot.world.getColumns() as unknown as readonly LoadedColumn[];
+  const center = new Vec3(scan.center.x, scan.center.y, scan.center.z).floored();
+  const radiusSquared = scan.radius === undefined ? Number.POSITIVE_INFINITY : scan.radius * scan.radius;
+  // One read of a cell's state can answer for every name that wants it, so
+  // states map straight onto the buckets of names that share them.
+  const wantedStateIds = new Set<number>();
+  const stateBuckets = new Map<number, number[]>();
+  scan.names.forEach(({ stateIds }, bucket) => {
+    for (const stateId of stateIds) {
+      const sharing = stateBuckets.get(stateId);
+      if (sharing) sharing.push(bucket);
+      else {
+        stateBuckets.set(stateId, [bucket]);
+        wantedStateIds.add(stateId);
+      }
+    }
+  });
+  if (wantedStateIds.size === 0) return zero();
+  const buckets = scan.names.map(() => ({ found: 0, candidates: [] as Candidate[] }));
+  const local = { x: 0, y: 0, z: 0 };
+  let deadline = performance.now() + 8;
+  const sections = matchingSections(columns, center, radiusSquared, wantedStateIds);
+  for (const { section, origin, order: sectionOrder } of sections) {
+    // The palette filter admits a single-value section only when that one
+    // state is wanted, so its cells answer from the map without unpacking.
+    const singleValue = section.data.value;
+    const sharedWanted = singleValue === undefined ? undefined : stateBuckets.get(singleValue);
+    for (local.y = 0; local.y < 16; local.y += 1) {
+      const y = origin.y + local.y;
+      const dy = y - center.y;
+      for (local.z = 0; local.z < 16; local.z += 1) {
+        const z = origin.z + local.z;
+        const dz = z - center.z;
+        for (local.x = 0; local.x < 16; local.x += 1) {
+          const x = origin.x + local.x;
+          const dx = x - center.x;
+          const horizontalDistanceSquared = dx * dx + dz * dz;
+          if (horizontalDistanceSquared > radiusSquared) continue;
+          const distanceSquared = horizontalDistanceSquared + dy * dy;
+          // Same traversal-order tiebreak as the single-name scan, so a name
+          // reported by both scans lists the same nearest cells in one order.
+          const order = sectionOrder * 4096 + local.y * 256 + local.z * 16 + local.x;
+          const wanted = sharedWanted ?? stateBuckets.get(section.get(local));
+          if (wanted === undefined) continue;
+          for (const bucket of wanted) {
+            const matching = buckets[bucket]!;
+            matching.found += 1;
+            const worst = matching.candidates[matching.candidates.length - 1];
+            if (
+              matching.candidates.length < scan.limit ||
+              !worst ||
+              distanceSquared < worst.distanceSquared ||
+              (distanceSquared === worst.distanceSquared && order < worst.order)
+            )
+              retainCandidate(matching.candidates, { x, y, z, distanceSquared, order }, scan.limit);
+          }
+        }
+      }
+    }
+    // A section is a bounded piece of work; between sections the loop may turn,
+    // so heartbeats, Minecraft packets and cancellation run however wide a view.
+    if (performance.now() >= deadline) {
+      await yieldToEventLoop();
+      deadline = performance.now() + 8;
+    }
+  }
+  return scan.names.map(({ name }, bucket) => ({
+    name,
+    found: buckets[bucket]!.found,
+    positions: buckets[bucket]!.candidates.map(({ x, y, z }) => new Vec3(x, y, z)),
+  }));
 }

@@ -54,14 +54,14 @@ test("a view needs at least one of find, box, or cells, dedupes names, and defau
   assert.deepEqual(parsed.cells, []);
 });
 
-test("find lists the nearest matches across what is loaded, with what is above and below, and counts the rest", () => {
+test("find lists the nearest matches across what is loaded, with what is above and below, and counts the rest", async () => {
   const bot = fakeBot({
     [key(3, 64, 0)]: { name: "obsidian" },
     [key(3, 65, 0)]: { name: "lava", properties: { level: "0" } },
     [key(3, 63, 0)]: { name: "stone" },
     [key(10, 64, 0)]: { name: "obsidian" },
   });
-  const result = viewBlocks(bot, { find: { blockNames: ["obsidian", "lava"], limit: 1 }, box: null, cells: [] });
+  const result = await viewBlocks(bot, { find: { blockNames: ["obsidian", "lava"], limit: 1 }, box: null, cells: [] });
   assert.equal(result.status, "succeeded");
   assert.deepEqual(result.blocks.find, [
     {
@@ -83,19 +83,35 @@ test("find lists the nearest matches across what is loaded, with what is above a
   assert.match(markdown, /### lava: 1 loaded\n- lava at 3, 65, 0, 3.2 blocks away \(source\)/);
 });
 
-test("a name Minecraft has no block for fails the view rather than finding nothing", () => {
-  const result = viewBlocks(fakeBot({}), { find: { blockNames: ["unobtainium"], limit: 12 }, box: null, cells: [] });
+test("names that select one block count its cells into each of them, as scans per name would", async () => {
+  const bot = fakeBot({
+    [key(3, 64, 0)]: { name: "oak_log" },
+    [key(10, 64, 0)]: { name: "spruce_log" },
+  });
+  const result = await viewBlocks(bot, { find: { blockNames: ["oak_log", "logs"], limit: 1 }, box: null, cells: [] });
+  assert.equal(result.status, "succeeded");
+  assert.deepEqual(
+    result.blocks.find!.map((entry) => [entry.name, entry.found, entry.listed[0]?.x, entry.listed.length]),
+    [
+      ["oak_log", 1, 3, 1],
+      ["logs", 2, 3, 1],
+    ],
+  );
+});
+
+test("a name Minecraft has no block for fails the view rather than finding nothing", async () => {
+  const result = await viewBlocks(fakeBot({}), { find: { blockNames: ["unobtainium"], limit: 12 }, box: null, cells: [] });
   assert.equal(result.status, "failed");
   assert.match((result as { error: string }).error, /no block named unobtainium/);
 });
 
-test("a box is drawn top layer first as one grid per layer with a legend", () => {
+test("a box is drawn top layer first as one grid per layer with a legend", async () => {
   const bot = fakeBot({
     [key(4, 63, 4)]: { name: "stone" },
     [key(5, 63, 4)]: { name: "stone" },
     [key(4, 64, 4)]: { name: "water", properties: { level: 0 } },
   });
-  const result = viewBlocks(bot, {
+  const result = await viewBlocks(bot, {
     find: null,
     box: { x: 4, y: 64, z: 4, halfWidth: 1, halfHeight: 1 },
     cells: [],
@@ -114,14 +130,14 @@ test("a box is drawn top layer first as one grid per layer with a legend", () =>
   assert.match(markdown, /Legend: \. air \(24\), A stone \(2\), ~ water \(1\)/);
 });
 
-test("cells report shape, liquid level, and waterlogging", () => {
+test("cells report shape, liquid level, and waterlogging", async () => {
   const bot = fakeBot({
     [key(1, 64, 1)]: { name: "water", properties: { level: 0 } },
     [key(2, 64, 1)]: { name: "water", properties: { level: 3 } },
     [key(3, 64, 1)]: { name: "oak_slab", properties: { waterlogged: true, type: "bottom" } },
     [key(4, 64, 1)]: { name: "stone" },
   });
-  const result = viewBlocks(bot, {
+  const result = await viewBlocks(bot, {
     find: null,
     box: null,
     cells: [

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -20,6 +20,9 @@ const SUPERVISOR_PAUSE_MS = LIVENESS.unresponsiveMs + 1_500;
 const FIXTURE_TIMING = {
   wedgeAfterMs: LIVENESS.incidentHistoryMs + 250,
   slowMs: LIVENESS.unresponsiveMs + 1_000,
+  // A blocked read longer than one window but inside the cap the supervisor
+  // holds while a request is still pending.
+  busyMs: LIVENESS.unresponsiveMs + 1_000,
   // The child resumes half a second after this process does.
   pauseMs: SUPERVISOR_PAUSE_MS + 500,
 };
@@ -58,6 +61,7 @@ async function supervised(instanceId: string, launch?: (directory: string) => { 
   return {
     supervisor,
     failures: failures as readonly string[],
+    directory,
     url: `http://127.0.0.1:${address.port}`,
     async [Symbol.asyncDispose]() {
       await supervisor.close();
@@ -226,6 +230,22 @@ concurrentTests({
     assert.equal((await fetch(`${url}/health`)).status, 200);
     await supervisor.close();
     assert.ok(supervisor.child.exitCode !== null || supervisor.child.signalCode !== null, "close must reap its runtime.");
+  },
+  "a read blocked past the unresponsive window answers when it is still the child's work": async () => {
+    await using run = await supervised("busy");
+    const { url } = run;
+    await whenHealthy(url);
+
+    // The child blocks its event loop for longer than one liveness window while
+    // this request is pending, then answers. Judging only heartbeats would kill
+    // honest work in the middle of the read, as three playthrough deaths already did.
+    const response = await fetch(`${url}/busy`);
+    assert.equal(await response.text(), "finished", "A read inside the pending cap is work, not a hang.");
+
+    const diagnostics = await (await fetch(`${url}/diagnostics/runtime`)).json();
+    assert.equal(diagnostics.state, "ready");
+    assert.equal((await fetch(`${url}/health`)).status, 200);
+    assert.deepEqual(await readdir(run.directory), [], "Surviving work must not write an incident.");
   },
 });
 

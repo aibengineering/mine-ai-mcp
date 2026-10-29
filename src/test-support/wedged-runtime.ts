@@ -43,6 +43,13 @@ const server = createServer(async (request, response) => {
     setTimeout(() => response.end("finished"), timing.slowMs);
     return;
   }
+  if (request.url === "/busy") {
+    // A read that blocks the event loop past one liveness window and then
+    // answers: busy work, not a wedge. The supervisor must let it finish.
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 7_000);
+    response.end("finished");
+    return;
+  }
   if (request.url === "/pause") {
     response.end("accepted");
     setTimeout(() => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, timing.pauseMs), 100);

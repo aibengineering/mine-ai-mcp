@@ -5,6 +5,12 @@ import { observeExecution, type ExecutionEvent } from "../execution/execution-sc
 // the observed Minecraft keepalive timeout. This never limits action duration.
 export const RUNTIME_HEARTBEAT_MS = 250;
 export const RUNTIME_UNRESPONSIVE_MS = 5_000;
+// A request the supervisor forwarded but the child has not answered is work in
+// progress, not a hang: one honest multi-second read starves the heartbeat until
+// it answers, exactly as a wedge does. The supervisor holds its verdict while a
+// request is pending — three windows at most — so a wedged child still dies by
+// the request it swallowed, within fifteen seconds of going quiet.
+export const RUNTIME_PENDING_REQUEST_MS = RUNTIME_UNRESPONSIVE_MS * 3;
 
 const ownerSchema = z.object({
   bot: z.string(),
