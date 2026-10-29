@@ -11,6 +11,7 @@ import { ExecutionScope } from "../execution/execution-scope.js";
 const timing = JSON.parse(process.argv[2] ?? "") as {
   readonly wedgeAfterMs: number;
   readonly slowMs: number;
+  readonly busyMs: number;
   readonly pauseMs: number;
 };
 
@@ -46,7 +47,7 @@ const server = createServer(async (request, response) => {
   if (request.url === "/busy") {
     // A read that blocks the event loop past one liveness window and then
     // answers: busy work, not a wedge. The supervisor must let it finish.
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 7_000);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, timing.busyMs);
     response.end("finished");
     return;
   }
