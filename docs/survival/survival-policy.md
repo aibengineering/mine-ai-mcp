@@ -104,6 +104,7 @@ For example, use `set_survival_policy` with the current revision:
 | `combat.recover_to_health`                  | `18`                     | Recovery target; hostile pursuit uses at least `engage_min_health`.                                                               |
 | `combat.protected_wait_ticks`               | `300`                    | Protected waiting without confirmed quarry damage before rejecting the position.                                                  |
 | `combat.enderman_wait_ticks`                | `300`                    | Enderman lure or roof waiting window; commands and incidental damage do not renew it.                                             |
+| `combat.hold_wait_ticks`                    | `600`                    | Holding or guarding with no attack position, attack, confirmed hit or damage taken before the fight ends with the target unreachable. |
 | `combat.volley_wait_ticks`                  | `100`                    | Window for an observed ranged volley to finish.                                                                                   |
 | `combat.recovery_timeout_ms`                | `90000`                  | One protected recovery hold, including movement and eating.                                                                       |
 | `combat.evade_timeout_ms`                   | `15000`                  | One withdrawal attempt, including replacement routes and projectile guards.                                                       |

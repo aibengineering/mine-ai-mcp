@@ -49,6 +49,8 @@ export async function runMobFight(
       if (scene.bot.health <= 0) { outcome = scene.result("bot_died"); break; }
       const tickBefore = scene.elapsedTicks;
       scene.observeBoundary();
+      const held = scene.holdLimit();
+      if (held) { outcome = held; break; }
       const tactic = scene.tactics.observe(scene, weapons);
       const effect = await scene.tactics.run(tactic, async () => {
         if (tactic.kind === "recover_footing") { await locomotion.recoverFooting(); return null; }
