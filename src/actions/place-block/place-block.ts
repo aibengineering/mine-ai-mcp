@@ -107,6 +107,24 @@ function findSupport(bot: Bot, target: Vec3): { block: WorldBlock; face: Vec3 } 
   return null;
 }
 
+/**
+ * The six cells a placement could stand on, each with what is actually in it.
+ *
+ * "No adjacent solid block" alone tells a reader nothing about the site: a base
+ * furnace refused at (-160, 76, -73) twice with the identical sentence, and the
+ * run had no way to tell a hole in the floor from a wall it could have placed
+ * against. Naming the neighbours is what makes the refusal actionable.
+ */
+function supportReport(bot: Bot, target: Vec3): string {
+  return SUPPORT_DIRECTIONS
+    .map(({ offset }) => {
+      const cell = target.plus(offset);
+      const block = bot.blockAt(cell);
+      return `(${cell.x}, ${cell.y}, ${cell.z})=${block?.name ?? "unloaded"}`;
+    })
+    .join(", ");
+}
+
 async function approachTarget(
   bot: Bot,
   target: Vec3,
@@ -307,7 +325,7 @@ export async function executePlaceBlock(
   if (!support) {
     return {
       status: "failed",
-      error: placeBlockOutcomes.noSupport,
+      error: placeBlockOutcomes.noSupport(target, supportReport(bot, target)),
       placement: evidence(bot, request, target, inventoryBefore, targetBlock.name),
     };
   }

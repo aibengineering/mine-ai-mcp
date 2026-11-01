@@ -289,7 +289,8 @@ test("preserves a block-update timeout with post-timeout world evidence", async 
     kind: "failed",
     error:
       "Event blockUpdate:(0, 64, 0) did not fire within timeout of 5000ms; " +
-      "physical verification after 5 ticks observed (0, 64, 0)=air.",
+      "physical verification after 5 ticks observed (0, 64, 0)=air, " +
+      "against the face of (0, 63, 0) pointing (0, 1, 0).",
   });
   assert.equal(ticks, 4);
 });
