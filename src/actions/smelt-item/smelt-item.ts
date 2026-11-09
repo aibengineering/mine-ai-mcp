@@ -13,7 +13,19 @@ import { type ExistingFurnaceRequest, parseSmeltItemRequest, SMELT_ITEM, SMELT_I
 const FURNACE_REACH = 4.5;
 const COOK_MS_PER_ITEM = 10_000;
 const COOK_STALL_MS = 15_000;
-const FUEL_START_SETTLEMENT_MS = 1_000;
+/**
+ * How long a cook must show no advance before the furnace is judged to have run
+ * out of burn - one item's cook time, not one second.
+ *
+ * Mineflayer's `fuel` property is a fraction of the window's total-fuel value,
+ * and it reads 0 until that total arrives, so a furnace that has just been fed
+ * reports an empty fuel slot and no burn for its first second while the game is
+ * already burning. Live, run219 it16-24: five cooks with a carried log each
+ * burned their fuel, were reported starved, and the next call finished the item
+ * on the burn the "starved" one had lit - one log per cooked item and a failure
+ * on every other tick.
+ */
+const FUEL_START_SETTLEMENT_MS = COOK_MS_PER_ITEM;
 const SLOT_RECOVERY_MS = 2_000;
 
 type FurnaceWindow = Awaited<ReturnType<Bot["openFurnace"]>>;
@@ -251,8 +263,12 @@ async function waitForCook(
     observe?.(current, stalledForMs);
     if (current.output >= requested && current.input === 0 && (current.cookProgress ?? 0) === 0)
       return { verdict: "completed", observation: current };
+    // The absence of burn is proven by the cook standing still for a whole item,
+    // not by the fuel property alone: mineflayer's `fuel` reads 0 until the
+    // window's total-fuel packet lands, so a freshly fed furnace looks empty for
+    // its first second while the game is already burning it.
     if (
-      now - startedAt >= FUEL_START_SETTLEMENT_MS &&
+      stalledForMs >= FUEL_START_SETTLEMENT_MS &&
       current.input > 0 &&
       current.fuelItems === 0 &&
       current.fuelProgress === 0 &&
