@@ -6,7 +6,7 @@ import type { Navigate, NavigationRuntime } from "../../navigation/index.js";
 import { blockReader } from "../../navigation/mineflayer/world.js";
 import { botFixture, type FakeStack } from "../../test-support/bot.js";
 import { blockNamed } from "../../test-support/world.js";
-import { collectBlock, inventoryStop, pursuedInventoryStop, settle } from "./collect-block.js";
+import { collectBlock, inventoryStop, preparationMaterial, pursuedInventoryStop, settle } from "./collect-block.js";
 
 test("capacity admission allows a clearing break with free space or a compatible partial stack", () => {
   let empty = 4;
@@ -204,4 +204,38 @@ test("collection stops on the selected pickaxe's tier loss unless on_tool_loss c
       assert.match("error" in result ? result.error : "", new RegExp(`TOOL_TIER_LOST.*${remains.source}`), label);
     }
   }
+});
+
+/**
+ * A lava seal is paid for out of the scaffold policy, not out of the base. Live,
+ * run221 it215: `gather_scaffold` in the Nether closed lava faces with a chest, a
+ * crafting table, a furnace, four nether brick fences, six acacia logs, two planks,
+ * six gravel, six nether bricks and a magma block - twenty-two kit blocks for
+ * thirty-two netherrack, every one of them needing a second craft.
+ */
+test("preparation material is the scaffold policy's blocks, never the kit lying beside them", () => {
+  const bot = botFixture({
+    items: [
+      { name: "netherrack", count: 1 },
+      { name: "chest", count: 1 },
+      { name: "crafting_table", count: 1 },
+      { name: "furnace", count: 1 },
+      { name: "nether_brick_fence", count: 4 },
+      { name: "acacia_log", count: 6 },
+      { name: "gravel", count: 6 },
+      { name: "nether_bricks", count: 6 },
+      { name: "magma_block", count: 1 },
+      { name: "cobblestone", count: 3 },
+      { name: "dirt", count: 12 },
+    ],
+  });
+  assert.deepEqual(
+    preparationMaterial(bot, new Set(["netherrack"])).map((item) => item.name),
+    ["dirt", "cobblestone"],
+  );
+});
+
+test("with no policy block carried the seal has no material, and the chest stays in the pack", () => {
+  const bot = botFixture({ items: [{ name: "chest", count: 1 }, { name: "nether_bricks", count: 64 }] });
+  assert.deepEqual(preparationMaterial(bot, new Set(["netherrack"])), []);
 });
