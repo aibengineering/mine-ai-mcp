@@ -22,13 +22,14 @@ import {
   type MineTarget,
 } from "../../navigation/processes/mining/mine-process.js";
 import { evaluateMineTarget, type MineTargetDecision } from "../../navigation/processes/mining/target-safety.js";
+import { scaffoldBlockNames } from "../../navigation/mineflayer/movement-policy.js";
 import { prepareBotForMovement } from "../../session/prepare-body.js";
 import type { ObserveRequest } from "../../session/request.js";
 import { asVec3 } from "../../utils/index.js";
 import { createDiscardedItems, type DiscardedItems } from "../../world/watchers/discarded-items.js";
 import { useItemAt } from "../../world/procedures/item-use.js";
 import { observeToolTierLoss } from "../../world/watchers/tool-loss.js";
-import { carriedSolidBlocks, placeSolidBlockInto } from "../../world/procedures/placement.js";
+import { carriedSolidBlocks, placeSolidBlockInto, type InventoryItem } from "../../world/procedures/placement.js";
 import { defineAction, type ActionContext } from "../action.js";
 import { blockMatchesSelector, expectedDropName, inventoryCounts, inventoryGains } from "./collection-facts.js";
 import { createCollectionMovements } from "./collection-movements.js";
@@ -150,6 +151,24 @@ function exactTargetStop(
   return decision.kind === "mineable" ? null : outcomes.unmineable(block.name, block.position, decision.reason);
 }
 
+/**
+ * What a collection may spend building its way to a target: the scaffold policy's
+ * blocks, in the order the bot carries most of them, and never the block being
+ * collected.
+ *
+ * Every other placement in the host selects material through `preferredScaffoldItem`,
+ * which reads `navigation.scaffold_blocks`. This one read the whole inventory instead,
+ * so a lava seal in the Nether paid for itself with the base: live, run221 it215,
+ * `gather_scaffold` consumed a chest, a crafting table, a furnace, four nether brick
+ * fences, six acacia logs, two planks, six gravel, six nether bricks and a magma block
+ * to place thirty-two netherrack. A kit item is not scaffold, and the run pays for it
+ * twice: the blocks are gone and the craft has to be made again.
+ */
+export function preparationMaterial(bot: Bot, collectable: ReadonlySet<string>): InventoryItem[] {
+  const admitted = new Set(scaffoldBlockNames(bot));
+  return carriedSolidBlocks(bot).filter((item) => !collectable.has(item.name) && admitted.has(item.name));
+}
+
 // ── Action execution ──────────────────────────────────────────────────────────────────────
 
 export async function collectBlock(
@@ -201,7 +220,7 @@ function beginCollectBlock(
     const movements = collectionMovements(bot, request, target);
     // Preparation and its lava-face budget use the same live material selection.
     // Items counted toward this request are reserved, just as they are for scaffold.
-    const buildingBlocks = () => carriedSolidBlocks(bot).filter((item) => !collectable.has(item.name));
+    const buildingBlocks = () => preparationMaterial(bot, collectable);
     const canMine = (block: MinecraftBlock) =>
       evaluateMineTarget(
         bot,
