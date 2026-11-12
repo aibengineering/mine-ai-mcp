@@ -131,6 +131,18 @@ function collisionHeight(shapes: readonly CollisionBox[]): number {
   return highest;
 }
 
+/**
+ * Whether a box top at `height` sits under the cell's middle, where a body
+ * standing in the cell would be. A body settles on a floor it meets under its
+ * own centre; a box that only reaches its top out at the cell's edge (a slat,
+ * a wall) or a ring whose middle is a hole holds nothing there.
+ */
+function treadUnderCentre(shapes: readonly CollisionBox[], height: number): boolean {
+  return shapes.some(
+    (box) => box.maxY === height && box.minX <= 0.5 && box.maxX >= 0.5 && box.minZ <= 0.5 && box.maxZ >= 0.5,
+  );
+}
+
 export function describeBlockGeometry(traits: BlockTraits, shapes: readonly CollisionBox[]): BlockGeometry {
   const hasCollision = !traits.empty && traits.liquid === null && shapes.length > 0;
   const height = collisionHeight(shapes);
@@ -169,6 +181,17 @@ export function describeBlockGeometry(traits: BlockTraits, shapes: readonly Coll
   // rather than landing, and the step-up that expected support never settled.
   // Climbables are support to walk over and climb into (`safeSupport`
   // below), never a tread to step up onto.
+  // Reading `height === 1` as a full cube left the same trap for every other
+  // plate and ring: an open trapdoor is a slat at the cell's edge, and a
+  // cauldron or hopper is a rim around a hole, yet each reaches the cell's
+  // ceiling. Judged by height alone each read as a tread, so the route
+  // committed a step up onto it, the body at the cell's middle was held up by
+  // nothing and fell back, and the identical step replanned. Observed live on
+  // 2026-10-16, hunting a cow penned behind open spruce trapdoors: the bot's
+  // feet crossed 336,63,151's middle over empty air for the length of the
+  // action. A tread is now the box at the top height that passes under the
+  // cell's middle, so a slat and a ring are not treads while a staircase,
+  // whose step's top reaches the middle, still is.
   // A big dripleaf's box is a full-width tread within an eighth of full
   // height, and by that reading alone it is a floor. It is the one block whose
   // collision answers to what stands on it: a body on the leaf tilts it in
@@ -184,7 +207,7 @@ export function describeBlockGeometry(traits: BlockTraits, shapes: readonly Coll
     solid &&
     !traits.climbable &&
     !traits.yielding &&
-    (height === 1 ||
+    ((height === 1 && treadUnderCentre(shapes, height)) ||
       (height < 1 &&
         height >= 1 - FLOOR_HEIGHT_DEFICIT &&
         shapes.some(
