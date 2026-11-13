@@ -184,6 +184,100 @@ test("masonry alone is not confirmation; a loaded frame produces a typed durable
   assert.equal(f.activations(), 0);
 });
 
+test("a confirmed frame deep under open water points the next step to tunnel_to", async () => {
+  using data = makeData();
+  // The bot floats at the ocean surface directly above a buried stronghold:
+  // feet and the cell below are water, so there is no footing to walk in on.
+  const bot = botFixture(
+    { username: "Locator", position: { x: 0, y: 70, z: 0 }, slots: [], blocks: { "0,70,0": "water", "0,69,0": "water" } },
+    { activateItem: () => {} },
+  );
+  using flights = new StrongholdEyeFlights(bot);
+  const material = registry.blocksByName.end_portal_frame!.minStateId;
+  bot.world.getColumns = () =>
+    [
+      {
+        chunkX: 0,
+        chunkZ: 0,
+        column: {
+          minY: 0,
+          sections: [
+            {
+              solidBlockCount: 1,
+              data: {},
+              palette: [material],
+              get: (pos: Vec3) => (pos.x === 1 && pos.y === 5 && pos.z === 1 ? material : 0),
+            },
+          ],
+        },
+      },
+    ] as never;
+  // A saved local throw that sinks almost straight down: the eye marks the bot
+  // as directly over the stronghold, the vertical-descent half of the trigger.
+  const store = new StrongholdThrows(data, "Locator", "overworld", "stronghold");
+  const id = store.begin({ x: 0, y: 70, z: 0 });
+  store.observe(id, id, { x: 0, y: 71, z: 0 }, { x: 0, y: 63, z: 0 });
+  store.finish(id, "observed");
+  const navigation = { navigate: async () => ({ status: "completed", elapsedMs: 1 }) } as unknown as NavigationRuntime;
+  const action = createLocateStrongholdAction(bot, navigation, data, flights, shortRecovery);
+  const result = await action.begin(
+    action.parse({ phase: "locate", continue_without_recommended_items: true }),
+    new AbortController().signal,
+    () => {},
+  )({});
+  assert.equal(result.status, "succeeded");
+  assert.deepEqual(result.confirmation?.position, { x: 1, y: 5, z: 1 });
+  assert.ok(result.reachByTunnel, "A frame deep under water must hand off to tunnel_to.");
+  assert.equal(result.reachByTunnel.searchId, "stronghold");
+  assert.deepEqual(result.reachByTunnel.target, { x: 1, y: 5, z: 1 });
+  assert.equal(result.reachByTunnel.descentBlocks, 65);
+  locateStrongholdResultSchema.parse(result);
+});
+
+test("a confirmed frame reachable on dry land is not flagged for tunnel_to", async () => {
+  using data = makeData();
+  // Same confirmed frame, but the bot stands on solid ground, not over water.
+  const bot = botFixture(
+    { username: "Locator", position: { x: 0, y: 70, z: 0 }, slots: [], blocks: { "0,69,0": "stone" } },
+    { activateItem: () => {} },
+  );
+  using flights = new StrongholdEyeFlights(bot);
+  const material = registry.blocksByName.end_portal_frame!.minStateId;
+  bot.world.getColumns = () =>
+    [
+      {
+        chunkX: 0,
+        chunkZ: 0,
+        column: {
+          minY: 0,
+          sections: [
+            {
+              solidBlockCount: 1,
+              data: {},
+              palette: [material],
+              get: (pos: Vec3) => (pos.x === 1 && pos.y === 5 && pos.z === 1 ? material : 0),
+            },
+          ],
+        },
+      },
+    ] as never;
+  const store = new StrongholdThrows(data, "Locator", "overworld", "stronghold");
+  const id = store.begin({ x: 0, y: 70, z: 0 });
+  store.observe(id, id, { x: 0, y: 71, z: 0 }, { x: 0, y: 63, z: 0 });
+  store.finish(id, "observed");
+  const navigation = { navigate: async () => ({ status: "completed", elapsedMs: 1 }) } as unknown as NavigationRuntime;
+  const action = createLocateStrongholdAction(bot, navigation, data, flights, shortRecovery);
+  const result = await action.begin(
+    action.parse({ phase: "locate", continue_without_recommended_items: true }),
+    new AbortController().signal,
+    () => {},
+  )({});
+  assert.equal(result.status, "succeeded");
+  assert.deepEqual(result.confirmation?.position, { x: 1, y: 5, z: 1 });
+  assert.equal(result.reachByTunnel, null, "A dry-land frame is walked into, not tunnelled to.");
+  locateStrongholdResultSchema.parse(result);
+});
+
 test("saved bearings resume navigation without requiring or spending another eye", async () => {
   using data = makeData();
   const f = fixture();

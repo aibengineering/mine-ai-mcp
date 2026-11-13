@@ -3,7 +3,7 @@ import { actionResultSchema } from "../action.js";
 
 export const LOCATE_STRONGHOLD = "locate_stronghold" as const;
 export const LOCATE_STRONGHOLD_DESCRIPTION =
-  "Locate an Overworld stronghold in two calls. phase: estimate (default) saves the initial Eye-of-Ender triangulation and returns success with approximate distance, walking time and recommended dragon-fight supplies, without travelling to the estimate. phase: locate reuses the same search_id, checks supplies, travels to the estimate, refines with a local eye throw and confirms loaded end_portal_frame blocks. Missing supplies require continue_without_recommended_items: true. Locate success does not mean entering the structure or activating its portal. Saved throws survive cancellation and restart. Attempts to recover nearby dropped eyes after throwing and on resume; shattered or unreachable eyes do not invalidate saved bearings. May dig; does not scaffold or gather other supplies.";
+  "Locate an Overworld stronghold in two calls. phase: estimate (default) saves the initial Eye-of-Ender triangulation and returns success with approximate distance, walking time and recommended dragon-fight supplies, without travelling to the estimate. phase: locate reuses the same search_id, checks supplies, travels to the estimate, refines with a local eye throw and confirms loaded end_portal_frame blocks. Missing supplies require continue_without_recommended_items: true. Locate success does not mean entering the structure or activating its portal. When the confirmed frame lies deep under open water with no footing here, the result sets reachByTunnel and recommends calling tunnel_to with the same search_id to carve a dry staircase down to it. Saved throws survive cancellation and restart. Attempts to recover nearby dropped eyes after throwing and on resume; shattered or unreachable eyes do not invalidate saved bearings. May dig; does not scaffold or gather other supplies.";
 
 export const locateStrongholdInputSchema = z.strictObject({
   phase: z
@@ -46,5 +46,11 @@ export const locateStrongholdResultSchema = actionResultSchema({
   throwIds: z.array(z.string()),
   estimate: estimateSchema.nullable(),
   confirmation: z.strictObject({ block: z.literal("end_portal_frame"), position: pointSchema }).nullable(),
+  // Set when the confirmed frame is buried deep under water with no footing
+  // here: the bot stands over the ocean, far above the frame, so the next step
+  // is tunnel_to rather than a walk in. Null when the frame is reachable on foot.
+  reachByTunnel: z
+    .strictObject({ searchId: z.string(), target: pointSchema, descentBlocks: z.number().nonnegative() })
+    .nullable(),
 });
 export type LocateStrongholdResult = z.output<typeof locateStrongholdResultSchema>;

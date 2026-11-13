@@ -99,6 +99,8 @@ import { USE_BUCKET, USE_BUCKET_DESCRIPTION, useBucketInputSchema } from "./use-
 import { createUseBucketAction } from "./use-bucket/index.js";
 import { USE_CONTAINER, USE_CONTAINER_DESCRIPTION, useContainerInputSchema } from "./use-container/contract.js";
 import { createUseContainerAction } from "./use-container/index.js";
+import { TUNNEL_TO, TUNNEL_TO_DESCRIPTION, tunnelToInputSchema } from "./tunnel-to/contract.js";
+import { createTunnelToAction } from "./tunnel-to/index.js";
 import { VIEW_BLOCKS, VIEW_BLOCKS_DESCRIPTION, viewBlocksInputSchema } from "./view-blocks/contract.js";
 import { createViewBlocksAction } from "./view-blocks/index.js";
 import {
@@ -180,6 +182,8 @@ export const ACTION_CATALOG: readonly CatalogEntry[] = Object.freeze([
     (d) => createActivatePortalAction(d.bot, d.navigation)),
   entry(LOCATE_STRONGHOLD, LOCATE_STRONGHOLD_DESCRIPTION, locateStrongholdInputSchema,
     (d) => createLocateStrongholdAction(d.bot, d.navigation, d.botData, d.strongholdEyeFlights)),
+  entry(TUNNEL_TO, TUNNEL_TO_DESCRIPTION, tunnelToInputSchema,
+    (d) => createTunnelToAction(d.bot, d.navigation, d.botData)),
   entry(ENTER_NETHER_PORTAL, ENTER_NETHER_PORTAL_DESCRIPTION, enterNetherPortalInputSchema,
     (d) => createEnterNetherPortalAction(d.bot, d.navigation)),
   entry(ENTER_END_PORTAL, ENTER_END_PORTAL_DESCRIPTION, enterEndPortalInputSchema,

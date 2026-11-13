@@ -1,0 +1,66 @@
+template: ../../templates/single-action.yaml
+
+tags: [acceptance, regression]
+description: >-
+  A stronghold end-portal room is buried under a static ocean, with lava
+  directly beneath the frame. Standing on the dry shore, the bot tunnels to a
+  foothold beside the frame: tunnel_to carves a walkable diagonal staircase that
+  descends from the nearest dry land, stays under the seabed the whole way so it
+  never breaches the ocean above or the lava below, and leaves the bot standing
+  dry at the portal room. The dry mouth and the portal-room exit persist as
+  durable stronghold landmarks. This is the §10 acceptance from the tunnel_to
+  design, built as a deterministic in-suite integration test rather than leaning
+  on a natural seed.
+# The world is an elevated stone massif (the overworld floor is bedrock at y-64,
+# so the room is dug downward from a plateau, not below sea level). Its east half
+# is dry land; its west half is an open ocean over a seabed whose solid top is
+# y-48. The frame sits at y-54, six blocks under the seabed, ringed by twelve
+# end_portal_frame blocks around a 3x3 room, with lava at y-56 under the room.
+# randomTickSpeed 0 keeps the water and lava static, and naturalRegeneration off
+# makes any drowning, suffocation or fall show up as lost health.
+world:
+  type: flat
+  time: noon
+  difficulty: peaceful
+  gamerules: { doDaylightCycle: false, doMobSpawning: false, doWeatherCycle: false, keepInventory: true, naturalRegeneration: false, randomTickSpeed: 0 }
+geometry:
+  # The solid massif: a plateau whose top is y-36.
+  - fill: { block: stone, from: [-42, -60, -12], to: [24, -36, 12] }
+  # Carve the ocean basin over the west half and fill it with static water: the
+  # surface is y-41, the seabed's solid top is y-48.
+  - fill: { block: air, from: [-42, -47, -12], to: [-26, -36, 12] }
+  - fill: { block: water, from: [-42, -47, -12], to: [-26, -41, 12] }
+  # The end-portal frame ring at y-54, around a 3x3 room (x -34..-32, z -1..1).
+  - fill: { block: "end_portal_frame[facing=south,eye=false]", from: [-34, -54, -2], to: [-32, -54, -2] }
+  - fill: { block: "end_portal_frame[facing=north,eye=false]", from: [-34, -54, 2], to: [-32, -54, 2] }
+  - fill: { block: "end_portal_frame[facing=east,eye=false]", from: [-35, -54, -1], to: [-35, -54, 1] }
+  - fill: { block: "end_portal_frame[facing=west,eye=false]", from: [-31, -54, -1], to: [-31, -54, 1] }
+  # The portal room: a dry three-high space with a solid floor at y-55.
+  - fill: { block: air, from: [-34, -54, -1], to: [-32, -52, 1] }
+  # Lava directly under the room, sealed below the y-55 floor.
+  - fill: { block: lava, from: [-34, -56, -1], to: [-32, -56, 1] }
+players:
+  - name: Tunneller
+    # On the dry shore, at the centre of the dry chunk nearest the frame, so the
+    # staircase begins here without a long walk to land first.
+    pos: [-7.5, -35, 8.5]
+    inventory:
+      - { item: iron_pickaxe, count: 1 }
+      - { item: iron_shovel, count: 1 }
+      - { item: cobblestone, count: 64 }
+client:
+  command: bun
+  cwd: ../..
+  args: [client-host.ts, drivers/ocean-stronghold-tunnel.ts]
+params:
+  target: { x: -30, y: -54, z: 0 }
+  searchId: stronghold
+goal:
+  kind: all
+  timeout: 300
+  goals:
+    # The bot ends standing dry at the foothold beside the frame.
+    - { kind: reach, who: Tunneller, pos: [-30, -54, 0], radius: 1.5 }
+    # No drowning, suffocation, lava or fall damage along the way.
+    - { kind: health, who: Tunneller, health: 20 }
+    - { kind: completion, who: Tunneller }
