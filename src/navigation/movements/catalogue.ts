@@ -772,7 +772,17 @@ function climb(context: MovementGenerationContext, out: MovementCandidates): voi
   const overClimbable = below.kind === "loaded" && below.traits.climbable;
   if (!insideClimbable && !overClimbable) return;
   if (overClimbable || insideClimbable) {
-    const feet = prepareCell(x, y - 1, z, context);
+    // Leaving a climbable downward is a step onto a floor, not a slip into the
+    // air beneath its foot: the column catches the body only while the body is
+    // in a climbable cell. Admit the descent only when the cell below keeps the
+    // column going, or stands on safe, non-lava footing — the same rule `fall`
+    // and `descend` already apply to a tread. Observed live 2026-11-13: a
+    // weeping vine hung from a nether_wart canopy with fourteen blocks of air
+    // and then a lava lake under its tip; the unguarded descent stepped off the
+    // tip into the air and the body fell into the lava.
+    const landing = look(context, x, y - 2, z);
+    const exitSafe = overClimbable || (isStandableTop(landing) && !isClimbable(landing));
+    const feet = exitSafe ? unlessLava(context, prepareCell(x, y - 1, z, context), x, y - 1, z) : NO_CELL;
     if (feet !== NO_CELL)
       out
         .open("climb", x, y - 1, z)
