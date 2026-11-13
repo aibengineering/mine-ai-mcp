@@ -46,6 +46,7 @@ export { isPassable, isHeadPassable, isSafeSupport } from "./world/block-geometr
 
 // The navigation transaction.
 export type { Navigate, NavigateOptions, NavigationResult } from "./navigate.js";
+export type { SearchLimits } from "./search/search-result.js";
 export { describeCalculationFailure } from "./orchestration/process-events.js";
 
 // Goals: what a route is asked to satisfy.

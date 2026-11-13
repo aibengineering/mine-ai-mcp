@@ -28,7 +28,7 @@ import {
 import { observeIncidents } from "../diagnostics/incident-observer.js";
 import { INCIDENT_HISTORY_MS, type IncidentProvenance } from "../diagnostics/incident-recorder.js";
 import { ExecutionScope, observeExecution } from "../execution/execution-scope.js";
-import { createNavigationRuntime, type NavigationRuntime } from "../navigation/index.js";
+import { createNavigationRuntime, type NavigationRuntime, type SearchLimits } from "../navigation/index.js";
 import type { StepFieldProvider } from "../navigation/step-field.js";
 import { ActionRunner } from "../runner/action-runner.js";
 import { attachIdleWaterControl } from "../survival/baseline/idle-water.js";
@@ -67,6 +67,11 @@ export interface MinecraftRuntimeOptions {
    * the bot kept full speed behind its shield.
    */
   readonly vanillaItemUseMovement?: boolean;
+  /**
+   * Operator-set inline search budgets every route starts from, below any a
+   * caller sets for its own goal. Unset, routes keep the engine's defaults.
+   */
+  readonly searchLimits?: SearchLimits;
   readonly onDisconnect?: (reason: string) => void;
   /** A replacement receives the same perception, footing and budgets as every reflex. */
   readonly createCombatController?: typeof createCombatController;
@@ -325,7 +330,7 @@ export async function createMinecraftRuntime(
   bot.physics.itemUseSlowdown = options.vanillaItemUseMovement === true;
   resources.defer(() => { bot.physics.itemUseSlowdown = itemUseSlowdown; });
   const reflexes = resources.use(new ReflexDriver(bot, runner));
-  const navigation = resources.use(createNavigationRuntime(bot));
+  const navigation = resources.use(createNavigationRuntime(bot, options.searchLimits));
   installMinecraftKnowledge(botData, bot.registry);
   const frontier = resources.use(attachSessionFrontier(bot, botData));
   const perception = resources.use(new CombatPerception(bot));
