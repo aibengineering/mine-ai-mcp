@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Bot } from "mineflayer";
 import { Vec3 } from "vec3";
-import { findLoadedBlockPositions, type LoadedBlockScan } from "./loaded-block-scan.js";
+import { findLoadedBlockPositions, findLoadedBlocksByName, type LoadedBlockScan } from "./loaded-block-scan.js";
 
 interface TestSection {
   solidBlockCount: number;
@@ -190,6 +190,117 @@ test("single-value sections need no packed reads and distant sections stop once 
   });
   assert.equal(positions.length, 256);
   assert.deepEqual(positions[0], new Vec3(8, 72, 8));
+});
+
+/** Nine chunk columns carrying three block states each, with and without palettes. */
+function mixedColumns(): TestColumn[] {
+  const columns: TestColumn[] = [];
+  let random = 41;
+  for (const chunkX of [1, -1, 0]) {
+    for (const chunkZ of [1, -1, 0]) {
+      const sections: TestSection[] = [];
+      for (let index = 0; index < 3; index += 1) {
+        const states = Array.from({ length: 4_096 }, () => {
+          random = (Math.imul(random, 1664525) + 1013904223) >>> 0;
+          return random % 3 === 0 ? 7 : random % 7 === 0 ? 5 : 1;
+        });
+        sections.push({
+          solidBlockCount: 4_096,
+          data: {},
+          ...(index === 1 ? { palette: [1, 5, 7] } : {}),
+          get: ({ x, y, z }) => states[y * 256 + z * 16 + x]!,
+        });
+      }
+      columns.push({ chunkX, chunkZ, column: { minY: -64, sections } });
+    }
+  }
+  return columns;
+}
+
+const namedScanCases = [
+  { center: { x: 0, y: -48, z: 0 }, radius: undefined },
+  { center: { x: 8, y: -48, z: 9 }, radius: 0 },
+  { center: { x: -8, y: 12, z: 30 }, radius: 17 },
+  { center: { x: 16, y: 20, z: 16 }, radius: 2 },
+] as const;
+
+test("the named scan reports exactly what scans per kind would have", async () => {
+  const columns = mixedColumns();
+  const wanted = [
+    { name: "seven", stateIds: new Set([7]) },
+    { name: "one", stateIds: new Set([1]) },
+    { name: "both kinds", stateIds: new Set([1, 7]) },
+  ];
+  for (const { center, radius } of namedScanCases) {
+    const base = { center, ...(radius === undefined ? {} : { radius }) };
+    for (const limit of [1, 24, 256]) {
+      const reported = await findLoadedBlocksByName(scannerBot(columns), { ...base, limit, names: wanted });
+      for (const [index, { name, stateIds }] of wanted.entries()) {
+        assert.deepEqual(
+          reported[index]!.positions.map((position) => [position.x, position.y, position.z]),
+          findLoadedBlockPositions(scannerBot(columns), { ...base, stateIds, limit }).map((p) => [p.x, p.y, p.z]),
+          JSON.stringify({ name, center, radius, limit }),
+        );
+        assert.equal(
+          reported[index]!.name,
+          name,
+          "names come back in the order asked, one entry each",
+        );
+        assert.equal(
+          reported[index]!.found,
+          findLoadedBlockPositions(scannerBot(columns), {
+            ...base,
+            stateIds,
+            limit: Number.POSITIVE_INFINITY,
+          }).length,
+          JSON.stringify({ name, center, radius }),
+        );
+      }
+    }
+  }
+});
+
+test("a named scan hands the event loop back while it counts the loaded world", { timeout: 60_000 }, async () => {
+  const neverRead = () => {
+    throw new Error("single-value sections answer without packed reads");
+  };
+  const columns: TestColumn[] = Array.from({ length: 8_000 }, (_unused, chunkX) => ({
+    chunkX,
+    chunkZ: 0,
+    column: { minY: 0, sections: [{ solidBlockCount: 4_096, data: { value: 7 }, get: neverRead }] },
+  }));
+  let heartbeats = 0;
+  const beat = (async () => {
+    while (heartbeats < 20) {
+      await new Promise((resolve) => setImmediate(resolve));
+      heartbeats += 1;
+    }
+  })();
+  const reported = await findLoadedBlocksByName(scannerBot(columns), {
+    center: { x: 0, y: 0, z: 0 },
+    limit: 64,
+    names: [{ name: "seven", stateIds: new Set([7]) }],
+  });
+  await beat;
+  assert.ok(heartbeats >= 20, "a scan this wide must let the event loop run while it reads");
+  assert.equal(reported[0]!.found, 8_000 * 4_096, "counts stay whole while lists stay bounded");
+  assert.equal(reported[0]!.positions.length, 64);
+});
+
+test("a named scan with nothing wanted or no limit to fill reads nothing", async () => {
+  const scanner = scannerBot([]);
+  assert.deepEqual(
+    await findLoadedBlocksByName(scanner, { center: { x: 0, y: 0, z: 0 }, limit: 12, names: [] }),
+    [],
+  );
+  assert.deepEqual(
+    await findLoadedBlocksByName(scanner, {
+      center: { x: 0, y: 0, z: 0 },
+      limit: 0,
+      names: [{ name: "seven", stateIds: new Set([7]) }],
+    }),
+    [{ name: "seven", found: 0, positions: [] }],
+  );
 });
 
 test("sparse scans retain distant matches and observe single-value container replacement", () => {

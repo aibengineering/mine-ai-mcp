@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import test, { afterEach } from "node:test";
 import { Vec3 } from "vec3";
 import type { NavigationRuntime } from "../../navigation/index.js";
+import type { CombatDecision } from "./contract.js";
 import { MemoryWorld as GoalTestWorld } from "../../navigation/world/memory-world.js";
 import { botFixture } from "../../test-support/bot.js";
 import {
@@ -1640,4 +1641,52 @@ test("carrying a shield does not slow a clear chase between volleys", async () =
   const result = await createCombatController(fixture.bot, navigation).engage(7, new AbortController().signal, "pursue");
   assert.equal(result.kind, "died");
   assert.equal(approaches, 1);
+});
+
+async function holdAgainstHiddenZombie(onWait: (fixture: ReturnType<typeof combatFixture>) => void) {
+  const fixture = combatFixture(["iron_sword"]);
+  fixture.bot.health = 20;
+  // A block between the bot and the zombie: in melee distance, never exposed.
+  Object.defineProperty(fixture.bot.world, "raycast", {
+    value: () => ({ position: new Vec3(1, 65, 0) }),
+  });
+  const controller = createCombatController(fixture.bot, navigationFixture());
+  await editPolicy(controller, { combat: { hold_wait_ticks: 40 } });
+  const decisions: CombatDecision[] = [];
+  controller.onDecision((event) => decisions.push(event));
+  const stop = new AbortController();
+  fixture.script.onWait = () => {
+    onWait(fixture);
+    if (fixture.clock.tick > 400) stop.abort("test detected an indefinite hold");
+  };
+  const outcome = await controller.engage(7, stop.signal, "hold");
+  return { fixture, outcome, decisions, controller };
+}
+
+test("a hold whose target never reaches an attack position hands the body back as unreachable", async () => {
+  const { fixture, outcome, decisions, controller } = await holdAgainstHiddenZombie(() => {});
+  assert.equal(outcome.kind, "unreachable");
+  assert.match("observation" in outcome ? outcome.observation : "", /\[COMBAT_HOLD_LIMIT\] Held 40 ticks against zombie 7/);
+  assert.equal(outcome.attacks, 0);
+  assert.ok(fixture.clock.tick < 100, `the hold ended at tick ${fixture.clock.tick}`);
+  const limit = decisions.find(
+    (event) => event.kind === "response" && JSON.stringify(event.evidence).includes('"boundary":"hold_limit"'),
+  );
+  assert.ok(limit, "the hold limit is reported as a response decision");
+  const ended = decisions.find((event) => event.kind === "engagement" && event.state === "ended");
+  assert.equal(ended?.kind === "engagement" ? ended.outcome : null, "unreachable");
+  assert.equal(controller.activeEngagement(), null);
+});
+
+test("damage taken while holding renews the hold window", async () => {
+  const { fixture, outcome } = await holdAgainstHiddenZombie((fixture) => {
+    if (fixture.clock.tick % 30 === 0 && fixture.clock.tick <= 300) {
+      fixture.bot.health -= 0.5;
+      fixture.bot.emit("health");
+    }
+  });
+  // Hurt every 30 ticks: no 40-tick quiet window until tick 300, then 40 more.
+  assert.equal(outcome.kind, "unreachable");
+  assert.match("observation" in outcome ? outcome.observation : "", /COMBAT_HOLD_LIMIT/);
+  assert.ok(fixture.clock.tick >= 300, `the hold ended at tick ${fixture.clock.tick}`);
 });

@@ -70,6 +70,11 @@ export class FightScene implements Disposable {
   elapsedTicks = 0;
   /** When a hovering flier was first seen above sword reach in this fight. */
   hoverWaitStartedAt: number | null = null;
+  /** Hold and guard ticks since the last evidence that the fight can happen: an
+   * attack position, an attack, a confirmed hit, or damage taken. */
+  holdTicks = 0;
+  #holdAttacks = 0;
+  #holdHealth: number | null = null;
   constructor(
     readonly environment: FightEnvironment,
     readonly request: FightRequest,
@@ -215,6 +220,49 @@ export class FightScene implements Disposable {
       outcome,
       observation,
     });
+  };
+  /** Count one physics tick of holding. Nothing else ends a hold whose target
+   * never reaches a usable attack position: a zombie behind a block held the
+   * body for hours on 23 October 2026 while the foreground request waited. */
+  readonly observeHold = (attackPosition: boolean): void => {
+    const health = this.bot.health;
+    const hurt = this.#holdHealth !== null && health < this.#holdHealth;
+    this.#holdHealth = health;
+    if (attackPosition || hurt || this.attacks !== this.#holdAttacks) {
+      this.#holdAttacks = this.attacks;
+      this.holdTicks = 0;
+      return;
+    }
+    const phase = this.execution.phase;
+    if (phase === "hold" || phase === "guard") this.holdTicks++;
+  };
+  readonly holdProgress = (): void => {
+    this.holdTicks = 0;
+  };
+  /** The released body returns to its caller; the answered fight keeps this target from taking it again. */
+  readonly holdLimit = (): CombatOutcome | null => {
+    const limit = this.policy.combat.hold_wait_ticks;
+    if (this.settled() || this.holdTicks < limit) return null;
+    const distance = this.target.position.distanceTo(this.bot.entity.position);
+    this.reportDecision({
+      kind: "response",
+      evidence: {
+        boundary: "hold_limit",
+        targetId: this.target.id,
+        targetName: this.target.name ?? null,
+        targetDistance: distance,
+        holdTicks: this.holdTicks,
+        limit,
+        attacks: this.attacks,
+        health: this.bot.health,
+      },
+    });
+    return {
+      ...this.result("unreachable"),
+      observation:
+        `[COMBAT_HOLD_LIMIT] Held ${this.holdTicks} ticks against ${this.target.name ?? "target"} ${this.target.id} ` +
+        `${distance.toFixed(1)} blocks away with no attack position, attack, confirmed hit or damage taken.`,
+    };
   };
   readonly guardLimit = (): CombatOutcome => ({
     ...this.result("unreachable"),

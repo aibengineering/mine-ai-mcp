@@ -45,8 +45,9 @@ export function observeFight(
     if (dragonDanger(scene.bot)) scene.dragonDefense.abort("Dragon hazard requires immediate evasion.");
     scene.elapsedTicks++;
     scene.execution.tick();
-    if (canMeleeTarget(scene.bot, scene.target))
-      scene.execution.progress.milestone("attack_position", String(scene.target.id));
+    const attackPosition = canMeleeTarget(scene.bot, scene.target);
+    if (attackPosition) scene.execution.progress.milestone("attack_position", String(scene.target.id));
+    scene.observeHold(attackPosition);
     const change = scene.execution.progress.observe(scene.bot.health);
     if (change) scene.reportProgress(change);
     if (scene.position.plan) scene.protectedProgress.tick(cover.recovering);
@@ -61,6 +62,7 @@ export function observeFight(
     const entity = scene.bot.entities[hit];
     if (hit !== scene.targetId && (!entity || !isThreat(scene.bot, entity, scene.perception))) return;
     scene.execution.progress.confirmedHit(hit === scene.targetId);
+    scene.holdProgress();
     if (hit === scene.targetId) {
       scene.protectedProgress.confirmedTargetDamage();
       roof.confirmedHit();

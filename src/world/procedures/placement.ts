@@ -169,7 +169,9 @@ export async function placeBlock(bot: Bot, placement: BlockPlacement): Promise<B
   if (blockUpdateTimeout) {
     return {
       kind: "failed",
-      error: `${blockUpdateTimeout}; physical verification after 5 ticks observed ${observedCells(bot, placement)}.`,
+      error: `${blockUpdateTimeout}; physical verification after 5 ticks observed ${observedCells(bot, placement)}, ` +
+        `against the face of (${placement.support.position.x}, ${placement.support.position.y}, ${placement.support.position.z}) ` +
+        `pointing (${face.x}, ${face.y}, ${face.z}).`,
     };
   }
 

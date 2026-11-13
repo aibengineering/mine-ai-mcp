@@ -42,6 +42,21 @@ test("defaults to compact output schemas and permits the explicit inline fallbac
   assert.equal(parseHostOptions(["--inline-output-schemas"]).outputSchemaReferences, false);
 });
 
+test("leaves the pathfinder's search budgets on the engine defaults unless an operator overrides them", () => {
+  assert.equal(parseHostOptions([]).searchLimits, undefined);
+  assert.deepEqual(parseHostOptions(["--search-failure-timeout-ms", "6000"]).searchLimits, {
+    failureTimeoutMs: 6000,
+  });
+  assert.deepEqual(
+    parseHostOptions(["--search-primary-timeout-ms", "1500", "--search-failure-timeout-ms", "6000"]).searchLimits,
+    { primaryTimeoutMs: 1500, failureTimeoutMs: 6000 },
+  );
+  assert.throws(
+    () => parseHostOptions(["--search-failure-timeout-ms", "0"]),
+    /--search-failure-timeout-ms must be a positive integer/,
+  );
+});
+
 test("rejects unknown bot-data choices at the host boundary", () => {
   assert.throws(
     () => parseHostOptions(["--bot-data-persistence", "sometimes"]),

@@ -196,6 +196,7 @@ export async function startRuntimeHost(
       botData: botDataOptions,
       debugExecuteJavaScript: configuration.debugExecuteJavaScript,
       vanillaItemUseMovement: configuration.vanillaItemUseMovement,
+      ...(configuration.searchLimits && { searchLimits: configuration.searchLimits }),
       onDisconnect: (reason) => connectionEnded(new Error(reason)),
       incidents: {
         retention: configuration.incidentRetention,

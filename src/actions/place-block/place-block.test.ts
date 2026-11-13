@@ -61,6 +61,30 @@ test("an exact cell becomes the target and no cell leaves the choice to the acti
   });
 });
 
+test("a refused support names the cells around the target", async () => {
+  // "No adjacent solid block" without the neighbours is a sentence a run cannot act on: the
+  // base furnace met it twice at (-160, 76, -73) with no way to tell a hole in the floor from
+  // a wall it could have placed against.
+  const target = new Vec3(2, 64, 0);
+  const blocks = new Map<string, any>();
+  const bot = botFixture(
+    { items: [{ name: "cobblestone", count: 1 }], position: { x: 0, y: 64, z: 0 } },
+    { blockAt: (position: Vec3) => blocks.get(key(position)) ?? { name: "air", boundingBox: "empty", position } },
+  );
+  const dependencies: PlaceBlockDependencies = {
+    navigate: async () => ({ status: "completed", elapsedMs: 0 }),
+    placeBlock: async () => ({ kind: "placed", block: { name: "cobblestone", boundingBox: "block", position: target } } as never),
+    placeNearby: async () => ({ kind: "no_cell" } as never),
+  };
+
+  const result = await executePlaceBlock(bot, { blockName: "cobblestone", target: { x: 2, y: 64, z: 0 } }, {}, dependencies);
+  assert.equal(result.status, "failed");
+  assert.match(
+    result.error ?? "",
+    /\[PLACE_NO_SUPPORT\] No adjacent solid block can support placement into \(2, 64, 0\): \(2, 63, 0\)=air, \(1, 64, 0\)=air, \(3, 64, 0\)=air, \(2, 64, -1\)=air, \(2, 64, 1\)=air, \(2, 65, 0\)=air\./,
+  );
+});
+
 test("chooses a cell beside the bot when no target is given", async () => {
   const { bot, dependencies } = testWorld();
   const result = await executePlaceBlock(bot, { blockName: "cobblestone", target: null }, {}, dependencies);

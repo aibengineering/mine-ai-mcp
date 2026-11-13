@@ -24,6 +24,17 @@ export interface HostOptions {
   readonly auth: Auth;
   readonly version: string;
   readonly connectTimeoutMs: number;
+  /**
+   * Operator override for the pathfinder's inline search budgets, in compute
+   * milliseconds. Left undefined, every route keeps the engine's own defaults
+   * (500 ms to keep searching once a segment is worth walking, 2000 ms while
+   * nothing is yet). Raising `failureTimeoutMs` is the knob for long, sparse
+   * routes that stop with `search timed out … no path or usable partial route`.
+   */
+  readonly searchLimits?: {
+    readonly primaryTimeoutMs?: number;
+    readonly failureTimeoutMs?: number;
+  };
   readonly debugExecuteJavaScript: boolean;
   /** Slow the bot and stop it sprinting while an item is in use, as the vanilla client does. */
   readonly vanillaItemUseMovement: boolean;
@@ -50,6 +61,8 @@ export function parseHostOptions(args: readonly string[] = process.argv.slice(2)
       auth: { type: "string", default: "offline" },
       version: { type: "string", default: "1.21.4" },
       "connect-timeout-ms": { type: "string", default: "45000" },
+      "search-primary-timeout-ms": { type: "string" },
+      "search-failure-timeout-ms": { type: "string" },
       "debug-execute-javascript": { type: "boolean", default: false },
       "vanilla-item-use-movement": { type: "boolean", default: false },
       "inline-output-schemas": { type: "boolean", default: false },
@@ -79,6 +92,7 @@ export function parseHostOptions(args: readonly string[] = process.argv.slice(2)
     auth: choiceArgument("--auth", values.auth, AUTH_MODES),
     version: values.version,
     connectTimeoutMs: positiveInteger("--connect-timeout-ms", values["connect-timeout-ms"]),
+    searchLimits: searchLimitsOf(values["search-primary-timeout-ms"], values["search-failure-timeout-ms"]),
     debugExecuteJavaScript: values["debug-execute-javascript"],
     vanillaItemUseMovement: values["vanilla-item-use-movement"],
     outputSchemaReferences: !values["inline-output-schemas"],
@@ -96,6 +110,21 @@ function positiveInteger(name: string, raw: string): number {
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer.`);
   return value;
+}
+
+/**
+ * The inline search budgets an operator set, or undefined when neither flag was
+ * given — the signal that keeps every route on the engine's own defaults.
+ */
+function searchLimitsOf(
+  primary: string | undefined,
+  failure: string | undefined,
+): HostOptions["searchLimits"] {
+  if (primary === undefined && failure === undefined) return undefined;
+  return {
+    ...(primary !== undefined && { primaryTimeoutMs: positiveInteger("--search-primary-timeout-ms", primary) }),
+    ...(failure !== undefined && { failureTimeoutMs: positiveInteger("--search-failure-timeout-ms", failure) }),
+  };
 }
 
 /** Narrow an argument to one of its allowed values, so no caller has to assert it later. */

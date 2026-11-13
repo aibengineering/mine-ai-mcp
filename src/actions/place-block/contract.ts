@@ -74,6 +74,7 @@ export const placeBlockOutcomes = {
   targetUnloaded: "[PLACE_TARGET_UNLOADED] The target cell was not loaded after navigation.",
   targetOccupied: (blockName: string) =>
     `[PLACE_TARGET_OCCUPIED] The target cell contains ${blockName}, which this action will not remove.`,
-  noSupport: "[PLACE_NO_SUPPORT] No adjacent solid block can support placement into the target cell.",
+  noSupport: (target: { x: number; y: number; z: number }, neighbours: string) =>
+    `[PLACE_NO_SUPPORT] No adjacent solid block can support placement into (${target.x}, ${target.y}, ${target.z}): ${neighbours}.`,
   failed: (reason: string) => `[PLACE_FAILED] Mineflayer could not place the requested block: ${reason}`,
 } as const;

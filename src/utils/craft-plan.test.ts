@@ -73,6 +73,17 @@ test("shares intermediate surplus across requested targets", () => {
   assert.match(preparation.plan.tree, /oak_button x1/);
 });
 
+test("treats stripped logs as their base log for planks recipes (minecraft-data gap)", () => {
+  const { bot } = craftingBot({ stripped_oak_log: 1 });
+  const target = registry.itemsByName.crafting_table;
+
+  const preparation = planCraftingFromInventory(bot, [{ ...target, count: 1 }]);
+
+  assert.equal(preparation.kind, "ready");
+  assert.deepEqual(preparation.plan.requiredMaterials, [{ item: "oak_log", count: 1 }]);
+  assert.match(preparation.plan.tree, /crafting_table x1/);
+});
+
 test("reserves one shared inventory before declaring a batch ready", () => {
   const { bot } = craftingBot({ oak_log: 1 });
 

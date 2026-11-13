@@ -48,6 +48,13 @@ export const combatPolicySchema = z.strictObject({
     .int()
     .positive()
     .describe("Physics ticks allowed for Enderman provocation or waiting for confirmed damage under a roof."),
+  hold_wait_ticks: z
+    .number()
+    .int()
+    .positive()
+    .describe(
+      "Physics ticks a fight may hold or guard without an attack position, an attack, confirmed damage or damage taken before it ends with the target unreachable.",
+    ),
   volley_wait_ticks: z
     .number()
     .int()
@@ -84,6 +91,7 @@ export const DEFAULT_COMBAT_POLICY: Readonly<CombatPolicy> = Object.freeze({
   recover_to_health: 18,
   protected_wait_ticks: 300,
   enderman_wait_ticks: 300,
+  hold_wait_ticks: 600,
   volley_wait_ticks: 100,
   recovery_timeout_ms: 90_000,
   evade_timeout_ms: 15_000,

@@ -163,7 +163,7 @@ test("does not insert anything into a furnace that already owns contents", async
   assert.equal(readProgress?.().completion.observed, false);
 });
 
-function observedFurnace(options: { readonly cookMs: number; readonly stopAfter?: number; readonly starved?: boolean; readonly recoverInputCount?: number }) {
+function observedFurnace(options: { readonly cookMs: number; readonly stopAfter?: number; readonly starved?: boolean; readonly recoverInputCount?: number; readonly unreportedFuel?: boolean }) {
   const items: FakeStack[] = [
     { name: "raw_iron", count: 3 },
     { name: "coal", count: 1 },
@@ -191,7 +191,7 @@ function observedFurnace(options: { readonly cookMs: number; readonly stopAfter?
     putFuel: async () => {
       adjust("coal", -1);
       activeFuel = options.starved ? 0 : 1;
-      furnace.fuel = activeFuel;
+      furnace.fuel = options.unreportedFuel ? 0 : activeFuel;
     },
     takeInput: async () => {
       const taken = { name: "raw_iron", count: input };
@@ -226,7 +226,7 @@ function observedFurnace(options: { readonly cookMs: number; readonly stopAfter?
       if (activeFuel === 0) return;
       elapsedInItem += milliseconds;
       furnace.progress = Math.min(1, elapsedInItem / options.cookMs);
-      furnace.fuel = activeFuel > 0 ? Math.max(0, 1 - now / (options.cookMs * 8)) : 0;
+      furnace.fuel = activeFuel > 0 && !options.unreportedFuel ? Math.max(0, 1 - now / (options.cookMs * 8)) : 0;
       if (elapsedInItem < options.cookMs) return;
       elapsedInItem = 0;
       furnace.progress = 0;
@@ -284,7 +284,26 @@ test("distinguishes exhausted fuel from a cook stall", async () => {
   assert.equal(result.status, "failed");
   assert.match(result.error, /SMELT_FUEL_STARVED.*0\/3 cooked, 3 raw, and 0 fuel/);
   assert.equal(result.smelt.rawRecovered, 3);
-  assert.equal(fixture.now, 1_000);
+  assert.equal(fixture.now, 10_000);
+});
+
+test("a cook whose burn property has not settled is not declared starved", async () => {
+  // Live, run219 it16-24: a carried log lit the furnace, the window's `fuel`
+  // still read 0 a second later, and the cook was reported starved while the
+  // burn was running - the next call then finished the item on that same burn,
+  // one log per cooked item and a failure on every other tick.
+  const fixture = observedFurnace({ cookMs: 6_000, unreportedFuel: true });
+  const result = await smeltItem(
+    fixture.bot,
+    navigation,
+    { itemName: "raw_iron", count: 3, fuelItemName: "coal", x: 2, y: 64, z: 0 },
+    {},
+    fixture.dependencies,
+  );
+
+  assert.equal(result.status, "succeeded");
+  assert.equal(result.smelt.produced, 3);
+  assert.equal(result.smelt.rawRecovered, 0);
 });
 
 test("reports only the raw count removed from a partially recovered furnace slot", async () => {

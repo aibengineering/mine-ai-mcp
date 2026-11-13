@@ -11,6 +11,7 @@ import {
 } from "../diagnostics/incident-recorder.js";
 import {
   RUNTIME_HEARTBEAT_MS,
+  RUNTIME_PENDING_REQUEST_WINDOWS,
   RUNTIME_UNRESPONSIVE_MS,
   runtimeMessageSchema,
   type RuntimeActivity,
@@ -74,6 +75,11 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
   // Docker binds all container interfaces; Compose restricts the published port to host loopback.
   if (!["127.0.0.1", "localhost", "::1", "0.0.0.0"].includes(options.host)) throw new Error("MCP must bind to loopback or 0.0.0.0 for container port forwarding.");
   const unresponsiveMs = options.liveness?.unresponsiveMs ?? RUNTIME_UNRESPONSIVE_MS;
+  // An accepted request the child is still working is not evidence of a hang: a
+  // multi-second read of the world starves the heartbeat just as a wedge does,
+  // until it answers. The verdict is held for the pending cap, three windows, so
+  // a wedged child still dies inside it and a busy one finishes first.
+  const pendingRequestMs = unresponsiveMs * RUNTIME_PENDING_REQUEST_WINDOWS;
   const incidentHistoryMs = options.liveness?.incidentHistoryMs ?? INCIDENT_HISTORY_MS;
   const notices = options.notices ?? { stderr: (line: string) => console.error(line) };
   let state: RuntimeState = { kind: "starting" };
@@ -278,7 +284,7 @@ export async function startMcpSupervisor(options: McpSupervisorOptions) {
       });
     }
     const age = now - Math.max(lastHeartbeat, observationResumedAt);
-    if (age >= unresponsiveMs)
+    if (age >= (pending.size === 0 ? unresponsiveMs : pendingRequestMs))
       void fail(
         "RUNTIME_UNRESPONSIVE",
         `Runtime event-loop heartbeat absent for ${Math.round(now - lastHeartbeat)} ms.`,

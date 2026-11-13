@@ -57,6 +57,8 @@ const LAVA = { stateId: 10, collisionShapes: [], traits: { empty: true, liquid: 
 /** A carpet: full-width collision one sixteenth of a block tall. */
 const CARPET = { stateId: 9, collisionShapes: [{ minX: 0, minY: 0, minZ: 0, maxX: 1, maxY: 0.0625, maxZ: 1 }] };
 const FENCE = { stateId: 2, collisionShapes: [{ minX: 0, minY: 0, minZ: 0, maxX: 1, maxY: 1.5, maxZ: 1 }] };
+// An open trapdoor's slat: full height, but only a sliver of the cell's width.
+const TRAPDOOR = { stateId: 3, collisionShapes: [{ minX: 0.8125, minY: 0, minZ: 0, maxX: 1, maxY: 1, maxZ: 1 }] };
 
 /** The flat world with the named cells changed. */
 function flat(...edits: Array<[Cell, Parameters<MemoryWorld["load"]>[1]]>): MemoryWorld {
@@ -287,6 +289,7 @@ const OFFERS: readonly OfferRow[] = [
   // bot jumps at the fence for as long as its patience lasts. Baritone keeps
   // fences, walls, and gates out of `canWalkOn` for the same reason.
   { shape: "a fence east", world: () => flat([{ x: 1, y: 63, z: 0 }, FENCE]), lacks: ["step_up@1,*,*"] },
+  { shape: "an open trapdoor east", world: () => flat([{ x: 1, y: 63, z: 0 }, TRAPDOOR]), lacks: ["step_up@1,*,*"] },
   {
     shape: "a carpet east",
     world: () => flat([{ x: 1, y: 63, z: 0 }, CARPET]),
@@ -838,6 +841,48 @@ test("a column is never a landing: no jump onto it, no drop onto it, and a walke
     generateFrom(overColumn, ORIGIN).filter((movement) => movement.step.kind === "drop"),
     [],
     "a falling body slides to the column's foot instead of settling on its top",
+  );
+});
+
+/**
+ * A weeping vine hanging from a canopy, the bot inside its tip, with one block
+ * of air under the foot and then either a lava lake or solid ground.
+ *
+ * Reproduced live 2026-11-13 at x=91, z=0 in the nether: a weeping vine hung
+ * from a nether_wart_block canopy (y55) down to y46, then fourteen blocks of
+ * air (y45–32), then a lava lake (y31–24). `climb` admitted the descent one
+ * cell at a time with no look at what the foot stood over, stepped off the
+ * tip into the air, and the body fell into the lava — the run's last death.
+ */
+function hangingVine(foot: "lava" | "floor"): MemoryWorld {
+  const world = new MemoryWorld();
+  for (let x = -1; x <= 1; x += 1)
+    for (let z = -1; z <= 1; z += 1) for (let y = 60; y <= 66; y += 1) world.load({ x, y, z }, AIR);
+  world.load({ x: 0, y: 65, z: 0 }, SOLID); // the canopy the vine hangs from
+  world.load({ x: 0, y: 64, z: 0 }, VINE);
+  world.load({ x: 0, y: 63, z: 0 }, VINE); // the vine's tip, the bot's feet
+  world.load({ x: 0, y: 62, z: 0 }, AIR); // one block of air under the tip
+  world.load({ x: 0, y: 61, z: 0 }, foot === "lava" ? LAVA : SOLID);
+  return world;
+}
+
+test("a climb never steps off a vine's foot into air that bottoms out in lava", () => {
+  const overLava = generateFrom(hangingVine("lava"), ORIGIN).filter(
+    (movement) => movement.step.kind === "climb" && movement.step.to.y === 62,
+  );
+  assert.deepEqual(
+    overLava.map((movement) => movement.step.kind),
+    [],
+    "stepping off the vine's tip into air held up by lava is a fall, not a climb, and is refused",
+  );
+
+  const overFloor = generateFrom(hangingVine("floor"), ORIGIN).filter(
+    (movement) => movement.step.kind === "climb" && movement.step.to.y === 62,
+  );
+  assert.deepEqual(
+    overFloor.map((movement) => movement.step.kind),
+    ["climb"],
+    "the same step down the vine's foot is kept when it stands on safe footing",
   );
 });
 

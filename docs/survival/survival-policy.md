@@ -42,7 +42,7 @@ can always see what it has changed and why.
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `navigation.scaffold_blocks` | `["dirt", "cobblestone", "cobbled_deepslate", "netherrack", "basalt", "end_stone"]` | Registered block item names automatic navigation and survival responses may place, in preference order. At most 16 names; `[]` disables automatic scaffolding. |
+| `navigation.scaffold_blocks` | `["dirt", "cobblestone", "cobbled_deepslate", "netherrack", "basalt", "end_stone"]` | Registered block item names automatic navigation and survival responses may place, in preference order. At most 16 names; `[]` disables automatic scaffolding. Every placement the bot makes on its own — scaffold while pathing, a lava seal while mining, a blast barrier — draws from this list and from nothing else, so a carried chest or crafting table is never spent as building material. |
 | `navigation.hostile_avoidance_multiplier` | `1` | Finite, nonnegative multiplier on the capped hostile proximity route cost. `2` doubles it, `0.5` halves it, and `0` removes proximity cost. |
 | `navigation.bucket_fall_save` | `true` | Save damaging falls using carried water on loaded safe full-block floors, then verify source removal and a refilled bucket. |
 | `navigation.bucket_drops` | `true` | Allow planned water-bucket descents up to 80 blocks. Independent of scaffolding and emergency fall rescue; unavailable in the Nether. |
@@ -104,6 +104,7 @@ For example, use `set_survival_policy` with the current revision:
 | `combat.recover_to_health`                  | `18`                     | Recovery target; hostile pursuit uses at least `engage_min_health`.                                                               |
 | `combat.protected_wait_ticks`               | `300`                    | Protected waiting without confirmed quarry damage before rejecting the position.                                                  |
 | `combat.enderman_wait_ticks`                | `300`                    | Enderman lure or roof waiting window; commands and incidental damage do not renew it.                                             |
+| `combat.hold_wait_ticks`                    | `600`                    | Holding or guarding with no attack position, attack, confirmed hit or damage taken before the fight ends with the target unreachable. |
 | `combat.volley_wait_ticks`                  | `100`                    | Window for an observed ranged volley to finish.                                                                                   |
 | `combat.recovery_timeout_ms`                | `90000`                  | One protected recovery hold, including movement and eating.                                                                       |
 | `combat.evade_timeout_ms`                   | `15000`                  | One withdrawal attempt, including replacement routes and projectile guards.                                                       |

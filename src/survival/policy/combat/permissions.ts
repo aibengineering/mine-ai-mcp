@@ -50,6 +50,7 @@ export function responsePermissions(policy: Readonly<CombatPolicy>, response: "f
         ...recovery,
         protected_wait_ticks: policy.protected_wait_ticks,
         enderman_wait_ticks: policy.enderman_wait_ticks,
+        hold_wait_ticks: policy.hold_wait_ticks,
         volley_wait_ticks: policy.volley_wait_ticks,
       };
 }

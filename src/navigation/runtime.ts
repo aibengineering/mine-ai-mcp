@@ -19,6 +19,7 @@ import type { Position3, WorldView } from "./world/world.js";
 import type { MovementKind } from "./movements/movement.js";
 import type { MovementPolicy } from "./movements/policy.js";
 import { runNavigation, type Navigate, type NavigationResult } from "./navigate.js";
+import type { SearchLimits } from "./search/search-result.js";
 import { createNavigator } from "./orchestration/navigator.js";
 import type { StepFieldProvider } from "./step-field.js";
 import type { NavigationEvent, TelemetrySink } from "./telemetry/index.js";
@@ -94,7 +95,14 @@ export function avoidingObservedBreath(movements: MovementPolicy, clouds: readon
 }
 
 /** Build the navigation runtime for one connected Mineflayer bot. */
-export function createNavigationRuntime(bot: Bot): NavigationRuntime {
+/**
+ * `defaultSearchLimits` raises (or lowers) the inline search budgets every
+ * route starts from, below any budget a caller sets for its own volatile goal.
+ * An operator passes it from the host configuration to experiment with how much
+ * compute the pathfinder needs on long, sparse routes; unset, routes keep
+ * {@link DEFAULT_SEARCH_LIMITS} exactly.
+ */
+export function createNavigationRuntime(bot: Bot, defaultSearchLimits?: SearchLimits): NavigationRuntime {
   // Built in dependency order: the world view, the bot port over it, and the
   // navigator that looks at and acts on the bot through that port.
   const world = new MineflayerWorldView(bot);
@@ -208,6 +216,13 @@ export function createNavigationRuntime(bot: Bot): NavigationRuntime {
         const route = execution.run("route", () =>
           runNavigation(navigator, {
             ...options,
+            // The operator's default sits under any per-call budget: a caller
+            // with a volatile goal (a fleeing mob, a drowning escape) still
+            // owns its own, tighter limits.
+            searchLimits:
+              defaultSearchLimits || options.searchLimits
+                ? { ...defaultSearchLimits, ...options.searchLimits }
+                : undefined,
             timeoutMs:
               options.timeoutMs === undefined ? undefined : Math.max(0, options.timeoutMs - (Date.now() - startedAt)),
             movements,

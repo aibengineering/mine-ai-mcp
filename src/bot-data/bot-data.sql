@@ -35,6 +35,19 @@ CREATE TABLE IF NOT EXISTS stronghold_throws (
 
 CREATE INDEX IF NOT EXISTS stronghold_throws_by_search ON stronghold_throws (bot_id, dimension, search_id);
 
+CREATE TABLE IF NOT EXISTS stronghold_landmarks (
+  landmark_id TEXT PRIMARY KEY,
+  bot_id TEXT NOT NULL,
+  dimension TEXT NOT NULL,
+  search_id TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('mouth', 'portal_exit')),
+  position_json TEXT NOT NULL CHECK (json_valid(position_json)),
+  created_at TEXT NOT NULL,
+  UNIQUE (bot_id, dimension, search_id, kind)
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS stronghold_landmarks_by_search ON stronghold_landmarks (bot_id, dimension, search_id);
+
 CREATE TABLE IF NOT EXISTS bot_status (
   bot_id TEXT PRIMARY KEY,
   dimension TEXT NOT NULL,
@@ -333,6 +346,14 @@ INSERT INTO data_dictionary (database_name, table_name, column_name, description
   ('main', 'stronghold_throws', 'bearing_degrees', 'Compass heading from eye start to end: 0 north, 90 east, 180 south, 270 west; null for less than one block horizontal travel.'),
   ('main', 'stronghold_throws', 'observed_at', 'UTC timestamp of the latest flight observation.'),
   ('main', 'stronghold_throws', 'state', 'pending: item use attempted; tracking: flight observed; observed: entity disappearance observed; incomplete: observation ended without disappearance. A row does not alone prove item consumption.'),
+  ('main', 'stronghold_landmarks', NULL, 'Walkable landmarks of a dug stronghold approach, scoped to a named search, bot and dimension. Written by tunnel_to; one row per kind, overwritten when the tunnel is re-dug.'),
+  ('main', 'stronghold_landmarks', 'landmark_id', 'Unique landmark identifier.'),
+  ('main', 'stronghold_landmarks', 'bot_id', 'Bot that dug the approach.'),
+  ('main', 'stronghold_landmarks', 'dimension', 'Dimension the landmark was recorded in; stronghold approaches are in the Overworld.'),
+  ('main', 'stronghold_landmarks', 'search_id', 'Caller-selected durable search name; shared with stronghold_throws.'),
+  ('main', 'stronghold_landmarks', 'kind', 'mouth: the dry shore cell where the staircase begins; portal_exit: the walkable cell in the portal room where the approach ends.'),
+  ('main', 'stronghold_landmarks', 'position_json', 'Landmark block position as x/y/z JSON.'),
+  ('main', 'stronghold_landmarks', 'created_at', 'UTC timestamp when the landmark was written.'),
   ('main', 'data_dictionary', NULL, 'Combined descriptions of every model-queryable schema, table, view, and column.'),
   ('main', 'data_dictionary', 'database_name', 'SQLite schema containing the described table or view.'),
   ('main', 'data_dictionary', 'table_name', 'Table or view being described.'),

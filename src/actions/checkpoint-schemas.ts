@@ -43,6 +43,8 @@ export const bucketCheckpointSchema = z.strictObject({ phase, held: z.string().n
 export const exploreCheckpointSchema = z.strictObject({ phase, expandedChunks: count, requested: count, enteredBiome: position.nullable() });
 export const strongholdCheckpointSchema = z.strictObject({ phase, throwIds: z.array(z.string()),
   estimate: z.strictObject({ x: count, z: count }).nullable(), confirmed: z.boolean() });
+export const tunnelToCheckpointSchema = z.strictObject({ phase, target: position, mouth: position.nullable(),
+  segments: count, descent: count, touchedWater: z.boolean(), touchedLava: z.boolean() });
 export const portalCheckpointSchema = z.strictObject({ phase, block: z.string().nullable(),
   filledSockets: count.optional(), portalCells: count.optional(), requiredPortalCells: count.optional() });
 export const sleepCheckpointSchema = z.strictObject({ phase, asleep: z.boolean(), timeOfDay: count });

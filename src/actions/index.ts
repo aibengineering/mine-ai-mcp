@@ -54,6 +54,7 @@ export * from "./send-message/index.js";
 export * from "./sleep/index.js";
 export * from "./smelt-item/index.js";
 export * from "./sql-action.js";
+export * from "./tunnel-to/index.js";
 export * from "./use-bucket/index.js";
 export * from "./use-container/index.js";
 export * from "./view-blocks/index.js";
