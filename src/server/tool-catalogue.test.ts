@@ -109,7 +109,7 @@ test(`the complete production catalogue defaults to equivalent reference schemas
   const references = await discover(await connect(t, createMinecraftMcpServer(runtime, "TestBot")));
   const explicitReferences = await discover(await connect(t, createMinecraftMcpServer(runtime, "TestBot", { outputSchemaReferences: true })));
   assert.deepEqual(explicitReferences, references);
-  assert.equal(baseline.tools.length, debugExecuteJavaScript ? 39 : 37);
+  assert.equal(baseline.tools.length, debugExecuteJavaScript ? 40 : 38);
   for (let i = 0; i < baseline.tools.length; i++) {
     const { outputSchema: inline, ...before } = baseline.tools[i]!;
     const { outputSchema: refs, ...after } = references.tools[i]!;
