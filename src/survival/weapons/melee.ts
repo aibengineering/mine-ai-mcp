@@ -76,8 +76,8 @@ export function hasMeleeKnockbackRoom(world: WorldView, position: Position3, att
   return hasSupportedCorridor(world, position, { x: (dx / distance) * 3, y: 0, z: (dz / distance) * 3 });
 }
 
-/** Lava within a knockback's reach of this position, at its feet or the step below. */
-export function atLavaShore(world: Pick<WorldView, "blockAt">, position: Position3): boolean {
+/** A liquid within a knockback's reach of this position, at its feet or the step below. */
+function atLiquidShore(world: Pick<WorldView, "blockAt">, position: Position3, liquid: "lava" | "water"): boolean {
   const x = Math.floor(position.x);
   const y = Math.floor(position.y);
   const z = Math.floor(position.z);
@@ -85,9 +85,19 @@ export function atLavaShore(world: Pick<WorldView, "blockAt">, position: Positio
     for (let dz = -3; dz <= 3; dz++)
       for (const dy of [-1, 0]) {
         const block = world.blockAt(x + dx, y + dy, z + dz);
-        if (block.kind === "loaded" && block.traits.liquid === "lava") return true;
+        if (block.kind === "loaded" && block.traits.liquid === liquid) return true;
       }
   return false;
+}
+
+/** Lava within a knockback's reach of this position, at its feet or the step below. */
+export function atLavaShore(world: Pick<WorldView, "blockAt">, position: Position3): boolean {
+  return atLiquidShore(world, position, "lava");
+}
+
+/** Water within a knockback's reach of this position, at its feet or the step below. */
+export function atWaterShore(world: Pick<WorldView, "blockAt">, position: Position3): boolean {
+  return atLiquidShore(world, position, "water");
 }
 
 /**
@@ -105,6 +115,19 @@ export function quarryDownAtLavaShore(world: Pick<WorldView, "blockAt">, ground:
 }
 /** One safe drop of three blocks and the step onto it. */
 const LAVA_SHORE_DESCENT = 4;
+
+/**
+ * A quarry standing over or at the edge of open water. An Enderman teleports
+ * out onto the sea and the pursuit swims after it, then cannot reach the
+ * surface target or descend: the bot is left treading water off the coast.
+ *
+ * Unlike the lava shore this needs no descent: the sea sits at the pursuit's
+ * own level, so the guard is the water itself within a knockback of the quarry,
+ * not a drop down to it. The same shore box as lava keeps the two symmetric.
+ */
+export function quarryAtWaterShore(world: Pick<WorldView, "blockAt">, quarry: Position3): boolean {
+  return atWaterShore(world, quarry);
+}
 
 /** Keep a non-sweeping tool available instead of equipping a sword whose swing must be withheld. */
 export function combatItemsForTarget(bot: Bot, target: Entity) {
