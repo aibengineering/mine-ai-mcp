@@ -278,6 +278,75 @@ test("a confirmed frame reachable on dry land is not flagged for tunnel_to", asy
   locateStrongholdResultSchema.parse(result);
 });
 
+test("an estimate over open water with no loaded frame stops for tunnel_to instead of surveying the sea", async () => {
+  using data = makeData();
+  // The bot floats over the ocean above an unloaded frame: feet and the cell
+  // below are water, and no end_portal_frame column is loaded here yet.
+  const bot = botFixture(
+    { username: "Locator", position: { x: 0, y: 70, z: 0 }, slots: [], blocks: { "0,70,0": "water", "0,69,0": "water" } },
+    { activateItem: () => {} },
+  );
+  using flights = new StrongholdEyeFlights(bot);
+  bot.world.getColumns = () => [] as never;
+  const store = new StrongholdThrows(data, "Locator", "overworld", "stronghold");
+  const id = store.begin({ x: 0, y: 70, z: 0 });
+  store.observe(id, id, { x: 0, y: 71, z: 0 }, { x: 0, y: 63, z: 0 });
+  store.finish(id, "observed");
+  let walks = 0;
+  const navigation = {
+    navigate: async () => {
+      walks += 1;
+      return { status: "completed", elapsedMs: 1 };
+    },
+  } as unknown as NavigationRuntime;
+  const action = createLocateStrongholdAction(bot, navigation, data, flights, shortRecovery);
+  const result = await action.begin(
+    action.parse({ phase: "locate", continue_without_recommended_items: true, search_radius: 16 }),
+    new AbortController().signal,
+    () => {},
+  )({});
+  assert.equal(result.status, "partial");
+  assert.equal(result.confirmation, null);
+  assert.match("error" in result ? result.error : "", /STRONGHOLD_OVER_OPEN_WATER/);
+  // Only the walk to the estimate ran; the open-water survey rings were skipped.
+  assert.equal(walks, 1, "no surface survey hops over open water");
+  locateStrongholdResultSchema.parse(result);
+});
+
+test("an estimate on dry land with no loaded frame still surveys the search radius", async () => {
+  using data = makeData();
+  // Same unconfirmed estimate, but the bot stands on solid ground, so the
+  // survey over nearby columns is safe and still runs.
+  const bot = botFixture(
+    { username: "Locator", position: { x: 0, y: 70, z: 0 }, slots: [], blocks: { "0,69,0": "stone" } },
+    { activateItem: () => {} },
+  );
+  using flights = new StrongholdEyeFlights(bot);
+  bot.world.getColumns = () => [] as never;
+  const store = new StrongholdThrows(data, "Locator", "overworld", "stronghold");
+  const id = store.begin({ x: 0, y: 70, z: 0 });
+  store.observe(id, id, { x: 0, y: 71, z: 0 }, { x: 0, y: 63, z: 0 });
+  store.finish(id, "observed");
+  let walks = 0;
+  const navigation = {
+    navigate: async () => {
+      walks += 1;
+      return { status: "completed", elapsedMs: 1 };
+    },
+  } as unknown as NavigationRuntime;
+  const action = createLocateStrongholdAction(bot, navigation, data, flights, shortRecovery);
+  const result = await action.begin(
+    action.parse({ phase: "locate", continue_without_recommended_items: true, search_radius: 16 }),
+    new AbortController().signal,
+    () => {},
+  )({});
+  assert.equal(result.status, "partial");
+  assert.match("error" in result ? result.error : "", /No end_portal_frame was observed in the 16-block survey/);
+  // The walk to the estimate plus one hop per surveyed ring column on land.
+  assert.ok(walks > 1, "the survey ran on dry land");
+  locateStrongholdResultSchema.parse(result);
+});
+
 test("saved bearings resume navigation without requiring or spending another eye", async () => {
   using data = makeData();
   const f = fixture();
