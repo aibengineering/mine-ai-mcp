@@ -29,6 +29,7 @@ const PUBLISHED: ReadonlyArray<
   ["collect_mob_drop", "resumable_task", false, true],
   ["activate_portal", "resumable_task", false, true],
   ["locate_stronghold", "resumable_task", false, true],
+  ["tunnel_to", "resumable_task", false, true],
   ["enter_nether_portal", "resumable_task", false, true],
   ["enter_end_portal", "resumable_task", false, true],
   ["navigate", "resumable_task", false, true],

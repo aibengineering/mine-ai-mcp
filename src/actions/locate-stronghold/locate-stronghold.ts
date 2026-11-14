@@ -28,6 +28,18 @@ import { direction, triangulate, type Bearing } from "./triangulation.js";
 const horizontalDistance = (a: { x: number; z: number }, b: { x: number; z: number }) =>
   Math.hypot(a.x - b.x, a.z - b.z);
 
+/** Deepest descent below the bot still treated as reachable by walking in, not tunnelling. */
+const TUNNEL_TRIGGER_DESCENT = 20;
+
+/** The bot stands in, or directly over, water — an ocean column, not dry land. */
+function overWater(bot: Bot): boolean {
+  const feet = bot.entity.position.floored();
+  for (const cell of [feet, feet.offset(0, -1, 0)]) {
+    if (bot.blockAt(cell)?.name === "water") return true;
+  }
+  return false;
+}
+
 /** Full-height loaded-column observation; common masonry is never a success predicate. */
 export function loadedStrongholdFrame(bot: Bot, center: { x: number; z: number }, radius: number) {
   const block = bot.registry.blocksByName.end_portal_frame;
@@ -92,8 +104,9 @@ export function createLocateStrongholdAction(
       const supplies = result.supplies
         .map((item) => `${item.recommendation}: ${item.carried}/${item.required}`)
         .join("; ");
-      const next =
-        result.phase === "estimate" && result.status === "succeeded"
+      const next = result.reachByTunnel
+        ? `\n\nThe frame is ${result.reachByTunnel.descentBlocks} blocks straight below you, buried under open water with no footing here. Call tunnel_to with search_id: ${JSON.stringify(result.reachByTunnel.searchId)} to carve a dry walkable staircase down to it.`
+        : result.phase === "estimate" && result.status === "succeeded"
           ? `\n\nStock up for the Ender Dragon fight before travelling. Then call phase: "locate" with search_id: ${JSON.stringify(result.searchId)}. If supplies are missing, explicitly set continue_without_recommended_items: true to proceed anyway.`
           : "";
       return `${location}${journey}\n\nRecommended loadout (carried/target): ${supplies}.${next}\n\nPhase: ${result.phase}. Search: ${result.searchId}. Saved throws: ${result.throwIds.length} in stronghold_throws.${result.status === "succeeded" ? "" : `\n\n${result.error}`}`;
@@ -115,6 +128,10 @@ async function locate(
   const store = new StrongholdThrows(data, bot.username, dimension, request.search_id);
   let estimate: { x: number; z: number } | null = null;
   let confirmation: LocateStrongholdResult["confirmation"] = null;
+  // Set once a local eye throw descends almost vertically: the bot is directly
+  // above the stronghold. Together with deep water and a large frame descent,
+  // this is the "buried under ocean" case that tunnel_to exists to reach.
+  let verticalEyeDescent = false;
   const evidence = () => ({
     phase: request.phase,
     journey: estimate
@@ -131,11 +148,21 @@ async function locate(
     throwIds: store.read().map((row) => row.throw_id),
     estimate,
     confirmation,
+    reachByTunnel: tunnelReach(),
   });
+  // A confirmed frame directly below, deep under open water, has no footing
+  // here: the bot stands over the ocean far above the frame. That is the gap
+  // tunnel_to fills, so the result points the agent there instead of a walk-in.
+  const tunnelReach = (): LocateStrongholdResult["reachByTunnel"] => {
+    if (!confirmation || !verticalEyeDescent || !overWater(bot)) return null;
+    const descentBlocks = Math.round(bot.entity.position.y - confirmation.position.y);
+    if (descentBlocks <= TUNNEL_TRIGGER_DESCENT) return null;
+    return { searchId: request.search_id, target: confirmation.position, descentBlocks };
+  };
   const assertActive = () => {
     context.observeProgress?.(() => ({ baseline: { dimension, searchId: request.search_id },
       checkpoint: { phase: request.phase, throwIds: store.read().map((row) => row.throw_id), estimate: estimate ? { ...estimate } : null,
-        confirmed: confirmation !== null },
+        confirmed: confirmation !== null, overWater: overWater(bot) },
       completion: { kind: "current", observed: request.phase === "estimate" ? estimate !== null : confirmation !== null,
         owes: request.phase === "estimate" ? "A usable eye-bearing estimate." : "An observed loaded end_portal_frame." },
     }));
@@ -227,7 +254,10 @@ async function locate(
         last.end_json &&
         !direction({ start: last.start_json, end: last.end_json }) &&
         last.end_json.y < last.start_json.y - 1;
-      if (descending && last.end_json) estimate = { x: last.end_json.x, z: last.end_json.z };
+      if (descending && last.end_json) {
+        estimate = { x: last.end_json.x, z: last.end_json.z };
+        verticalEyeDescent = true;
+      }
       if (request.phase === "estimate" && estimate) return { status: "succeeded", ...evidence() };
       if (request.phase === "locate" && !estimate)
         throw new Error('No usable saved estimate. Complete phase: "estimate" with this search_id first.');
@@ -259,6 +289,17 @@ async function locate(
         continue;
       }
       if (scan()) break;
+      // The estimate sits over open ocean. Swimming here across the sea was
+      // fine; lingering is not. The frame is straight down and already in scan
+      // range once its column loads, so a surface survey from ring to ring only
+      // strands the bot in deep water - an ocean monument, at worst - with no
+      // footing and no clean way down. Stop with an actionable handoff instead
+      // of a lethal open-water sweep. Saved throws persist, so a retreat to dry
+      // land and a resume lose nothing.
+      if (overWater(bot))
+        throw new Error(
+          `[STRONGHOLD_OVER_OPEN_WATER] The estimate near ${Math.floor(estimate.x)}, ${Math.floor(estimate.z)} sits over open water with no footing, and no loaded end_portal_frame was in reach from the surface. The surface survey is skipped here to avoid stranding in deep water. Retreat to the nearest dry land - saved throws persist under search_id ${JSON.stringify(request.search_id)} - then resume, and carve down with tunnel_to from the dry shore.`,
+        );
       for (const target of survey(estimate, request.search_radius)) {
         await walk(nearXzGoal(target, 2));
         if (scan()) break;
