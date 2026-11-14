@@ -38,7 +38,7 @@ import {
   type HuntMobResult,
 } from "./contract.js";
 import { observeHuntDrops } from "./drop-accounting.js";
-import { quarryDownAtLavaShore } from "../../survival/weapons/melee.js";
+import { quarryDownAtLavaShore, quarryAtWaterShore } from "../../survival/weapons/melee.js";
 import { collectionTargetSafetyTier, compareCollectionTargets } from "./target-selection.js";
 import { closestLoadedSpawner, SpawnerCamp, spawnerCampGoal } from "./spawner-camp.js";
 import { DROPPED_ITEM_OBSERVATION_EVENTS, findNewItemEntity, snapshotEntityIds, type ObservedItemEntity } from "../../world/dropped-items.js";
@@ -68,6 +68,8 @@ export interface HuntDrop {
 export type HuntPursuit = Omit<HuntRequest, "route" | "movements"> & {
   /** Where the request began; see EngageOptions. */
   readonly ground?: Position3;
+  /** Reject quarry standing over open water, so the pursuit is not drawn out to sea. */
+  readonly avoidWaterShore?: boolean;
 };
 
 export interface HuntMobDependencies {
@@ -143,11 +145,12 @@ export function huntMobDependencies(
       try {
         pending = hunt(bot, {
           ...pursuit,
-          // The fight will not follow a quarry down to a lava shore, so the
-          // hunt does not select one or walk after it.
+          // The fight will not follow a quarry down to a lava shore, nor out
+          // onto open water, so the hunt does not select one or walk after it.
           matches: (entity) =>
             pursuit.matches(entity) &&
-            !quarryDownAtLavaShore(navigation.world, pursuit.ground ?? bot.entity.position, entity.position),
+            !quarryDownAtLavaShore(navigation.world, pursuit.ground ?? bot.entity.position, entity.position) &&
+            !(pursuit.avoidWaterShore && quarryAtWaterShore(navigation.world, entity.position)),
           signal: AbortSignal.any([stop.signal, ...(pursuit.signal ? [pursuit.signal] : [])]),
           movements: createMovements(bot, {
             allowSprinting: true,
@@ -715,6 +718,7 @@ function beginHuntMob(
       contactRange: HOSTILE_CONTACT_RANGE,
       ...(request.mobName === "enderman" && {
         reconsiderApproach: true,
+        avoidWaterShore: true,
         targetTier: (target: Bot["entities"][number]) => collectionTargetSafetyTier(bot, target),
       }),
       ...(context.signal && { signal: context.signal }),
