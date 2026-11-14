@@ -83,9 +83,10 @@ params:
       arguments: { note: "Combat evidence tour started.", context: "Fresh-server MCP response qualification." }
     - action: note_read
       arguments: { n: 1 }
-    # The flat tour has neither End targets nor Eyes of Ender. These five
-    # explicitly arranged failures exercise truthful response boundaries;
-    # successful physical jobs remain in the End and stronghold suites.
+    # The flat tour has neither End targets, Eyes of Ender, nor a stronghold.
+    # These six explicitly arranged failures exercise truthful response
+    # boundaries; successful physical jobs remain in the End and stronghold
+    # suites.
     - action: destroy_end_crystal
       arguments: { entity_id: 2147483647, weapon: auto }
       expected_error: "Selected end crystal is not loaded"
@@ -101,6 +102,11 @@ params:
     - action: locate_stronghold
       arguments: {}
       expected_error: "No carried Eyes of Ender remain"
+    - action: tunnel_to
+      # locate_stronghold could not confirm a frame here, so the carve has no
+      # target: it must refuse rather than dig an open-ended staircase.
+      arguments: {}
+      expected_error: "No loaded end_portal_frame within 128 blocks"
     - action: view_blocks
       arguments: { cells: [{ x: 8, y: -59, z: 4 }] }
     - action: cancel_foreground_action
