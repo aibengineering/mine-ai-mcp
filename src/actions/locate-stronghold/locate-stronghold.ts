@@ -162,7 +162,7 @@ async function locate(
   const assertActive = () => {
     context.observeProgress?.(() => ({ baseline: { dimension, searchId: request.search_id },
       checkpoint: { phase: request.phase, throwIds: store.read().map((row) => row.throw_id), estimate: estimate ? { ...estimate } : null,
-        confirmed: confirmation !== null },
+        confirmed: confirmation !== null, overWater: overWater(bot) },
       completion: { kind: "current", observed: request.phase === "estimate" ? estimate !== null : confirmation !== null,
         owes: request.phase === "estimate" ? "A usable eye-bearing estimate." : "An observed loaded end_portal_frame." },
     }));
@@ -289,6 +289,17 @@ async function locate(
         continue;
       }
       if (scan()) break;
+      // The estimate sits over open ocean. Swimming here across the sea was
+      // fine; lingering is not. The frame is straight down and already in scan
+      // range once its column loads, so a surface survey from ring to ring only
+      // strands the bot in deep water - an ocean monument, at worst - with no
+      // footing and no clean way down. Stop with an actionable handoff instead
+      // of a lethal open-water sweep. Saved throws persist, so a retreat to dry
+      // land and a resume lose nothing.
+      if (overWater(bot))
+        throw new Error(
+          `[STRONGHOLD_OVER_OPEN_WATER] The estimate near ${Math.floor(estimate.x)}, ${Math.floor(estimate.z)} sits over open water with no footing, and no loaded end_portal_frame was in reach from the surface. The surface survey is skipped here to avoid stranding in deep water. Retreat to the nearest dry land - saved throws persist under search_id ${JSON.stringify(request.search_id)} - then resume, and carve down with tunnel_to from the dry shore.`,
+        );
       for (const target of survey(estimate, request.search_radius)) {
         await walk(nearXzGoal(target, 2));
         if (scan()) break;
