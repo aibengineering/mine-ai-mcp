@@ -1,0 +1,175 @@
+template: ../../templates/combat-idle-midnight.yaml
+
+tags: [acceptance, regression]
+description: >-
+  Five wounded idle bots on bedrock pads, one carried block kind each and a
+  held hostile in sight, must close the same nine-cell shelter. Planks: sixteen
+  acacia planks must wall the bot in; the emergency list holds only oak,
+  spruce, and birch planks, so until 2026-11-14 any other full cube it carried
+  was ignored and, with the floor undiggable, it stood in the open and placed
+  nothing. Dirt: sixteen dirt walls, the cheap-material guard. Preference:
+  sixteen cobblestone and sixteen dirt must spend cobblestone first. Partial:
+  sixteen oak slabs must not become a wall. Falling: sixteen sand must not
+  become a wall.
+
+# Five pens 100 blocks apart, beyond entity tracking. Every bot stands on a
+# bedrock pad, so a hide that carries no usable block cannot dig instead of
+# building; the wall outcome is the only way to close the shelter.
+#   x:    0            100           200
+#   z 0:  Planks       Dirt          Preference
+#   z100: Partial      Falling
+world:
+  type: flat
+  time: midnight
+  difficulty: normal
+  gamerules:
+    doDaylightCycle: false
+    doMobSpawning: false
+    keepInventory: true
+    naturalRegeneration: false
+    randomTickSpeed: 0
+
+geometry:
+  - fill: { block: bedrock, from: [-8, -61, -8], to: [8, -61, 8] }
+  - fill: { block: bedrock, from: [92, -61, -8], to: [108, -61, 8] }
+  - fill: { block: bedrock, from: [192, -61, -8], to: [208, -61, 8] }
+  - fill: { block: bedrock, from: [-8, -61, 92], to: [8, -61, 108] }
+  - fill: { block: bedrock, from: [92, -61, 92], to: [108, -61, 108] }
+
+entities:
+  # Held hostiles in sight: below the hide bar, one is reason enough to dig
+  # in. They never move, so only the wall construction is under test.
+  - { type: spider, pos: [-11.5, -60, 0.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_planks"]}' }
+  - { type: spider, pos: [88.5, -60, 0.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_dirt"]}' }
+  - { type: spider, pos: [188.5, -60, 0.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_preference"]}' }
+  - { type: spider, pos: [-11.5, -60, 100.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_partial"]}' }
+  - { type: spider, pos: [88.5, -60, 100.5], nbt: '{NoAI:1b,PersistenceRequired:1b,Tags:["pen_falling"]}' }
+
+players:
+  - name: Planks
+    pos: [0.5, -60, 0.5]
+    health: 7
+    inventory:
+      - { item: acacia_planks, count: 16 }
+  - name: Dirt
+    pos: [100.5, -60, 0.5]
+    health: 7
+    inventory:
+      - { item: dirt, count: 16 }
+  - name: Preference
+    pos: [200.5, -60, 0.5]
+    health: 7
+    inventory:
+      - { item: cobblestone, count: 16 }
+      - { item: dirt, count: 16 }
+  - name: Partial
+    pos: [0.5, -60, 100.5]
+    health: 7
+    inventory:
+      - { item: oak_slab, count: 16 }
+  - name: Falling
+    pos: [100.5, -60, 100.5]
+    health: 7
+    inventory:
+      - { item: sand, count: 16 }
+
+schedule:
+  # Recovery is the outcome after the wall stands. It is switched on after the
+  # world arrangement so the wound holds while Mine Labs places the bots.
+  - { afterTicks: 0, run: "gamerule naturalRegeneration true" }
+
+params:
+  waitTicks: 2400
+
+tick:
+  - "gamemode spectator @a[name=!Planks,name=!Dirt,name=!Preference,name=!Partial,name=!Falling,gamemode=!spectator]"
+
+goal:
+  kind: all
+  timeout: 200
+  goals:
+    - kind: blocksAt
+      who: Planks
+      block: acacia_planks
+      positions:
+        - [1, -60, 0]
+        - [1, -59, 0]
+        - [-1, -60, 0]
+        - [-1, -59, 0]
+        - [0, -60, 1]
+        - [0, -59, 1]
+        - [0, -60, -1]
+        - [0, -59, -1]
+        - [0, -58, 0]
+    - { kind: survive, who: Planks, seconds: 1 }
+    - { kind: completion, who: Planks }
+
+    - kind: blocksAt
+      who: Dirt
+      block: dirt
+      positions:
+        - [101, -60, 0]
+        - [101, -59, 0]
+        - [99, -60, 0]
+        - [99, -59, 0]
+        - [100, -60, 1]
+        - [100, -59, 1]
+        - [100, -60, -1]
+        - [100, -59, -1]
+        - [100, -58, 0]
+    - { kind: survive, who: Dirt, seconds: 1 }
+    - { kind: completion, who: Dirt }
+
+    - kind: blocksAt
+      who: Preference
+      block: cobblestone
+      positions:
+        - [201, -60, 0]
+        - [201, -59, 0]
+        - [199, -60, 0]
+        - [199, -59, 0]
+        - [200, -60, 1]
+        - [200, -59, 1]
+        - [200, -60, -1]
+        - [200, -59, -1]
+        - [200, -58, 0]
+    - { kind: hasItem, who: Preference, item: dirt, count: 16, max: 16 }
+    - { kind: survive, who: Preference, seconds: 1 }
+    - { kind: completion, who: Preference }
+
+    # A slab never makes a full wall; the shelter must stay open and the bot
+    # must spend none of the slabs on it.
+    - kind: blocksAt
+      who: Partial
+      block: air
+      positions:
+        - [1, -60, 100]
+        - [1, -59, 100]
+        - [-1, -60, 100]
+        - [-1, -59, 100]
+        - [0, -60, 101]
+        - [0, -59, 101]
+        - [0, -60, 99]
+        - [0, -59, 99]
+        - [0, -58, 100]
+    - { kind: hasItem, who: Partial, item: oak_slab, count: 16, max: 16 }
+    - { kind: survive, who: Partial, seconds: 1 }
+    - { kind: completion, who: Partial }
+
+    # Sand is a full cube but falls; it is not wall material.
+    - kind: blocksAt
+      who: Falling
+      block: air
+      positions:
+        - [101, -60, 100]
+        - [101, -59, 100]
+        - [99, -60, 100]
+        - [99, -59, 100]
+        - [100, -60, 101]
+        - [100, -59, 101]
+        - [100, -60, 99]
+        - [100, -59, 99]
+        - [100, -58, 100]
+    - { kind: hasItem, who: Falling, item: sand, count: 16, max: 16 }
+    - { kind: survive, who: Falling, seconds: 1 }
+    - { kind: completion, who: Falling }
