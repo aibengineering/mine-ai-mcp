@@ -6,7 +6,7 @@ import { Vec3 } from "vec3";
 import { MemoryWorld as GoalTestWorld } from "../../navigation/world/memory-world.js";
 import { flatWorld, observation } from "../../test-support/navigation.js";
 import { entityDimensions } from "../../world/entity-dimensions.js";
-import { hasMeleeKnockbackRoom, meleeApproachGoal, quarryDownAtLavaShore } from "./melee.js";
+import { hasMeleeKnockbackRoom, meleeApproachGoal, quarryAtWaterShore, quarryDownAtLavaShore } from "./melee.js";
 import { meleeDistance } from "../perception/combat/reach.js";
 
 const goalTestWorld = new GoalTestWorld();
@@ -172,4 +172,14 @@ test("a quarry is down at a lava shore only a drop below the bot, with the bot o
   assert.equal(quarryDownAtLavaShore(world, { x: 10.5, y: 51, z: 0.5 }, quarry(48)), false, "a cube on the shelf");
   assert.equal(quarryDownAtLavaShore(world, { x: 10.5, y: 62, z: 0.5 }, quarry(48)), true, "a cube down at the shore");
   assert.equal(quarryDownAtLavaShore(world, { x: 3.5, y: 62, z: 0.5 }, quarry(62)), false, "level with the bot");
+});
+
+test("a quarry over open water is a water shore, dry land is not", () => {
+  // An Enderman teleports out onto the sea and the pursuit would swim after
+  // it. Unlike the lava shore the sea is level with the bot, so the water
+  // itself under the quarry is the guard, not a drop down to it.
+  const world = new GoalTestWorld();
+  world.load({ x: 10, y: 62, z: 0 }, { stateId: 102, collisionShapes: [], traits: { liquid: "water", empty: true } });
+  assert.equal(quarryAtWaterShore(world, { x: 10.5, y: 63, z: 0.5 }), true, "over the sea");
+  assert.equal(quarryAtWaterShore(world, { x: 20.5, y: 63, z: 0.5 }), false, "dry land off the coast");
 });
